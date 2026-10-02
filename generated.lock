@@ -59,7 +59,7 @@
     "crates/ever-connect-contracts/tests/typed/mod.rs": "f1302bdc4b6464ca6092951d52e98ec7064e6d38f8caded7f17f58bbc043abc2",
     "docs/integrations.md": "dd6520ef205d80e8b94eb1299a3b55f723fec1b8c16e39dd7fed6da72cf97f40",
     "docs/outbound-calls.md": "7bb011c7dfa9da0fef94463143ae5e22f5946c230907e464e235229c76d550c6",
-    "docs/stats-schema.md": "28d5642608bf2ba667f0c79e9ddcd5f00374d5fa6d5cc90ff61196c811266d02",
+    "docs/stats-schema.md": "d9a2596513720f15e4798ed2cdfbb85888679721ba28f8b1abbee7c480c7749e",
     "packages/ts/connect-contracts/src/generated/constants.ts": "333250168dcb9c6086667498947df3f1acfbf4e5798d1e7814ee299b35e931bb",
     "packages/ts/connect-contracts/src/generated/ever-platform.v1.ts": "190fd5b904da44699b8545a6d73ba85124a3a7c8df66480f4b8d34d7bce7503a",
     "packages/ts/connect-contracts/src/generated/integrations.ts": "ababc9fb96d896e8c335878adb0dbf020de5a7f52c71ec9ca4e1dc811b8aa7a1",
