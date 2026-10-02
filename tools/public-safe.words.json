@@ -1,5 +1,5 @@
 {
-  "description": "Rules of tools/check-public-safe.mjs. This file is excluded from the scan because it names the words it bans. A finding prints the file, the line and the rule id, never the matched text.",
+  "description": "Rules of tools/check-public-safe.mjs. This file is excluded from the scan because it names the words it bans; the terms it must not spell out are listed under `hashed` as salted sha256 hashes. A finding prints the file, the line and the rule id, never the matched text.",
   "noun": {
     "id": "N1",
     "pattern": "\\bnetworks?\\b",
@@ -47,16 +47,6 @@
   },
   "banned": [
     {
-      "id": "W1",
-      "pattern": "take[- _]?rate",
-      "flags": "i"
-    },
-    {
-      "id": "W2",
-      "pattern": "\\bmoats?\\b",
-      "flags": "i"
-    },
-    {
       "id": "W3",
       "pattern": "\\bA?GPL\\b",
       "flags": "i"
@@ -80,26 +70,96 @@
       ]
     },
     {
-      "id": "W6",
-      "pattern": "program §|Foundation Program|FOUNDATION_PROGRAM|program document|_sections/|IMPLEMENTATION_PLAN|PHASE0_AUDIT|EVER_CONNECT §|REGISTRY §|IDENTITY §|BILLING §|FLOWS §|STACK §",
-      "flags": "i"
-    },
-    {
       "id": "W7",
-      "pattern": "plan section|design [A-Z_]{4,}|\\bS[0-9] §|EVER_CONNECT_AND_STATS|REGISTRY_AND_CONTRACTS|IDENTITY_DESIGN|FLOWS_PROFILES_PORTAL|STACK_AND_CONVENTIONS|BILLING_AND_SUBSCRIPTIONS|PLATFORM_REPO_AND_STACK|BUSINESS_AI_AGENT",
+      "description": "the word design before an upper-case document name",
+      "pattern": "design [A-Z_]{4,}",
       "flags": ""
     },
     {
-      "id": "W8",
-      "pattern": "review round|design lane|\\bplan (§|row)",
-      "flags": "i"
-    },
-    {
       "id": "W9",
-      "pattern": "\\b(internal|confidential)\\s+(document|documents|doc|docs|note|notes|planning|strategy|memo|handover)\\b|\\bnever publish\\b|<!--\\s*INTERNAL",
-      "flags": "i"
+      "description": "an HTML comment that opens with an upper-case marker word (a classification or editorial marker)",
+      "pattern": "<!--\\s*[A-Z]{5,}(?![a-z])",
+      "flags": ""
     }
   ],
+  "hashed": {
+    "description": "Terms the rules must not spell out. tools/check-public-safe.mjs hashes, for every line, each word and each run of two words (split on anything that is not a letter or a digit) and each snake_case token, all in lower case, as sha256(salt + candidate); a listed hash is a finding of its rule.",
+    "salt": "ever-public-safe:v1:",
+    "rules": [
+      {
+        "id": "W1",
+        "sha256": [
+          "3ab46b5a1fb8343306cb683686bcd88ad4a105fe7280b00dce3578d7c909d295",
+          "bddf9b69d7f23ede9c7271a09e8c0d7b58b3b41d181fe238edb55ff2a77895ae"
+        ]
+      },
+      {
+        "id": "W2",
+        "sha256": [
+          "f29de7f42a2cebb220f7eb03f000d534b700126d513f29ef551c438e37adfd86",
+          "f8a68cc96ccda4d7cc7829f394699aa89bf910b1fb8c7dc4b69859e40418d5d9"
+        ]
+      },
+      {
+        "id": "W6",
+        "sha256": [
+          "0b2b636b7caac179ee2b07b1c2d0f171c7fe6716f16119893002a811f50f1dae",
+          "2a9f0ba968cd38f14884d16bb6f41bdcffa675c67307e0ec44b6dbd9b2da4043",
+          "736f0759ff7516417bfbb38b89584b14ba161721e0277f6f6093eb64da2596c8",
+          "e0408ed273900433d38839a842a102585ee35f823616600f74891ad25db032d4",
+          "efe040b08b722c74f8db32fbf88cb3f55fa3cebaebfd04110af9b26fff4b415e"
+        ]
+      },
+      {
+        "id": "W7",
+        "sha256": [
+          "15736290ba99b507703b8465b909ebc419f83038eb364e94f99ec9ca1cce55ed",
+          "195713d4554226c87f2aa4a8752dd4fb6adbc222d0831cf3c1046e537d22e52a",
+          "710c3a5a9c979fc6a1f0f6db0d15ed8c654627b59d19870bd3dc10936a27221b",
+          "72a6380bd015b206d32a76a966b1f602e14ae0ea8e46942eb6baea0ad5b37c57",
+          "786f7f9410828f3fa658a5c5a0bf75bbea208cab6ece9e6241df6657eea9fa56",
+          "a22022cf2bfd59ff94a98c58116a252516cf968ce839319579ee963960e8b8f6",
+          "a926393ee35cc57f368d08a837b62895ce08d342f30efeee92362ea326275f91",
+          "aa72069c25f266a24cfb7024fd46a1a8ee6c79a14b41a47d8e784e9d9f5eb965",
+          "fb2f63b0b50d13edaa7e930f06ae1bec30426e1495cd7cf8f83312d7bb9192af"
+        ]
+      },
+      {
+        "id": "W8",
+        "sha256": [
+          "318a4ec2a26ffca64a0ec7b73137e3eab26eb3dd5dabc6c6cbba392649cbcda3",
+          "757a7989d8fa79812cf3c4c390e997838b6e66ecdb31b84106a3499d1110b396",
+          "b51fcadfbf592ce6c6986658e35afb740ece2e8d97ed74c2cd18dde45680735c"
+        ]
+      },
+      {
+        "id": "W9",
+        "sha256": [
+          "02b2b63f9f0e6bb84be5836818c671148f7962bad20793c77218c8b64e00ade1",
+          "05ec7e6eb2c163901c14b59033b68069695bfa034ab36b24e0cc67ae7f2d287b",
+          "0639c2d68a44ee97e330402c4acdf3bbf215a1c98940c1c68d2920eb70e54a2d",
+          "0d2d3ffa13956e20f4fe4f5f1f15bbe4155d635f1a462e114985ae04617bf63c",
+          "109125f263037eda614d413238a541b7463c2cf8984d33c3aad3215e084701bb",
+          "18493e0990e9f6a2629427e4279c37636033d9b653dac3b3bc42d451ffb8ae08",
+          "332dafc954c20cdea6880875e440bd2c23cf394f88133415301f04d0ba338c6b",
+          "447fe6f50cdf6f2c9165c4075ca45a294b135eac2b6b327636241d88737c080c",
+          "472d93c79cd144cc36e0c071bbfe6a9c280b9cc86645a4ce2cbbed752a456c10",
+          "605e7f24ff1177b5793469a63cf0824b211729544149e2da08db2b2e88a6e8f3",
+          "a3469e9a3e2e44ffbcdaa47f3606e4b94e77354b2f8224b050fd0e9543f2d24e",
+          "a740260017b608a514be70901936a6c962357f3dd15eceacb71491e716e37193",
+          "b0845e5ab3a75e73a832e22f40ac792722aae5d594bbf578f876800cc5c10f72",
+          "c8e91ffe906c7b2e0dfc1672066d6763f100adf2cb7d142c00991683d52f9cbf",
+          "d523edc5fc53ffefaf34c7f1c33a3ecf74e96120f4ff2796d293b65cfdffbe30",
+          "da17028b0bc26b749bbf8c630908dd1ab67b2b3b74fa109951bf29e848047144",
+          "e4b6117236503a80311f9538acd2778d8c73993c7d6874fe36523ab5b7606d30",
+          "e60234cf48027d407d729fd045c32b6cb3986726a48d8f9d01fb229d43567527",
+          "ea1560aedba683f2e41d68bf8466a899cbaf61929751ae8bfed2d8e820d7202c",
+          "f24b12626238230fd32d2709a08cf056f004ff9c4c46584da376761e51e3d886",
+          "f61797b453b0f28512301abf60b3e0cbd82d54bbc683c25ed8d50fe8a276c255"
+        ]
+      }
+    ]
+  },
   "hosts": {
     "id": "H1",
     "pattern": "\\b(?:[a-z0-9-]+\\.)+ever\\.co\\b",
@@ -142,8 +202,8 @@
     },
     {
       "id": "S1",
-      "description": "a numbered section sign: public pages name the heading instead",
-      "pattern": "§\\s?[0-9]",
+      "description": "a section sign: public pages name the heading instead",
+      "pattern": "\u00a7",
       "flags": ""
     }
   ],

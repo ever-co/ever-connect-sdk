@@ -147,7 +147,7 @@ Run it on a runner with Docker (the sniffer needs `NET_RAW` and `NET_ADMIN`) and
 artifacts directory, for example:
 
 ```yaml
-runs-on: ${{ vars.RUNNER_LINUX_X64_8 || 'ubuntu-latest' }}
+runs-on: ubuntu-latest
 steps:
   - uses: actions/checkout@v5
   - run: pnpm exec ever-egress-audit --config egress-audit.config.json --mode off --artifacts egress-audit-artifacts
