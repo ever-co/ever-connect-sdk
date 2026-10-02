@@ -230,7 +230,8 @@ function selfTest() {
   // A commit message may name the technical terms, and only those.
   if (findings(ok, 'commit', [], { file: COMMIT_MESSAGE }).length > 0) problems.push('a technical commit message failed');
   const noun = readFileSync(join(FIXTURES, 'bad-network-noun.md'), 'utf8');
-  if (!findings(noun, 'commit', [], { file: COMMIT_MESSAGE }).some((f) => f.endsWith(': N1'))) problems.push('a commit message with the noun passed');
+  if (!findings(noun, 'commit', [], { file: COMMIT_MESSAGE }).some((f) => f.endsWith(': N1')))
+    problems.push('a commit message with the noun passed');
   // A private phrase is caught and never printed.
   const phrases = compilePhraseList({ phrases: ['planted phrase'], patterns: [{ pattern: 'secret\\s+word' }] });
   const planted = findings('A Planted  Phrase and a secret word.', 'planted', phrases, { file: 'docs/x.md' });
