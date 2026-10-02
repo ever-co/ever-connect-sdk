@@ -50,7 +50,8 @@ const lf = (t) => t.replace(/\r\n/g, '\n');
 
 function load() {
   const spec = YAML.parse(readText(SPEC));
-  const rowsDoc = readJson(join(REPO, 'contracts/openapi/rows.json'));
+  // EVER_SDK_ROWS_JSON points the generator at another table (the generator's own tests use it).
+  const rowsDoc = readJson(process.env.EVER_SDK_ROWS_JSON ?? join(REPO, 'contracts/openapi/rows.json'));
   const pending = readJson(join(REPO, 'contracts/openapi/pending-upstream.json'));
   const constants = readJson(join(REPO, 'contracts/constants.json'));
   const catalog = readJson(join(REPO, 'contracts/integrations/catalog.v1.json'));
