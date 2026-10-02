@@ -148,6 +148,11 @@
       "schema": "KeyRotate",
       "valid": true
     },
+    "keys.invalid-missing-proof.json": {
+      "schema": "KeyRotate",
+      "valid": false,
+      "path": "/new_key_proof"
+    },
     "keys.invalid-extra-field.json": {
       "schema": "KeyRotate",
       "valid": false,

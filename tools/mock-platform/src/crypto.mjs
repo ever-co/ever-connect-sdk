@@ -25,6 +25,9 @@ export function publicKeyFromX(x) {
 /** The instance key id: base64url of the first 8 bytes of SHA-256 over the raw public key. */
 export const instanceKid = (x) => b64url(sha256(fromB64url(x)).subarray(0, 8));
 
+/** The RFC 7638 thumbprint of an Ed25519 public key (the `cnf.jkt` of a rotation proof). */
+export const thumbprint = (x) => b64url(sha256(`{"crv":"Ed25519","kty":"OKP","x":"${x}"}`));
+
 export const signBytes = (privateKey, bytes) => b64url(edSign(null, Buffer.from(bytes), privateKey));
 
 export function verifyBytes(x, bytes, signature) {

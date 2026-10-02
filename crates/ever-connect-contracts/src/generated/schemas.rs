@@ -2870,6 +2870,174 @@ pub mod key_manifest_v1 {
     }
 }
 
+/// Types of `contracts/schemas/ever.usage.v1.json`.
+pub mod usage_v1 {
+    ///`UnitCount`
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct UnitCount {
+        ///How it was counted: currently active records at measured_at, or the peak within the billing period.
+        pub method: UnitCountMethod,
+        pub quantity: i64,
+        pub unit: UnitCountUnit,
+    }
+    ///How it was counted: currently active records at measured_at, or the peak within the billing period.
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd,
+    )]
+    pub enum UnitCountMethod {
+        #[serde(rename = "active_at_measurement")]
+        ActiveAtMeasurement,
+        #[serde(rename = "peak_in_period")]
+        PeakInPeriod,
+    }
+    impl ::std::fmt::Display for UnitCountMethod {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::ActiveAtMeasurement => f.write_str("active_at_measurement"),
+                Self::PeakInPeriod => f.write_str("peak_in_period"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for UnitCountMethod {
+        type Err = self::error::ConversionError;
+        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "active_at_measurement" => Ok(Self::ActiveAtMeasurement),
+                "peak_in_period" => Ok(Self::PeakInPeriod),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for UnitCountMethod {
+        type Error = self::error::ConversionError;
+        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for UnitCountMethod {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    ///`UnitCountUnit`
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd,
+    )]
+    pub enum UnitCountUnit {
+        #[serde(rename = "employee")]
+        Employee,
+        #[serde(rename = "user")]
+        User,
+        #[serde(rename = "seat")]
+        Seat,
+        #[serde(rename = "project")]
+        Project,
+        #[serde(rename = "transaction")]
+        Transaction,
+    }
+    impl ::std::fmt::Display for UnitCountUnit {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Employee => f.write_str("employee"),
+                Self::User => f.write_str("user"),
+                Self::Seat => f.write_str("seat"),
+                Self::Project => f.write_str("project"),
+                Self::Transaction => f.write_str("transaction"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for UnitCountUnit {
+        type Err = self::error::ConversionError;
+        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "employee" => Ok(Self::Employee),
+                "user" => Ok(Self::User),
+                "seat" => Ok(Self::Seat),
+                "project" => Ok(Self::Project),
+                "transaction" => Ok(Self::Transaction),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for UnitCountUnit {
+        type Error = self::error::ConversionError;
+        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for UnitCountUnit {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    ///The counts an Ever product installation reports to Ever Platform for apps whose pricing depends on a unit such as employees or seats. Counts and timestamps only: never names, e-mails, addresses, identifiers of people or companies, document contents or per-record amounts. Answered only while the installation's usage_reporting integration is enabled. Closed at every level.
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct UsageReportV1 {
+        ///The installation's Ever Platform id.
+        pub instance_id: ::std::string::String,
+        ///When the counts were taken (RFC 3339, UTC).
+        pub measured_at: ::std::string::String,
+        ///For a multi-tenant product, the product tenant the counts belong to.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub product_tenant_id: ::std::option::Option<::std::string::String>,
+        pub schema: ::std::string::String,
+        ///One count per unit asked for; a unit the product does not know is omitted, never guessed.
+        pub units: ::std::vec::Vec<UnitCount>,
+    }
+    /// Error types.
+    pub mod error {
+        /// Error from a `TryFrom` or `FromStr` implementation.
+        pub struct ConversionError(::std::borrow::Cow<'static, str>);
+        impl ::std::error::Error for ConversionError {}
+        impl ::std::fmt::Display for ConversionError {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> Result<(), ::std::fmt::Error> {
+                ::std::fmt::Display::fmt(&self.0, f)
+            }
+        }
+        impl ::std::fmt::Debug for ConversionError {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> Result<(), ::std::fmt::Error> {
+                ::std::fmt::Debug::fmt(&self.0, f)
+            }
+        }
+        impl From<&'static str> for ConversionError {
+            fn from(value: &'static str) -> Self {
+                Self(value.into())
+            }
+        }
+        impl From<String> for ConversionError {
+            fn from(value: String) -> Self {
+                Self(value.into())
+            }
+        }
+    }
+}
+
 /// Data of the `ever.consent.consent.granted` event (`contracts/schemas/events/ever.consent.consent.granted.v1.schema.json`).
 pub mod consent_consent_granted_v1 {
     ///where a consent was given; product_ui = granted in the product's own consent dialog after a fresh Ever ID sign-in

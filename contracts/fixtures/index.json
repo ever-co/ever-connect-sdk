@@ -576,6 +576,13 @@
       "typed": false
     },
     {
+      "file": "requests/keys.invalid-missing-proof.json",
+      "kind": "component",
+      "schema": "KeyRotate",
+      "valid": false,
+      "typed": false
+    },
+    {
       "file": "requests/keys.json",
       "kind": "component",
       "schema": "KeyRotate",
@@ -1013,6 +1020,69 @@
       "file": "stats/valid/works.json",
       "kind": "schema",
       "schema": "stats",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "usage/invalid/extra-field.json",
+      "kind": "schema",
+      "schema": "usage",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "usage/invalid/fractional-quantity.json",
+      "kind": "schema",
+      "schema": "usage",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "usage/invalid/negative-quantity.json",
+      "kind": "schema",
+      "schema": "usage",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "usage/invalid/person-name.json",
+      "kind": "schema",
+      "schema": "usage",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "usage/invalid/unknown-unit.json",
+      "kind": "schema",
+      "schema": "usage",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "usage/invalid/uuid-instance.json",
+      "kind": "schema",
+      "schema": "usage",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "usage/valid/employees.json",
+      "kind": "schema",
+      "schema": "usage",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "usage/valid/no-units.json",
+      "kind": "schema",
+      "schema": "usage",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "usage/valid/tenant-peak.json",
+      "kind": "schema",
+      "schema": "usage",
       "valid": true,
       "typed": true
     }

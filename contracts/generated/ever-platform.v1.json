@@ -1693,7 +1693,7 @@
     },
     "/v1/instances/me/keys": {
       "post": {
-        "summary": "Rotates the instance's connect key: the new key signs assertions from now on, the replaced key\nkeeps minting tokens for 7 days (`previous_valid_until`), and tokens already minted stay valid\nuntil they expire. Only one replaced key is kept: rotating again inside the overlap drops the\nolder key at once, with every token minted with it (the way to cut a compromised key now). The\nnew key must be an Ed25519 public JWK no installation holds; the platform assigns its `kid`.",
+        "summary": "Rotates the instance's connect key: the new key signs assertions from now on, the replaced key\nkeeps minting tokens for 7 days (`previous_valid_until`), and tokens already minted stay valid\nuntil they expire. The body proves the rotation twice: `current_key_proof` is signed with the\ncurrent connect key (the key it replaced is not accepted, even during the overlap) and\n`new_key_proof` with the new key; both carry the claims of a client assertion with\n`aud = <api origin>/v1/instances/me/keys` and `cnf.jkt` = the RFC 7638 thumbprint of the new\nkey, and each `jti` is used once. Only one replaced key is kept: rotating again inside the\noverlap (proved with the then current key) drops the older key at once, with every token minted\nwith it (the way to cut a compromised key now). The new key must be an Ed25519 public JWK no\ninstallation holds or held; the platform assigns its `kid`.",
         "tags": [
           "entitlements"
         ],
@@ -1747,7 +1747,7 @@
                 }
               }
             },
-            "description": "No valid instance token, or the credential is revoked"
+            "description": "No valid instance token, or the credential is revoked; or `invalid_client`: the proofs were not accepted (not signed with the current key and the new key, not bound to the new key, replayed, or the current key changed meanwhile)"
           },
           "403": {
             "content": {
@@ -1767,7 +1767,7 @@
                 }
               }
             },
-            "description": "`public_jwk_invalid`: not an Ed25519 public key, the current key, or a key an installation holds"
+            "description": "`public_jwk_invalid`: not an Ed25519 public key, the current key, or a key an installation holds or held; or the body does not validate (both proofs are required)"
           }
         },
         "x-ever-row": 16
@@ -2813,7 +2813,7 @@
                 }
               }
             },
-            "description": "`rate_limited`: too many wrong codes from this caller (`Retry-After`)"
+            "description": "`rate_limited`: too many wrong link codes from this installation, or from its address across installations (`Retry-After`)"
           }
         },
         "x-ever-row": 5
@@ -3625,7 +3625,7 @@
     },
     "/v1/instances/token": {
       "post": {
-        "summary": "Exchanges an RFC 7523 client assertion for a one-hour instance token (`client_credentials`\nwith `client_assertion_type = urn:ietf:params:oauth:client-assertion-type:jwt-bearer`, as\nJSON or as a form). An assertion that fails verification (unknown instance, a key that is\nneither the current one nor the replaced one inside its 7-day overlap, a bad signature, a\nreplayed `jti`, `exp` more than 300 s after `iat`, a clock skew over 300 s, an algorithm other\nthan `EdDSA`) answers `401 invalid_client`; a disconnected or revoked installation answers\n`401 credential_revoked` (it runs its local disconnect steps). The token is opaque, lives one\nhour, and is kept in memory only.",
+        "summary": "Exchanges an RFC 7523 client assertion for a one-hour instance token (`client_credentials`\nwith `client_assertion_type = urn:ietf:params:oauth:client-assertion-type:jwt-bearer`, as\nJSON or as a form). An assertion that fails verification (unknown instance, a key that is\nneither the current one nor the replaced one inside its 7-day overlap, a bad signature, a\nreplayed `jti`, `exp` more than 300 s after `iat`, a clock skew over 300 s, an algorithm other\nthan `EdDSA`) answers `401 invalid_client`; a disconnected or revoked installation answers\n`401 credential_revoked` (it runs its local disconnect steps). An installation that already\nreceived 60 tokens in the last hour answers `429 rate_limited` with `Retry-After`. The token is\nopaque, lives one hour, and is kept in memory only.",
         "tags": [
           "entitlements"
         ],
@@ -3678,6 +3678,16 @@
               }
             },
             "description": "The body does not validate (a `grant_type` or `client_assertion_type` other than the two above)"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`rate_limited`: this installation received its tokens of the window (`Retry-After`)"
           }
         },
         "x-ever-row": 4
@@ -7279,15 +7289,25 @@
       },
       "KeyRotate": {
         "additionalProperties": false,
-        "description": "A new connect key.",
+        "description": "A new connect key and the two proofs that authorize the rotation. Each proof is a compact JWS\nwith the claims of a client assertion (`iss = sub = <instance id>`, a random `jti` of 16-128\ncharacters used once, `iat`, `exp` at most 300 s after `iat`) whose `aud` is\n`<api origin>/v1/instances/me/keys` and whose `cnf.jkt` is the RFC 7638 thumbprint of\n`public_jwk`. An instance token alone never rotates a key.",
         "properties": {
+          "current_key_proof": {
+            "description": "The proof signed with the installation's current connect key (the key it replaced is not\naccepted, even during the overlap).",
+            "type": "string"
+          },
+          "new_key_proof": {
+            "description": "The proof signed with the new key (the installation holds the key it installs).",
+            "type": "string"
+          },
           "public_jwk": {
-            "description": "The new Ed25519 public JWK (no installation may hold it yet).",
+            "description": "The new Ed25519 public JWK (no installation may hold it yet, or have held it).",
             "type": "object"
           }
         },
         "required": [
-          "public_jwk"
+          "public_jwk",
+          "current_key_proof",
+          "new_key_proof"
         ],
         "type": "object"
       },

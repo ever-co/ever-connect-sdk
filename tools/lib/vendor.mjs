@@ -32,6 +32,12 @@ const STATIC = [
     transform: 'json-public-description',
   },
   {
+    path: 'contracts/schemas/ever.usage.v1.json',
+    source: 'contracts/usage/ever.usage.v1.schema.json',
+    upstream: null,
+    transform: null,
+  },
+  {
     path: 'contracts/integrations/catalog.v1.json',
     source: 'docs/specs/seeds/integrations-catalog.yaml',
     upstream: 'contracts/integrations/catalog.v1.json',

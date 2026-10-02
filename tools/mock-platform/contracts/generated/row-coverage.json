@@ -117,6 +117,11 @@
           "status": 422,
           "code": "validation_failed",
           "documented": true
+        },
+        {
+          "status": 429,
+          "code": "rate_limited",
+          "documented": true
         }
       ]
     },
@@ -612,6 +617,11 @@
           "documented": true
         },
         {
+          "status": 401,
+          "code": "invalid_client",
+          "documented": true
+        },
+        {
           "status": 403,
           "code": "instance_pending_approval",
           "documented": true
@@ -619,6 +629,11 @@
         {
           "status": 422,
           "code": "public_jwk_invalid",
+          "documented": true
+        },
+        {
+          "status": 422,
+          "code": "validation_failed",
           "documented": true
         }
       ]

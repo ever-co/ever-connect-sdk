@@ -43,6 +43,7 @@ export const SCHEMA_DOCS = [
   { file: 'ever.entitlement.v1.json', key: 'entitlement', type: 'EntitlementV1', module: 'entitlement_v1' },
   { file: 'ever.consent.v1.json', key: 'consent', type: 'ConsentV1', module: 'consent_v1' },
   { file: 'ever.key-manifest.v1.json', key: 'keyManifest', type: 'KeyManifestV1', module: 'key_manifest_v1' },
+  { file: 'ever.usage.v1.json', key: 'usage', type: 'UsageReportV1', module: 'usage_v1' },
 ];
 
 const readText = (p) => readFileSync(join(REPO, p), 'utf8');

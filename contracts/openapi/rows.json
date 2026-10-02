@@ -73,14 +73,15 @@
       "auth": "client assertion signed with the connect key",
       "trigger": "while connected: before the token expires, and after a 401",
       "payload": "grant_type, client_assertion_type, client_assertion (issuer and subject are the Ever Platform instance id returned at connect, never the statistics instance id)",
-      "cadence": "every 50 min while connected; on a 401",
+      "cadence": "every 50 min while connected (a token is kept for its hour; at most 60 an hour); on a 401",
       "disable": "disconnect",
       "products": "all",
       "phase": 2,
       "errors": [
         [401, "invalid_client"],
         [401, "credential_revoked"],
-        [422, "validation_failed"]
+        [422, "validation_failed"],
+        [429, "rate_limited"]
       ]
     },
     {
@@ -307,15 +308,17 @@
       "group": "connection",
       "auth": "instance token",
       "trigger": "the operator disconnects; the connect key is rotated",
-      "payload": "none (disconnect); public_jwk of the new connect key (rotation; the statistics key is never rotated by this call)",
+      "payload": "none (disconnect); public_jwk of the new connect key with two rotation proofs, one signed with the current connect key and one with the new key (rotation; the statistics key is never rotated by this call)",
       "cadence": "on action",
       "disable": "none needed: operator action only",
       "products": "all",
       "phase": 2,
       "errors": [
         [401, "credential_revoked"],
+        [401, "invalid_client"],
         [403, "instance_pending_approval"],
-        [422, "public_jwk_invalid"]
+        [422, "public_jwk_invalid"],
+        [422, "validation_failed"]
       ]
     },
     {

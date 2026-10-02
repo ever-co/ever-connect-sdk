@@ -42,6 +42,7 @@ export function addIntegrationStates(state, instance, linkId = null) {
 
 export function createInstance(state, { product, version, install_source, kind, serves_products, public_jwk, org, status }) {
   const id = state.ulid('instance');
+  state.heldKeys.add(public_jwk.x);
   const instance = {
     id,
     product,

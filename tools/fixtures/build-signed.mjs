@@ -10,6 +10,7 @@
  *                the TEST root as a JWKS for EVER_PLATFORM_ROOT_KEYS_FILE, and the test context
  *   entitlement/ valid instance and link documents and the invalid set, each with its expected code
  *   consent/     valid and invalid consent records; consent-screen/ the seven blocks per key
+ *   usage/       valid and invalid usage reports (ever.usage.v1: counts and timestamps only)
  *   (connect/vectors/ is vendored byte for byte from the platform by tools/sync-contract.mjs)
  *   stats/       the provisional statistics fixtures and expected.json
  *
@@ -30,6 +31,7 @@ import {
   signClientAssertion,
   signEntitlement,
   signManifest,
+  signRotationProof,
   signStatsLinkStatement,
   testKey,
   testRootEntry,
@@ -153,8 +155,28 @@ function requestCases() {
     ),
     keys: c(
       'KeyRotate',
-      { public_jwk: { kty: 'OKP', crv: 'Ed25519', x: testKey('connectNext').x } },
-      { 'extra-field': (b) => [extra(b), '/unexpected_field'] },
+      {
+        public_jwk: { kty: 'OKP', crv: 'Ed25519', x: testKey('connectNext').x },
+        current_key_proof: signRotationProof({
+          key: connect,
+          instanceId: IDS.instance,
+          origin: ISSUER,
+          newX: testKey('connectNext').x,
+          iat: NOW,
+        }),
+        new_key_proof: signRotationProof({
+          key: testKey('connectNext'),
+          instanceId: IDS.instance,
+          origin: ISSUER,
+          newX: testKey('connectNext').x,
+          iat: NOW,
+        }),
+      },
+      {
+        // A token alone never rotates a key: both proofs are required.
+        'missing-proof': (b) => [Object.fromEntries(Object.entries(b).filter(([k]) => k !== 'new_key_proof')), '/new_key_proof'],
+        'extra-field': (b) => [extra(b), '/unexpected_field'],
+      },
     ),
     'person-link': c(
       'PersonLinkCreate',
@@ -720,6 +742,56 @@ function consentRecords() {
   return files;
 }
 
+function usageReports() {
+  const files = {};
+  const expected = {};
+  const base = {
+    schema: 'ever.usage.v1',
+    instance_id: IDS.instance,
+    measured_at: iso(NOW),
+    units: [{ unit: 'employee', quantity: 42, method: 'active_at_measurement' }],
+  };
+  const valid = {
+    employees: base,
+    'tenant-peak': {
+      ...base,
+      product_tenant_id: 'tenant-1',
+      units: [
+        { unit: 'user', quantity: 17, method: 'peak_in_period' },
+        { unit: 'seat', quantity: 12, method: 'active_at_measurement' },
+      ],
+    },
+    'no-units': { ...base, units: [] },
+  };
+  const unit = (extra) => ({ ...base, units: [{ ...base.units[0], ...extra }] });
+  const invalid = {
+    'unknown-unit': [unit({ unit: 'invoice' }), '/units/0/unit', 'a unit outside the list'],
+    'negative-quantity': [unit({ quantity: -1 }), '/units/0/quantity', 'a count is never negative'],
+    'fractional-quantity': [unit({ quantity: 4.5 }), '/units/0/quantity', 'a count is a whole number'],
+    'person-name': [unit({ name: 'Ada' }), '/units/0/name', 'counts only: never a name'],
+    'extra-field': [{ ...base, email: 'owner@example.com' }, '/email', 'closed at every level'],
+    'uuid-instance': [{ ...base, instance_id: IDS.statsInstance }, '/instance_id', 'the installation id is a ULID'],
+  };
+  for (const [name, report] of Object.entries(valid)) {
+    const v = validateSchema('usage', report);
+    if (!v.ok) throw new Error(`usage/valid/${name}.json does not validate: ${JSON.stringify(v.errors[0])}`);
+    files[`usage/valid/${name}.json`] = json(report);
+    expected[`valid/${name}.json`] = { valid: true };
+  }
+  for (const [name, [report, path, reason]] of Object.entries(invalid)) {
+    const v = validateSchema('usage', report);
+    if (v.ok) throw new Error(`usage/invalid/${name}.json validates`);
+    if (v.errors[0].path !== path) throw new Error(`usage/invalid/${name}.json fails at ${v.errors[0].path}, expected ${path}`);
+    files[`usage/invalid/${name}.json`] = json(report);
+    expected[`invalid/${name}.json`] = { valid: false, path, reason };
+  }
+  files['usage/expected.json'] = json({
+    description: 'Verdict of each usage report against ever.usage.v1.json; invalid reports fail at the given path.',
+    fixtures: expected,
+  });
+  return files;
+}
+
 export const LEGAL = {
   terms_url: 'https://ever.co/legal/terms',
   terms_version: '2026-10',
@@ -792,6 +864,7 @@ export function buildAll() {
     ...entitlements(),
     ...consentRecords(),
     ...consentScreens(constants, integrations),
+    ...usageReports(),
     ...Object.fromEntries(Object.entries(statsFixtures()).map(([p, t]) => [`stats/${p}`, t])),
   };
   files['index.json'] = json(fixtureIndex(files));
@@ -825,6 +898,8 @@ function fixtureIndex(files) {
     entries.push({ file: `entitlement/valid/${name}.claims.json`, kind: 'schema', schema: 'entitlement', valid: true, typed: true });
   for (const [name, e] of Object.entries(read('consent/expected.json').fixtures))
     entries.push({ file: `consent/${name}`, kind: 'schema', schema: 'consent', valid: e.valid, typed: e.valid });
+  for (const [name, e] of Object.entries(read('usage/expected.json').fixtures))
+    entries.push({ file: `usage/${name}`, kind: 'schema', schema: 'usage', valid: e.valid, typed: e.valid });
   for (const [name, e] of Object.entries(read('stats/expected.json').fixtures)) {
     // Ingest-layer fixtures are schema-valid documents the ingest refuses for other reasons.
     const valid = e.layer === 'ingest' ? true : e.status === 202;
@@ -842,7 +917,7 @@ function main() {
   const check = process.argv.includes('--check');
   const files = buildAll();
   // connect/vectors/ is vendored from the platform (tools/sync-contract.mjs), not built here.
-  const managed = ['requests', 'feed', 'keys', 'entitlement', 'consent', 'consent-screen', 'stats'];
+  const managed = ['requests', 'feed', 'keys', 'entitlement', 'consent', 'consent-screen', 'stats', 'usage'];
   const current = {};
   for (const dir of managed)
     for (const p of walk(join(REPO, FIXTURES, dir))) {

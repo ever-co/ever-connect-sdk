@@ -175,6 +175,7 @@ pub fn schema(key: &str, value: &Value) -> Option<Result<Value, String>> {
         "entitlement" => rt::<schemas::entitlement_v1::EntitlementV1>(value),
         "consent" => rt::<schemas::consent_v1::ConsentV1>(value),
         "keyManifest" => rt::<schemas::key_manifest_v1::KeyManifestV1>(value),
+        "usage" => rt::<schemas::usage_v1::UsageReportV1>(value),
         _ => return None,
     })
 }

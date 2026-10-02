@@ -4,7 +4,7 @@
 //! * [`openapi::components`]: request and response types of the instance-facing contract
 //!   (`contracts/openapi/ever-platform.v1.yaml`), generated with typify.
 //! * [`schemas`]: types of the JSON Schemas (statistics report, entitlement document, consent
-//!   record, key manifest) and of the data of every instance-audience event type.
+//!   record, key manifest, usage report) and of the data of every instance-audience event type.
 //! * [`constants`], [`integrations`], [`outbound_calls`] and the `schema_*` accessors: the
 //!   contract files themselves, parsed on first use.
 //! * [`step_up`]: the types and pure checks of the in-product consent dialog's fresh sign-in.
@@ -111,6 +111,11 @@ pub fn schema_key_manifest_v1() -> &'static str {
     schema("ever.key-manifest.v1.json")
 }
 
+/// The `ever.usage.v1` JSON Schema (a usage report of the `usage_reporting` integration), verbatim.
+pub fn schema_usage_v1() -> &'static str {
+    schema("ever.usage.v1.json")
+}
+
 /// The event schemas: `envelope.schema.json`, `common.schema.json` and one data schema per
 /// instance-audience event type, by file name.
 pub fn event_schemas() -> &'static [(&'static str, &'static str)] {
@@ -151,6 +156,7 @@ mod tests {
             schema_entitlement_v1(),
             schema_consent_v1(),
             schema_key_manifest_v1(),
+            schema_usage_v1(),
         ] {
             let v: Value = serde_json::from_str(text).unwrap();
             assert_eq!(v["$schema"], "https://json-schema.org/draft/2020-12/schema");

@@ -1,0 +1,44 @@
+{
+  "context": {
+    "audience": "https://api.ever.test/v1/instances/me/keys",
+    "current_key": {
+      "crv": "Ed25519",
+      "kid": "_fcqCI8Y9zk",
+      "kty": "OKP",
+      "x": "Zr5-Myx6RTMyvZ0Kf32wVfXF7xoGraZtmLOftoEMRzo"
+    },
+    "instance_id": "01JNE7V9J03J6XQ2WN8H0Z88R5",
+    "new_key": {
+      "crv": "Ed25519",
+      "kty": "OKP",
+      "x": "C-71qeZ55qPhNP4ng3v_MsfLX11E6gm8sOVCutakwMw"
+    },
+    "new_key_thumbprint": "9ZHZPi2yVG0JrD0Xiord_cdN_4EdgeQKRIpz5HF5JF0",
+    "now": 1793613600,
+    "overlap_s": 604800,
+    "previous_key": {
+      "crv": "Ed25519",
+      "kid": "7SPYUxJaOs8",
+      "kty": "OKP",
+      "x": "C1E62bSSQBXKCQLtB5BE06xdvsIwbwaUjBDajrbjny0"
+    },
+    "rotated_at": 1793354400,
+    "seen_jti": [
+      "replayed-jti-0000000000"
+    ]
+  },
+  "description": "both proofs carry the same jti",
+  "expected": {
+    "code": "invalid_client",
+    "status": 401
+  },
+  "request": {
+    "current_key_proof": "eyJhbGciOiJFZERTQSIsImtpZCI6Il9mY3FDSThZOXprIiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL2FwaS5ldmVyLnRlc3QvdjEvaW5zdGFuY2VzL21lL2tleXMiLCJjbmYiOnsiamt0IjoiOVpIWlBpMnlWRzBKckQwWGlvcmRfY2ROXzRFZGdlUUtSSXB6NUhGNUpGMCJ9LCJleHAiOjE3OTM2MTM5MDAsImlhdCI6MTc5MzYxMzYwMCwiaXNzIjoiMDFKTkU3VjlKMDNKNlhRMldOOEgwWjg4UjUiLCJqdGkiOiJyb3RhdGlvbi1qdGktMDAwMDAwMDAxMyIsInN1YiI6IjAxSk5FN1Y5SjAzSjZYUTJXTjhIMFo4OFI1In0.R3IF9pfcIenieUWBCKKyfyx-jwDN1xYLiHFJlQiuOxlM0kxHj1lc6ieY6IRyXiCg7dL_xlnC9397WwZRXNsBAA",
+    "new_key_proof": "eyJhbGciOiJFZERTQSIsImtpZCI6IlVoYUtuQmtzYlJVIiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL2FwaS5ldmVyLnRlc3QvdjEvaW5zdGFuY2VzL21lL2tleXMiLCJjbmYiOnsiamt0IjoiOVpIWlBpMnlWRzBKckQwWGlvcmRfY2ROXzRFZGdlUUtSSXB6NUhGNUpGMCJ9LCJleHAiOjE3OTM2MTM5MDAsImlhdCI6MTc5MzYxMzYwMCwiaXNzIjoiMDFKTkU3VjlKMDNKNlhRMldOOEgwWjg4UjUiLCJqdGkiOiJyb3RhdGlvbi1qdGktMDAwMDAwMDAxMyIsInN1YiI6IjAxSk5FN1Y5SjAzSjZYUTJXTjhIMFo4OFI1In0.Vzu6TACigAyBVhyIHGMycRT-BtZ2U3o2dMt0PUU8wu7SBukOGi1g5X9Ggcio4CaluRy9dKIuk1t2NIao3TyjCA",
+    "public_jwk": {
+      "crv": "Ed25519",
+      "kty": "OKP",
+      "x": "C-71qeZ55qPhNP4ng3v_MsfLX11E6gm8sOVCutakwMw"
+    }
+  }
+}

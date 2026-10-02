@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import YAML from 'yaml';
+import { checkPins } from '../check-schema-drift.mjs';
 import { REPO, readJson } from '../lib/common.mjs';
 import { checkRows } from '../sync-contract.mjs';
 
@@ -114,4 +115,15 @@ test('the committed contract matches the platform checkout (when EVER_PLATFORM_R
   }
   const { execFileSync } = await import('node:child_process');
   execFileSync(process.execPath, ['tools/sync-contract.mjs', '--check'], { cwd: REPO, stdio: 'pipe' });
+});
+
+test('the vendored schemas match the checksums the platform pins (contracts/SCHEMAS.sha256)', () => {
+  const files = readJson(join(REPO, 'contracts/VENDOR.json')).files;
+  const pinned = ['contracts/schemas/ever.entitlement.v1.json', 'contracts/schemas/ever.usage.v1.json'].map((p) =>
+    files.find((f) => f.path === p),
+  );
+  const pins = `# comment\n${pinned.map((f) => `${f.sha256}  ${f.source}`).join('\n')}\n`;
+  assert.deepEqual(checkPins(pins, files), []);
+  assert.match(checkPins(pins.replace(pinned[1].sha256, '0'.repeat(64)), files)[0], /the platform pins/);
+  assert.match(checkPins(`${'1'.repeat(64)}  contracts/other/x.json\n`, files)[0], /not vendored/);
 });

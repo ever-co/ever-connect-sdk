@@ -25,15 +25,15 @@ export const linkHandlers = {
   instanceCreateTenantLink(ctx) {
     const { state, instance, body } = ctx;
     issuance(state, 'link codes');
-    windowOpen(state, ctx);
+    windowOpen(state, ctx, 'link');
     const code = String(body.link_code).trim().toUpperCase();
     const entry = LINK_CODE_SHAPE.test(code) ? state.codes.get(code) : null;
     if (!entry || entry.kind !== 'link' || entry.used || entry.revoked || entry.expires_at <= state.now()) {
-      countWrong(state, ctx);
+      countWrong(state, ctx, 'link');
       fail(422, 'code_invalid');
     }
     if (entry.product && entry.product !== body.product) {
-      countWrong(state, ctx);
+      countWrong(state, ctx, 'link');
       fail(422, 'product_mismatch', 'this link code was minted for another product');
     }
     const dup = activeLinks(instance).find(

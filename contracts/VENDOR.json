@@ -2,14 +2,14 @@
   "description": "Where every contract file of this repository comes from. Written by tools/sync-contract.mjs; checked by tools/check-schema-drift.mjs. `provisional` sources are drafts the platform has not published yet: tools/check-schema-drift.mjs --strict refuses them.",
   "platform": {
     "repository": "ever-co/platform",
-    "commit": "371e6343a4043e88ade69c60e46caf11cfb9fc75"
+    "commit": "882d1faf6b8ec07cc389e325bf3c9930f57f8003"
   },
   "openapi": {
     "target": "contracts/openapi/ever-platform.v1.yaml",
-    "sha256": "84ddd5fba2c9faa8fe271b0914614a6313b4312a290169219011bf5128ce2b9c",
+    "sha256": "d13a95de1904a62cfdcda4ef9375c6fc21dfc371ba1e98bbda0a27689bb6d17e",
     "pinned": {
       "source": "contracts/openapi/ever-api.v1.json",
-      "sha256": "ebab78ce235a26ac24eb980daac5e61037846c4c0091565e31cc72187957df04"
+      "sha256": "b9e90f27d76f3b62f5999ea6a01a355ee92092cc1c646c34ea197fbe7d87c718"
     },
     "design": {
       "source": "docs/specs/api",
@@ -120,12 +120,21 @@
     },
     {
       "path": "contracts/schemas/ever.entitlement.v1.json",
-      "source": "docs/specs/contracts/ever.entitlement.v1.schema.json",
-      "source_sha256": "f4a48ba7bd70bfddb85f220092806f8553945a8f9448ad234a0ca6e96b880197",
+      "source": "contracts/entitlements/ever.entitlement.v1.schema.json",
+      "source_sha256": "c39ffc42f6dbc2d871b1af04dcdc9a0f7472ca726612dd82ff712fdf3fd6bd79",
       "sha256": "c39ffc42f6dbc2d871b1af04dcdc9a0f7472ca726612dd82ff712fdf3fd6bd79",
-      "transform": "json-public-description",
-      "provisional": true,
-      "upstream": "contracts/entitlements/ever.entitlement.v1.schema.json"
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/schemas/ever.usage.v1.json",
+      "source": "contracts/usage/ever.usage.v1.schema.json",
+      "source_sha256": "d06ef9bfe14fb43d91566a7d58ed70f10b934f3941d449ac2295094288d47237",
+      "sha256": "d06ef9bfe14fb43d91566a7d58ed70f10b934f3941d449ac2295094288d47237",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
     },
     {
       "path": "contracts/integrations/catalog.v1.json",
@@ -510,6 +519,87 @@
       "source": "contracts/connect/vectors/assertion-wrong-aud.json",
       "source_sha256": "8bb16c2b9e8624e3224dad56377fef09636d86e8e187148f23beafd2a16bb6c7",
       "sha256": "8bb16c2b9e8624e3224dad56377fef09636d86e8e187148f23beafd2a16bb6c7",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/connect/vectors/rotation-bound-to-another-key.json",
+      "source": "contracts/connect/vectors/rotation-bound-to-another-key.json",
+      "source_sha256": "8c9cdcca52bc6c02dfb8566b02760b27b04ee711a6715b0e9bd327ef91f02459",
+      "sha256": "8c9cdcca52bc6c02dfb8566b02760b27b04ee711a6715b0e9bd327ef91f02459",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/connect/vectors/rotation-new-key-proof-by-current-key.json",
+      "source": "contracts/connect/vectors/rotation-new-key-proof-by-current-key.json",
+      "source_sha256": "1c0429fe4723fcc9e71f79ec6b3e39f2c0a0f35effa17762af241aec3f24d0f3",
+      "sha256": "1c0429fe4723fcc9e71f79ec6b3e39f2c0a0f35effa17762af241aec3f24d0f3",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/connect/vectors/rotation-other-instance.json",
+      "source": "contracts/connect/vectors/rotation-other-instance.json",
+      "source_sha256": "2d91f9842899ef017ddfc4344067a54be23ea15ce29cc7a6db1d719e109db286",
+      "sha256": "2d91f9842899ef017ddfc4344067a54be23ea15ce29cc7a6db1d719e109db286",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/connect/vectors/rotation-replayed-jti.json",
+      "source": "contracts/connect/vectors/rotation-replayed-jti.json",
+      "source_sha256": "57eb55b9fc67e2d94528467c79f112ca7a7312f1c4ceb7f44989933f4086d234",
+      "sha256": "57eb55b9fc67e2d94528467c79f112ca7a7312f1c4ceb7f44989933f4086d234",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/connect/vectors/rotation-same-jti.json",
+      "source": "contracts/connect/vectors/rotation-same-jti.json",
+      "source_sha256": "6320f61068258d902b9fc5830f0f0af9f71612c9807f7d18772fa5cf59ba9ea6",
+      "sha256": "6320f61068258d902b9fc5830f0f0af9f71612c9807f7d18772fa5cf59ba9ea6",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/connect/vectors/rotation-signed-by-previous-key.json",
+      "source": "contracts/connect/vectors/rotation-signed-by-previous-key.json",
+      "source_sha256": "473b497192fa0eeaf47704ac6ddb3c358d586372ab44c22e19f3b24a027d96c1",
+      "sha256": "473b497192fa0eeaf47704ac6ddb3c358d586372ab44c22e19f3b24a027d96c1",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/connect/vectors/rotation-token-audience.json",
+      "source": "contracts/connect/vectors/rotation-token-audience.json",
+      "source_sha256": "2ecd9a70f38ee6248ba6c29be662eb963c17b0b588cb4cecb16a90a5ad1a8186",
+      "sha256": "2ecd9a70f38ee6248ba6c29be662eb963c17b0b588cb4cecb16a90a5ad1a8186",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/connect/vectors/rotation-unbound.json",
+      "source": "contracts/connect/vectors/rotation-unbound.json",
+      "source_sha256": "b124eb61ddbe9c42e854c62c9cef4786e1e5644847ea51df645ccf76105cd6b9",
+      "sha256": "b124eb61ddbe9c42e854c62c9cef4786e1e5644847ea51df645ccf76105cd6b9",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/connect/vectors/rotation-valid.json",
+      "source": "contracts/connect/vectors/rotation-valid.json",
+      "source_sha256": "2a4c730f36bd6be7313995bed28dd53977a425a9058f91fe48f84b429a41c104",
+      "sha256": "2a4c730f36bd6be7313995bed28dd53977a425a9058f91fe48f84b429a41c104",
       "transform": null,
       "provisional": false,
       "upstream": null

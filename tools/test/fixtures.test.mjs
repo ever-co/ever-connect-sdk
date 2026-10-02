@@ -5,8 +5,8 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { REPO, readJson } from '../lib/common.mjs';
-import { verifyAssertion } from '../mock-platform/src/assertion.mjs';
-import { fromB64url, sha256Hex } from '../mock-platform/src/crypto.mjs';
+import { verifyAssertion, verifyRotation } from '../mock-platform/src/assertion.mjs';
+import { fromB64url, sha256Hex, thumbprint } from '../mock-platform/src/crypto.mjs';
 import { validateComponent, validateEnvelope, validateEventData, validatePending, validateSchema } from '../mock-platform/src/validate.mjs';
 import { verifyEntitlement, verifyManifest } from './lib/reference-verify.mjs';
 
@@ -113,6 +113,16 @@ test('consent records: valid ones validate, invalid ones fail at their path', ()
   assert.equal(fixture('consent/valid/product-ui.json').consent_source, 'product_ui');
 });
 
+test('usage reports: counts and timestamps only; valid ones validate, invalid ones fail at their path', () => {
+  const { fixtures } = fixture('usage/expected.json');
+  assert.ok(Object.keys(fixtures).length >= 8);
+  for (const [file, e] of Object.entries(fixtures)) {
+    const r = validateSchema('usage', fixture(`usage/${file}`));
+    assert.equal(r.ok, e.valid, file);
+    if (!e.valid) assert.equal(r.errors[0].path, e.path, file);
+  }
+});
+
 test('consent screens: seven blocks per non-hidden key, in-product consent refused for the two app-only keys', () => {
   const constants = readJson(join(REPO, 'contracts/constants.json'));
   const files = readdirSync(join(F, 'consent-screen')).sort();
@@ -137,7 +147,9 @@ test('consent screens: seven blocks per non-hidden key, in-product consent refus
 
 test('client-assertion vectors: the platform rules give each vector its expected answer', () => {
   const dir = join(F, 'connect/vectors');
-  const files = readdirSync(dir).sort();
+  const files = readdirSync(dir)
+    .filter((f) => f.startsWith('assertion-'))
+    .sort();
   assert.ok(files.length >= 10);
   for (const file of files) {
     const v = readJson(join(dir, file));
@@ -150,6 +162,30 @@ test('client-assertion vectors: the platform rules give each vector its expected
       seenJti: (jti) => c.seen_jti.includes(jti),
     });
     assert.equal(r.ok ? 200 : 401, v.expected.status, `${file}: ${r.reason ?? 'ok'}`);
+  }
+});
+
+test('rotation vectors: two proofs, the current key and the new key, both binding the new key', () => {
+  const dir = join(F, 'connect/vectors');
+  const files = readdirSync(dir)
+    .filter((f) => f.startsWith('rotation-'))
+    .sort();
+  assert.ok(files.length >= 9);
+  for (const file of files) {
+    const v = readJson(join(dir, file));
+    const c = v.context;
+    assert.equal(thumbprint(c.new_key.x), c.new_key_thumbprint, `${file}: the RFC 7638 thumbprint`);
+    const r = verifyRotation(v.request.current_key_proof, v.request.new_key_proof, {
+      now: c.now,
+      audience: c.audience,
+      instanceId: c.instance_id,
+      currentKey: c.current_key,
+      newKey: { x: v.request.public_jwk.x },
+      thumbprint: thumbprint(v.request.public_jwk.x),
+      seenJti: (jti) => c.seen_jti.includes(jti),
+    });
+    assert.equal(r.ok ? 200 : 401, v.expected.status, `${file}: ${r.reason ?? 'ok'}`);
+    if (!r.ok) assert.equal(v.expected.code, 'invalid_client', file);
   }
 });
 

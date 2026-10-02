@@ -22,6 +22,7 @@ describe('@ever-co/connect-contracts', () => {
     const cjs = require('@ever-co/connect-contracts');
     for (const mod of [esm, cjs]) {
       expect(mod.SCHEMAS.stats.$id).toBe('https://api.ever.co/v1/stats/schema/ever.stats.v1');
+      expect(mod.SCHEMAS.usage.$id).toBe('https://api.ever.co/v1/usage/schema/ever.usage.v1');
       expect(mod.INTEGRATIONS.stats_link.key).toBe('stats_link');
       expect(mod.CONSTANTS.stats_headers.key).toBe('Ever-Stats-Key');
       expect(mod.ROWS).toHaveLength(34);

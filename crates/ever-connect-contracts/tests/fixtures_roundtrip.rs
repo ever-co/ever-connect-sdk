@@ -60,6 +60,7 @@ fn load() -> Schemas {
         ("entitlement", "ever.entitlement.v1.json"),
         ("consent", "ever.consent.v1.json"),
         ("keyManifest", "ever.key-manifest.v1.json"),
+        ("usage", "ever.usage.v1.json"),
     ] {
         let schema = read(format!("contracts/schemas/{file}"));
         let id = schema["$id"].as_str().unwrap().to_owned();

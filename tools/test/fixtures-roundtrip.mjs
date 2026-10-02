@@ -28,6 +28,7 @@ function validators() {
     ['entitlement', 'ever.entitlement.v1.json'],
     ['consent', 'ever.consent.v1.json'],
     ['keyManifest', 'ever.key-manifest.v1.json'],
+    ['usage', 'ever.usage.v1.json'],
   ]) {
     const schema = read(`contracts/schemas/${file}`);
     strict.addSchema(schema);

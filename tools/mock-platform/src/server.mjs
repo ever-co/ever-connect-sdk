@@ -10,7 +10,7 @@ import { sha256Hex } from './crypto.mjs';
 import { isInstanceWide } from './model.mjs';
 import { fail, HttpProblem, problemBody } from './problem.mjs';
 import { Recorder } from './record.mjs';
-import { connectHandlers } from './routes/connect.mjs';
+import { connectHandlers, keyAccepted } from './routes/connect.mjs';
 import { consentHandlers } from './routes/consent.mjs';
 import { instanceHandlers } from './routes/instance.mjs';
 import { linkHandlers } from './routes/links.mjs';
@@ -142,6 +142,10 @@ function authInstance(ctx) {
   if (!t || t.expires_at <= ctx.state.now()) fail(401, 'unauthorized', 'no valid instance token');
   const instance = ctx.state.instances.get(t.instance_id);
   if (t.revoked || !instance || instance.status === 'revoked') fail(401, 'credential_revoked');
+  // A token minted with a key the installation no longer accepts (a second rotation dropped it, or
+  // its overlap ended) stops while the installation stays connected: mint a new one.
+  if (t.kid !== null && !keyAccepted(instance, t.kid, ctx.state.now()))
+    fail(401, 'unauthorized', 'the key that minted this token is no longer accepted: mint a new token');
   const limit = ctx.state.faults.revoke_credential_at_call;
   ctx.state.authCalls += 1;
   if (limit !== null && ctx.state.authCalls > limit) {

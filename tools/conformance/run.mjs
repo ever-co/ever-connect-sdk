@@ -61,6 +61,8 @@ export function buildRequest(c, base) {
       iat: Math.floor(Date.now() / 1000),
       jti: b64url(sha256(`conformance/${randomUUID()}`)).slice(0, 22),
     }),
+    // An instance token no platform issued: the shape of one, from a public seed.
+    unknown_instance_token: `evit_${b64url(sha256('ever-connect-sdk/conformance/unknown-token'))}`,
   };
   const headers = { 'user-agent': USER_AGENT };
   if (c.stats) {
@@ -76,6 +78,7 @@ export function buildRequest(c, base) {
   }
   const r = c.request;
   if (r.idempotent) headers['idempotency-key'] = randomUUID();
+  if (r.bearer) headers.authorization = `Bearer ${substitute(r.bearer, vars)}`;
   let body;
   if (r.body !== undefined) {
     headers['content-type'] = 'application/json';
