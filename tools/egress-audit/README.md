@@ -1,9 +1,9 @@
 # ever-egress-audit
 
 The egress audit of a product that hosts the Ever Platform modules. It runs the product's own
-compose files with every compose network sealed, watches every DNS query and every connection
+compose files with every Docker network sealed, watches every DNS query and every connection
 attempt of each product process from before the process starts, drives the product from inside the
-sealed network, and fails the run when the product looks up an Ever host, tries to reach anything
+sealed Docker network, and fails the run when the product looks up an Ever host, tries to reach anything
 outside the compose services, answers a module route while the modules are off, or makes an Ever
 Platform call its mode does not allow.
 
@@ -38,9 +38,9 @@ asserts the DNS and connection rules below.
 1. **DNS.** Every name queried must be a compose service name (or alias, or container name), or in
    `allowed_external_hosts`. Any name under `ever.co`, `ever.team`, `gauzy.co`, `ever.works`,
    `rec.so` or `traduora.co` fails, whatever the allow-list says (the config schema refuses them).
-   Reverse lookups of addresses inside the sealed networks are allowed.
+   Reverse lookups of addresses inside the sealed Docker networks are allowed.
 2. **Connection attempts.** No TCP SYN and no UDP packet (DNS aside) to an address outside the
-   sealed networks; loopback is inside.
+   sealed Docker networks; loopback is inside.
 3. **Product logs.** No `ENOTFOUND`, `ECONNREFUSED` or `EAI_AGAIN` for a host outside the compose
    services.
 4. **Module routes.** In `off`, every route in `module_routes` answers 404.
@@ -56,7 +56,7 @@ tcpdump cannot capture`). A proven violation exits 1 even when part of the run f
 `run.mjs` adds an overlay (`compose.audit.yml`, filled in per run) after the product's compose
 files:
 
-- **Sealed compose networks.** Every compose network becomes `internal: true` (no route out); the
+- **Sealed Docker networks.** Every Docker network of the compose files becomes `internal: true` (no route out); the
   default one gets a fixed /24.
 - **One resolver.** CoreDNS (`Corefile`) is the only resolver of the product processes. It logs
   every query, answers the compose names (through Docker's resolver of its own container) and
@@ -64,12 +64,12 @@ files:
 - **One sniffer per product process.** Each service in `process_services` gets a namespace holder
   that owns its network namespace, carries the service's name as an alias and points the shared
   `resolv.conf` at CoreDNS. A `nicolaka/netshoot` sniffer joins that namespace with `NET_RAW` and
-  `NET_ADMIN`, routes every address outside the sealed networks to a sink that forwards nothing
+  `NET_ADMIN`, routes every address outside the sealed Docker networks to a sink that forwards nothing
   (so an attempt leaves a SYN to see instead of failing silently), and starts `tcpdump` before the
   product process starts. The product joins the same namespace (`network_mode: service:<holder>`).
 - **The mock platform** runs only in positive modes, built from the bundled mock (or `mock_image`),
   with a real-time clock so products sign with their own clock.
-- **The driver.** A small container on the sealed network waits for `health_url`, runs the
+- **The driver.** A small container on the sealed Docker network waits for `health_url`, runs the
   adapter's hooks, requests the managed operation (`positive_managed`), probes the module routes
   and reads the mock's record. Its own traffic never passes through a sniffed namespace.
 

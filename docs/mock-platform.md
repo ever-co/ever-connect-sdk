@@ -24,7 +24,7 @@ docker run --rm -p 8080:8080 ever-mock-platform:local
 |---|---|---|
 | `--port` | `8080` (or `PORT`) | listening port |
 | `--host` | `0.0.0.0` (or `HOST`) | listening address |
-| `--config <file>` | none | configuration file (section 2); `EVER_MOCK_CONFIG_JSON` passes the same JSON through the environment |
+| `--config <file>` | none | configuration file (see *Configuration* below); `EVER_MOCK_CONFIG_JSON` passes the same JSON through the environment |
 | `--record <file.jsonl>` | none | appends one line per call received |
 | `--state-out <file.json>` | none | writes the state on exit (`SIGTERM`, `SIGINT`) |
 | `--fixed-clock` | off | keeps the deterministic clock instead of real time |
