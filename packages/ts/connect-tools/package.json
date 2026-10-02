@@ -2,6 +2,7 @@
   "name": "@ever-co/connect-tools",
   "version": "1.0.0-rc.1",
   "description": "Dev-only tools for products that host the Ever Platform modules: the mock platform (ever-mock-platform) and the egress audit (ever-egress-audit). Products depend on it instead of copying either tool.",
+  "license": "Apache-2.0",
   "private": true,
   "type": "module",
   "engines": {

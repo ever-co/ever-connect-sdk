@@ -2,6 +2,7 @@
   "name": "ever-mock-platform",
   "version": "0.1.0",
   "description": "A mock of the Ever Platform API for product CI: every outbound call of the Ever Platform modules, with the platform's statuses and problem codes.",
+  "license": "Apache-2.0",
   "private": true,
   "type": "module",
   "engines": {

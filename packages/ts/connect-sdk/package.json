@@ -2,6 +2,7 @@
   "name": "@ever-co/connect-sdk",
   "version": "1.0.0-rc.1",
   "description": "Ever Platform connection SDK. This skeleton carries the managed-operation runner; the client, the verifiers and the statistics signer are added on top of it.",
+  "license": "Apache-2.0",
   "private": true,
   "type": "module",
   "sideEffects": false,
