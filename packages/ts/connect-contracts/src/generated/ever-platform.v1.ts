@@ -63,14 +63,13 @@ export interface paths {
         readonly get?: never;
         readonly put?: never;
         /**
-         * Code-first connect (redeem a connect code with the instance key)
-         * @description Creates the instance in one transaction, pins the presented public key
-         *     and emits `instance.connected`. A 24-hour code redeemed outside its
-         *     originating session yields `status: pending_approval`. Unknown,
-         *     expired, revoked and consumed codes answer a byte-identical
-         *     `422 code_invalid`; `422 product_mismatch` when the code was minted for
-         *     another product; `422 product_not_supported` for products that accept
-         *     no connections. Replays with the same `Idempotency-Key` return the
+         * Redeems a connect code with the installation's own Ed25519 connect key (Flow A): creates the
+         *     instance (or reconnects this organization's disconnected instance holding the same key) and
+         *     pins the key. A 24-hour code (`ever_sh`, `provisioning`, `partner`) redeems as
+         *     `pending_approval`: until an owner or admin approves it, every instance route but
+         *     `GET /v1/instances/me` answers `403 instance_pending_approval`. Unknown, expired, revoked,
+         *     consumed and malformed codes answer one byte-identical `422 code_invalid`; ten wrong codes in
+         *     an hour from one caller answer `429`. A replay with the same `Idempotency-Key` returns the
          *     original answer.
          */
         readonly post: operations["connectRedeem"];
@@ -403,7 +402,13 @@ export interface paths {
         };
         readonly get?: never;
         readonly put?: never;
-        /** Rotate the instance key (old key valid 7 days) */
+        /**
+         * Rotates the instance's connect key: the new key signs assertions from now on, the replaced key
+         *     keeps minting tokens for 7 days (`previous_valid_until`), and tokens already minted stay valid
+         *     until they expire. Only one replaced key is kept: rotating again inside the overlap drops the
+         *     older key at once, with every token minted with it (the way to cut a compromised key now). The
+         *     new key must be an Ed25519 public JWK no installation holds; the platform assigns its `kid`.
+         */
         readonly post: operations["instanceRotateKey"];
         readonly delete?: never;
         readonly options?: never;
@@ -564,8 +569,11 @@ export interface paths {
         readonly get?: never;
         readonly put?: never;
         /**
-         * Attach a product workspace with a link code
-         * @description `422 code_invalid` for unknown, expired, revoked or consumed codes (one message; no enumeration). Emits `tenant_link.created`; a per-link entitlement and integration states are created.
+         * Attaches a product workspace to the Ever organization that minted the link code: a
+         *     `tenant_link` with `link_method: link_code`, its `tenant_link.created` event to the
+         *     organization and the installation. Unknown, expired, revoked, consumed and malformed codes
+         *     answer one `422 code_invalid`; one product tenant (and organization) links to one Ever
+         *     organization (`409 already_linked`).
          */
         readonly post: operations["instanceCreateTenantLink"];
         readonly delete?: never;
@@ -720,14 +728,14 @@ export interface paths {
         readonly get?: never;
         readonly put?: never;
         /**
-         * Exchange an RFC 7523 assertion for a 1-hour instance token
-         * @description OAuth 2.0 `client_credentials` grant with RFC 7523 client authentication
-         *     (`client_assertion_type = urn:ietf:params:oauth:client-assertion-type:jwt-bearer`).
-         *     An assertion that fails verification (unknown instance or `kid`, bad
-         *     signature, replayed `jti`, `exp` more than 5 minutes ahead, skew over
-         *     300 s) answers `401 invalid_client`; a disconnected or revoked instance
-         *     answers `401 credential_revoked` (the product runs its local disconnect
-         *     steps).
+         * Exchanges an RFC 7523 client assertion for a one-hour instance token (`client_credentials`
+         *     with `client_assertion_type = urn:ietf:params:oauth:client-assertion-type:jwt-bearer`, as
+         *     JSON or as a form). An assertion that fails verification (unknown instance, a key that is
+         *     neither the current one nor the replaced one inside its 7-day overlap, a bad signature, a
+         *     replayed `jti`, `exp` more than 300 s after `iat`, a clock skew over 300 s, an algorithm other
+         *     than `EdDSA`) answers `401 invalid_client`; a disconnected or revoked installation answers
+         *     `401 credential_revoked` (it runs its local disconnect steps). The token is opaque, lives one
+         *     hour, and is kept in memory only.
          */
         readonly post: operations["instanceToken"];
         readonly delete?: never;
@@ -1106,7 +1114,12 @@ export interface components {
             readonly version_range: string;
         };
         /** @description Connect code `EVC-XXXX-XXXX-XXXX` (Crockford base32, no I L O U; case-insensitive on input). */
-        readonly ConnectCode: string;
+        readonly ConnectCodeValue: string;
+        /**
+         * @description The kind of deployment an installation is.
+         * @enum {string}
+         */
+        readonly ConnectKind: "cloud" | "self_hosted" | "works_app";
         readonly ConsentUrl: {
             readonly expires_at: components["schemas"]["Timestamp"];
             /**
@@ -1298,7 +1311,7 @@ export interface components {
             readonly expires_in: 900;
             /** @default 5 */
             readonly interval: number;
-            readonly user_code: components["schemas"]["ConnectCode"];
+            readonly user_code: components["schemas"]["ConnectCodeValue"];
             /**
              * Format: uri
              * @constant
@@ -1460,7 +1473,7 @@ export interface components {
         };
         /**
          * @description The closed feature key set of the `ever.entitlement.v1` document
-         *     (contracts/entitlement-document.md §1.2); the same keys are used by the plan
+         *     (see the entitlement document format); the same keys are used by the plan
          *     catalog and by `Integration.requires_feature`. Adding a key is additive;
          *     clients ignore unknown keys. Managed add-ons are the `managed` object, not
          *     features.
@@ -1877,7 +1890,7 @@ export interface components {
              *     `{"alg":"EdDSA","kid":"<root kid>","typ":"ever-key-manifest+jwt"}`;
              *     payload `{"iss":"https://api.ever.co","iat":<unix s>,"exp":<iat + 30 d>,
              *     "keys_sha256":"<hex sha256 of the RFC 8785 canonical keys array>",
-             *     "root_kid":"<root kid>"}` (contracts/entitlement-document.md §4).
+             *     "root_kid":"<root kid>"}` (see the entitlement document format).
              *     Validity is the payload's `iat`/`exp`; there are no separate
              *     timestamps in the response.
              */
@@ -1893,13 +1906,22 @@ export interface components {
              */
             readonly manifest: string;
         };
+        /** @description A new connect key. */
         readonly KeyRotate: {
-            readonly public_jwk: components["schemas"]["Jwk"];
+            /** @description The new Ed25519 public JWK (no installation may hold it yet). */
+            readonly public_jwk: Record<string, never>;
         };
+        /** @description A rotated key. */
         readonly KeyRotated: {
+            /** @description The new key's id (sign assertions with it now). */
             readonly kid: string;
+            /** @description The replaced key's id. */
             readonly previous_kid: string;
-            readonly previous_valid_until: components["schemas"]["Timestamp"];
+            /**
+             * Format: date-time
+             * @description Until when the replaced key still mints tokens.
+             */
+            readonly previous_valid_until: string;
         };
         /** @description Terms, the data-processing agreement and the sub-processor list linked from every consent screen and cached by instances. One agreement covers every integration; a new `dpa_version` asks for consent again on every integration. */
         readonly Legal: {
@@ -1946,8 +1968,32 @@ export interface components {
         readonly Limits: {
             readonly [key: string]: number;
         };
-        /** @description Link code `EVL-XXXX-XXXX-XXXX` minted by an organization admin to attach a product workspace. */
-        readonly LinkCode: string;
+        /** @description A tenant link as the instance sees it (never who linked it). */
+        readonly LinkedTenant: {
+            /** @description The product tenant's name as reported. */
+            readonly display_name?: string | null;
+            /** @description The link. */
+            readonly id: string;
+            /** @description The instance. */
+            readonly instance_id: string;
+            /** @description How it was made (`link_code`, `explicit`, ...). */
+            readonly link_method: string;
+            /**
+             * Format: date-time
+             * @description When it was made.
+             */
+            readonly linked_at: string;
+            /** @description The organization it links to. */
+            readonly org_id: string;
+            /** @description The product. */
+            readonly product: string;
+            /** @description The product organization, when there is one. */
+            readonly product_org_id?: string | null;
+            /** @description The product tenant (`*`: the whole installation). */
+            readonly product_tenant_id: string;
+            /** @description `active`, `suspended`, `orphaned` or `unlinked`. */
+            readonly state: string;
+        };
         /** @description Public card projection produced by the type plugin. */
         readonly ListingCard: {
             readonly categories?: readonly string[];
@@ -2305,47 +2351,70 @@ export interface components {
          */
         readonly ProductCode: "gauzy" | "teams" | "works" | "rec" | "traduora" | "demand";
         /**
-         * @description Code-first connect. The instance-generated Ed25519 public key becomes its
-         *     credential; the same key signs anonymous stats. The body carries no
-         *     Category B data: the instance address is never sent here. It is set only
-         *     by the owner in app.ever.co (`base_url` of `PATCH
-         *     /v1/orgs/{org}/instances/{instance}`); any future instance-side
-         *     setter must carry `x-ever-integration: instance_url` and work only after
-         *     that consent exists.
+         * @description Code-first connect: the installation redeems a connect code with its own Ed25519 connect
+         *     key, which becomes its credential. The connect key never signs anonymous statistics (those
+         *     have a key of their own). The body carries no address or any other field outside this
+         *     schema: an instance's public address is set by the organization in app.ever.co, or later by
+         *     the instance through a consented integration.
          */
         readonly RedeemRequest: {
-            readonly code: components["schemas"]["ConnectCode"];
-            readonly install_source: components["schemas"]["InstallSource"];
+            /** @description The connect code, `EVC-XXXX-XXXX-XXXX` (case-insensitive). */
+            readonly code: string;
             /**
-             * @default self_hosted
-             * @enum {string}
+             * @description Where it was installed from, read from its environment (`self-hosted`, `ever.sh`,
+             *     `partner:<slug>`, ...); never inferred.
+             * @example self-hosted
              */
-            readonly kind: "cloud" | "self_hosted" | "works_app";
-            readonly product: components["schemas"]["ProductCode"];
-            readonly public_jwk: components["schemas"]["Jwk"];
-            readonly serves_products?: readonly components["schemas"]["ProductCode"][];
-            /** @description Tenant descriptor for the first link when the code pre-binds an organization. */
-            readonly tenant?: {
-                readonly display_name?: string;
-                readonly product_org_id?: string;
-                readonly product_tenant_id?: string;
-            };
-            readonly version: components["schemas"]["SemVer"];
+            readonly install_source: string;
+            readonly kind?: null | components["schemas"]["ConnectKind"];
+            /**
+             * @description The product the installation runs.
+             * @example gauzy
+             */
+            readonly product: string;
+            /** @description Its connect key: an Ed25519 public JWK (`kty: OKP`, `crv: Ed25519`, `x`). */
+            readonly public_jwk: Record<string, never>;
+            /** @description The products it serves besides its own (a Gauzy API serving Teams). */
+            readonly serves_products?: readonly string[] | null;
+            readonly tenant?: null | components["schemas"]["RedeemTenant"];
+            /**
+             * @description Its version (`major.minor.patch[-suffix]`).
+             * @example 96.1.0
+             */
+            readonly version: string;
         };
+        /** @description The connected installation and where it calls next. */
         readonly RedeemResponse: {
-            /** Format: uri */
+            /** @description The entitlement document. */
             readonly entitlement_endpoint: string;
-            /** Format: uri */
+            /** @description The event feed. */
             readonly feed_endpoint: string;
-            readonly instance_id: components["schemas"]["Ulid"];
-            readonly keys?: components["schemas"]["KeyManifest"];
-            /** @description Key id the platform assigned to the presented public key. */
+            /** @description The instance id: the assertion's `iss` and `sub`. */
+            readonly instance_id: string;
+            /** @description The key manifest as `/.well-known/ever-keys.json` serves it. */
+            readonly keys?: Record<string, never> | null;
+            /** @description The key id the platform assigned to the presented key (the assertion's `kid`). */
             readonly kid: string;
-            readonly link?: components["schemas"]["TenantLink"];
-            /** @enum {string} */
-            readonly status: "active" | "pending_approval";
-            /** Format: uri */
+            readonly link?: null | components["schemas"]["LinkedTenant"];
+            /**
+             * @description `active`, or `pending_approval` (an owner or admin approves it with the key's
+             *     fingerprint; until then every instance route but `GET /v1/instances/me` answers `403`).
+             */
+            readonly status: string;
+            /** @description `POST` an assertion here for a token. */
             readonly token_endpoint: string;
+        };
+        /** @description The tenant the redeem links when the code pre-binds the organization. */
+        readonly RedeemTenant: {
+            /** @description The product tenant's name, shown to the organization. */
+            readonly display_name?: string | null;
+            /** @description The product organization's id. */
+            readonly product_org_id?: string | null;
+            /**
+             * @description The product tenant's id (a multi-tenant product; a single-organization product links the
+             *     whole installation).
+             */
+            readonly product_tenant_id?: string | null;
         };
         /**
          * @description Active salt versions. The salt is public by design; privacy comes from
@@ -2857,12 +2926,23 @@ export interface components {
              */
             readonly unlinked_at?: string | null;
         };
-        /** @description Redeem a link code minted by the organization admin; the organization comes from the code. */
+        /**
+         * @description Redeem a link code: the product workspace becomes the same organization as the one that
+         *     minted the code.
+         */
         readonly TenantLinkCreate: {
-            readonly display_name?: string;
-            readonly link_code: components["schemas"]["LinkCode"];
-            readonly product: components["schemas"]["ProductCode"];
-            readonly product_org_id?: string;
+            /** @description The product tenant's name, shown to the organization. */
+            readonly display_name?: string | null;
+            /** @description The link code, `EVL-XXXX-XXXX-XXXX` (case-insensitive). */
+            readonly link_code: string;
+            /**
+             * @description The product the workspace runs.
+             * @example gauzy
+             */
+            readonly product: string;
+            /** @description The product organization's id. */
+            readonly product_org_id?: string | null;
+            /** @description The product tenant's id. */
             readonly product_tenant_id: string;
         };
         /**
@@ -2903,21 +2983,37 @@ export interface components {
          * @example 2026-10-02T10:00:00Z
          */
         readonly Timestamp: string;
-        /** @description RFC 7523 JWT-bearer client authentication. Assertion claims `iss = sub = instance_id`, `aud = https://api.ever.co/v1/instances/token`, random `jti`, `exp <= 5 min`, `alg EdDSA`, header `kid`. */
+        /**
+         * @description RFC 7523 client authentication with the `client_credentials` grant. The assertion is a
+         *     compact JWS (`alg: EdDSA`, `typ: JWT`, `kid`) signed with the connect key, with claims
+         *     `iss = sub = <instance id>`, `aud = <api origin>/v1/instances/token`, a random `jti` (16-128
+         *     characters, used once), `iat`, and `exp` at most 300 s after `iat`.
+         */
         readonly TokenRequest: {
+            /** @description The signed assertion. */
             readonly client_assertion: string;
-            /** @constant */
-            readonly client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
-            /** @constant */
-            readonly grant_type: "client_credentials";
+            /**
+             * @description `urn:ietf:params:oauth:client-assertion-type:jwt-bearer`.
+             * @example urn:ietf:params:oauth:client-assertion-type:jwt-bearer
+             */
+            readonly client_assertion_type: string;
+            /**
+             * @description `client_credentials`.
+             * @example client_credentials
+             */
+            readonly grant_type: string;
         };
+        /** @description An instance token. */
         readonly TokenResponse: {
-            /** @description Opaque `evit_...` token, 1 hour, keep in memory only. */
+            /** @description `evit_…`: opaque, one hour; keep it in memory only. */
             readonly access_token: string;
-            /** @constant */
-            readonly expires_in: 3600;
-            /** @constant */
-            readonly token_type: "Bearer";
+            /**
+             * Format: int64
+             * @description Seconds it lives (3600).
+             */
+            readonly expires_in: number;
+            /** @description `Bearer`. */
+            readonly token_type: string;
         };
         /**
          * @description ULID, 26 Crockford base32 characters, uppercase.
@@ -3179,7 +3275,11 @@ export interface operations {
         readonly parameters: {
             readonly query?: never;
             readonly header: {
-                /** @description Client-generated key, unique per principal, <= 128 characters. See the `Idempotency` schema. */
+                /**
+                 * @description Client-generated key, unique per principal, at most 128 characters; remembered 24 h.
+                 *     The same key with the same request replays the first answer (`Idempotency-Replayed:
+                 *     true`); with a different request it answers `422 idempotency_mismatch`.
+                 */
                 readonly "Idempotency-Key": string;
             };
             readonly path?: never;
@@ -3191,18 +3291,25 @@ export interface operations {
             };
         };
         readonly responses: {
-            /** @description Instance created. */
+            /** @description Connected (`status: active`) or waiting for approval (`status: pending_approval`) */
             readonly 201: {
                 headers: {
-                    /** @description `true` when this response was replayed from a previous request with the same `Idempotency-Key`. */
-                    readonly "Idempotency-Replayed"?: boolean;
                     readonly [name: string]: unknown;
                 };
                 content: {
                     readonly "application/json": components["schemas"]["RedeemResponse"];
                 };
             };
-            /** @description `already_connected`: the presented key already holds an active connection (disconnect first); `key_mismatch` does not apply here. */
+            /** @description Connect codes are not issued on this deployment */
+            readonly 404: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `already_connected`: the presented key already holds a connection (disconnect first) */
             readonly 409: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -3211,7 +3318,7 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Validation failed; unknown fields are rejected on writes (`validation_failed`, `schema_violation`, `code_invalid`, `idempotency_mismatch`, `mirror_owned_field`, `limit_exceeded`). */
+            /** @description `code_invalid` (unknown, expired, revoked, consumed or malformed: one answer), `product_mismatch`, `product_not_supported`, `public_jwk_invalid`, or the body does not validate */
             readonly 422: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -3220,34 +3327,9 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Rate limit exceeded for this principal class (`rate_limited`). */
+            /** @description `rate_limited`: too many wrong codes from this caller (`Retry-After`) */
             readonly 429: {
                 headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description Seconds to wait before retrying. */
-                    readonly "Retry-After"?: number;
-                    readonly [name: string]: unknown;
-                };
-                content: {
-                    readonly "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description Any other error, as a problem document. */
-            readonly default: {
-                headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
                     readonly [name: string]: unknown;
                 };
                 content: {
@@ -4054,7 +4136,11 @@ export interface operations {
         readonly parameters: {
             readonly query?: never;
             readonly header: {
-                /** @description Client-generated key, unique per principal, <= 128 characters. See the `Idempotency` schema. */
+                /**
+                 * @description Client-generated key, unique per principal, at most 128 characters; remembered 24 h.
+                 *     The same key with the same request replays the first answer (`Idempotency-Replayed:
+                 *     true`); with a different request it answers `422 idempotency_mismatch`.
+                 */
                 readonly "Idempotency-Key": string;
             };
             readonly path?: never;
@@ -4066,7 +4152,7 @@ export interface operations {
             };
         };
         readonly responses: {
-            /** @description Rotated. */
+            /** @description Rotated */
             readonly 200: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -4075,8 +4161,8 @@ export interface operations {
                     readonly "application/json": components["schemas"]["KeyRotated"];
                 };
             };
-            /** @description Validation failed; unknown fields are rejected on writes (`validation_failed`, `schema_violation`, `code_invalid`, `idempotency_mismatch`, `mirror_owned_field`, `limit_exceeded`). */
-            readonly 422: {
+            /** @description No valid instance token, or the credential is revoked */
+            readonly 401: {
                 headers: {
                     readonly [name: string]: unknown;
                 };
@@ -4084,17 +4170,18 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Any other error, as a problem document. */
-            readonly default: {
+            /** @description `instance_pending_approval` */
+            readonly 403: {
                 headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `public_jwk_invalid`: not an Ed25519 public key, the current key, or a key an installation holds */
+            readonly 422: {
+                headers: {
                     readonly [name: string]: unknown;
                 };
                 content: {
@@ -4619,7 +4706,11 @@ export interface operations {
         readonly parameters: {
             readonly query?: never;
             readonly header: {
-                /** @description Client-generated key, unique per principal, <= 128 characters. See the `Idempotency` schema. */
+                /**
+                 * @description Client-generated key, unique per principal, at most 128 characters; remembered 24 h.
+                 *     The same key with the same request replays the first answer (`Idempotency-Replayed:
+                 *     true`); with a different request it answers `422 idempotency_mismatch`.
+                 */
                 readonly "Idempotency-Key": string;
             };
             readonly path?: never;
@@ -4631,16 +4722,25 @@ export interface operations {
             };
         };
         readonly responses: {
-            /** @description Linked. */
+            /** @description Linked */
             readonly 201: {
                 headers: {
                     readonly [name: string]: unknown;
                 };
                 content: {
-                    readonly "application/json": components["schemas"]["TenantLink"];
+                    readonly "application/json": components["schemas"]["LinkedTenant"];
                 };
             };
-            /** @description Principal lacks the role, scope, integration or entitlement, or the operation needs a fresh sign-in (`forbidden_role`, `forbidden_scope`, `integration_disabled`, `integration_revoked`, `instance_pending_approval`, `entitlement_required`, `tier_required`, `sso_required`, `reauth_required`, `session_required`: an Ever ID token issued to a product, installation or App client used anywhere except the two `everIdTokenRead` reads and the in-product consent write; `step_up_required`: that consent write without a sign-in in the last 300 s; `not_connection_owner`: an installation-wide integration changed by an organization that does not own the installation). */
+            /** @description No valid instance token, or the credential is revoked */
+            readonly 401: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `instance_pending_approval` */
             readonly 403: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -4649,7 +4749,25 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Validation failed; unknown fields are rejected on writes (`validation_failed`, `schema_violation`, `code_invalid`, `idempotency_mismatch`, `mirror_owned_field`, `limit_exceeded`). */
+            /** @description Link codes are not issued on this deployment */
+            readonly 404: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `already_linked`: this product tenant is linked to another organization */
+            readonly 409: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `code_invalid` (one answer), `product_mismatch`, or the body does not validate */
             readonly 422: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -4658,17 +4776,9 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Any other error, as a problem document. */
-            readonly default: {
+            /** @description `rate_limited`: too many wrong codes from this caller (`Retry-After`) */
+            readonly 429: {
                 headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
                     readonly [name: string]: unknown;
                 };
                 content: {
@@ -5147,17 +5257,16 @@ export interface operations {
             };
         };
         readonly responses: {
-            /** @description Token. */
+            /** @description A token (`Cache-Control: no-store`) */
             readonly 200: {
                 headers: {
-                    readonly "Cache-Control"?: "no-store";
                     readonly [name: string]: unknown;
                 };
                 content: {
                     readonly "application/json": components["schemas"]["TokenResponse"];
                 };
             };
-            /** @description Missing, expired or revoked credential (`unauthorized`, `credential_revoked`). */
+            /** @description `invalid_client` (the assertion was not accepted) or `credential_revoked` (the installation is disconnected or revoked) */
             readonly 401: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -5166,17 +5275,9 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Any other error, as a problem document. */
-            readonly default: {
+            /** @description The body does not validate (a `grant_type` or `client_assertion_type` other than the two above) */
+            readonly 422: {
                 headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
                     readonly [name: string]: unknown;
                 };
                 content: {

@@ -196,32 +196,87 @@ pub mod components {
         ::serde::Deserialize, ::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
     )]
     #[serde(transparent)]
-    pub struct ConnectCode(pub ::std::string::String);
-    impl ::std::ops::Deref for ConnectCode {
+    pub struct ConnectCodeValue(pub ::std::string::String);
+    impl ::std::ops::Deref for ConnectCodeValue {
         type Target = ::std::string::String;
         fn deref(&self) -> &::std::string::String {
             &self.0
         }
     }
-    impl ::std::convert::From<ConnectCode> for ::std::string::String {
-        fn from(value: ConnectCode) -> Self {
+    impl ::std::convert::From<ConnectCodeValue> for ::std::string::String {
+        fn from(value: ConnectCodeValue) -> Self {
             value.0
         }
     }
-    impl ::std::convert::From<::std::string::String> for ConnectCode {
+    impl ::std::convert::From<::std::string::String> for ConnectCodeValue {
         fn from(value: ::std::string::String) -> Self {
             Self(value)
         }
     }
-    impl ::std::fmt::Display for ConnectCode {
+    impl ::std::fmt::Display for ConnectCodeValue {
         fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
             self.0.fmt(f)
         }
     }
-    impl ::std::str::FromStr for ConnectCode {
+    impl ::std::str::FromStr for ConnectCodeValue {
         type Err = ::std::convert::Infallible;
         fn from_str(value: &str) -> ::std::result::Result<Self, Self::Err> {
             Ok(Self(value.to_string()))
+        }
+    }
+    ///The kind of deployment an installation is.
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd,
+    )]
+    pub enum ConnectKind {
+        #[serde(rename = "cloud")]
+        Cloud,
+        #[serde(rename = "self_hosted")]
+        SelfHosted,
+        #[serde(rename = "works_app")]
+        WorksApp,
+    }
+    impl ::std::fmt::Display for ConnectKind {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Cloud => f.write_str("cloud"),
+                Self::SelfHosted => f.write_str("self_hosted"),
+                Self::WorksApp => f.write_str("works_app"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ConnectKind {
+        type Err = self::error::ConversionError;
+        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "cloud" => Ok(Self::Cloud),
+                "self_hosted" => Ok(Self::SelfHosted),
+                "works_app" => Ok(Self::WorksApp),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for ConnectKind {
+        type Error = self::error::ConversionError;
+        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for ConnectKind {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`ConsentUrl`
@@ -504,7 +559,7 @@ pub mod components {
         pub device_code: ::std::string::String,
         pub expires_in: i64,
         pub interval: i64,
-        pub user_code: ConnectCode,
+        pub user_code: ConnectCodeValue,
         pub verification_uri: ::std::string::String,
         pub verification_uri_complete: ::std::string::String,
     }
@@ -519,9 +574,10 @@ pub mod components {
     ///`DeviceTokenResponse`
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct DeviceTokenResponse {
-        ///Opaque `evit_...` token, 1 hour, keep in memory only.
+        ///`evit_…`: opaque, one hour; keep it in memory only.
         pub access_token: ::std::string::String,
         pub entitlement_endpoint: ::std::string::String,
+        ///Seconds it lives (3600).
         pub expires_in: i64,
         pub feed_endpoint: ::std::string::String,
         pub instance_id: Ulid,
@@ -529,6 +585,7 @@ pub mod components {
         pub keys: ::std::option::Option<KeyManifest>,
         pub kid: ::std::string::String,
         pub status: DeviceTokenResponseStatus,
+        ///`Bearer`.
         pub token_type: ::std::string::String,
     }
     ///`DeviceTokenResponseStatus`
@@ -1320,7 +1377,7 @@ pub mod components {
         pub version: i64,
     }
     /**The closed feature key set of the `ever.entitlement.v1` document
-    (contracts/entitlement-document.md §1.2); the same keys are used by the plan
+    (see the entitlement document format); the same keys are used by the plan
     catalog and by `Integration.requires_feature`. Adding a key is additive;
     clients ignore unknown keys. Managed add-ons are the `managed` object, not
     features.
@@ -2560,7 +2617,7 @@ pub mod components {
         `{"alg":"EdDSA","kid":"<root kid>","typ":"ever-key-manifest+jwt"}`;
         payload `{"iss":"https://api.ever.co","iat":<unix s>,"exp":<iat + 30 d>,
         "keys_sha256":"<hex sha256 of the RFC 8785 canonical keys array>",
-        "root_kid":"<root kid>"}` (contracts/entitlement-document.md §4).
+        "root_kid":"<root kid>"}` (see the entitlement document format).
         Validity is the payload's `iat`/`exp`; there are no separate
         timestamps in the response.
         */
@@ -2575,18 +2632,22 @@ pub mod components {
         root_kid}` where `keys_sha256` is the SHA-256 of the RFC 8785 canonical `keys` array.*/
         pub manifest: ::std::string::String,
     }
-    ///`KeyRotate`
+    ///A new connect key.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct KeyRotate {
-        pub public_jwk: Jwk,
+        ///The new Ed25519 public JWK (no installation may hold it yet).
+        pub public_jwk: ::serde_json::Map<::std::string::String, ::serde_json::Value>,
     }
-    ///`KeyRotated`
+    ///A rotated key.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct KeyRotated {
+        ///The new key's id (sign assertions with it now).
         pub kid: ::std::string::String,
+        ///The replaced key's id.
         pub previous_kid: ::std::string::String,
-        pub previous_valid_until: Timestamp,
+        ///Until when the replaced key still mints tokens.
+        pub previous_valid_until: ::std::string::String,
     }
     ///Terms, the data-processing agreement and the sub-processor list linked from every consent screen and cached by instances. One agreement covers every integration; a new `dpa_version` asks for consent again on every integration.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
@@ -2726,38 +2787,31 @@ pub mod components {
             Self(value)
         }
     }
-    ///Link code `EVL-XXXX-XXXX-XXXX` minted by an organization admin to attach a product workspace.
-    #[derive(
-        ::serde::Deserialize, ::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
-    )]
-    #[serde(transparent)]
-    pub struct LinkCode(pub ::std::string::String);
-    impl ::std::ops::Deref for LinkCode {
-        type Target = ::std::string::String;
-        fn deref(&self) -> &::std::string::String {
-            &self.0
-        }
-    }
-    impl ::std::convert::From<LinkCode> for ::std::string::String {
-        fn from(value: LinkCode) -> Self {
-            value.0
-        }
-    }
-    impl ::std::convert::From<::std::string::String> for LinkCode {
-        fn from(value: ::std::string::String) -> Self {
-            Self(value)
-        }
-    }
-    impl ::std::fmt::Display for LinkCode {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            self.0.fmt(f)
-        }
-    }
-    impl ::std::str::FromStr for LinkCode {
-        type Err = ::std::convert::Infallible;
-        fn from_str(value: &str) -> ::std::result::Result<Self, Self::Err> {
-            Ok(Self(value.to_string()))
-        }
+    ///A tenant link as the instance sees it (never who linked it).
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct LinkedTenant {
+        ///The product tenant's name as reported.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub display_name: ::std::option::Option<::std::string::String>,
+        ///The link.
+        pub id: ::std::string::String,
+        ///The instance.
+        pub instance_id: ::std::string::String,
+        ///How it was made (`link_code`, `explicit`, ...).
+        pub link_method: ::std::string::String,
+        ///When it was made.
+        pub linked_at: ::std::string::String,
+        ///The organization it links to.
+        pub org_id: ::std::string::String,
+        ///The product.
+        pub product: ::std::string::String,
+        ///The product organization, when there is one.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub product_org_id: ::std::option::Option<::std::string::String>,
+        ///The product tenant (`*`: the whole installation).
+        pub product_tenant_id: ::std::string::String,
+        ///`active`, `suspended`, `orphaned` or `unlinked`.
+        pub state: ::std::string::String,
     }
     ///Public card projection produced by the type plugin.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
@@ -4465,160 +4519,70 @@ pub mod components {
             value.parse()
         }
     }
-    /**Code-first connect. The instance-generated Ed25519 public key becomes its
-    credential; the same key signs anonymous stats. The body carries no
-    Category B data: the instance address is never sent here. It is set only
-    by the owner in app.ever.co (`base_url` of `PATCH
-    /v1/orgs/{org}/instances/{instance}`); any future instance-side
-    setter must carry `x-ever-integration: instance_url` and work only after
-    that consent exists.
-    */
+    /**Code-first connect: the installation redeems a connect code with its own Ed25519 connect
+    key, which becomes its credential. The connect key never signs anonymous statistics (those
+    have a key of their own). The body carries no address or any other field outside this
+    schema: an instance's public address is set by the organization in app.ever.co, or later by
+    the instance through a consented integration.*/
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct RedeemRequest {
-        pub code: ConnectCode,
-        pub install_source: InstallSource,
+        ///The connect code, `EVC-XXXX-XXXX-XXXX` (case-insensitive).
+        pub code: ::std::string::String,
+        /**Where it was installed from, read from its environment (`self-hosted`, `ever.sh`,
+        `partner:<slug>`, ...); never inferred.*/
+        pub install_source: ::std::string::String,
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub kind: ::std::option::Option<RedeemRequestKind>,
-        pub product: ProductCode,
-        pub public_jwk: Jwk,
-        #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
-        pub serves_products: ::std::vec::Vec<ProductCode>,
+        pub kind: ::std::option::Option<ConnectKind>,
+        ///The product the installation runs.
+        pub product: ::std::string::String,
+        ///Its connect key: an Ed25519 public JWK (`kty: OKP`, `crv: Ed25519`, `x`).
+        pub public_jwk: ::serde_json::Map<::std::string::String, ::serde_json::Value>,
+        ///The products it serves besides its own (a Gauzy API serving Teams).
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub tenant: ::std::option::Option<RedeemRequestTenant>,
-        pub version: SemVer,
-    }
-    ///`RedeemRequestKind`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum RedeemRequestKind {
-        #[serde(rename = "cloud")]
-        Cloud,
-        #[serde(rename = "self_hosted")]
-        SelfHosted,
-        #[serde(rename = "works_app")]
-        WorksApp,
-    }
-    impl ::std::fmt::Display for RedeemRequestKind {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Cloud => f.write_str("cloud"),
-                Self::SelfHosted => f.write_str("self_hosted"),
-                Self::WorksApp => f.write_str("works_app"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for RedeemRequestKind {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "cloud" => Ok(Self::Cloud),
-                "self_hosted" => Ok(Self::SelfHosted),
-                "works_app" => Ok(Self::WorksApp),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for RedeemRequestKind {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for RedeemRequestKind {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    ///Tenant descriptor for the first link when the code pre-binds an organization.
-    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, Default)]
-    #[serde(deny_unknown_fields)]
-    pub struct RedeemRequestTenant {
+        pub serves_products: ::std::option::Option<::std::vec::Vec<::std::string::String>>,
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub display_name: ::std::option::Option<::std::string::String>,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub product_org_id: ::std::option::Option<::std::string::String>,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub product_tenant_id: ::std::option::Option<::std::string::String>,
+        pub tenant: ::std::option::Option<RedeemTenant>,
+        ///Its version (`major.minor.patch[-suffix]`).
+        pub version: ::std::string::String,
     }
-    ///`RedeemResponse`
+    ///The connected installation and where it calls next.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct RedeemResponse {
+        ///The entitlement document.
         pub entitlement_endpoint: ::std::string::String,
+        ///The event feed.
         pub feed_endpoint: ::std::string::String,
-        pub instance_id: Ulid,
+        ///The instance id: the assertion's `iss` and `sub`.
+        pub instance_id: ::std::string::String,
+        ///The key manifest as `/.well-known/ever-keys.json` serves it.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub keys: ::std::option::Option<KeyManifest>,
-        ///Key id the platform assigned to the presented public key.
+        pub keys:
+            ::std::option::Option<::serde_json::Map<::std::string::String, ::serde_json::Value>>,
+        ///The key id the platform assigned to the presented key (the assertion's `kid`).
         pub kid: ::std::string::String,
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub link: ::std::option::Option<TenantLink>,
-        pub status: RedeemResponseStatus,
+        pub link: ::std::option::Option<LinkedTenant>,
+        /**`active`, or `pending_approval` (an owner or admin approves it with the key's
+        fingerprint; until then every instance route but `GET /v1/instances/me` answers `403`).*/
+        pub status: ::std::string::String,
+        ///`POST` an assertion here for a token.
         pub token_endpoint: ::std::string::String,
     }
-    ///`RedeemResponseStatus`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum RedeemResponseStatus {
-        #[serde(rename = "active")]
-        Active,
-        #[serde(rename = "pending_approval")]
-        PendingApproval,
-    }
-    impl ::std::fmt::Display for RedeemResponseStatus {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Active => f.write_str("active"),
-                Self::PendingApproval => f.write_str("pending_approval"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for RedeemResponseStatus {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "active" => Ok(Self::Active),
-                "pending_approval" => Ok(Self::PendingApproval),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for RedeemResponseStatus {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for RedeemResponseStatus {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
+    ///The tenant the redeem links when the code pre-binds the organization.
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, Default)]
+    #[serde(deny_unknown_fields)]
+    pub struct RedeemTenant {
+        ///The product tenant's name, shown to the organization.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub display_name: ::std::option::Option<::std::string::String>,
+        ///The product organization's id.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub product_org_id: ::std::option::Option<::std::string::String>,
+        /**The product tenant's id (a multi-tenant product; a single-organization product links the
+        whole installation).*/
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub product_tenant_id: ::std::option::Option<::std::string::String>,
     }
     /**Active salt versions. The salt is public by design; privacy comes from
     the one-way hash, opt-in only answers, feature-scoped results, rate
@@ -6605,16 +6569,22 @@ pub mod components {
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub unlinked_at: ::std::option::Option<::std::string::String>,
     }
-    ///Redeem a link code minted by the organization admin; the organization comes from the code.
+    /**Redeem a link code: the product workspace becomes the same organization as the one that
+    minted the code.*/
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct TenantLinkCreate {
+        ///The product tenant's name, shown to the organization.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub display_name: ::std::option::Option<::std::string::String>,
-        pub link_code: LinkCode,
-        pub product: ProductCode,
+        ///The link code, `EVL-XXXX-XXXX-XXXX` (case-insensitive).
+        pub link_code: ::std::string::String,
+        ///The product the workspace runs.
+        pub product: ::std::string::String,
+        ///The product organization's id.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub product_org_id: ::std::option::Option<::std::string::String>,
+        ///The product tenant's id.
         pub product_tenant_id: ::std::string::String,
     }
     ///Re-key an installation-wide tenant link to one product organization, once the product gained organizations (Ever Traduora - the `*` link becomes the id of the default organization).
@@ -6795,20 +6765,28 @@ pub mod components {
             Ok(Self(value.to_string()))
         }
     }
-    ///RFC 7523 JWT-bearer client authentication. Assertion claims `iss = sub = instance_id`, `aud = https://api.ever.co/v1/instances/token`, random `jti`, `exp <= 5 min`, `alg EdDSA`, header `kid`.
+    /**RFC 7523 client authentication with the `client_credentials` grant. The assertion is a
+    compact JWS (`alg: EdDSA`, `typ: JWT`, `kid`) signed with the connect key, with claims
+    `iss = sub = <instance id>`, `aud = <api origin>/v1/instances/token`, a random `jti` (16-128
+    characters, used once), `iat`, and `exp` at most 300 s after `iat`.*/
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct TokenRequest {
+        ///The signed assertion.
         pub client_assertion: ::std::string::String,
+        ///`urn:ietf:params:oauth:client-assertion-type:jwt-bearer`.
         pub client_assertion_type: ::std::string::String,
+        ///`client_credentials`.
         pub grant_type: ::std::string::String,
     }
-    ///`TokenResponse`
+    ///An instance token.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct TokenResponse {
-        ///Opaque `evit_...` token, 1 hour, keep in memory only.
+        ///`evit_…`: opaque, one hour; keep it in memory only.
         pub access_token: ::std::string::String,
+        ///Seconds it lives (3600).
         pub expires_in: i64,
+        ///`Bearer`.
         pub token_type: ::std::string::String,
     }
     ///ULID, 26 Crockford base32 characters, uppercase.

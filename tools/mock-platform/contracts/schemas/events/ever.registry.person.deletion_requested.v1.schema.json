@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://api.ever.co/v1/events/catalog/schemas/ever.registry.person.deletion_requested.v1.schema.json",
   "title": "ever.registry.person.deletion_requested v1 data",
-  "description": "subject_hash = sha256 of the (iss, sub) pair so an installation can find its person_link without receiving the raw subject; idempotent (T16)",
+  "description": "subject_hash = sha256 of the (iss, sub) pair so an installation can find its person_link without receiving the raw subject; idempotent",
   "type": "object",
   "additionalProperties": false,
   "required": [

@@ -2,18 +2,18 @@
   "description": "Where every contract file of this repository comes from. Written by tools/sync-contract.mjs; checked by tools/check-schema-drift.mjs. `provisional` sources are drafts the platform has not published yet: tools/check-schema-drift.mjs --strict refuses them.",
   "platform": {
     "repository": "ever-co/platform",
-    "commit": "90b7efcb666f2fa6a605dc5641aeba075a7f1621"
+    "commit": "371e6343a4043e88ade69c60e46caf11cfb9fc75"
   },
   "openapi": {
     "target": "contracts/openapi/ever-platform.v1.yaml",
-    "sha256": "048c75a35cc97419a70ff39a3d098391fd83ae96550f3de9612fe0488114091e",
+    "sha256": "84ddd5fba2c9faa8fe271b0914614a6313b4312a290169219011bf5128ce2b9c",
     "pinned": {
       "source": "contracts/openapi/ever-api.v1.json",
-      "sha256": "54cbe0be263447f86c74e0273da5031b445a316cdc562f79d2f7655bcca2755f"
+      "sha256": "ebab78ce235a26ac24eb980daac5e61037846c4c0091565e31cc72187957df04"
     },
     "design": {
       "source": "docs/specs/api",
-      "sha256": "2943c827c137608ba6be65c5df242c2382933f9bc896412e1d19dc08cf69cf3d",
+      "sha256": "75697f9404ce1af63db37dee07e46e75ff17e482ba2041163a1d920cc835d733",
       "files": 23
     },
     "operations": 53,
@@ -21,7 +21,6 @@
       "completeProvisionIntent",
       "connectDevice",
       "connectDeviceToken",
-      "connectRedeem",
       "discoverSso",
       "getConnectLegal",
       "getLookupSalt",
@@ -30,7 +29,6 @@
       "instanceAckRequest",
       "instanceCreateBillingLink",
       "instanceCreatePersonLink",
-      "instanceCreateTenantLink",
       "instanceDeleteLinkIdentifiers",
       "instanceDeletePersonLink",
       "instanceDisableIntegration",
@@ -50,8 +48,6 @@
       "instanceReportUsage",
       "instanceReportUsageReadings",
       "instanceRequestOidcClient",
-      "instanceRotateKey",
-      "instanceToken",
       "lookupCounterparties",
       "putIntegrationState",
       "resolveIdentity"
@@ -60,9 +56,16 @@
       "Context",
       "Identifier",
       "Problem",
-      "TenantLink"
+      "TenantLink",
+      "TokenResponse"
     ],
-    "renamed_schemas": [],
+    "renamed_schemas": [
+      {
+        "name": "ConnectCode",
+        "renamed": "ConnectCodeValue",
+        "file": "common.yaml"
+      }
+    ],
     "schema_overrides": [
       "StatsLinkCreate"
     ],
@@ -75,7 +78,7 @@
   "events": {
     "source": "contracts/events/catalog.json",
     "version": "1.1",
-    "sha256": "a5f215027c90b159c1a0d9ab7b0c6c2c81590430b61d8d1fb7e371a3269d6509",
+    "sha256": "865be7b0dbbe2417e38ba207ab7f18033ac41916ea970dfa33b76ad120e7b1ef",
     "instance_types": [
       "ever.consent.consent.granted",
       "ever.consent.consent.revoked",
@@ -119,8 +122,8 @@
       "path": "contracts/schemas/ever.entitlement.v1.json",
       "source": "docs/specs/contracts/ever.entitlement.v1.schema.json",
       "source_sha256": "f4a48ba7bd70bfddb85f220092806f8553945a8f9448ad234a0ca6e96b880197",
-      "sha256": "f4a48ba7bd70bfddb85f220092806f8553945a8f9448ad234a0ca6e96b880197",
-      "transform": null,
+      "sha256": "c39ffc42f6dbc2d871b1af04dcdc9a0f7472ca726612dd82ff712fdf3fd6bd79",
+      "transform": "json-public-description",
       "provisional": true,
       "upstream": "contracts/entitlements/ever.entitlement.v1.schema.json"
     },
@@ -334,8 +337,8 @@
     {
       "path": "contracts/schemas/events/ever.registry.person.deletion_requested.v1.schema.json",
       "source": "contracts/events/schemas/ever.registry.person.deletion_requested.v1.schema.json",
-      "source_sha256": "aa530afcd300df0b0735a8d8a35dd8bf17816c9b728205ad8f375f544ae24029",
-      "sha256": "aa530afcd300df0b0735a8d8a35dd8bf17816c9b728205ad8f375f544ae24029",
+      "source_sha256": "bc82b5c3e4fd952f12e65c41dbb61016e7caf34085c83f36f3033c64b6677ceb",
+      "sha256": "bc82b5c3e4fd952f12e65c41dbb61016e7caf34085c83f36f3033c64b6677ceb",
       "transform": null,
       "provisional": false,
       "upstream": null
@@ -393,6 +396,123 @@
       "transform": null,
       "provisional": false,
       "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/connect/vectors/assertion-alg-none.json",
+      "source": "contracts/connect/vectors/assertion-alg-none.json",
+      "source_sha256": "eff756a7132c7072d662ddb0256035ad07eed09cd6c8f75272e6bc49651e6764",
+      "sha256": "eff756a7132c7072d662ddb0256035ad07eed09cd6c8f75272e6bc49651e6764",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/connect/vectors/assertion-exp-too-far.json",
+      "source": "contracts/connect/vectors/assertion-exp-too-far.json",
+      "source_sha256": "8fa93a9705fe418570a55c110908d8aed00b1cd43d4edbc2a9e3cfbc7b2b9e7a",
+      "sha256": "8fa93a9705fe418570a55c110908d8aed00b1cd43d4edbc2a9e3cfbc7b2b9e7a",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/connect/vectors/assertion-expired.json",
+      "source": "contracts/connect/vectors/assertion-expired.json",
+      "source_sha256": "d1ed5fc0b87f9dddb0cad69f3cd5491e9bec7d977ca8df3f03ae538e7b8594e3",
+      "sha256": "d1ed5fc0b87f9dddb0cad69f3cd5491e9bec7d977ca8df3f03ae538e7b8594e3",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/connect/vectors/assertion-previous-key-inside-overlap.json",
+      "source": "contracts/connect/vectors/assertion-previous-key-inside-overlap.json",
+      "source_sha256": "d7033acde8f75c9b1008307393764c0b08f00c4d322c55f8465fe7984bfba0a5",
+      "sha256": "d7033acde8f75c9b1008307393764c0b08f00c4d322c55f8465fe7984bfba0a5",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/connect/vectors/assertion-previous-key-outside-overlap.json",
+      "source": "contracts/connect/vectors/assertion-previous-key-outside-overlap.json",
+      "source_sha256": "9bc8990173ef4bc550f1833022ccde9de5eeedb15ea3729842894692786b329e",
+      "sha256": "9bc8990173ef4bc550f1833022ccde9de5eeedb15ea3729842894692786b329e",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/connect/vectors/assertion-replayed-jti.json",
+      "source": "contracts/connect/vectors/assertion-replayed-jti.json",
+      "source_sha256": "9adba5094db0a39d4174727740090d0df0a4cf5e3db7a93794f19f0051dbf58a",
+      "sha256": "9adba5094db0a39d4174727740090d0df0a4cf5e3db7a93794f19f0051dbf58a",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/connect/vectors/assertion-rs256.json",
+      "source": "contracts/connect/vectors/assertion-rs256.json",
+      "source_sha256": "14e2e94414d693cdd73b544f10fdb008b785a51c92bcb9b788aea7adb1f246bb",
+      "sha256": "14e2e94414d693cdd73b544f10fdb008b785a51c92bcb9b788aea7adb1f246bb",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/connect/vectors/assertion-skew.json",
+      "source": "contracts/connect/vectors/assertion-skew.json",
+      "source_sha256": "b589f2a06aff8b281820f587ca3bf2e757b98cec868356a217853eea45da9471",
+      "sha256": "b589f2a06aff8b281820f587ca3bf2e757b98cec868356a217853eea45da9471",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/connect/vectors/assertion-subject-differs.json",
+      "source": "contracts/connect/vectors/assertion-subject-differs.json",
+      "source_sha256": "6a5338778445bb267c97d30e1513b8ec0d014fbc996c2387f2693f2c5dee8458",
+      "sha256": "6a5338778445bb267c97d30e1513b8ec0d014fbc996c2387f2693f2c5dee8458",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/connect/vectors/assertion-unknown-key.json",
+      "source": "contracts/connect/vectors/assertion-unknown-key.json",
+      "source_sha256": "788a3f99cbf11047404051ca50d50dd12a30eff0a9cbbc24f4620c139f5043aa",
+      "sha256": "788a3f99cbf11047404051ca50d50dd12a30eff0a9cbbc24f4620c139f5043aa",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/connect/vectors/assertion-uuid-issuer.json",
+      "source": "contracts/connect/vectors/assertion-uuid-issuer.json",
+      "source_sha256": "000a7c75ca0a7ded6ba14b4c8cc7e969daecb93d38e0a2374b52a8eccb47ea4b",
+      "sha256": "000a7c75ca0a7ded6ba14b4c8cc7e969daecb93d38e0a2374b52a8eccb47ea4b",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/connect/vectors/assertion-valid.json",
+      "source": "contracts/connect/vectors/assertion-valid.json",
+      "source_sha256": "db47f6181a1a9d5ca71f9b1ad1a72f5503a0d3d02ab031b3eca99ab8cdf38d4b",
+      "sha256": "db47f6181a1a9d5ca71f9b1ad1a72f5503a0d3d02ab031b3eca99ab8cdf38d4b",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/connect/vectors/assertion-wrong-aud.json",
+      "source": "contracts/connect/vectors/assertion-wrong-aud.json",
+      "source_sha256": "8bb16c2b9e8624e3224dad56377fef09636d86e8e187148f23beafd2a16bb6c7",
+      "sha256": "8bb16c2b9e8624e3224dad56377fef09636d86e8e187148f23beafd2a16bb6c7",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
     }
   ],
   "authored": [
@@ -403,10 +523,6 @@
     {
       "path": "contracts/schemas/ever.key-manifest.v1.json",
       "until": "the platform publishes the key manifest schema"
-    },
-    {
-      "path": "contracts/fixtures/connect/vectors/",
-      "until": "the platform publishes its client-assertion vectors"
     },
     {
       "path": "contracts/fixtures/stats/",

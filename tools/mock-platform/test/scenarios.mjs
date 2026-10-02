@@ -499,6 +499,11 @@ export const ERRORS = {
     await env.admin('faults', { keys_unavailable: true });
     return env.call('GET', '/.well-known/ever-keys.json');
   },
+  '3:404:not_found': async (env) => {
+    // A deployment with issuance off answers a well-formed redeem 404 (a malformed one stays 422).
+    await env.admin('faults', { connect_issuance_off: true });
+    return env.call('POST', '/v1/connect/redeem', { body: redeemBody('EVC-TEST-0000-0001'), headers: idem('off') });
+  },
   '3:409:already_connected': async (env) => {
     await env.connect();
     await env.admin('codes', { code: 'EVC-TEST-0000-0007', product: 'gauzy' });
@@ -555,6 +560,23 @@ export const ERRORS = {
       },
     });
   },
+  '4:422:validation_failed': (env) =>
+    env.call('POST', '/v1/instances/token', {
+      body: {
+        grant_type: 'password',
+        client_assertion_type: 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
+        client_assertion: 'not.a.jws',
+      },
+    }),
+  '5:401:credential_revoked': async (env) => {
+    const c = await connected(env);
+    await env.admin('revoke-instance', {});
+    return env.call('POST', '/v1/instances/me/tenant-links', {
+      token: c.token,
+      body: { link_code: 'EVL-TEST-0000-0002', product: 'gauzy', product_tenant_id: 't2' },
+      headers: idem('cr'),
+    });
+  },
   '5:403:instance_pending_approval': async (env) => {
     const c = await connected(env, { code: 'EVC-TEST-0000-0003' });
     return env.call('POST', '/v1/instances/me/tenant-links', {
@@ -585,6 +607,23 @@ export const ERRORS = {
       body: { link_code: 'EVL-ZZZZ-ZZZZ-ZZZZ', product: 'gauzy', product_tenant_id: 't' },
       headers: idem('lc'),
     }),
+  '5:422:product_mismatch': async (env) =>
+    env.call('POST', '/v1/instances/me/tenant-links', {
+      token: (await connected(env)).token,
+      body: { link_code: 'EVL-TEST-0000-0002', product: 'works', product_tenant_id: 't' },
+      headers: idem('lpm'),
+    }),
+  '5:429:rate_limited': async (env) => {
+    const { token } = await connected(env);
+    let r;
+    for (let i = 0; i < 11; i += 1)
+      r = await env.call('POST', '/v1/instances/me/tenant-links', {
+        token,
+        body: { link_code: `EVL-AAAA-BBBB-${String(i).padStart(4, '0')}`, product: 'gauzy', product_tenant_id: 't' },
+        headers: idem(`lrl${i}`),
+      });
+    return r;
+  },
   '6:401:credential_revoked': async (env) => {
     const c = await connected(env);
     await env.call('POST', '/v1/instances/me/disconnect', { token: c.token, headers: idem('dc') });

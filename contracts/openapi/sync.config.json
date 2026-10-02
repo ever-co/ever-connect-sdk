@@ -27,5 +27,11 @@
   "drop_extensions": ["x-ever-key-scopes"],
   "design_operation_aliases": {
     "getKeyManifest": "get_key_manifest"
+  },
+  "design_renames": {
+    "ConnectCode": {
+      "to": "ConnectCodeValue",
+      "why": "the pinned contract names the connect-code resource ConnectCode; the design operations still mean the code itself (EVC-XXXX-XXXX-XXXX)"
+    }
   }
 }

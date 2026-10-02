@@ -68,8 +68,10 @@ export function checkDrift({ platform, strict }) {
     const catalogSha = sha256(readFileSync(catalog));
     if (catalogSha !== vendorDoc.events.sha256)
       errors.push(`${vendorDoc.events.source}: platform ${catalogSha}, synced ${vendorDoc.events.sha256}: run tools/sync-contract.mjs`);
-    for (const [path, upstream] of Object.entries(AUTHORED_UPSTREAM)) {
-      if (!existsSync(join(platform, upstream))) continue;
+    // Only what is still authored here (VENDOR.json `authored`) can be overtaken by a publication.
+    for (const { path } of vendorDoc.authored ?? []) {
+      const upstream = AUTHORED_UPSTREAM[path];
+      if (!upstream || !existsSync(join(platform, upstream))) continue;
       const msg = `${path} is authored here but the platform now publishes ${upstream}: vendor it instead`;
       if (strict) errors.push(msg);
       else warnings.push(msg);

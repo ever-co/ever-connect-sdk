@@ -70,7 +70,7 @@
           "method": "POST",
           "path": "/v1/connect/redeem",
           "operation_id": "connectRedeem",
-          "status": "provisional"
+          "status": "pinned"
         }
       ],
       "trigger": "the operator submits a connect code; EVER_CONNECT_CODE at first boot",
@@ -98,7 +98,7 @@
           "method": "POST",
           "path": "/v1/instances/token",
           "operation_id": "instanceToken",
-          "status": "provisional"
+          "status": "pinned"
         }
       ],
       "trigger": "while connected: before the token expires, and after a 401",
@@ -126,7 +126,7 @@
           "method": "POST",
           "path": "/v1/instances/me/tenant-links",
           "operation_id": "instanceCreateTenantLink",
-          "status": "provisional"
+          "status": "pinned"
         },
         {
           "method": "DELETE",
@@ -142,7 +142,7 @@
         }
       ],
       "trigger": "an organization admin submits a link code, removes a link, or a single-organization product moves its link to a new organization id",
-      "payload": "link_code, product, product_tenant_id, product_org_id?",
+      "payload": "link_code, product, product_tenant_id, product_org_id?, display_name? of the tenant",
       "cadence": "on action",
       "disable": "do not link",
       "products": [
@@ -497,7 +497,7 @@
           "method": "POST",
           "path": "/v1/instances/me/keys",
           "operation_id": "instanceRotateKey",
-          "status": "provisional"
+          "status": "pinned"
         }
       ],
       "trigger": "the operator disconnects; the connect key is rotated",

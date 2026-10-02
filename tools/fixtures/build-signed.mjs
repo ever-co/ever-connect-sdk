@@ -10,7 +10,7 @@
  *                the TEST root as a JWKS for EVER_PLATFORM_ROOT_KEYS_FILE, and the test context
  *   entitlement/ valid instance and link documents and the invalid set, each with its expected code
  *   consent/     valid and invalid consent records; consent-screen/ the seven blocks per key
- *   connect/     client-assertion vectors with the platform's expected answer
+ *   (connect/vectors/ is vendored byte for byte from the platform by tools/sync-contract.mjs)
  *   stats/       the provisional statistics fixtures and expected.json
  *
  * Every signature comes from a TEST key derived from a public seed (no private key file exists),
@@ -78,7 +78,10 @@ function requestCases() {
         tenant: { product_tenant_id: 'tenant-1', product_org_id: 'org-1' },
       },
       {
-        'null-id': (b) => [{ ...b, tenant: { ...b.tenant, product_org_id: null } }, '/tenant/product_org_id'],
+        // The platform takes absent and null tenant fields alike; a missing key or an unknown field
+        // is what its contract refuses.
+        'missing-key': (b) => [Object.fromEntries(Object.entries(b).filter(([k]) => k !== 'public_jwk')), '/public_jwk'],
+        'tenant-extra-field': (b) => [{ ...b, tenant: { ...b.tenant, email: 'jane@example.com' } }, '/tenant/email'],
         'extra-field': (b) => [extra(b, 'public_url', 'https://gauzy.example.com'), '/public_url'],
       },
     ),
@@ -95,7 +98,7 @@ function requestCases() {
       'TenantLinkCreate',
       { link_code: 'EVL-TEST-0000-0002', product: 'gauzy', product_tenant_id: 'tenant-2', product_org_id: 'org-2' },
       {
-        'null-id': (b) => [{ ...b, product_org_id: null }, '/product_org_id'],
+        'missing-tenant': (b) => [Object.fromEntries(Object.entries(b).filter(([k]) => k !== 'product_tenant_id')), '/product_tenant_id'],
         'extra-field': (b) => [extra(b, 'org_id', IDS.org), '/org_id'],
       },
     ),
@@ -776,87 +779,6 @@ function consentScreens(constants, integrations) {
   return files;
 }
 
-// -------------------------------------------------------------------------------------- connect
-function connectVectors() {
-  const files = {};
-  const key = testKey('connect');
-  const previous = testKey('connectNext');
-  const audience = `${ISSUER}/v1/instances/token`;
-  const ctx = {
-    instance_id: IDS.instance,
-    audience,
-    now: NOW,
-    current_key: { kty: 'OKP', crv: 'Ed25519', x: key.x, kid: key.kid },
-    previous_key: { kty: 'OKP', crv: 'Ed25519', x: previous.x, kid: previous.kid },
-    rotated_at: NOW - 3 * 86400,
-    seen_jti: ['replayed-jti-0000000000'],
-  };
-  const vec = (name, assertion, expected, description, context = {}) => {
-    files[`connect/vectors/assertion-${name}.json`] = json({ description, context: { ...ctx, ...context }, assertion, expected });
-  };
-  const ok = { status: 200 };
-  const bad = { status: 401, code: 'invalid_client' };
-  vec('valid', signClientAssertion({ instanceId: IDS.instance, audience, iat: NOW }), ok, 'a fresh assertion signed with the current key');
-  vec(
-    'wrong-aud',
-    signClientAssertion({ instanceId: IDS.instance, audience: 'https://api.example.com/v1/instances/token', iat: NOW }),
-    bad,
-    'the audience is another token endpoint',
-  );
-  vec(
-    'exp-too-far',
-    signClientAssertion({ instanceId: IDS.instance, audience, iat: NOW, ttl: 600 }),
-    bad,
-    'exp is more than 300 s after iat',
-  );
-  vec(
-    'skew',
-    signClientAssertion({ instanceId: IDS.instance, audience, iat: NOW - 900 }),
-    bad,
-    'iat is more than 300 s away from the server clock (and already expired)',
-  );
-  vec(
-    'replayed-jti',
-    signClientAssertion({ instanceId: IDS.instance, audience, iat: NOW, jti: 'replayed-jti-0000000000' }),
-    bad,
-    'a jti the platform has seen before',
-  );
-  vec(
-    'previous-key-inside-overlap',
-    signClientAssertion({ key: previous, instanceId: IDS.instance, audience, iat: NOW }),
-    ok,
-    'signed with the previous connect key 3 days after rotation (accepted for 7 days)',
-  );
-  vec(
-    'previous-key-outside-overlap',
-    signClientAssertion({ key: previous, instanceId: IDS.instance, audience, iat: NOW }),
-    bad,
-    'signed with the previous connect key 8 days after rotation',
-    { rotated_at: NOW - 8 * 86400 },
-  );
-  const [, payload] = signClientAssertion({ instanceId: IDS.instance, audience, iat: NOW }).split('.');
-  vec('alg-none', `${b64url(JSON.stringify({ alg: 'none', typ: 'JWT' }))}.${payload}.`, bad, 'an unsigned assertion');
-  vec(
-    'rs256',
-    `${b64url(JSON.stringify({ alg: 'RS256', kid: key.kid, typ: 'JWT' }))}.${payload}.${b64url(sha256('not-a-signature'))}`,
-    bad,
-    'another algorithm',
-  );
-  vec(
-    'uuid-iss',
-    signClientAssertion({ instanceId: IDS.statsInstance, audience, iat: NOW }),
-    bad,
-    'issuer and subject are a UUID (a statistics id), not the installation ULID',
-  );
-  vec(
-    'stranger-key',
-    signClientAssertion({ key: testKey('stranger'), instanceId: IDS.instance, audience, iat: NOW }),
-    bad,
-    'signed by a key the platform never pinned',
-  );
-  return files;
-}
-
 // ---------------------------------------------------------------------------------------- build
 export function buildAll() {
   const constants = readJson(join(REPO, 'contracts/constants.json'));
@@ -870,7 +792,6 @@ export function buildAll() {
     ...entitlements(),
     ...consentRecords(),
     ...consentScreens(constants, integrations),
-    ...connectVectors(),
     ...Object.fromEntries(Object.entries(statsFixtures()).map(([p, t]) => [`stats/${p}`, t])),
   };
   files['index.json'] = json(fixtureIndex(files));
@@ -920,7 +841,8 @@ function fixtureIndex(files) {
 function main() {
   const check = process.argv.includes('--check');
   const files = buildAll();
-  const managed = ['requests', 'feed', 'keys', 'entitlement', 'consent', 'consent-screen', 'connect', 'stats'];
+  // connect/vectors/ is vendored from the platform (tools/sync-contract.mjs), not built here.
+  const managed = ['requests', 'feed', 'keys', 'entitlement', 'consent', 'consent-screen', 'stats'];
   const current = {};
   for (const dir of managed)
     for (const p of walk(join(REPO, FIXTURES, dir))) {

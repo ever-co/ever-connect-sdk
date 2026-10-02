@@ -730,7 +730,14 @@
       "typed": false
     },
     {
-      "file": "requests/redeem.invalid-null-id.json",
+      "file": "requests/redeem.invalid-missing-key.json",
+      "kind": "component",
+      "schema": "RedeemRequest",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/redeem.invalid-tenant-extra-field.json",
       "kind": "component",
       "schema": "RedeemRequest",
       "valid": false,
@@ -807,7 +814,7 @@
       "typed": false
     },
     {
-      "file": "requests/tenant-link.invalid-null-id.json",
+      "file": "requests/tenant-link.invalid-missing-tenant.json",
       "kind": "component",
       "schema": "TenantLinkCreate",
       "valid": false,

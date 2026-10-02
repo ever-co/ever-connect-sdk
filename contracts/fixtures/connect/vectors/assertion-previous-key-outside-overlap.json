@@ -1,29 +1,30 @@
 {
-  "description": "signed with the previous connect key 8 days after rotation",
+  "assertion": "eyJhbGciOiJFZERTQSIsImtpZCI6IjdTUFlVeEphT3M4IiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL2FwaS5ldmVyLnRlc3QvdjEvaW5zdGFuY2VzL3Rva2VuIiwiZXhwIjoxNzkzNjEzOTAwLCJpYXQiOjE3OTM2MTM2MDAsImlzcyI6IjAxSk5FN1Y5SjAzSjZYUTJXTjhIMFo4OFI1IiwianRpIjoidmVjdG9yLWp0aS0wMDAwMDAwMDA3Iiwic3ViIjoiMDFKTkU3VjlKMDNKNlhRMldOOEgwWjg4UjUifQ.pzzjxSvXNMypXzHjPQbYRe6N7VcZJiRg3PGJjAbeq7J56yVJ8WMbBFfr83mqVhoo4gwNi392jgZdxbrfxVRjDg",
   "context": {
-    "instance_id": "01JNE7V9J03J6XQ2WN8H0Z88R5",
-    "audience": "https://mock-platform.test/v1/instances/token",
-    "now": 1793613600,
+    "audience": "https://api.ever.test/v1/instances/token",
     "current_key": {
-      "kty": "OKP",
       "crv": "Ed25519",
-      "x": "XOrehnhhK36sJQ4HZocoSpNrjjBfhTvnTslp7PQzO90",
-      "kid": "xNLVJASKZjU"
+      "kid": "_fcqCI8Y9zk",
+      "kty": "OKP",
+      "x": "Zr5-Myx6RTMyvZ0Kf32wVfXF7xoGraZtmLOftoEMRzo"
     },
+    "instance_id": "01JNE7V9J03J6XQ2WN8H0Z88R5",
+    "now": 1793613600,
+    "overlap_s": 604800,
     "previous_key": {
-      "kty": "OKP",
       "crv": "Ed25519",
-      "x": "BBSukYFIFF7Vlz1s69lGnEs3NjRSQv0x8iOoTte4cfE",
-      "kid": "HXT4UjY1E9Y"
+      "kid": "7SPYUxJaOs8",
+      "kty": "OKP",
+      "x": "C1E62bSSQBXKCQLtB5BE06xdvsIwbwaUjBDajrbjny0"
     },
     "rotated_at": 1792922400,
     "seen_jti": [
       "replayed-jti-0000000000"
     ]
   },
-  "assertion": "eyJhbGciOiJFZERTQSIsImtpZCI6IkhYVDRValkxRTlZIiwidHlwIjoiSldUIn0.eyJpc3MiOiIwMUpORTdWOUowM0o2WFEyV044SDBaODhSNSIsInN1YiI6IjAxSk5FN1Y5SjAzSjZYUTJXTjhIMFo4OFI1IiwiYXVkIjoiaHR0cHM6Ly9tb2NrLXBsYXRmb3JtLnRlc3QvdjEvaW5zdGFuY2VzL3Rva2VuIiwianRpIjoieXM1aDB0VTJwYlFCU1NYWFJ1WGFPQSIsImlhdCI6MTc5MzYxMzYwMCwiZXhwIjoxNzkzNjEzOTAwfQ.88-jzl8q8_EVrdpFIxieDEHhXzXYlV600dbQs1g65BiJ-gTzvkrArpuzFlpNhK636M8YFE33G0Ug2Zu9aIgxDQ",
+  "description": "signed with the previous connect key 8 days after the rotation",
   "expected": {
-    "status": 401,
-    "code": "invalid_client"
+    "code": "invalid_client",
+    "status": 401
   }
 }

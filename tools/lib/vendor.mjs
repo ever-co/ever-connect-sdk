@@ -2,7 +2,7 @@
 // Every vendored file is byte-identical to its source unless `transform` says otherwise; a
 // transform exists only for a provisional source (a draft the platform has not published yet) and
 // disappears once the platform publishes the file at `upstream`.
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import YAML from 'yaml';
 import { sha256 } from './common.mjs';
@@ -29,7 +29,7 @@ const STATIC = [
     path: 'contracts/schemas/ever.entitlement.v1.json',
     source: 'docs/specs/contracts/ever.entitlement.v1.schema.json',
     upstream: 'contracts/entitlements/ever.entitlement.v1.schema.json',
-    transform: null,
+    transform: 'json-public-description',
   },
   {
     path: 'contracts/integrations/catalog.v1.json',
@@ -49,6 +49,13 @@ const TRANSFORMS = {
   'json-drop-comment': (text) => {
     const doc = JSON.parse(text);
     delete doc.$comment;
+    return `${JSON.stringify(doc, null, 2)}\n`;
+  },
+  // The draft's description cites the platform's own design document by path; the public copy
+  // keeps the sentence without the citation.
+  'json-public-description': (text) => {
+    const doc = JSON.parse(text);
+    if (typeof doc.description === 'string') doc.description = doc.description.replace(/\s*\(contracts\/[^()]*\.md[^()]*\)/g, '');
     return `${JSON.stringify(doc, null, 2)}\n`;
   },
   'catalog-yaml': (text) => {
@@ -120,6 +127,19 @@ export function eventEntries(platform) {
   };
 }
 
+/** Where the platform publishes its client-assertion vectors, and where this repository keeps them. */
+export const CONNECT_VECTORS = { source: 'contracts/connect/vectors', path: 'contracts/fixtures/connect/vectors' };
+
+/** The platform's client-assertion vectors, byte-identical, once it publishes them (else none). */
+export function connectVectorEntries(platform) {
+  const dir = join(platform, CONNECT_VECTORS.source);
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir)
+    .filter((f) => f.endsWith('.json'))
+    .sort()
+    .map((f) => ({ path: `${CONNECT_VECTORS.path}/${f}`, source: `${CONNECT_VECTORS.source}/${f}`, transform: null, upstream: null }));
+}
+
 /**
  * Produces every vendored file from the checkout. Answers {files: {path: text}, entries: [...]}
  * where each entry records its source, transform, provisional flag and hashes.
@@ -128,7 +148,7 @@ export function vendor(platform) {
   const events = eventEntries(platform);
   const files = {};
   const entries = [];
-  for (const entry of [...STATIC, ...events.entries]) {
+  for (const entry of [...STATIC, ...events.entries, ...connectVectorEntries(platform)]) {
     const upstreamPath = entry.upstream ? join(platform, entry.upstream) : null;
     const fromUpstream = upstreamPath !== null && existsSync(upstreamPath);
     const source = fromUpstream ? entry.upstream : entry.source;

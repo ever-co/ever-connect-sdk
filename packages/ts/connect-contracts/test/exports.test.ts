@@ -58,8 +58,8 @@ describe('@ever-co/connect-contracts', () => {
     const fixture = (name: string) =>
       JSON.parse(readFileSync(fileURLToPath(import.meta.resolve(`@ever-co/connect-contracts/fixtures/requests/${name}`)), 'utf8'));
     expect(validate?.(fixture('redeem.json'))).toBe(true);
-    expect(validate?.(fixture('redeem.invalid-null-id.json'))).toBe(false);
-    expect(validate?.errors?.some((e) => e.instancePath === '/tenant/product_org_id')).toBe(true);
+    expect(validate?.(fixture('redeem.invalid-tenant-extra-field.json'))).toBe(false);
+    expect(validate?.errors?.some((e) => e.instancePath === '/tenant' && e.keyword === 'additionalProperties')).toBe(true);
   });
 
   it('isProblem recognises a problem document with a contract code', async () => {

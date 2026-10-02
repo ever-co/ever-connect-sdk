@@ -1876,7 +1876,7 @@ pub mod stats_v1 {
 
 /// Types of `contracts/schemas/ever.entitlement.v1.json`.
 pub mod entitlement_v1 {
-    ///The only wire format of the entitlement document (contracts/entitlement-document.md section 1.2). Served verbatim at GET /v1/entitlements/schema; vendored in the SDK as contracts/schemas/ever.entitlement.v1.json with a sha256 drift test; every signed document is validated against it by the issuer's tests. Closed at every level; handle is the only human-readable field.
+    ///The only wire format of the entitlement document. Served verbatim at GET /v1/entitlements/schema; vendored in the SDK as contracts/schemas/ever.entitlement.v1.json with a sha256 drift test; every signed document is validated against it by the issuer's tests. Closed at every level; handle is the only human-readable field.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct EntitlementV1 {
@@ -8073,7 +8073,7 @@ pub mod registry_person_deletion_requested_v1 {
             Ok(Self(value.to_string()))
         }
     }
-    ///subject_hash = sha256 of the (iss, sub) pair so an installation can find its person_link without receiving the raw subject; idempotent (T16)
+    ///subject_hash = sha256 of the (iss, sub) pair so an installation can find its person_link without receiving the raw subject; idempotent
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct EverRegistryPersonDeletionRequestedV1 {

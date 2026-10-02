@@ -1,29 +1,30 @@
 {
-  "description": "a jti the platform has seen before",
+  "assertion": "eyJhbGciOiJFZERTQSIsImtpZCI6Il9mY3FDSThZOXprIiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL2FwaS5ldmVyLnRlc3QvdjEvaW5zdGFuY2VzL3Rva2VuIiwiZXhwIjoxNzkzNjEzOTAwLCJpYXQiOjE3OTM2MTM2MDAsImlzcyI6IjAxSk5FN1Y5SjAzSjZYUTJXTjhIMFo4OFI1IiwianRpIjoicmVwbGF5ZWQtanRpLTAwMDAwMDAwMDAiLCJzdWIiOiIwMUpORTdWOUowM0o2WFEyV044SDBaODhSNSJ9.lcIavqEjTsSdpYnpo9Ll9UxXe75jywF9rr-219Fht25pv_KGR2ts_vPV60F0IRO2N5Dcsx51DBK1BI_6go4qCQ",
   "context": {
-    "instance_id": "01JNE7V9J03J6XQ2WN8H0Z88R5",
-    "audience": "https://mock-platform.test/v1/instances/token",
-    "now": 1793613600,
+    "audience": "https://api.ever.test/v1/instances/token",
     "current_key": {
-      "kty": "OKP",
       "crv": "Ed25519",
-      "x": "XOrehnhhK36sJQ4HZocoSpNrjjBfhTvnTslp7PQzO90",
-      "kid": "xNLVJASKZjU"
+      "kid": "_fcqCI8Y9zk",
+      "kty": "OKP",
+      "x": "Zr5-Myx6RTMyvZ0Kf32wVfXF7xoGraZtmLOftoEMRzo"
     },
+    "instance_id": "01JNE7V9J03J6XQ2WN8H0Z88R5",
+    "now": 1793613600,
+    "overlap_s": 604800,
     "previous_key": {
-      "kty": "OKP",
       "crv": "Ed25519",
-      "x": "BBSukYFIFF7Vlz1s69lGnEs3NjRSQv0x8iOoTte4cfE",
-      "kid": "HXT4UjY1E9Y"
+      "kid": "7SPYUxJaOs8",
+      "kty": "OKP",
+      "x": "C1E62bSSQBXKCQLtB5BE06xdvsIwbwaUjBDajrbjny0"
     },
     "rotated_at": 1793354400,
     "seen_jti": [
       "replayed-jti-0000000000"
     ]
   },
-  "assertion": "eyJhbGciOiJFZERTQSIsImtpZCI6InhOTFZKQVNLWmpVIiwidHlwIjoiSldUIn0.eyJpc3MiOiIwMUpORTdWOUowM0o2WFEyV044SDBaODhSNSIsInN1YiI6IjAxSk5FN1Y5SjAzSjZYUTJXTjhIMFo4OFI1IiwiYXVkIjoiaHR0cHM6Ly9tb2NrLXBsYXRmb3JtLnRlc3QvdjEvaW5zdGFuY2VzL3Rva2VuIiwianRpIjoicmVwbGF5ZWQtanRpLTAwMDAwMDAwMDAiLCJpYXQiOjE3OTM2MTM2MDAsImV4cCI6MTc5MzYxMzkwMH0.grBp227rMRoBh3asmLL1_yn7NvZ5ne-0YIy5NsVu4VB-_4Vp3AcVSVNbKU1YhB6N6Ac93o0mva8tl8ge_9ezDQ",
+  "description": "a jti the platform has seen before",
   "expected": {
-    "status": 401,
-    "code": "invalid_client"
+    "code": "invalid_client",
+    "status": 401
   }
 }

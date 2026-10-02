@@ -29,11 +29,16 @@ test('the statistics header names come from the statistics operation', () => {
   for (const h of headers) assert.ok(!/^x-/i.test(h.name), 'no X- prefix');
 });
 
-test('code patterns, install sources and products equal the contract schemas', () => {
+test('code patterns, install sources and products equal the contract schemas where it states them', () => {
   const s = spec.components.schemas;
-  assert.equal(constants.connect_code_pattern, s.ConnectCode.pattern);
-  assert.equal(constants.link_code_pattern, s.LinkCode.pattern);
+  // The pinned contract describes the connect code as the code resource (no pattern), so the
+  // published pattern stays; a contract that states a pattern again wins.
+  const stated = (name) => (typeof s[name]?.pattern === 'string' ? s[name].pattern : null);
+  const codeSchema = stated('ConnectCodeValue') ?? stated('ConnectCode');
+  if (codeSchema) assert.equal(constants.connect_code_pattern, codeSchema);
+  if (stated('LinkCode')) assert.equal(constants.link_code_pattern, stated('LinkCode'));
   assert.equal(constants.install_sources, s.InstallSource.pattern);
+  assert.ok(new RegExp(constants.link_code_pattern).test('EVL-TEST-0000-0002'));
   assert.deepEqual(constants.products, s.ProductCode.enum);
   assert.ok(constants.products.includes('demand'), 'demand is a product code (it answers product_not_supported)');
   const code = new RegExp(constants.connect_code_pattern);

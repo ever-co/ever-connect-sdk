@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://api.ever.co/v1/entitlements/schema/ever.entitlement.v1",
   "title": "ever.entitlement.v1 JWS payload",
-  "description": "The only wire format of the entitlement document (contracts/entitlement-document.md section 1.2). Served verbatim at GET /v1/entitlements/schema; vendored in the SDK as contracts/schemas/ever.entitlement.v1.json with a sha256 drift test; every signed document is validated against it by the issuer's tests. Closed at every level; handle is the only human-readable field.",
+  "description": "The only wire format of the entitlement document. Served verbatim at GET /v1/entitlements/schema; vendored in the SDK as contracts/schemas/ever.entitlement.v1.json with a sha256 drift test; every signed document is validated against it by the issuer's tests. Closed at every level; handle is the only human-readable field.",
   "type": "object",
   "additionalProperties": false,
   "required": [

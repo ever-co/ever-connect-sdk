@@ -1,5 +1,5 @@
 {
-  "assertion": "eyJhbGciOiJFZERTQSIsImtpZCI6Il9mY3FDSThZOXprIiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL2FwaS5ldmVyLnRlc3QvdjEvaW5zdGFuY2VzL3Rva2VuIiwiZXhwIjoxNzkzNjE0MjAwLCJpYXQiOjE3OTM2MTM2MDAsImlzcyI6IjAxSk5FN1Y5SjAzSjZYUTJXTjhIMFo4OFI1IiwianRpIjoidmVjdG9yLWp0aS0wMDAwMDAwMDAzIiwic3ViIjoiMDFKTkU3VjlKMDNKNlhRMldOOEgwWjg4UjUifQ.CTIXk6cmBJSRFfK2lx4m8RWtWCWBnujS0_YyS4NwCna-p4k6NlzZ67R2glXriCIXYJbpAn-pLAo2baXotTIqBQ",
+  "assertion": "eyJhbGciOiJFZERTQSIsImtpZCI6Il9mY3FDSThZOXprIiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL2FwaS5ldmVyLnRlc3QvdjEvaW5zdGFuY2VzL3Rva2VuIiwiZXhwIjoxNzkzNjEzOTAwLCJpYXQiOjE3OTM2MTM2MDAsImlzcyI6IjBiOGY4YTVlLTRhNmMtNGYxZS05YTUxLTZmMGU2YjliOGMxMSIsImp0aSI6InZlY3Rvci1qdGktMDAwMDAwMDAxMSIsInN1YiI6IjBiOGY4YTVlLTRhNmMtNGYxZS05YTUxLTZmMGU2YjliOGMxMSJ9.r_Dzp7O_urJwUAQyxfu4cmtw3MA7OH-ig7dGHj9PwRna7qkO35ARLlosgMKpTgfGtyGF1LqQp4gx_CjScvNUDg",
   "context": {
     "audience": "https://api.ever.test/v1/instances/token",
     "current_key": {
@@ -22,7 +22,7 @@
       "replayed-jti-0000000000"
     ]
   },
-  "description": "exp is more than 300 s after iat",
+  "description": "iss and sub are a UUID (an anonymous stats id never authenticates)",
   "expected": {
     "code": "invalid_client",
     "status": 401

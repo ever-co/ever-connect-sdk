@@ -21,6 +21,8 @@ import { join } from 'node:path';
 import { REPO, writeText } from './lib/common.mjs';
 
 const MARKER = ['PUBLIC-SAFE', 'DRAFT'].join(' ');
+// The drafts number their sections; the corrections name the headings instead.
+const SECTION = String.fromCharCode(0xa7);
 const DRAFT_DIR = 'docs/docs-drafts';
 const region = (name) => [`<!-- generated:${name} -->`, `<!-- /generated:${name} -->`];
 
@@ -38,10 +40,10 @@ export const DRAFTS = [
     ],
     fixes: [
       [
-        'To verify yourself: Docker Compose and `tcpdump` (see §7).',
+        `To verify yourself: Docker Compose and \`tcpdump\` (see ${SECTION}7).`,
         'To verify yourself: Docker Compose and `tcpdump` (see *How to verify yourself* below).',
       ],
-      ['the non-Ever hosts listed in §1;', 'the non-Ever hosts listed under *When nothing is sent*;'],
+      [`the non-Ever hosts listed in ${SECTION}1;`, 'the non-Ever hosts listed under *When nothing is sent*;'],
       [/^\*\*Nothing else\.\*\*.*$/m, NOTHING_ELSE],
       [
         /the `code` is stable: [^\n]*?\. The modules log/,
@@ -62,7 +64,7 @@ export const DRAFTS = [
         /Example \(Ever Gauzy; the same document as the SDK's golden fixture [^\n]*\):/,
         "Example (Ever Gauzy), generated from the SDK's golden fixture `contracts/fixtures/stats/valid/gauzy.json`:",
       ],
-      ['you can reset it (§5)', 'you can reset it (see *How to see what was sent*)'],
+      [`you can reset it (${SECTION}5)`, 'you can reset it (see *How to see what was sent*)'],
       ['The schema is published in the open-source SDK', 'The schema is published in the SDK'],
       [
         /The signature uses a key pair your installation generated on first boot; [^\n]*?The key proves continuity, not identity: the platform learns nothing about who you are from it\./,

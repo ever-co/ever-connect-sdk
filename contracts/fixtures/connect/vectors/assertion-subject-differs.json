@@ -1,5 +1,5 @@
 {
-  "assertion": "eyJhbGciOiJFZERTQSIsImtpZCI6Il9mY3FDSThZOXprIiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL2FwaS5ldmVyLnRlc3QvdjEvaW5zdGFuY2VzL3Rva2VuIiwiZXhwIjoxNzkzNjE0MjAwLCJpYXQiOjE3OTM2MTM2MDAsImlzcyI6IjAxSk5FN1Y5SjAzSjZYUTJXTjhIMFo4OFI1IiwianRpIjoidmVjdG9yLWp0aS0wMDAwMDAwMDAzIiwic3ViIjoiMDFKTkU3VjlKMDNKNlhRMldOOEgwWjg4UjUifQ.CTIXk6cmBJSRFfK2lx4m8RWtWCWBnujS0_YyS4NwCna-p4k6NlzZ67R2glXriCIXYJbpAn-pLAo2baXotTIqBQ",
+  "assertion": "eyJhbGciOiJFZERTQSIsImtpZCI6Il9mY3FDSThZOXprIiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL2FwaS5ldmVyLnRlc3QvdjEvaW5zdGFuY2VzL3Rva2VuIiwiZXhwIjoxNzkzNjEzOTAwLCJpYXQiOjE3OTM2MTM2MDAsImlzcyI6IjAxSk5FN1Y5SjAzSjZYUTJXTjhIMFo4OFI1IiwianRpIjoidmVjdG9yLWp0aS0wMDAwMDAwMDEyIiwic3ViIjoiMDFKTkU3VjlKMDNKNlhRMldOOEgwWjg4UjYifQ._5qzf5mhaTo9Xo2Rj2zz3-of54JTb6bUP8o1tN6NoWjNPncdUD8PP6hBTwPB3x59zL-CtvKmmgN9vGXY8yOKCQ",
   "context": {
     "audience": "https://api.ever.test/v1/instances/token",
     "current_key": {
@@ -22,7 +22,7 @@
       "replayed-jti-0000000000"
     ]
   },
-  "description": "exp is more than 300 s after iat",
+  "description": "sub is not iss",
   "expected": {
     "code": "invalid_client",
     "status": 401

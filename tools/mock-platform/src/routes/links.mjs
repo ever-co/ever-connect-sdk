@@ -1,6 +1,9 @@
 // Row 5: tenant links (link codes), unlink and re-key.
-import { activeLinks, createLink, tenantLinkView } from '../model.mjs';
+import { activeLinks, createLink, linkedTenantView, tenantLinkView } from '../model.mjs';
 import { fail } from '../problem.mjs';
+import { countWrong, issuance, windowOpen } from './connect.mjs';
+
+const LINK_CODE_SHAPE = /^EVL(-[0-9A-HJKMNP-TV-Z]{4}){3}$/;
 
 const linkEventData = (link) => {
   const data = {
@@ -17,11 +20,22 @@ const linkEventData = (link) => {
 };
 
 export const linkHandlers = {
-  instanceCreateTenantLink({ state, instance, body }) {
-    const code = body.link_code.toUpperCase();
-    const entry = state.codes.get(code);
-    if (!entry || entry.kind !== 'link' || entry.used || entry.revoked || entry.expires_at <= state.now()) fail(422, 'code_invalid');
-    if (entry.product && entry.product !== body.product) fail(422, 'product_mismatch');
+  // The platform's order: issuance (404), the caller's wrong-code window (429), the link code (one
+  // 422 code_invalid), the code's product, then the link (409 when the tenant is linked already).
+  instanceCreateTenantLink(ctx) {
+    const { state, instance, body } = ctx;
+    issuance(state, 'link codes');
+    windowOpen(state, ctx);
+    const code = String(body.link_code).trim().toUpperCase();
+    const entry = LINK_CODE_SHAPE.test(code) ? state.codes.get(code) : null;
+    if (!entry || entry.kind !== 'link' || entry.used || entry.revoked || entry.expires_at <= state.now()) {
+      countWrong(state, ctx);
+      fail(422, 'code_invalid');
+    }
+    if (entry.product && entry.product !== body.product) {
+      countWrong(state, ctx);
+      fail(422, 'product_mismatch', 'this link code was minted for another product');
+    }
     const dup = activeLinks(instance).find(
       (l) => l.product_tenant_id === body.product_tenant_id && (l.product_org_id ?? null) === (body.product_org_id ?? null),
     );
@@ -29,7 +43,7 @@ export const linkHandlers = {
     entry.used = true;
     const link = createLink(state, instance, { org: entry.org, ...body, link_method: 'link_code' });
     state.emit(instance, 'ever.registry.tenant_link.created', linkEventData(link), { subject: { kind: 'tenant_link', id: link.id } });
-    return { status: 201, body: tenantLinkView(state, link) };
+    return { status: 201, body: linkedTenantView(state, link) };
   },
 
   instanceUnlinkTenantLink({ state, instance, params }) {

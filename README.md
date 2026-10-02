@@ -32,7 +32,7 @@ place, in TypeScript and Rust:
 | `crates/ever-connect-sdk` | the managed-operation executor trait and runner for Rust |
 | `tools/mock-platform` | the mock platform and its image |
 | `tools/egress-audit` | the egress audit and its self-test |
-| `tools/` | the generators and checks (`generate.mjs`, `sync-contract.mjs`, `split-integrations.mjs`, `fixtures/build-signed.mjs`, `check-schema-drift.mjs`, `check-public-safe.mjs`, `copy-draft.mjs`) |
+| `tools/` | the generators and checks (`generate.mjs`, `sync-contract.mjs`, `split-integrations.mjs`, `fixtures/build-signed.mjs`, `check-schema-drift.mjs`, `check-public-safe.mjs`, `copy-draft.mjs`) and `conformance/run.mjs`, which replays non-destructive cases against a running Ever Platform API and the mock |
 | `docs/` | the documentation pages; the tables in them are generated |
 
 ## Build and test

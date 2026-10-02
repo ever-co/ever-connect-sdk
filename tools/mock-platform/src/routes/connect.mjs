@@ -4,7 +4,7 @@ import { randomBytes } from 'node:crypto';
 import { verifyAssertion } from '../assertion.mjs';
 import { b64url, decodeJws, instanceKid, publicKeyFromX, verifyBytes } from '../crypto.mjs';
 import { manifestEntry, signManifest, testKey } from '../keys.mjs';
-import { createInstance, createLink } from '../model.mjs';
+import { createInstance, createLink, linkedTenantView } from '../model.mjs';
 import { fail } from '../problem.mjs';
 
 export const LEGAL = {
@@ -43,15 +43,52 @@ const validJwk = (jwk) => {
   }
 };
 
+// The caller's wrong-code window, shared by connect and link codes: a caller past the limit gets
+// 429 before its code is looked at; every wrong code counts.
+const windowKey = (ctx) => `wrong-codes|${ctx.req.socket.remoteAddress}`;
+
+export function windowOpen(state, ctx) {
+  const w = state.windows.get(windowKey(ctx));
+  const limit = state.config.limits.wrong_codes_per_hour;
+  if (w && state.now() < w.start + 3600 && w.count >= limit)
+    fail(429, 'rate_limited', undefined, { retry_after_s: w.start + 3600 - state.now() });
+}
+
+export function countWrong(state, ctx) {
+  state.hit(windowKey(ctx), state.config.limits.wrong_codes_per_hour, 3600);
+}
+
+/** Connect and link codes are issued unless the deployment switched issuance off (404). */
+export function issuance(state, what = 'connect codes') {
+  if (state.faults.connect_issuance_off) fail(404, 'not_found', `${what} are not issued on this deployment`);
+}
+
 function codeInvalid(state, code, ctx) {
   const entry = code ? state.codes.get(code) : null;
   if (entry && !entry.used) {
     entry.wrong_attempts += 1;
     if (entry.wrong_attempts >= state.config.limits.wrong_attempts_per_code) entry.revoked = true;
   }
-  const wait = state.hit(`wrong-codes|${ctx.req.socket.remoteAddress}`, state.config.limits.wrong_codes_per_hour, 3600);
-  if (wait > 0) fail(429, 'rate_limited', undefined, { retry_after_s: wait });
+  countWrong(state, ctx);
   fail(422, 'code_invalid');
+}
+
+const PRODUCTS = new Set(['gauzy', 'teams', 'works', 'rec', 'traduora', 'demand']);
+const VERSION = /^[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}(-[0-9A-Za-z.]{1,16})?$/;
+const INSTALL_SOURCE = /^(cloud|self-hosted|ever\.sh|works_app|desktop|partner:[a-z0-9-]{2,32})$/;
+const CODE_SHAPE = /^EVC(-[0-9A-HJKMNP-TV-Z]{4}){3}$/;
+
+/** What a redeem body says, checked as the platform checks it before any code is consumed. */
+function checkRedeemBody(body) {
+  const field = (path, code, message) => fail(422, 'validation_failed', undefined, { errors: [{ path, code, message }] });
+  if (!PRODUCTS.has(body.product)) field('/product', 'invalid', 'not a product code');
+  if (body.product === 'demand') fail(422, 'product_not_supported');
+  if (!VERSION.test(String(body.version).trim())) field('/version', 'invalid_shape', 'a `major.minor.patch[-suffix]` version');
+  if (!INSTALL_SOURCE.test(String(body.install_source).trim())) field('/install_source', 'invalid', 'not an install source');
+  const serves = body.serves_products ?? [];
+  if (serves.some((p) => !PRODUCTS.has(p))) field('/serves_products', 'invalid', 'not a product code');
+  if (serves.length > 5) field('/serves_products', 'out_of_range', 'at most five products');
+  if (!validJwk(body.public_jwk) || 'd' in body.public_jwk) fail(422, 'public_jwk_invalid');
 }
 
 function endpoints(issuer) {
@@ -95,29 +132,33 @@ export const connectHandlers = {
     return { status: 200, body: { ...LEGAL } };
   },
 
+  // The platform's order: the body's shape (422), issuance (404), what consumes nothing (product,
+  // version, install source, served products, key), the caller's wrong-code window (429), the code
+  // (one 422 code_invalid for unknown, expired, used, revoked and malformed codes), the code's
+  // product, then the key's holder.
   connectRedeem: Object.assign(
     (ctx) => {
       const { state, body, validation, issuer } = ctx;
-      if (body?.product === 'demand') fail(422, 'product_not_supported');
-      if (!validation.ok) {
-        // A code of the wrong shape answers exactly like an unknown one.
-        if (validation.errors.every((e) => e.path === '/code')) codeInvalid(state, null, ctx);
-        fail(422, 'validation_failed', undefined, { errors: validation.errors });
-      }
-      const code = body.code.toUpperCase();
-      const entry = state.codes.get(code);
+      if (!validation.ok) fail(422, 'validation_failed', undefined, { errors: validation.errors });
+      issuance(state);
+      checkRedeemBody(body);
+      windowOpen(state, ctx);
+      const code = String(body.code).trim().toUpperCase();
+      const entry = CODE_SHAPE.test(code) ? state.codes.get(code) : null;
       if (!entry || entry.kind !== 'connect' || entry.used || entry.revoked || entry.expires_at <= state.now())
-        codeInvalid(state, code, ctx);
+        codeInvalid(state, entry ? code : null, ctx);
       if (entry.product && entry.product !== body.product) {
         entry.wrong_attempts += 1;
+        countWrong(state, ctx);
         fail(422, 'product_mismatch');
       }
-      if (!validJwk(body.public_jwk)) fail(422, 'public_jwk_invalid');
       const holder = [...state.instances.values()].find(
         (i) => i.current_key.x === body.public_jwk.x || i.previous_key?.x === body.public_jwk.x,
       );
-      if (holder?.status === 'active' || holder?.status === 'pending_approval') fail(409, 'already_connected');
       if (holder?.status === 'revoked') fail(422, 'public_jwk_invalid', 'a revoked key is never reused');
+      if (holder && (holder.current_key.x !== body.public_jwk.x || holder.org.id !== entry.org.id || holder.product !== body.product))
+        fail(422, 'public_jwk_invalid', 'the key belongs to another installation');
+      if (holder?.status === 'active' || holder?.status === 'pending_approval') fail(409, 'already_connected');
       entry.used = true;
       let instance = holder;
       if (instance) {
@@ -127,23 +168,24 @@ export const connectHandlers = {
         instance = createInstance(state, { ...body, org: entry.org, status: entry.pending_approval ? 'pending_approval' : 'active' });
       }
       let link;
-      if (body.tenant?.product_tenant_id) {
-        link = createLink(state, instance, { org: entry.org, product: body.product, ...body.tenant, link_method: 'link_code' });
+      if (body.tenant?.product_tenant_id && instance.status === 'active') {
+        link = createLink(state, instance, { org: entry.org, product: body.product, ...body.tenant, link_method: 'explicit' });
       }
       connected(state, instance);
       const out = { instance_id: instance.id, kid: instance.current_key.kid, status: instance.status, ...endpoints(issuer) };
-      if (link) out.link = viewLink(state, link);
+      if (link) out.link = linkedTenantView(state, link);
       return { status: 201, body: out };
     },
     { ownValidation: true },
   ),
 
   instanceToken({ state, body, issuer }) {
-    if (
-      body?.grant_type !== 'client_credentials' ||
-      body?.client_assertion_type !== 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer'
-    )
-      fail(401, 'invalid_client');
+    if (body?.grant_type !== 'client_credentials')
+      fail(422, 'validation_failed', undefined, { errors: [{ path: '/grant_type', code: 'invalid', message: 'client_credentials' }] });
+    if (body?.client_assertion_type !== 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer')
+      fail(422, 'validation_failed', undefined, {
+        errors: [{ path: '/client_assertion_type', code: 'invalid', message: 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer' }],
+      });
     const decoded = decodeJws(body.client_assertion);
     const instance = decoded ? state.instances.get(decoded.payload.iss) : null;
     const r = verifyAssertion(body.client_assertion, {
@@ -240,20 +282,3 @@ export const connectHandlers = {
     };
   },
 };
-
-function viewLink(state, link) {
-  return {
-    id: link.id,
-    org_id: link.org_id,
-    instance_id: link.instance_id,
-    product: link.product,
-    product_tenant_id: link.product_tenant_id,
-    product_org_id: link.product_org_id,
-    display_name: link.display_name,
-    link_method: link.link_method,
-    linked_at: state.iso(link.linked_at),
-    linked_by_person_id: null,
-    state: link.state,
-    unlinked_at: null,
-  };
-}

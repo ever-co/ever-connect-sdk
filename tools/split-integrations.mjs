@@ -110,9 +110,15 @@ export function build() {
   };
   const vendorDoc = readJson(join(REPO, 'contracts/VENDOR.json'));
   constants.contracts_version = readFileSync(join(REPO, 'contracts/VERSION'), 'utf8').trim();
-  constants.connect_code_pattern = doc.components.schemas.ConnectCode.pattern;
-  constants.link_code_pattern = doc.components.schemas.LinkCode.pattern;
-  constants.install_sources = doc.components.schemas.InstallSource.pattern;
+  // A pattern the contract states wins; where the pinned contract describes the value without one
+  // (the connect code became the code resource), the published constant stays as it was.
+  const patternOf = (name, current) => {
+    const schema = doc.components.schemas[name];
+    return typeof schema?.pattern === 'string' ? schema.pattern : current;
+  };
+  constants.connect_code_pattern = patternOf('ConnectCodeValue', patternOf('ConnectCode', constants.connect_code_pattern));
+  constants.link_code_pattern = patternOf('LinkCode', constants.link_code_pattern);
+  constants.install_sources = patternOf('InstallSource', constants.install_sources);
   constants.products = products;
   constants.stats_headers = { key: pick('-Key'), signature: pick('-Signature'), key_id: pick('-Key-Id') };
   constants.feed_event_types = vendorDoc.events.instance_types;

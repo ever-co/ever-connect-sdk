@@ -6,7 +6,12 @@
  * reference: a difference is fixed in the mock or filed against the platform's contract.
  *
  *   node tools/conformance/run.mjs --target http://localhost:8080 [--against-mock] [--json]
+ *                                  [--issuance on|off] [--modules connect,stats]
  *   node tools/conformance/run.mjs --target mock                   (the mock against itself)
+ *
+ * --issuance off expects what a deployment that issues no connect codes answers (a well-formed
+ * redeem is 404; the mock is switched the same way). --modules runs only the cases of those
+ * modules, for a platform that does not serve the others yet.
  *
  * Exit 0 with zero differences, 1 with differences, 2 when the target cannot be reached.
  */
@@ -95,12 +100,16 @@ async function send(base, req) {
   };
 }
 
+/** What a case expects under a profile ({issuance: 'on' | 'off'}). */
+export const expectation = (c, profile = {}) => (profile.issuance === 'off' && c.expect_issuance_off ? c.expect_issuance_off : c.expect);
+
 /** Differences of one answer from the expectation (and from the reference answer, when given). */
-export function compare(c, answer, reference = null) {
+export function compare(c, answer, reference = null, profile = {}) {
   const diffs = [];
-  if (answer.status !== c.expect.status) diffs.push(`status ${answer.status}, expected ${c.expect.status}`);
-  if (c.expect.code && answer.code !== c.expect.code) diffs.push(`code ${answer.code}, expected ${c.expect.code}`);
-  for (const f of c.expect.required ?? []) if (!answer.body || !(f in answer.body)) diffs.push(`no ${f} in the answer`);
+  const expect = expectation(c, profile);
+  if (answer.status !== expect.status) diffs.push(`status ${answer.status}, expected ${expect.status}`);
+  if (expect.code && answer.code !== expect.code) diffs.push(`code ${answer.code}, expected ${expect.code}`);
+  for (const f of expect.required ?? []) if (!answer.body || !(f in answer.body)) diffs.push(`no ${f} in the answer`);
   if (reference) {
     if (answer.status !== reference.status) diffs.push(`status ${answer.status}, the other side ${reference.status}`);
     if (answer.code !== reference.code) diffs.push(`code ${answer.code}, the other side ${reference.code}`);
@@ -108,32 +117,37 @@ export function compare(c, answer, reference = null) {
   return diffs;
 }
 
-export async function startMock() {
+export async function startMock(profile = {}) {
   const mock = createMockPlatform({ config: { clock: { real: true } } });
   const { url } = await mock.listen(0, '127.0.0.1');
   mock.state.config.issuer = url;
+  if (profile.issuance === 'off') mock.state.faults.connect_issuance_off = true;
   return { url, close: () => mock.close() };
 }
 
-/** Runs every case against the target (and the mock): [{id, row, target, mock, diffs}]. */
-export async function run({ target, againstMock = false, cases = loadCases() }) {
+/**
+ * Runs the cases against the target (and the mock): [{id, row, module, target, mock, diffs}].
+ * profile: {issuance: 'on' | 'off'}; modules: the case modules to run (all when absent).
+ */
+export async function run({ target, againstMock = false, cases = loadCases(), profile = {}, modules = null }) {
   let own = null;
   let base = target;
   if (target === 'mock') {
-    own = await startMock();
+    own = await startMock(profile);
     base = own.url;
   }
-  const mock = againstMock ? await startMock() : null;
+  const mock = againstMock ? await startMock(profile) : null;
   const results = [];
   try {
-    for (const c of cases) {
+    for (const c of cases.filter((x) => !modules || modules.includes(x.module))) {
       const answer = await send(base, buildRequest(c, base));
       const reference = mock ? await send(mock.url, buildRequest(c, mock.url)) : null;
-      const diffs = compare(c, answer, reference);
-      if (reference) diffs.push(...compare(c, reference).map((d) => `mock: ${d}`));
+      const diffs = compare(c, answer, reference, profile);
+      if (reference) diffs.push(...compare(c, reference, null, profile).map((d) => `mock: ${d}`));
       results.push({
         id: c.id,
         row: c.row,
+        module: c.module,
         target: answer.status + (answer.code ? ` ${answer.code}` : ''),
         mock: reference ? reference.status + (reference.code ? ` ${reference.code}` : '') : null,
         diffs,
@@ -158,7 +172,17 @@ async function main(argv) {
   }
   let results;
   try {
-    results = await run({ target: target.replace(/\/$/, ''), againstMock: argv.includes('--against-mock') });
+    const issuance = arg('issuance') ?? 'on';
+    if (!['on', 'off'].includes(issuance)) {
+      process.stderr.write('conformance: --issuance is on or off\n');
+      return 2;
+    }
+    results = await run({
+      target: target.replace(/\/$/, ''),
+      againstMock: argv.includes('--against-mock'),
+      profile: { issuance },
+      modules: arg('modules')?.split(',') ?? null,
+    });
   } catch (error) {
     process.stderr.write(`conformance: the target could not be reached: ${error.cause?.code ?? error.message}\n`);
     return 2;
