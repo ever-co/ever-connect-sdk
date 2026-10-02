@@ -1,0 +1,12 @@
+{
+  "items": [
+    {
+      "meter_key": "employees.reported",
+      "quantity": 27,
+      "period": "2026-11",
+      "employee_names": [
+        "Jane Doe"
+      ]
+    }
+  ]
+}

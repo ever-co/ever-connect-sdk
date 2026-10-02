@@ -1,0 +1,19 @@
+[package]
+name = "ever-connect-sdk"
+description = "Ever Platform connection SDK for Rust. This skeleton carries the managed-operation runner; the client, the verifiers and the statistics signer are added on top of it."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+repository.workspace = true
+keywords = ["ever-platform", "sdk"]
+categories = ["api-bindings"]
+
+[lints]
+workspace = true
+
+[dependencies]
+ever-connect-contracts = { path = "../ever-connect-contracts" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+jsonschema = { workspace = true }

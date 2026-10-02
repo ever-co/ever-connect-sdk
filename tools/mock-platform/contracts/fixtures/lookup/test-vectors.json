@@ -1,0 +1,51 @@
+{
+  "salt_version": 0,
+  "salt": "oXdv2Z2X27XAr8ToW3-GHP6OD-AetKCiA4oRkF_FnWM",
+  "normalization_version": 1,
+  "vectors": [
+    {
+      "kind": "vat",
+      "input": " bg 123 456 789 ",
+      "normalized": "BG123456789",
+      "salt_version": 0,
+      "hash": "12c9b8f891583acaea6dc0f86233ea527c32c31e0bd818c329a7105d3beaf366"
+    },
+    {
+      "kind": "vat",
+      "input": "123456789",
+      "country": "`BG`",
+      "normalized": "BG123456789",
+      "salt_version": 0,
+      "hash": "12c9b8f891583acaea6dc0f86233ea527c32c31e0bd818c329a7105d3beaf366"
+    },
+    {
+      "kind": "vat",
+      "input": "de 12.345.678/9",
+      "normalized": "DE123456789",
+      "salt_version": 0,
+      "hash": "4bdabbf37545dc49a7c8ac4a4431fa7f973da56cf8c24b9120d971527d2502ae"
+    },
+    {
+      "kind": "registration",
+      "input": "123 456 789",
+      "country": "`BG`",
+      "normalized": "BG:123456789",
+      "salt_version": 0,
+      "hash": "bc070adf3c0ecacf78ef7e53189f984eec9f1a1c85899cffd2317258cec7ba0c"
+    },
+    {
+      "kind": "email",
+      "input": "Jane.Doe+x@Exämple.com ",
+      "normalized": "jane.doe+x@xn--exmple-cua.com",
+      "salt_version": 0,
+      "hash": "115359ae4e546210526840c005fb832d7ee51e44f19fdfed8f163c04340f9582"
+    },
+    {
+      "kind": "email",
+      "input": "  ACME@Example.COM",
+      "normalized": "acme@example.com",
+      "salt_version": 0,
+      "hash": "3116007e07691603630786b813de99da03048dfddad522e98f9e01ed72904068"
+    }
+  ]
+}

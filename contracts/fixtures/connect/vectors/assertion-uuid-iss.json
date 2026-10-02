@@ -1,0 +1,29 @@
+{
+  "description": "issuer and subject are a UUID (a statistics id), not the installation ULID",
+  "context": {
+    "instance_id": "01JNE7V9J03J6XQ2WN8H0Z88R5",
+    "audience": "https://mock-platform.test/v1/instances/token",
+    "now": 1793613600,
+    "current_key": {
+      "kty": "OKP",
+      "crv": "Ed25519",
+      "x": "XOrehnhhK36sJQ4HZocoSpNrjjBfhTvnTslp7PQzO90",
+      "kid": "xNLVJASKZjU"
+    },
+    "previous_key": {
+      "kty": "OKP",
+      "crv": "Ed25519",
+      "x": "BBSukYFIFF7Vlz1s69lGnEs3NjRSQv0x8iOoTte4cfE",
+      "kid": "HXT4UjY1E9Y"
+    },
+    "rotated_at": 1793354400,
+    "seen_jti": [
+      "replayed-jti-0000000000"
+    ]
+  },
+  "assertion": "eyJhbGciOiJFZERTQSIsImtpZCI6InhOTFZKQVNLWmpVIiwidHlwIjoiSldUIn0.eyJpc3MiOiJmMjM2YzQ1NS0xMjBiLTRjOTEtYjJkMC1jZmU4ZjNiY2I5ZDYiLCJzdWIiOiJmMjM2YzQ1NS0xMjBiLTRjOTEtYjJkMC1jZmU4ZjNiY2I5ZDYiLCJhdWQiOiJodHRwczovL21vY2stcGxhdGZvcm0udGVzdC92MS9pbnN0YW5jZXMvdG9rZW4iLCJqdGkiOiJTQ205dlBxMmpxQkNjVnBKT2JTZEpnIiwiaWF0IjoxNzkzNjEzNjAwLCJleHAiOjE3OTM2MTM5MDB9.1l_MH_uF-0M3bJpmwP8jLF-Piy-ly6Y9bDElD1HPMKjDXhKgqrfvqb8Ke_dHjJ1MkK-FcZJyg1IrE9RPFUvgDQ",
+  "expected": {
+    "status": 401,
+    "code": "invalid_client"
+  }
+}

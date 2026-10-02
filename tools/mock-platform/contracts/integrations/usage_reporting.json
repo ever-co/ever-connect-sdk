@@ -1,0 +1,74 @@
+{
+  "key": "usage_reporting",
+  "name": "Usage reporting",
+  "description": "Sends daily counts of the meters you choose (for example active employees or seats) for plans that are priced by usage. On Ever Cloud the row starts on under the Ever Cloud terms, because cloud plans are billed on these counts (for example per employee for Ever Gauzy and Ever Teams, on the latest successful count). A self-hosted installation sends nothing unless an administrator turns it on.",
+  "category": "entitlements",
+  "owner_module": "entitlements",
+  "direction": "outbound",
+  "defaults": {
+    "cloud": true,
+    "self_hosted": false
+  },
+  "availability": {
+    "cloud": "enabled",
+    "self_hosted": "disabled"
+  },
+  "requires_feature": "usage_reporting",
+  "products": [
+    "gauzy",
+    "works"
+  ],
+  "phase": 2,
+  "status": "active",
+  "scope_version": 1,
+  "revoke_effect": "Reports stop.",
+  "notes": "Ever Cloud: starts on under the Ever Cloud terms (for example Ever Gauzy and Ever Teams per-employee plans; a missed count never raises the bill above the last known number). Self-hosted: off unless an administrator consents.",
+  "scope": [
+    {
+      "field_path": "meters.active_employees",
+      "direction": "to_ever",
+      "form": "count",
+      "frequency": "daily",
+      "required": false,
+      "purpose": "Usage-based plan quantity",
+      "retention": "Daily totals kept for 24 months."
+    },
+    {
+      "field_path": "meters.active_users",
+      "direction": "to_ever",
+      "form": "count",
+      "frequency": "daily",
+      "required": false,
+      "purpose": "Usage-based plan quantity",
+      "retention": "Daily totals kept for 24 months."
+    },
+    {
+      "field_path": "meters.tracked_employees",
+      "direction": "to_ever",
+      "form": "count",
+      "frequency": "daily",
+      "required": false,
+      "purpose": "Usage-based plan quantity",
+      "retention": "Daily totals kept for 24 months."
+    },
+    {
+      "field_path": "meters.seats",
+      "direction": "to_ever",
+      "form": "count",
+      "frequency": "daily",
+      "required": false,
+      "purpose": "Usage-based plan quantity (Works)",
+      "retention": "Daily totals kept for 24 months."
+    },
+    {
+      "field_path": "meters.credits_used",
+      "direction": "to_ever",
+      "form": "count",
+      "frequency": "daily",
+      "required": false,
+      "purpose": "Usage-based plan quantity (Works)",
+      "retention": "Daily totals kept for 24 months."
+    }
+  ],
+  "docs_anchor": "usage_reporting"
+}

@@ -1,0 +1,7 @@
+maxprocs: Leaving GOMAXPROCS=14: CPU quota undefined
+.:53
+app.:53
+CoreDNS-1.12.1
+linux/amd64, go1.24.1, 707c7c1
+[INFO] 10.231.31.2:58694 - 16065 "AAAA IN api.ever.co. udp 29 false 512" NXDOMAIN qr,aa,rd 29 0.000263988s
+[INFO] 10.231.31.2:58694 - 15700 "A IN api.ever.co. udp 29 false 512" NXDOMAIN qr,aa,rd 29 0.000291786s

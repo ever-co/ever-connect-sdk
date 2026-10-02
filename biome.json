@@ -1,0 +1,93 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": [
+      "**",
+      "!**/generated",
+      "!contracts",
+      "!**/dist",
+      "!crates",
+      "!target",
+      "!packages/ts/connect-contracts/fixtures",
+      "!packages/ts/connect-contracts/schemas",
+      "!packages/ts/connect-contracts/integrations",
+      "!packages/ts/connect-tools/contracts",
+      "!tools/fixtures/public-safe",
+      "!tools/mock-platform/contracts"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 140
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "trailingCommas": "all",
+      "semicolons": "always"
+    }
+  },
+  "json": {
+    "formatter": {
+      "enabled": false
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "style": {
+        "noParameterAssign": "off",
+        "useTemplate": "off",
+        "noNonNullAssertion": "off"
+      },
+      "complexity": {
+        "noForEach": "off",
+        "useLiteralKeys": "off"
+      },
+      "suspicious": {
+        "noControlCharactersInRegex": "off",
+        "noAssignInExpressions": "off",
+        "useIterableCallbackReturn": "off",
+        "noExportsInTest": "off"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": [
+        "packages/ts/connect-contracts/src/**",
+        "packages/ts/connect-sdk/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "node:http": "the contract and SDK packages make no request of their own",
+                  "node:https": "the contract and SDK packages make no request of their own",
+                  "node:net": "the contract and SDK packages open no socket",
+                  "http": "the contract and SDK packages make no request of their own",
+                  "https": "the contract and SDK packages make no request of their own",
+                  "net": "the contract and SDK packages open no socket",
+                  "axios": "use the global fetch through the SDK transport",
+                  "undici": "use the global fetch through the SDK transport",
+                  "jose": "signatures use node:crypto only"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

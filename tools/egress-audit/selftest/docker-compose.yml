@@ -1,0 +1,11 @@
+# The self-test's fixture product: one service running the fixture named by EVER_SELFTEST_FIXTURE
+# (quiet, leaky, stats-sender or managed-executor). Built from this directory; nothing is mounted.
+services:
+  app:
+    image: ever-audit-selftest-${EVER_SELFTEST_FIXTURE:-quiet}:local
+    build:
+      context: .
+      args:
+        FIXTURE: ${EVER_SELFTEST_FIXTURE:-quiet}
+    environment:
+      PORT: "8080"

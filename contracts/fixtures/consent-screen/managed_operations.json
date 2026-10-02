@@ -1,0 +1,113 @@
+{
+  "key": "managed_operations",
+  "scope_version": 1,
+  "screen_version": "1",
+  "blocks": {
+    "title": "Enable Managed updates and backups for {organization}",
+    "purpose": "Lets an owner or admin ask this self-hosted installation, from app.ever.co, to run a maintenance operation: an update, a backup, a restore check or a health report. Requests reach the installation through its own outbound connection; the operator also turns the feature on locally and sets when and what may run. Backups stay in your own storage, and Ever Platform sees only each operation's status and size. Ever never connects in.",
+    "leaves_installation": [
+      {
+        "field": "result.status",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "on_action",
+        "purpose": "Whether the operation succeeded, failed or expired",
+        "required": true
+      },
+      {
+        "field": "result.version",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "on_action",
+        "purpose": "Product version after an update",
+        "required": false
+      },
+      {
+        "field": "result.size_bytes",
+        "form": "count",
+        "form_text": "as a count",
+        "when": "on_action",
+        "purpose": "Size of a backup or a health report",
+        "required": false
+      },
+      {
+        "field": "result.artefact_ref",
+        "form": "id",
+        "form_text": "as an identifier",
+        "when": "on_action",
+        "purpose": "Name of the backup in your own storage, so you can find it; its content never leaves your storage",
+        "required": false
+      }
+    ],
+    "arrives_at_installation": [
+      {
+        "field": "operation.id",
+        "form": "id",
+        "form_text": "as an identifier",
+        "when": "on_action",
+        "purpose": "Identify the requested operation"
+      },
+      {
+        "field": "operation.kind",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "on_action",
+        "purpose": "Which operation to run: update, backup, restore check or health report"
+      },
+      {
+        "field": "operation.params",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "on_action",
+        "purpose": "The fixed settings of that kind of operation (for example the target version of an update), and the time window it may run in"
+      }
+    ],
+    "platform_keeps": [
+      {
+        "field": "operation.id",
+        "retention": "Kept with the organization's operation history."
+      },
+      {
+        "field": "operation.kind",
+        "retention": "Kept with the organization's operation history."
+      },
+      {
+        "field": "operation.params",
+        "retention": "Kept with the organization's operation history."
+      },
+      {
+        "field": "result.status",
+        "retention": "Kept with the organization's operation history."
+      },
+      {
+        "field": "result.version",
+        "retention": "Kept with the organization's operation history."
+      },
+      {
+        "field": "result.size_bytes",
+        "retention": "Kept with the organization's operation history."
+      },
+      {
+        "field": "result.artefact_ref",
+        "retention": "Kept with the organization's operation history."
+      }
+    ],
+    "how_often": [
+      "only when you act"
+    ],
+    "where_to_change": "Integrations & data in this product, or Instances in app.ever.co; turning it off stops the data at once.",
+    "revoke_effect": "Queued operations are cancelled and nothing further runs.",
+    "legal": {
+      "terms_url": "https://ever.co/legal/terms",
+      "terms_version": "2026-10",
+      "dpa_url": "https://ever.co/legal/dpa",
+      "dpa_version": "2026-10",
+      "subprocessors_url": "https://ever.co/legal/subprocessors"
+    },
+    "authorisation": "I am authorised to enable this for {organization}"
+  },
+  "in_product": {
+    "allowed": true,
+    "step_up_max_age_s": 300
+  }
+}

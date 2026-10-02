@@ -1,0 +1,113 @@
+{
+  "key": "ever_id_login",
+  "scope_version": 1,
+  "screen_version": "1",
+  "blocks": {
+    "title": "Enable Sign in with Ever ID for {organization}",
+    "purpose": "Adds Ever ID as an extra sign-in option in this installation. Existing sign-in methods keep working unchanged.",
+    "leaves_installation": [
+      {
+        "field": "instance.oidc.redirect_uris",
+        "form": "url",
+        "form_text": "as an address",
+        "when": "once",
+        "purpose": "Register the sign-in callback addresses of this installation",
+        "required": true
+      },
+      {
+        "field": "instance.oidc.post_logout_uris",
+        "form": "url",
+        "form_text": "as an address",
+        "when": "once",
+        "purpose": "Register the sign-out return addresses",
+        "required": false
+      },
+      {
+        "field": "instance.oidc.backchannel_logout_uri",
+        "form": "url",
+        "form_text": "as an address",
+        "when": "once",
+        "purpose": "Receive sign-out notices from Ever ID",
+        "required": false
+      },
+      {
+        "field": "organization.display_name",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "once",
+        "purpose": "Name shown on the Ever ID sign-in screen",
+        "required": true
+      }
+    ],
+    "arrives_at_installation": [
+      {
+        "field": "oidc.issuer",
+        "form": "url",
+        "form_text": "as an address",
+        "when": "once",
+        "purpose": "Ever ID issuer address for this installation"
+      },
+      {
+        "field": "oidc.client_id",
+        "form": "id",
+        "form_text": "as an identifier",
+        "when": "once",
+        "purpose": "Client identifier for this installation"
+      },
+      {
+        "field": "oidc.client_secret",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "once",
+        "purpose": "Client secret, stored encrypted by the installation"
+      }
+    ],
+    "platform_keeps": [
+      {
+        "field": "instance.oidc.redirect_uris",
+        "retention": "Kept while the integration is enabled."
+      },
+      {
+        "field": "instance.oidc.post_logout_uris",
+        "retention": "Kept while the integration is enabled."
+      },
+      {
+        "field": "instance.oidc.backchannel_logout_uri",
+        "retention": "Kept while the integration is enabled."
+      },
+      {
+        "field": "organization.display_name",
+        "retention": "Kept while the integration is enabled."
+      },
+      {
+        "field": "oidc.issuer",
+        "retention": "Stored in the installation's own settings."
+      },
+      {
+        "field": "oidc.client_id",
+        "retention": "Stored in the installation's own settings."
+      },
+      {
+        "field": "oidc.client_secret",
+        "retention": "Stored encrypted in the installation's own settings; environment variables take precedence."
+      }
+    ],
+    "how_often": [
+      "once"
+    ],
+    "where_to_change": "Integrations & data in this product, or Instances in app.ever.co; turning it off stops the data at once.",
+    "revoke_effect": "The Ever ID client for this installation is deleted and its local settings are cleared. Existing local sessions are not affected.",
+    "legal": {
+      "terms_url": "https://ever.co/legal/terms",
+      "terms_version": "2026-10",
+      "dpa_url": "https://ever.co/legal/dpa",
+      "dpa_version": "2026-10",
+      "subprocessors_url": "https://ever.co/legal/subprocessors"
+    },
+    "authorisation": "I am authorised to enable this for {organization}"
+  },
+  "in_product": {
+    "allowed": true,
+    "step_up_max_age_s": 300
+  }
+}

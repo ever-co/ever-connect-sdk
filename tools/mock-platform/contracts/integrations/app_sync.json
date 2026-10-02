@@ -1,0 +1,126 @@
+{
+  "key": "app_sync",
+  "name": "Apps and deployments",
+  "description": "Lists the apps you build and deploy in Ever Works on your organization's account pages, and on your public profile if you choose. Only identifiers and status move. App content, repositories, budgets, agents and memory never leave Ever Works.",
+  "category": "apps",
+  "owner_module": "registry",
+  "direction": "outbound",
+  "defaults": {
+    "cloud": true,
+    "self_hosted": false
+  },
+  "availability": {
+    "cloud": "enabled",
+    "self_hosted": "available"
+  },
+  "requires_feature": "app_sync",
+  "products": [
+    "works"
+  ],
+  "phase": 2,
+  "status": "active",
+  "scope_version": 1,
+  "revoke_effect": "Pending updates are drained and no further updates are sent.",
+  "scope": [
+    {
+      "field_path": "work.id",
+      "direction": "to_ever",
+      "form": "id",
+      "frequency": "events",
+      "required": true,
+      "purpose": "Identify the app",
+      "retention": "Kept while the integration is enabled."
+    },
+    {
+      "field_path": "work.kind",
+      "direction": "to_ever",
+      "form": "clear",
+      "frequency": "events",
+      "required": true,
+      "purpose": "App type",
+      "retention": "Kept while the integration is enabled."
+    },
+    {
+      "field_path": "work.status",
+      "direction": "to_ever",
+      "form": "clear",
+      "frequency": "events",
+      "required": true,
+      "purpose": "App status",
+      "retention": "Kept while the integration is enabled."
+    },
+    {
+      "field_path": "deployment.target",
+      "direction": "to_ever",
+      "form": "clear",
+      "frequency": "events",
+      "required": false,
+      "purpose": "Where the app runs",
+      "retention": "Kept while the integration is enabled."
+    },
+    {
+      "field_path": "deployment.provider",
+      "direction": "to_ever",
+      "form": "clear",
+      "frequency": "events",
+      "required": false,
+      "purpose": "Where the app runs",
+      "retention": "Kept while the integration is enabled."
+    },
+    {
+      "field_path": "deployment.shape",
+      "direction": "to_ever",
+      "form": "clear",
+      "frequency": "events",
+      "required": false,
+      "purpose": "Deployment kind",
+      "retention": "Kept while the integration is enabled."
+    },
+    {
+      "field_path": "deployment.managed_by",
+      "direction": "to_ever",
+      "form": "clear",
+      "frequency": "events",
+      "required": false,
+      "purpose": "Who manages the deployment",
+      "retention": "Kept while the integration is enabled."
+    },
+    {
+      "field_path": "deployment.url",
+      "direction": "to_ever",
+      "form": "url",
+      "frequency": "events",
+      "required": false,
+      "purpose": "Public address of a live app",
+      "retention": "Kept while the integration is enabled."
+    },
+    {
+      "field_path": "organization.id",
+      "direction": "to_ever",
+      "form": "id",
+      "frequency": "events",
+      "required": true,
+      "purpose": "Match the Works organization to your Ever Platform organization",
+      "retention": "Kept while the integration is enabled."
+    },
+    {
+      "field_path": "organization.slug",
+      "direction": "to_ever",
+      "form": "clear",
+      "frequency": "events",
+      "required": true,
+      "purpose": "Match the Works organization to your Ever Platform organization",
+      "retention": "Kept while the integration is enabled."
+    },
+    {
+      "field_path": "member.joined_left",
+      "direction": "to_ever",
+      "form": "id",
+      "frequency": "events",
+      "required": false,
+      "purpose": "Keep organization membership links current (person link id only)",
+      "retention": "Kept while the integration is enabled."
+    }
+  ],
+  "docs_anchor": "app_sync"
+}

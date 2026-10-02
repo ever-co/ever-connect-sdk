@@ -1,0 +1,44 @@
+{
+  "name": "@ever-co/connect-sdk",
+  "version": "1.0.0-rc.1",
+  "description": "Ever Platform connection SDK. This skeleton carries the managed-operation runner; the client, the verifiers and the statistics signer are added on top of it.",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ever-co/ever-connect-sdk.git",
+    "directory": "packages/ts/connect-sdk"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@ever-co/connect-contracts": "workspace:*",
+    "ajv": "8.20.0"
+  }
+}

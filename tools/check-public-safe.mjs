@@ -5,8 +5,8 @@
  *
  * Two sets of rules:
  *   - the generic rules in tools/public-safe.words.json (a product noun outside the technical
- *     allow-list of the egress harness, banned words, hosts, internal paths, draft markers and
- *     work-item identifiers);
+ *     allow-list of the egress harness and of commit messages, banned words, hosts, internal
+ *     paths, draft markers and work-item identifiers);
  *   - a phrase list kept outside the repository, read from the environment variable
  *     EVER_BANNED_PHRASES_JSON (a CI secret) or from the git-ignored local file
  *     tools/banned-phrases.private.json. Without one, those rules are skipped with a note, so
@@ -75,11 +75,12 @@ function headingsByLine(lines) {
   });
 }
 
+/** The `file` of a commit message: it may describe harness work, with the technical terms only. */
+const COMMIT_MESSAGE = ':commit-message';
+
 function nounAllowed(file, line, heading) {
-  const inPath = WORDS.noun.allowed_paths.some((p) => file.startsWith(p));
-  const inSection = WORDS.noun.allowed_sections.some(
-    (s) => s.file === file && heading.replace(/^[0-9.]+\s+/, '').startsWith(s.heading),
-  );
+  const inPath = file === COMMIT_MESSAGE || WORDS.noun.allowed_paths.some((p) => file.startsWith(p));
+  const inSection = WORDS.noun.allowed_sections.some((s) => s.file === file && heading.replace(/^[0-9.]+\s+/, '').startsWith(s.heading));
   if (!inPath && !inSection) return false;
   // Every occurrence on the line must be part of a technical term.
   let rest = line;
@@ -185,7 +186,7 @@ function scanCommits(range, phraseRules) {
   const out = [];
   for (const block of log.split('--end-of-commit--\n').filter((b) => b.trim() !== '')) {
     const [sha = '', ...body] = block.split('\n');
-    out.push(...findings(body.join('\n'), `commit ${sha.slice(0, 12)}`, phraseRules, { file: '' }));
+    out.push(...findings(body.join('\n'), `commit ${sha.slice(0, 12)}`, phraseRules, { file: COMMIT_MESSAGE }));
   }
   return out;
 }
@@ -203,8 +204,7 @@ function branchName() {
 function loadPhraseRules() {
   const env = process.env.EVER_BANNED_PHRASES_JSON;
   if (env && env.trim() !== '') return { source: 'the CI secret', rules: compilePhraseList(JSON.parse(env)) };
-  if (existsSync(LOCAL_LIST))
-    return { source: 'the local file', rules: compilePhraseList(JSON.parse(readFileSync(LOCAL_LIST, 'utf8'))) };
+  if (existsSync(LOCAL_LIST)) return { source: 'the local file', rules: compilePhraseList(JSON.parse(readFileSync(LOCAL_LIST, 'utf8'))) };
   return { source: null, rules: [] };
 }
 
@@ -227,6 +227,11 @@ function selfTest() {
   if (okFound.length > 0) problems.push(`ok-docker-network.md failed: ${okFound.join(', ')}`);
   const outside = findings(ok, 'ok-docker-network.md', [], { file: 'docs/ok-docker-network.md' });
   if (!outside.some((f) => f.endsWith(': N1'))) problems.push('ok-docker-network.md passed outside tools/egress-audit/');
+  // A commit message may name the technical terms, and only those.
+  if (findings(ok, 'commit', [], { file: COMMIT_MESSAGE }).length > 0) problems.push('a technical commit message failed');
+  const noun = readFileSync(join(FIXTURES, 'bad-network-noun.md'), 'utf8');
+  if (!findings(noun, 'commit', [], { file: COMMIT_MESSAGE }).some((f) => f.endsWith(': N1')))
+    problems.push('a commit message with the noun passed');
   // A private phrase is caught and never printed.
   const phrases = compilePhraseList({ phrases: ['planted phrase'], patterns: [{ pattern: 'secret\\s+word' }] });
   const planted = findings('A Planted  Phrase and a secret word.', 'planted', phrases, { file: 'docs/x.md' });

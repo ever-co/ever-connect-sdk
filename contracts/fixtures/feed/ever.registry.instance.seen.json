@@ -1,0 +1,35 @@
+{
+  "events": [
+    {
+      "id": "01JNK7K2AKV0G7J227W7BEQXYZ",
+      "type": "ever.registry.instance.seen",
+      "version": 1,
+      "occurred_at": "2026-11-02T10:00:00Z",
+      "subject": {
+        "kind": "instance",
+        "id": "01J426N2DMSZTD2N1AESC9C1T1"
+      },
+      "org_id": "01JNB79NZW2S85GF4A96MMX6BT",
+      "instance_id": "01JNE7V9J03J6XQ2WN8H0Z88R5",
+      "actor": {
+        "kind": "system",
+        "id": "platform"
+      },
+      "data": {
+        "instance_id": "01JNE7V9J03J6XQ2WN8H0Z88R5",
+        "org_id": "01JNB79NZW2S85GF4A96MMX6BT",
+        "product": "gauzy",
+        "serves_products": [
+          "gauzy"
+        ],
+        "install_source": "self-hosted",
+        "kind": "cloud",
+        "status": "active",
+        "last_seen_bucket": "now",
+        "kid": "aBcDeFgHiJk"
+      }
+    }
+  ],
+  "last_id": "01JNK7K2AKV0G7J227W7BEQXYZ",
+  "has_more": false
+}

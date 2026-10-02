@@ -1,0 +1,103 @@
+{
+  "description": "Non-destructive conformance cases: each one is sent to a running Ever Platform API (the target) and, with --against-mock, to the mock platform, and the status, the problem code and the required response fields are compared. Nothing here connects an installation or changes an organization; the statistics cases use a conformance-only instance id and a key derived from a public seed.",
+  "cases": [
+    {
+      "id": "key-manifest",
+      "row": 1,
+      "request": { "method": "GET", "path": "/.well-known/ever-keys.json" },
+      "expect": { "status": 200, "required": ["manifest", "keys"] }
+    },
+    {
+      "id": "legal",
+      "row": 2,
+      "request": { "method": "GET", "path": "/v1/connect/legal" },
+      "expect": { "status": 200 }
+    },
+    {
+      "id": "redeem-unknown-code",
+      "row": 3,
+      "request": {
+        "method": "POST",
+        "path": "/v1/connect/redeem",
+        "idempotent": true,
+        "body": {
+          "code": "EVC-AAAA-BBBB-CCCC",
+          "product": "gauzy",
+          "version": "1.0.0",
+          "install_source": "self-hosted",
+          "public_jwk": { "kty": "OKP", "crv": "Ed25519", "x": "$conformance_key_x" }
+        }
+      },
+      "expect": { "status": 422, "code": "code_invalid" }
+    },
+    {
+      "id": "redeem-malformed",
+      "row": 3,
+      "request": {
+        "method": "POST",
+        "path": "/v1/connect/redeem",
+        "idempotent": true,
+        "body": { "code": "EVC-AAAA-BBBB-CCCC", "version": "1.0.0", "install_source": "self-hosted" }
+      },
+      "expect": { "status": 422, "code": "validation_failed" }
+    },
+    {
+      "id": "token-malformed-assertion",
+      "row": 4,
+      "request": {
+        "method": "POST",
+        "path": "/v1/instances/token",
+        "body": {
+          "grant_type": "client_credentials",
+          "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+          "client_assertion": "not.a.jws"
+        }
+      },
+      "expect": { "status": 401, "code": "invalid_client" }
+    },
+    {
+      "id": "token-unknown-instance",
+      "row": 4,
+      "request": {
+        "method": "POST",
+        "path": "/v1/instances/token",
+        "body": {
+          "grant_type": "client_credentials",
+          "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+          "client_assertion": "$unknown_instance_assertion"
+        }
+      },
+      "expect": { "status": 401, "code": "invalid_client" }
+    },
+    {
+      "id": "stats-accepted",
+      "row": 17,
+      "stats": { "fixture": "stats/valid/gauzy.json" },
+      "expect": { "status": 202, "required": ["accepted"] }
+    },
+    {
+      "id": "stats-bad-signature",
+      "row": 17,
+      "stats": { "fixture": "stats/valid/gauzy.json", "mutate": "signature" },
+      "expect": { "status": 400, "code": "signature_invalid" }
+    },
+    {
+      "id": "stats-missing-key",
+      "row": 17,
+      "stats": { "fixture": "stats/valid/gauzy.json", "mutate": "no-key" },
+      "expect": { "status": 400, "code": "validation_failed" }
+    },
+    {
+      "id": "stats-schema-violation",
+      "row": 17,
+      "stats": { "fixture": "stats/invalid/01-extra-field.json" },
+      "expect": { "status": 422, "code": "schema_violation" }
+    },
+    {
+      "id": "stats-key-mismatch",
+      "row": 17,
+      "stats": { "fixture": "stats/valid/gauzy.json", "mutate": "other-key" },
+      "expect": { "status": 409, "code": "key_mismatch" }
+    }
+  ]
+}

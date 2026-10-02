@@ -1,0 +1,36 @@
+{
+  "key": "billing_link",
+  "name": "Link cloud billing",
+  "description": "Links your existing Ever Gauzy Cloud billing account to your Ever Platform organization, so all your plans show in one place. Prices, limits and existing offers do not change.",
+  "category": "billing",
+  "owner_module": "billing",
+  "direction": "outbound",
+  "defaults": {
+    "cloud": true,
+    "self_hosted": false
+  },
+  "availability": {
+    "cloud": "enabled",
+    "self_hosted": "not_applicable"
+  },
+  "requires_feature": null,
+  "products": [
+    "gauzy"
+  ],
+  "phase": 2,
+  "status": "active",
+  "scope_version": 1,
+  "revoke_effect": "The link is removed. Billing itself continues unchanged.",
+  "scope": [
+    {
+      "field_path": "tenant.stripeCustomerId",
+      "direction": "to_ever",
+      "form": "id",
+      "frequency": "once",
+      "required": true,
+      "purpose": "Match the cloud tenant's billing customer to the organization's billing account",
+      "retention": "Kept while the integration is enabled."
+    }
+  ],
+  "docs_anchor": "billing_link"
+}

@@ -1,0 +1,13 @@
+{
+  "keys": [
+    {
+      "kid": "test-root-1",
+      "iss": "https://mock-platform.test",
+      "kty": "OKP",
+      "crv": "Ed25519",
+      "x": "slsZoNmmvLZONnDVCJ_lF6TV46dFWyDmWR9svtaZzMk",
+      "use": "sig",
+      "alg": "EdDSA"
+    }
+  ]
+}

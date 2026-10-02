@@ -1,0 +1,73 @@
+{
+  "key": "marketplace_installs",
+  "name": "Install apps from apps.ever.co",
+  "description": "Lets you install an app you picked on apps.ever.co into this installation. The installation picks up the request and runs its normal plugin installer, then reports whether the install worked.",
+  "category": "marketplace",
+  "owner_module": "listings",
+  "direction": "both",
+  "defaults": {
+    "cloud": true,
+    "self_hosted": false
+  },
+  "availability": {
+    "cloud": "enabled",
+    "self_hosted": "available"
+  },
+  "requires_feature": "listings",
+  "products": [
+    "gauzy",
+    "works"
+  ],
+  "phase": 4,
+  "status": "coming_soon",
+  "scope_version": 1,
+  "revoke_effect": "Install requests are no longer delivered. Installed apps stay installed.",
+  "scope": [
+    {
+      "field_path": "install.id",
+      "direction": "from_ever",
+      "form": "id",
+      "frequency": "on_action",
+      "required": true,
+      "purpose": "Identify the install request",
+      "retention": "Kept with the install record."
+    },
+    {
+      "field_path": "install.slug",
+      "direction": "from_ever",
+      "form": "clear",
+      "frequency": "on_action",
+      "required": true,
+      "purpose": "Which app to install",
+      "retention": "Kept with the install record."
+    },
+    {
+      "field_path": "install.package",
+      "direction": "from_ever",
+      "form": "clear",
+      "frequency": "on_action",
+      "required": true,
+      "purpose": "Package to install",
+      "retention": "Kept with the install record."
+    },
+    {
+      "field_path": "install.edition",
+      "direction": "from_ever",
+      "form": "clear",
+      "frequency": "on_action",
+      "required": false,
+      "purpose": "Edition chosen",
+      "retention": "Kept with the install record."
+    },
+    {
+      "field_path": "install.status",
+      "direction": "to_ever",
+      "form": "clear",
+      "frequency": "on_change",
+      "required": true,
+      "purpose": "Report whether the install succeeded",
+      "retention": "Kept with the install record."
+    }
+  ],
+  "docs_anchor": "marketplace_installs"
+}

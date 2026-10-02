@@ -1,0 +1,9 @@
+{
+  "stats_instance_id": "f236c455-120b-4c91-b2d0-cfe8f3bcb9d6",
+  "stats_public_jwk": {
+    "kty": "OKP",
+    "crv": "Ed25519",
+    "x": "Inweq2-sIMiuuI2zaT07AWI5P0YSvD4RAnXKhD-IaCE"
+  },
+  "statement_sig": "eyJhbGciOiJFZERTQSIsInR5cCI6ImV2ZXItc3RhdHMtbGluaytqd3QifQ.eyJzdGF0c19pbnN0YW5jZV9pZCI6ImYyMzZjNDU1LTEyMGItNGM5MS1iMmQwLWNmZThmM2JjYjlkNiIsInN0YXRzX3B1YmxpY19qd2siOnsia3R5IjoiT0tQIiwiY3J2IjoiRWQyNTUxOSIsIngiOiJJbndlcTItc0lNaXV1STJ6YVQwN0FXSTVQMFlTdkQ0UkFuWEtoRC1JYUNFIn0sImlhdCI6MTc5MzYxMzYwMH0.BXTTlMUtWMCXUIc7Ee82BMs1usZNAmPHknKo7KiqPvYzIQ9vovqw1U7ZFUoJF6FKxoIZh437oYzsZul6A5-FBg"
+}

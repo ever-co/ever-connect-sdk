@@ -33,7 +33,16 @@
       "NET_RAW",
       "NET_ADMIN",
       "bad-network-noun.md",
-      "ok-docker-network.md"
+      "ok-docker-network.md",
+      "sealed (audit |default )?networks?",
+      "audit network",
+      "compose networks?",
+      "product networks?",
+      "docker networks?",
+      "network (aliases|subnets?)",
+      "\\.networks?\\b",
+      "\\bnetworks\\s*(=|\\.|\\[|:|,|\\}|\\))",
+      "'network'"
     ]
   },
   "banned": [

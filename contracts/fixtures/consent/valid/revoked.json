@@ -1,0 +1,24 @@
+{
+  "id": "01J3PJ14MCJTB8ZMP7Y6Q5G966",
+  "org_id": "01JNB79NZW2S85GF4A96MMX6BT",
+  "instance_id": "01JNE7V9J03J6XQ2WN8H0Z88R5",
+  "tenant_link_id": "01JHGF4PAY0P5JJ7J2A56VSRZM",
+  "integration_key": "stats_link",
+  "scope_version": 1,
+  "dpa_version": "2026-10",
+  "terms_version": "2026-10",
+  "granted_by_person_id": "01JV9DTN53Y4WCY615AVZA7MVQ",
+  "granted_at": "2026-11-02T10:00:00Z",
+  "consent_source": "app_ever_co",
+  "evidence": {
+    "ui": "app.ever.co",
+    "screen_version": "1",
+    "request_id": "req-1",
+    "ui_locale": "en"
+  },
+  "revoked_at": "2026-11-02T11:00:00Z",
+  "revoked_by_person_id": "01JV9DTN53Y4WCY615AVZA7MVQ",
+  "revoke_reason": "owner",
+  "revoke_source": "platform",
+  "supersedes_id": null
+}

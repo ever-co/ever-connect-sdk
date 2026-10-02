@@ -1,0 +1,34 @@
+{
+  "events": [
+    {
+      "id": "01JRK2HT16DMBJMJQC98RKS5JA",
+      "type": "ever.registry.managed_operation.requested",
+      "version": 1,
+      "occurred_at": "2026-11-02T10:00:00Z",
+      "subject": {
+        "kind": "managed_operation",
+        "id": "01JSPN4RWPN7EETB8F20J1KWFS"
+      },
+      "org_id": "01JNB79NZW2S85GF4A96MMX6BT",
+      "instance_id": "01JNE7V9J03J6XQ2WN8H0Z88R5",
+      "actor": {
+        "kind": "system",
+        "id": "platform"
+      },
+      "data": {
+        "operation_id": "01J28W71TQ4P0DZ8CJG0DZ1NV8",
+        "org_id": "01JNB79NZW2S85GF4A96MMX6BT",
+        "instance_id": "01JNE7V9J03J6XQ2WN8H0Z88R5",
+        "kind": "restore_check",
+        "params": {
+          "artefact_ref": "bk-20261102-0100",
+          "shell": "rm -rf /"
+        },
+        "not_before": "2026-11-02T10:00:00Z",
+        "expires_at": "2026-11-03T10:00:00Z"
+      }
+    }
+  ],
+  "last_id": "01JRK2HT16DMBJMJQC98RKS5JA",
+  "has_more": false
+}

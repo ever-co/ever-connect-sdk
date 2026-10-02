@@ -1,0 +1,13 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "minimumReleaseAge": "7 days",
+  "internalChecksFilter": "strict",
+  "rangeStrategy": "pin",
+  "labels": ["dependencies"],
+  "packageRules": [
+    { "matchManagers": ["github-actions"], "groupName": "GitHub Actions" },
+    { "matchManagers": ["cargo"], "matchPackageNames": ["typify", "schemars"], "groupName": "Rust type generation" },
+    { "matchPackageNames": ["openapi-typescript", "json-schema-to-typescript", "typescript"], "groupName": "TypeScript type generation" }
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "key": "provider_access",
+  "scope_version": 1,
+  "screen_version": "1",
+  "blocks": {
+    "title": "Enable Grant a provider access for {organization}",
+    "purpose": "Lets a service provider you choose on apps.ever.co (for example an accountant or payroll provider) work in your installation with a role and scope you pick. The grant shows in Integrations & data and you can revoke it at any time.",
+    "leaves_installation": [
+      {
+        "field": "grant.status",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "on_change",
+        "purpose": "Show whether the grant is active",
+        "required": true
+      }
+    ],
+    "arrives_at_installation": [
+      {
+        "field": "grant.provider_organization_id",
+        "form": "id",
+        "form_text": "as an identifier",
+        "when": "on_action",
+        "purpose": "Which provider is granted access"
+      },
+      {
+        "field": "grant.role",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "on_action",
+        "purpose": "Role the provider gets in the installation"
+      }
+    ],
+    "platform_keeps": [
+      {
+        "field": "grant.provider_organization_id",
+        "retention": "Kept while the grant exists."
+      },
+      {
+        "field": "grant.role",
+        "retention": "Kept while the grant exists."
+      },
+      {
+        "field": "grant.status",
+        "retention": "Kept while the grant exists."
+      }
+    ],
+    "how_often": [
+      "only when you act",
+      "when the value changes"
+    ],
+    "where_to_change": "Integrations & data in this product, or Instances in app.ever.co; turning it off stops the data at once.",
+    "revoke_effect": "The provider's access is removed from the installation.",
+    "legal": {
+      "terms_url": "https://ever.co/legal/terms",
+      "terms_version": "2026-10",
+      "dpa_url": "https://ever.co/legal/dpa",
+      "dpa_version": "2026-10",
+      "subprocessors_url": "https://ever.co/legal/subprocessors"
+    },
+    "authorisation": "I am authorised to enable this for {organization}"
+  },
+  "in_product": {
+    "allowed": true,
+    "step_up_max_age_s": 300
+  }
+}

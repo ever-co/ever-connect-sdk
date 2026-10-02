@@ -1,0 +1,122 @@
+[
+  {
+    "ts": "2026-10-02T04:05:46Z",
+    "method": "GET",
+    "path_template": "/.well-known/ever-keys.json",
+    "row": 1,
+    "status": 200,
+    "user_agent": "ever-connect-sdk/0.0.0-selftest (gauzy/1.0.0)",
+    "idempotency_key": null,
+    "body_sha256": null
+  },
+  {
+    "ts": "2026-10-02T04:05:47Z",
+    "method": "POST",
+    "path_template": "/v1/connect/redeem",
+    "row": 3,
+    "status": 201,
+    "user_agent": "ever-connect-sdk/0.0.0-selftest (gauzy/1.0.0)",
+    "idempotency_key": "30f621bb-e635-46e6-9e7b-1c6beea78ce0",
+    "body_sha256": "bc4e3559db180586d078dce91defe8c14903f862891d2a63271ad9f63d1b8086"
+  },
+  {
+    "ts": "2026-10-02T04:05:47Z",
+    "method": "POST",
+    "path_template": "/v1/instances/token",
+    "row": 4,
+    "status": 200,
+    "user_agent": "ever-connect-sdk/0.0.0-selftest (gauzy/1.0.0)",
+    "idempotency_key": null,
+    "body_sha256": "5c332230fdbdec63aeef458807d5a6cede14c43cc1f0ff88fcf2266d5e75def2"
+  },
+  {
+    "ts": "2026-10-02T04:05:47Z",
+    "method": "GET",
+    "path_template": "/v1/instances/me/events",
+    "row": 7,
+    "status": 200,
+    "user_agent": "ever-connect-sdk/0.0.0-selftest (gauzy/1.0.0)",
+    "idempotency_key": null,
+    "body_sha256": null
+  },
+  {
+    "ts": "2026-10-02T04:05:47Z",
+    "method": "POST",
+    "path_template": "/v1/instances/me/events/ack",
+    "row": 7,
+    "status": 200,
+    "user_agent": "ever-connect-sdk/0.0.0-selftest (gauzy/1.0.0)",
+    "idempotency_key": null,
+    "body_sha256": "1247d6c9faac24265dc8504aa62242724be30c542a05132e5228676c89e68c61"
+  },
+  {
+    "ts": "2026-10-02T04:05:51Z",
+    "method": "GET",
+    "path_template": "/v1/instances/me/events",
+    "row": 7,
+    "status": 200,
+    "user_agent": "ever-connect-sdk/0.0.0-selftest (gauzy/1.0.0)",
+    "idempotency_key": null,
+    "body_sha256": null
+  },
+  {
+    "ts": "2026-10-02T04:05:51Z",
+    "method": "POST",
+    "path_template": "/v1/instances/me/managed-operations/{operation}/result",
+    "row": 34,
+    "status": 200,
+    "user_agent": "ever-connect-sdk/0.0.0-selftest (gauzy/1.0.0)",
+    "idempotency_key": null,
+    "body_sha256": "9fd6d9aec3fd90738ff80ab65e4ab2dd6a0423ebb024859bf666008fa7478429"
+  },
+  {
+    "ts": "2026-10-02T04:05:51Z",
+    "method": "POST",
+    "path_template": "/v1/instances/me/events/ack",
+    "row": 7,
+    "status": 200,
+    "user_agent": "ever-connect-sdk/0.0.0-selftest (gauzy/1.0.0)",
+    "idempotency_key": null,
+    "body_sha256": "f80aca56c9a06d34891c1eebf40a4982927b1775c973c7019fd93567286eca6b"
+  },
+  {
+    "ts": "2026-10-02T04:05:51Z",
+    "method": "GET",
+    "path_template": "/v1/instances/me/events",
+    "row": 7,
+    "status": 200,
+    "user_agent": "ever-connect-sdk/0.0.0-selftest (gauzy/1.0.0)",
+    "idempotency_key": null,
+    "body_sha256": null
+  },
+  {
+    "ts": "2026-10-02T04:05:51Z",
+    "method": "POST",
+    "path_template": "/v1/instances/me/events/ack",
+    "row": 7,
+    "status": 200,
+    "user_agent": "ever-connect-sdk/0.0.0-selftest (gauzy/1.0.0)",
+    "idempotency_key": null,
+    "body_sha256": "38c5cb5a2d3f2fb1d888157b2f2ff9f47f704c5f32e68c5b9471976d8f539ec5"
+  },
+  {
+    "ts": "2026-10-02T04:05:56Z",
+    "method": "GET",
+    "path_template": "/v1/instances/me/events",
+    "row": 7,
+    "status": 200,
+    "user_agent": "ever-connect-sdk/0.0.0-selftest (gauzy/1.0.0)",
+    "idempotency_key": null,
+    "body_sha256": null
+  },
+  {
+    "ts": "2026-10-02T04:06:01Z",
+    "method": "GET",
+    "path_template": "/v1/instances/me/events",
+    "row": 7,
+    "status": 200,
+    "user_agent": "ever-connect-sdk/0.0.0-selftest (gauzy/1.0.0)",
+    "idempotency_key": null,
+    "body_sha256": null
+  }
+]

@@ -1,0 +1,21 @@
+{
+  "issuer": "http://mock-platform:8080",
+  "clock": { "start": 1793613600 },
+  "codes": [
+    { "code": "EVC-TEST-0000-0001", "kind": "connect", "product": "gauzy", "org": { "id": "01JMQCK0RG000000000000000A", "handle": "acme" }, "expires_in_s": 900, "pending_approval": false },
+    { "code": "EVC-TEST-0000-0003", "kind": "connect", "product": "gauzy", "org": { "id": "01JMQCK0RG000000000000000A", "handle": "acme" }, "expires_in_s": 86400, "pending_approval": true },
+    { "code": "EVL-TEST-0000-0002", "kind": "link", "product": "gauzy", "org": { "id": "01JMQCK0RG000000000000000B", "handle": "globex" }, "expires_in_s": 900 }
+  ],
+  "entitlement": {
+    "tier": "paid",
+    "plan": { "code": "ever_gauzy_selfhosted_small_business_lifetime", "source": "licence_certificate", "ref": "EVER-GAUZY-SB-1A2B3C4D" },
+    "features": { "handle": true, "discoverability": true, "lookup": true, "profile.public": true, "ever_id_login": true },
+    "managed": { "updates": false, "backups": false, "support_level": "community" }
+  },
+  "integrations": { "cloud_defaults": false, "enabled": [] },
+  "lookup": {
+    "salt_versions": [{ "version": 1, "salt": "use a 32-byte base64url salt", "active_from": "2026-11-01T00:00:00Z", "retire_after": null }],
+    "optins": [{ "kind": "vat", "normalized": "BG123456789", "handle": "acme", "features": ["pay"] }]
+  },
+  "faults": { "keys_unavailable": false, "webhooks_module_disabled": false, "revoke_credential_at_call": null }
+}

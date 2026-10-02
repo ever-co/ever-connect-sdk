@@ -1,0 +1,43 @@
+{
+  "key": "billing_link",
+  "scope_version": 1,
+  "screen_version": "1",
+  "blocks": {
+    "title": "Enable Link cloud billing for {organization}",
+    "purpose": "Links your existing Ever Gauzy Cloud billing account to your Ever Platform organization, so all your plans show in one place. Prices, limits and existing offers do not change.",
+    "leaves_installation": [
+      {
+        "field": "tenant.stripeCustomerId",
+        "form": "id",
+        "form_text": "as an identifier",
+        "when": "once",
+        "purpose": "Match the cloud tenant's billing customer to the organization's billing account",
+        "required": true
+      }
+    ],
+    "arrives_at_installation": [],
+    "platform_keeps": [
+      {
+        "field": "tenant.stripeCustomerId",
+        "retention": "Kept while the integration is enabled."
+      }
+    ],
+    "how_often": [
+      "once"
+    ],
+    "where_to_change": "Integrations & data in this product, or Instances in app.ever.co; turning it off stops the data at once.",
+    "revoke_effect": "The link is removed. Billing itself continues unchanged.",
+    "legal": {
+      "terms_url": "https://ever.co/legal/terms",
+      "terms_version": "2026-10",
+      "dpa_url": "https://ever.co/legal/dpa",
+      "dpa_version": "2026-10",
+      "subprocessors_url": "https://ever.co/legal/subprocessors"
+    },
+    "authorisation": "I am authorised to enable this for {organization}"
+  },
+  "in_product": {
+    "allowed": true,
+    "step_up_max_age_s": 300
+  }
+}

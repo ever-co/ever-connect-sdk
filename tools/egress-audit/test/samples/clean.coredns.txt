@@ -1,0 +1,5 @@
+maxprocs: Leaving GOMAXPROCS=14: CPU quota undefined
+.:53
+app.:53
+CoreDNS-1.12.1
+linux/amd64, go1.24.1, 707c7c1

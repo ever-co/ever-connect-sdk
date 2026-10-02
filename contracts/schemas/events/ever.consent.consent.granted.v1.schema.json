@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://api.ever.co/v1/events/catalog/schemas/ever.consent.consent.granted.v1.schema.json",
+  "title": "ever.consent.consent.granted v1 data",
+  "description": "data object of ever.consent.consent.granted",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "consent_id",
+    "org_id",
+    "instance_id",
+    "integration_key",
+    "scope_version",
+    "dpa_version",
+    "consent_source"
+  ],
+  "properties": {
+    "consent_id": {
+      "$ref": "common.schema.json#/$defs/ulid"
+    },
+    "org_id": {
+      "$ref": "common.schema.json#/$defs/ulid"
+    },
+    "instance_id": {
+      "$ref": "common.schema.json#/$defs/ulid"
+    },
+    "tenant_link_id": {
+      "$ref": "common.schema.json#/$defs/ulid"
+    },
+    "integration_key": {
+      "$ref": "common.schema.json#/$defs/integration_key"
+    },
+    "scope_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "dpa_version": {
+      "$ref": "common.schema.json#/$defs/dpa_version"
+    },
+    "consent_source": {
+      "$ref": "common.schema.json#/$defs/consent_source"
+    }
+  }
+}

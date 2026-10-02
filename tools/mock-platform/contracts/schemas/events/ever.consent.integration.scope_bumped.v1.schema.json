@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://api.ever.co/v1/events/catalog/schemas/ever.consent.integration.scope_bumped.v1.schema.json",
+  "title": "ever.consent.integration.scope_bumped v1 data",
+  "description": "data object of ever.consent.integration.scope_bumped",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "org_id",
+    "instance_id",
+    "integration_key",
+    "scope_version",
+    "re_consent_required"
+  ],
+  "properties": {
+    "org_id": {
+      "$ref": "common.schema.json#/$defs/ulid"
+    },
+    "instance_id": {
+      "$ref": "common.schema.json#/$defs/ulid"
+    },
+    "integration_key": {
+      "$ref": "common.schema.json#/$defs/integration_key"
+    },
+    "scope_version": {
+      "type": "integer",
+      "minimum": 2
+    },
+    "re_consent_required": {
+      "const": true
+    }
+  }
+}

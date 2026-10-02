@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://api.ever.co/v1/events/catalog/schemas/ever.registry.managed_operation.state_changed.v1.schema.json",
+  "title": "ever.registry.managed_operation.state_changed v1 data",
+  "description": "the notice products call `managed.operation_result`: a managed operation changed state (accepted, running, succeeded or failed from the installation's result; expired or cancelled by the platform, so a queued operation never starts); status and size only, never file names, paths, URLs or backup content",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "operation_id",
+    "org_id",
+    "instance_id",
+    "kind",
+    "state"
+  ],
+  "properties": {
+    "operation_id": {
+      "$ref": "common.schema.json#/$defs/ulid"
+    },
+    "org_id": {
+      "$ref": "common.schema.json#/$defs/ulid"
+    },
+    "instance_id": {
+      "$ref": "common.schema.json#/$defs/ulid"
+    },
+    "kind": {
+      "$ref": "common.schema.json#/$defs/managed_operation_kind"
+    },
+    "state": {
+      "$ref": "common.schema.json#/$defs/managed_operation_state"
+    },
+    "version": {
+      "$ref": "common.schema.json#/$defs/semver",
+      "description": "product version after an update"
+    },
+    "artefact_ref": {
+      "$ref": "common.schema.json#/$defs/external_id",
+      "description": "opaque reference of the backup in the customer's own storage"
+    },
+    "size_bytes": {
+      "$ref": "common.schema.json#/$defs/count"
+    }
+  },
+  "examples": [
+    {
+      "operation_id": "01JE0M4N5P6Q7R8S9T0V1W2X3Y",
+      "org_id": "01JBX1A2B3C4D5E6F7G8H9J0K1",
+      "instance_id": "01JC5M2R4T6V8X0Z2B4D6F8H0J",
+      "kind": "backup",
+      "state": "succeeded",
+      "artefact_ref": "bk-20261102-0100",
+      "size_bytes": 734003200
+    }
+  ]
+}

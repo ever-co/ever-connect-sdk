@@ -1,0 +1,56 @@
+{
+  "key": "webhooks",
+  "scope_version": 1,
+  "screen_version": "1",
+  "blocks": {
+    "title": "Enable Event delivery for {organization}",
+    "purpose": "Lets Ever Platform send signed notifications (for example 'your plan changed') to installations that can receive them. Installations that only make outbound connections use polling instead.",
+    "leaves_installation": [
+      {
+        "field": "webhook.endpoint_url",
+        "form": "url",
+        "form_text": "as an address",
+        "when": "once",
+        "purpose": "Where to deliver signed notifications",
+        "required": true
+      }
+    ],
+    "arrives_at_installation": [
+      {
+        "field": "event.payload_ids",
+        "form": "id",
+        "form_text": "as an identifier",
+        "when": "events",
+        "purpose": "Notifications carry identifiers only"
+      }
+    ],
+    "platform_keeps": [
+      {
+        "field": "webhook.endpoint_url",
+        "retention": "Kept while the integration is enabled."
+      },
+      {
+        "field": "event.payload_ids",
+        "retention": "Delivery log kept 30 days."
+      }
+    ],
+    "how_often": [
+      "once",
+      "as events happen"
+    ],
+    "where_to_change": "Integrations & data in this product, or Instances in app.ever.co; turning it off stops the data at once.",
+    "revoke_effect": "The endpoint is deleted. The installation falls back to polling.",
+    "legal": {
+      "terms_url": "https://ever.co/legal/terms",
+      "terms_version": "2026-10",
+      "dpa_url": "https://ever.co/legal/dpa",
+      "dpa_version": "2026-10",
+      "subprocessors_url": "https://ever.co/legal/subprocessors"
+    },
+    "authorisation": "I am authorised to enable this for {organization}"
+  },
+  "in_product": {
+    "allowed": true,
+    "step_up_max_age_s": 300
+  }
+}

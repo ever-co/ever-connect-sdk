@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://api.ever.co/v1/events/catalog/schemas/ever.consent.integration.disabled.v1.schema.json",
+  "title": "ever.consent.integration.disabled v1 data",
+  "description": "= `consent.changed` in the product-side vocabulary",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "org_id",
+    "instance_id",
+    "integration_key",
+    "enabled"
+  ],
+  "properties": {
+    "org_id": {
+      "$ref": "common.schema.json#/$defs/ulid"
+    },
+    "instance_id": {
+      "$ref": "common.schema.json#/$defs/ulid"
+    },
+    "tenant_link_id": {
+      "$ref": "common.schema.json#/$defs/ulid"
+    },
+    "integration_key": {
+      "$ref": "common.schema.json#/$defs/integration_key"
+    },
+    "enabled": {
+      "type": "boolean"
+    },
+    "consent_id": {
+      "$ref": "common.schema.json#/$defs/ulid"
+    },
+    "reason": {
+      "enum": [
+        "consent",
+        "revoked",
+        "instance",
+        "policy",
+        "platform",
+        "scope_bumped"
+      ]
+    }
+  }
+}

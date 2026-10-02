@@ -1,8 +1,20 @@
 name: CI
 
+# Jobs:
+#   public-safe         the gate's self-test, then every file, the branch name and the commit messages
+#   generate-check      the generated files, the integration definitions and the fixtures equal what
+#                       the tools produce from the contract; vendored files match VENDOR.json
+#   contract-sync       the contract and the vendored files equal the ever-co/platform checkout they
+#                       were synchronised from (needs the read token; skipped with a notice without it)
+#   ts                  frozen install, Biome, build, type check and every TypeScript and tool test
+#   rust                formatting, Clippy and the crate tests
+#   fixtures-roundtrip  TypeScript (ajv) and Rust (jsonschema + generated types) agree on every fixture
+#   mock-rows           the mock answers every row and problem code; its image builds and starts
+#   tools               the egress harness unit tests and its self-test with the failing control
+#
 # Runners: the organisation's runners for this repository's own branches and pull requests;
 # `ubuntu-latest` for pull requests from forks and whenever the runner variables are absent, so a
-# fork builds without any of our infrastructure.
+# fork builds without any of our infrastructure. Nothing here publishes anything.
 on:
   push:
     branches: [develop, stage, main]
@@ -17,6 +29,7 @@ permissions:
 
 env:
   CI: "1"
+  CARGO_TERM_COLOR: always
 
 jobs:
   public-safe:
@@ -37,3 +50,221 @@ jobs:
           EVER_BANNED_PHRASES_JSON: ${{ secrets.EVER_BANNED_PHRASES_JSON }}
           EVER_PUSH_BEFORE: ${{ github.event.before }}
         run: node tools/check-public-safe.mjs
+
+  generate-check:
+    name: generate-check
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || vars.RUNNER_LINUX_X64_4 || 'ubuntu-latest' }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install rustup (when the runner image has no Rust)
+        run: |
+          if ! command -v rustup >/dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 --retry 10 --retry-connrefused -fsSL https://sh.rustup.rs \
+              | sh -s -- --default-toolchain none -y
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          fi
+      - name: Toolchain (pinned by rust-toolchain.toml)
+        run: rustup toolchain install && rustup show active-toolchain
+      - uses: Swatinem/rust-cache@v2
+      - name: Install (frozen)
+        run: pnpm install --frozen-lockfile
+      - name: Generated files equal the contract (types, rows, docs regions, lock)
+        run: node tools/generate.mjs --check
+      - name: Integration definitions and constants
+        run: node tools/split-integrations.mjs --check
+      - name: Fixtures rebuild byte for byte
+        run: node tools/fixtures/build-signed.mjs --check
+      - name: Vendored files match VENDOR.json
+        run: node tools/check-schema-drift.mjs
+
+  contract-sync:
+    name: contract-sync
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || vars.RUNNER_LINUX_X64_4 || 'ubuntu-latest' }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - id: token
+        name: Read token available?
+        env:
+          TOKEN: ${{ secrets.PLATFORM_CONTRACT_READ_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::notice::PLATFORM_CONTRACT_READ_TOKEN is not set: the comparison with ever-co/platform is skipped"
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "commit=$(node -p "require('./contracts/VENDOR.json').platform.commit")" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v7
+        if: steps.token.outputs.present == 'true'
+        with:
+          repository: ever-co/platform
+          ref: ${{ steps.token.outputs.commit }}
+          token: ${{ secrets.PLATFORM_CONTRACT_READ_TOKEN }}
+          path: .platform
+          sparse-checkout: |
+            contracts
+            docs/specs/api
+            docs/specs/contracts
+            docs/specs/seeds
+      - uses: pnpm/action-setup@v6
+        if: steps.token.outputs.present == 'true'
+      - uses: actions/setup-node@v7
+        if: steps.token.outputs.present == 'true'
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: The contract equals the platform at the recorded commit
+        if: steps.token.outputs.present == 'true'
+        env:
+          EVER_PLATFORM_REPO: .platform
+        run: |
+          pnpm install --frozen-lockfile
+          node tools/sync-contract.mjs --check
+          node tools/check-schema-drift.mjs
+
+  ts:
+    name: ts
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || vars.RUNNER_LINUX_X64_4 || 'ubuntu-latest' }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install (frozen)
+        run: pnpm install --frozen-lockfile
+      - name: Biome (lint and format)
+        run: pnpm exec biome ci .
+      - name: Build
+        run: pnpm run build
+      - name: Type check
+        run: pnpm -r --if-present run typecheck
+      - name: Workspace tests
+        run: pnpm run test:workspaces
+      - name: Tool tests (contract, schemas, constants, fixtures, managed operations)
+        run: node --test "tools/test/sync-contract.test.mjs" "tools/test/schema-meta.test.mjs" "tools/test/constants.test.mjs" "tools/test/fixtures.test.mjs" "tools/test/managed-contracts.test.mjs"
+
+  rust:
+    name: rust
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || vars.RUNNER_LINUX_X64_4 || 'ubuntu-latest' }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install rustup (when the runner image has no Rust)
+        run: |
+          if ! command -v rustup >/dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 --retry 10 --retry-connrefused -fsSL https://sh.rustup.rs \
+              | sh -s -- --default-toolchain none -y
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          fi
+      - name: Toolchain (pinned by rust-toolchain.toml)
+        run: rustup toolchain install && rustup show active-toolchain
+      - uses: Swatinem/rust-cache@v2
+      - name: Formatting
+        run: cargo fmt --all -- --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Tests
+        run: cargo test --workspace --locked
+
+  fixtures-roundtrip:
+    name: fixtures-roundtrip
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || vars.RUNNER_LINUX_X64_4 || 'ubuntu-latest' }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install rustup (when the runner image has no Rust)
+        run: |
+          if ! command -v rustup >/dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 --retry 10 --retry-connrefused -fsSL https://sh.rustup.rs \
+              | sh -s -- --default-toolchain none -y
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          fi
+      - name: Toolchain (pinned by rust-toolchain.toml)
+        run: rustup toolchain install && rustup show active-toolchain
+      - uses: Swatinem/rust-cache@v2
+      - name: Install (frozen)
+        run: pnpm install --frozen-lockfile
+      - name: Rust verdicts (jsonschema and the generated types)
+        run: cargo test --locked -p ever-connect-contracts --test fixtures_roundtrip
+      - name: TypeScript verdicts and the comparison
+        run: node tools/test/fixtures-roundtrip.mjs
+
+  mock-rows:
+    name: mock-rows
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || vars.RUNNER_LINUX_X64_4 || 'ubuntu-latest' }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install (frozen)
+        run: pnpm install --frozen-lockfile
+      - name: Build the contracts and SDK packages (the sample flow and the managed scenario import them)
+        run: pnpm --filter @ever-co/connect-contracts --filter @ever-co/connect-sdk build
+      - name: Every row and problem code, the sample flow, in-product consent and managed operations
+        run: pnpm --filter ever-mock-platform test
+      - name: The image builds and answers
+        run: |
+          docker build -t ever-mock-platform:ci tools/mock-platform
+          cid=$(docker run -d ever-mock-platform:ci)
+          trap 'docker rm -f "$cid" >/dev/null 2>&1 || true' EXIT
+          for i in $(seq 1 30); do
+            if docker exec "$cid" wget -qO- http://127.0.0.1:8080/__mock/healthz >/dev/null 2>&1; then echo "ready after ${i}s"; break; fi
+            sleep 1
+          done
+          docker exec "$cid" wget -qO- http://127.0.0.1:8080/.well-known/ever-keys.json | grep -q '"manifest"'
+
+  tools:
+    name: tools
+    # The self-test needs Docker with NET_RAW and NET_ADMIN for the sniffers.
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || vars.RUNNER_LINUX_X64_8 || vars.RUNNER_LINUX_X64_4 || 'ubuntu-latest' }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install (frozen)
+        run: pnpm install --frozen-lockfile
+      - name: Harness unit tests (evidence recorded by real runs)
+        run: node --test tools/egress-audit/test/
+      - name: Docker and Compose
+        run: |
+          docker version --format 'docker {{.Server.Version}}'
+          if ! docker compose version >/dev/null 2>&1; then
+            mkdir -p "$HOME/.docker/cli-plugins"
+            curl --proto '=https' --tlsv1.2 --retry 5 -fsSL -o "$HOME/.docker/cli-plugins/docker-compose" \
+              "https://github.com/docker/compose/releases/download/v5.5.1/docker-compose-linux-x86_64"
+            chmod +x "$HOME/.docker/cli-plugins/docker-compose"
+          fi
+          docker compose version
+      - name: Self-test (off/leaky must fail, positive_stats without the mock must not pass)
+        run: node tools/egress-audit/run.mjs --selftest --artifacts egress-audit-artifacts
+      - name: Evidence (pcaps, DNS logs, report.json)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: egress-audit-selftest
+          path: egress-audit-artifacts
+          if-no-files-found: warn
+          retention-days: 14

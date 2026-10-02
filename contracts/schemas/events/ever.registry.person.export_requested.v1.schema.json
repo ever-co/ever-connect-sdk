@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://api.ever.co/v1/events/catalog/schemas/ever.registry.person.export_requested.v1.schema.json",
+  "title": "ever.registry.person.export_requested v1 data",
+  "description": "fan-out to every installation linked to one of the person's organizations; the installation answers with its own export",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "person_id",
+    "job_id",
+    "respond_by"
+  ],
+  "properties": {
+    "person_id": {
+      "$ref": "common.schema.json#/$defs/ulid"
+    },
+    "job_id": {
+      "$ref": "common.schema.json#/$defs/ulid"
+    },
+    "respond_by": {
+      "$ref": "common.schema.json#/$defs/datetime"
+    }
+  }
+}

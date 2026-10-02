@@ -1,0 +1,22 @@
+{
+  "description": "Verification outcome of each manifest against the TEST root in roots.json at the context time.",
+  "fixtures": {
+    "manifest.valid.json": {
+      "valid": true,
+      "trusted_kids": [
+        "test-assertion-1",
+        "test-entitlement-1",
+        "test-entitlement-2",
+        "test-intent-1"
+      ]
+    },
+    "manifest.keys-sha256-mismatch.json": {
+      "valid": false,
+      "code": "keys_mismatch"
+    },
+    "manifest.unknown-root.json": {
+      "valid": false,
+      "code": "unknown_root"
+    }
+  }
+}

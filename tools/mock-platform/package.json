@@ -1,0 +1,31 @@
+{
+  "name": "ever-mock-platform",
+  "version": "0.1.0",
+  "description": "A mock of the Ever Platform API for product CI: every outbound call of the Ever Platform modules, with the platform's statuses and problem codes.",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "ever-mock-platform": "./bin/ever-mock-platform.mjs"
+  },
+  "exports": {
+    ".": "./src/server.mjs",
+    "./keys": "./src/keys.mjs",
+    "./crypto": "./src/crypto.mjs",
+    "./validate": "./src/validate.mjs"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "start": "node bin/ever-mock-platform.mjs"
+  },
+  "dependencies": {
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1"
+  },
+  "devDependencies": {
+    "@ever-co/connect-contracts": "workspace:*",
+    "@ever-co/connect-sdk": "workspace:*"
+  }
+}

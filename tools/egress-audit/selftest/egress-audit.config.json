@@ -1,0 +1,12 @@
+{
+  "product": "selftest",
+  "compose": ["docker-compose.yml"],
+  "api_service": "app",
+  "process_services": ["app"],
+  "build": true,
+  "health_url": "http://app:8080/healthz",
+  "health_timeout_s": 90,
+  "module_routes": ["/api/ever-connect/status", "/api/ever-stats/status"],
+  "adapter": "adapter.mjs",
+  "wait_s": 8
+}

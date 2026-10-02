@@ -1,0 +1,28 @@
+{
+  "events": [
+    {
+      "id": "01JJYMM5DB8395H7EH8359HC77",
+      "type": "ever.registry.person.deletion_requested",
+      "version": 1,
+      "occurred_at": "2026-11-02T10:00:00Z",
+      "subject": {
+        "kind": "person",
+        "id": "01J2Z0VY8P767S5J1R1HKPQVJ0"
+      },
+      "org_id": "01JNB79NZW2S85GF4A96MMX6BT",
+      "instance_id": "01JNE7V9J03J6XQ2WN8H0Z88R5",
+      "actor": {
+        "kind": "system",
+        "id": "platform"
+      },
+      "data": {
+        "person_id": "01JDFTGFSNB2G7Z8BK54MS1VY1",
+        "job_id": "01JSF0AY2MRHJXQBQWY8CW44MM",
+        "respond_by": "2026-11-02T10:00:00Z",
+        "subject_hash": "9a5c38b2a8ed26f75c1f395f6571e86c3fcaf99dede49220fab548db439ffc6e"
+      }
+    }
+  ],
+  "last_id": "01JJYMM5DB8395H7EH8359HC77",
+  "has_more": false
+}

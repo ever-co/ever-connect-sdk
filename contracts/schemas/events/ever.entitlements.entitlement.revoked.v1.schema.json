@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://api.ever.co/v1/events/catalog/schemas/ever.entitlements.entitlement.revoked.v1.schema.json",
+  "title": "ever.entitlements.entitlement.revoked v1 data",
+  "description": "the document itself is never on the stream; the installation fetches it with If-None-Match",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "subject",
+    "org_id",
+    "seq",
+    "expires_at",
+    "tier",
+    "features_changed",
+    "limits_changed"
+  ],
+  "properties": {
+    "subject": {
+      "$ref": "common.schema.json#/$defs/entitlement_subject"
+    },
+    "org_id": {
+      "$ref": "common.schema.json#/$defs/ulid"
+    },
+    "instance_id": {
+      "$ref": "common.schema.json#/$defs/ulid"
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "expires_at": {
+      "$ref": "common.schema.json#/$defs/datetime"
+    },
+    "tier": {
+      "$ref": "common.schema.json#/$defs/tier"
+    },
+    "features_changed": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/key"
+      },
+      "maxItems": 32,
+      "uniqueItems": true
+    },
+    "limits_changed": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/key"
+      },
+      "maxItems": 32,
+      "uniqueItems": true
+    }
+  }
+}

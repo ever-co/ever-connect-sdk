@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ever-connect-sdk.invalid/egress-audit/config.schema.json",
+  "title": "egress-audit.config.json",
+  "description": "A product's egress audit configuration. Paths are relative to this file. Ever hosts can never be allowed: any name under ever.co, ever.team, gauzy.co, ever.works, rec.so or traduora.co fails the audit, and this schema refuses them in allowed_external_hosts.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["product", "compose", "api_service", "process_services", "health_url", "module_routes"],
+  "properties": {
+    "product": { "enum": ["gauzy", "teams", "works", "rec", "traduora", "demand", "selftest"] },
+    "compose": {
+      "description": "The product's compose files, in order.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "project": { "description": "The compose project name prefix (default ever-audit-<product>).", "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,40}$" },
+    "api_service": { "description": "The service that answers health_url and the module routes.", "type": "string", "minLength": 1 },
+    "process_services": {
+      "description": "Every service that runs product code (API, workers, schedulers): each gets its own sniffer.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "services": {
+      "description": "The services to start (with their dependencies); default: every service of the compose files.",
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "build": { "description": "Build the product images before the run (docker compose up --build).", "type": "boolean" },
+    "health_url": { "description": "Reached from inside the audit network, by service name.", "type": "string", "pattern": "^http://[^\\s/]+(/\\S*)?$" },
+    "health_timeout_s": { "type": "integer", "minimum": 5, "maximum": 1800 },
+    "module_routes": {
+      "description": "Routes of the Ever Platform modules; in the off mode every one must answer 404.",
+      "type": "array",
+      "items": { "type": "string", "pattern": "^/" }
+    },
+    "allowed_external_hosts": {
+      "description": "Names outside the compose services the product may look up (it still reaches nothing).",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9.-]+$",
+        "not": { "pattern": "(^|\\.)(ever\\.co|ever\\.team|gauzy\\.co|ever\\.works|rec\\.so|traduora\\.co)\\.?$" }
+      }
+    },
+    "artifacts_dir": { "description": "Where evidence and report.json go (default ./egress-audit-artifacts).", "type": "string" },
+    "wait_s": { "description": "Seconds to watch the product after the scenario (default 20).", "type": "integer", "minimum": 0, "maximum": 3600 },
+    "env_prefix": {
+      "description": "Replaces the leading EVER_ of every mode variable (for example TR_EVER_).",
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]*_$"
+    },
+    "adapter": { "description": "The adapter module (see adapter.schema.json).", "type": "string" },
+    "subnet": { "description": "The sealed network's /24 (default 10.231.7.0/24).", "type": "string", "pattern": "^([0-9]{1,3}\\.){3}0/24$" },
+    "phase": { "description": "The highest program phase whose outbound-call rows apply (default 2).", "type": "integer", "minimum": 2, "maximum": 5 },
+    "every_trigger_exclude_rows": { "type": "array", "items": { "type": "integer", "minimum": 1 } },
+    "mock_image": { "description": "A published mock platform image; default: built from the bundled mock.", "type": "string" },
+    "mock_config": { "description": "Merged into the mock platform configuration of positive modes.", "type": "object" },
+    "modes": {
+      "type": "object",
+      "description": "Extra product modes (for example connect off and sign-in on), in the shape of modes.json.",
+      "additionalProperties": { "type": "object" }
+    }
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "key": "stats_link",
+  "name": "Link usage statistics to this organization",
+  "description": "Connects the anonymous statistics identity of this self-hosted installation to your organization, so you can see your installation's latest statistics report in app.ever.co. Without this link, statistics stay anonymous. It is never offered on Ever Cloud, where one installation serves many organizations.",
+  "category": "stats",
+  "owner_module": "stats",
+  "direction": "outbound",
+  "defaults": {
+    "cloud": false,
+    "self_hosted": false
+  },
+  "availability": {
+    "cloud": "not_applicable",
+    "self_hosted": "available"
+  },
+  "requires_feature": null,
+  "products": [
+    "gauzy",
+    "teams",
+    "works",
+    "rec",
+    "traduora"
+  ],
+  "phase": 2,
+  "status": "active",
+  "scope_version": 1,
+  "revoke_effect": "The link is cleared. Later statistics reports are anonymous again.",
+  "scope": [
+    {
+      "field_path": "instance.stats_instance_id",
+      "direction": "to_ever",
+      "form": "id",
+      "frequency": "once",
+      "required": true,
+      "purpose": "Match the installation's anonymous statistics identity to the connected installation",
+      "retention": "Kept while the integration is enabled."
+    },
+    {
+      "field_path": "instance.stats_public_key",
+      "direction": "to_ever",
+      "form": "id",
+      "frequency": "once",
+      "required": true,
+      "purpose": "The public half of the separate statistics key, so the link can be checked against the key that signs the reports",
+      "retention": "Kept while the integration is enabled."
+    },
+    {
+      "field_path": "instance.stats_link_signature",
+      "direction": "to_ever",
+      "form": "id",
+      "frequency": "once",
+      "required": true,
+      "purpose": "Signature made with the statistics key, proving that the connected installation holds it",
+      "retention": "Kept while the integration is enabled."
+    }
+  ],
+  "docs_anchor": "stats_link"
+}

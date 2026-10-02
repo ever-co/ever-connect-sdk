@@ -1,0 +1,12 @@
+{
+  "product": "gauzy",
+  "version": "96.2.1",
+  "install_source": "self-hosted",
+  "kind": "self_hosted",
+  "public_jwk": {
+    "kty": "OKP",
+    "crv": "Ed25519",
+    "x": "XOrehnhhK36sJQ4HZocoSpNrjjBfhTvnTslp7PQzO90"
+  },
+  "public_url": "https://gauzy.example.com"
+}

@@ -1,0 +1,82 @@
+[
+  {
+    "ts": "2026-10-02T04:10:01Z",
+    "method": "GET",
+    "path_template": "/.well-known/ever-keys.json",
+    "row": 1,
+    "status": 200,
+    "user_agent": "ever-connect-sdk/0.0.0-selftest (gauzy/1.0.0)",
+    "idempotency_key": null,
+    "body_sha256": null
+  },
+  {
+    "ts": "2026-10-02T04:10:01Z",
+    "method": "POST",
+    "path_template": "/v1/connect/redeem",
+    "row": 3,
+    "status": 201,
+    "user_agent": "ever-connect-sdk/0.0.0-selftest (gauzy/1.0.0)",
+    "idempotency_key": "5f0c3b1e-6a3d-4c55-9e2a-0d1b7c9a4e21",
+    "body_sha256": "b5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c"
+  },
+  {
+    "ts": "2026-10-02T04:10:01Z",
+    "method": "POST",
+    "path_template": "/v1/instances/token",
+    "row": 4,
+    "status": 200,
+    "user_agent": "ever-connect-sdk/0.0.0-selftest (gauzy/1.0.0)",
+    "idempotency_key": null,
+    "body_sha256": "b5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c"
+  },
+  {
+    "ts": "2026-10-02T04:10:02Z",
+    "method": "POST",
+    "path_template": "/v1/instances/me/heartbeat",
+    "row": 6,
+    "status": 200,
+    "user_agent": "ever-connect-sdk/0.0.0-selftest (gauzy/1.0.0)",
+    "idempotency_key": null,
+    "body_sha256": "b5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c"
+  },
+  {
+    "ts": "2026-10-02T04:10:02Z",
+    "method": "GET",
+    "path_template": "/v1/instances/me/entitlement",
+    "row": 8,
+    "status": 200,
+    "user_agent": "ever-connect-sdk/0.0.0-selftest (gauzy/1.0.0)",
+    "idempotency_key": null,
+    "body_sha256": null
+  },
+  {
+    "ts": "2026-10-02T04:10:02Z",
+    "method": "GET",
+    "path_template": "/v1/instances/me/integrations",
+    "row": 9,
+    "status": 200,
+    "user_agent": "ever-connect-sdk/0.0.0-selftest (gauzy/1.0.0)",
+    "idempotency_key": null,
+    "body_sha256": null
+  },
+  {
+    "ts": "2026-10-02T04:10:07Z",
+    "method": "GET",
+    "path_template": "/v1/instances/me/events",
+    "row": 7,
+    "status": 200,
+    "user_agent": "ever-connect-sdk/0.0.0-selftest (gauzy/1.0.0)",
+    "idempotency_key": null,
+    "body_sha256": null
+  },
+  {
+    "ts": "2026-10-02T04:10:07Z",
+    "method": "POST",
+    "path_template": "/v1/instances/me/events/ack",
+    "row": 7,
+    "status": 200,
+    "user_agent": "ever-connect-sdk/0.0.0-selftest (gauzy/1.0.0)",
+    "idempotency_key": null,
+    "body_sha256": "b5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c"
+  }
+]

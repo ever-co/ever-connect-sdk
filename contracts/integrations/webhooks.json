@@ -1,0 +1,46 @@
+{
+  "key": "webhooks",
+  "name": "Event delivery",
+  "description": "Lets Ever Platform send signed notifications (for example 'your plan changed') to installations that can receive them. Installations that only make outbound connections use polling instead.",
+  "category": "events",
+  "owner_module": "events",
+  "direction": "inbound",
+  "defaults": {
+    "cloud": true,
+    "self_hosted": false
+  },
+  "availability": {
+    "cloud": "enabled",
+    "self_hosted": "available"
+  },
+  "requires_feature": null,
+  "products": [
+    "gauzy",
+    "works"
+  ],
+  "phase": 2,
+  "status": "active",
+  "scope_version": 1,
+  "revoke_effect": "The endpoint is deleted. The installation falls back to polling.",
+  "scope": [
+    {
+      "field_path": "webhook.endpoint_url",
+      "direction": "to_ever",
+      "form": "url",
+      "frequency": "once",
+      "required": true,
+      "purpose": "Where to deliver signed notifications",
+      "retention": "Kept while the integration is enabled."
+    },
+    {
+      "field_path": "event.payload_ids",
+      "direction": "from_ever",
+      "form": "id",
+      "frequency": "events",
+      "required": true,
+      "purpose": "Notifications carry identifiers only",
+      "retention": "Delivery log kept 30 days."
+    }
+  ],
+  "docs_anchor": "webhooks"
+}

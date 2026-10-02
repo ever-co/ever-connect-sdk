@@ -1,0 +1,91 @@
+{
+  "key": "usage_reporting",
+  "scope_version": 1,
+  "screen_version": "1",
+  "blocks": {
+    "title": "Enable Usage reporting for {organization}",
+    "purpose": "Sends daily counts of the meters you choose (for example active employees or seats) for plans that are priced by usage. On Ever Cloud the row starts on under the Ever Cloud terms, because cloud plans are billed on these counts (for example per employee for Ever Gauzy and Ever Teams, on the latest successful count). A self-hosted installation sends nothing unless an administrator turns it on.",
+    "leaves_installation": [
+      {
+        "field": "meters.active_employees",
+        "form": "count",
+        "form_text": "as a count",
+        "when": "daily",
+        "purpose": "Usage-based plan quantity",
+        "required": false
+      },
+      {
+        "field": "meters.active_users",
+        "form": "count",
+        "form_text": "as a count",
+        "when": "daily",
+        "purpose": "Usage-based plan quantity",
+        "required": false
+      },
+      {
+        "field": "meters.tracked_employees",
+        "form": "count",
+        "form_text": "as a count",
+        "when": "daily",
+        "purpose": "Usage-based plan quantity",
+        "required": false
+      },
+      {
+        "field": "meters.seats",
+        "form": "count",
+        "form_text": "as a count",
+        "when": "daily",
+        "purpose": "Usage-based plan quantity (Works)",
+        "required": false
+      },
+      {
+        "field": "meters.credits_used",
+        "form": "count",
+        "form_text": "as a count",
+        "when": "daily",
+        "purpose": "Usage-based plan quantity (Works)",
+        "required": false
+      }
+    ],
+    "arrives_at_installation": [],
+    "platform_keeps": [
+      {
+        "field": "meters.active_employees",
+        "retention": "Daily totals kept for 24 months."
+      },
+      {
+        "field": "meters.active_users",
+        "retention": "Daily totals kept for 24 months."
+      },
+      {
+        "field": "meters.tracked_employees",
+        "retention": "Daily totals kept for 24 months."
+      },
+      {
+        "field": "meters.seats",
+        "retention": "Daily totals kept for 24 months."
+      },
+      {
+        "field": "meters.credits_used",
+        "retention": "Daily totals kept for 24 months."
+      }
+    ],
+    "how_often": [
+      "once a day"
+    ],
+    "where_to_change": "Integrations & data in this product, or Instances in app.ever.co; turning it off stops the data at once.",
+    "revoke_effect": "Reports stop.",
+    "legal": {
+      "terms_url": "https://ever.co/legal/terms",
+      "terms_version": "2026-10",
+      "dpa_url": "https://ever.co/legal/dpa",
+      "dpa_version": "2026-10",
+      "subprocessors_url": "https://ever.co/legal/subprocessors"
+    },
+    "authorisation": "I am authorised to enable this for {organization}"
+  },
+  "in_product": {
+    "allowed": true,
+    "step_up_max_age_s": 300
+  }
+}

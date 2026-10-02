@@ -7,6 +7,35 @@
     "node": ">=20"
   },
   "scripts": {
-    "public-safe": "node tools/check-public-safe.mjs --self-test && node tools/check-public-safe.mjs"
+    "generate": "node tools/generate.mjs",
+    "sync": "node tools/sync-contract.mjs",
+    "fixtures": "node tools/fixtures/build-signed.mjs",
+    "public-safe": "node tools/check-public-safe.mjs --self-test && node tools/check-public-safe.mjs",
+    "lint": "biome ci .",
+    "build": "pnpm -r --if-present run build",
+    "test:workspaces": "pnpm -r --if-present run test",
+    "test:tools": "node --test \"tools/test/*.test.mjs\"",
+    "test": "pnpm run build && pnpm run test:workspaces && pnpm run test:tools"
+  },
+  "devDependencies": {
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
+    "yaml": "2.9.1",
+    "@biomejs/biome": "2.5.15",
+    "@redocly/cli": "2.57.0",
+    "@types/node": "24.19.1",
+    "json-schema-to-typescript": "16.0.0",
+    "openapi-typescript": "7.13.0",
+    "typescript": "5.9.3",
+    "tsup": "8.5.1",
+    "vitest": "5.0.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "openapi-typescript>typescript": "5.9.3"
+    },
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }

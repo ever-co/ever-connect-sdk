@@ -1,0 +1,35 @@
+{
+  "name": "@ever-co/connect-tools",
+  "version": "1.0.0-rc.1",
+  "description": "Dev-only tools for products that host the Ever Platform modules: the mock platform (ever-mock-platform) and the egress audit (ever-egress-audit). Products depend on it instead of copying either tool.",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ever-co/ever-connect-sdk.git",
+    "directory": "packages/ts/connect-tools"
+  },
+  "bin": {
+    "ever-mock-platform": "./dist/mock-platform/bin/ever-mock-platform.mjs",
+    "ever-egress-audit": "./dist/egress-audit/run.mjs"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "node scripts/bundle.mjs",
+    "test": "node --test \"test/*.test.mjs\""
+  },
+  "dependencies": {
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
+    "yaml": "2.9.1"
+  },
+  "devDependencies": {
+    "ever-egress-audit": "workspace:*",
+    "ever-mock-platform": "workspace:*"
+  }
+}

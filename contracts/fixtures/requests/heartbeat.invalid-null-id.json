@@ -1,0 +1,8 @@
+{
+  "version": null,
+  "module_version": "1.0.0",
+  "serves_products": [
+    "gauzy",
+    "teams"
+  ]
+}

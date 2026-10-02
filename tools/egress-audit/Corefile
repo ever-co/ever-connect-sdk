@@ -1,0 +1,15 @@
+# The only resolver of the product processes on the sealed audit network (run.mjs fills in the
+# compose names and builds it into a small image). Every query is logged. The compose names are
+# answered by Docker's resolver of this container; every other name answers NXDOMAIN, so nothing
+# outside the compose services can be reached by name.
+__COMPOSE_NAMES__ {
+  log
+  forward . 127.0.0.11
+}
+. {
+  log
+  errors
+  template ANY ANY {
+    rcode NXDOMAIN
+  }
+}

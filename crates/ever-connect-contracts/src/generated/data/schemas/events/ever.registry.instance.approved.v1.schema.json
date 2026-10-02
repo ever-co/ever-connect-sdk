@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://api.ever.co/v1/events/catalog/schemas/ever.registry.instance.approved.v1.schema.json",
+  "title": "ever.registry.instance.approved v1 data",
+  "description": "`seen` is emitted at most once per hour per installation (heartbeat coalesced); `kid` only on key_rotated",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "instance_id",
+    "org_id",
+    "product",
+    "serves_products",
+    "install_source",
+    "kind",
+    "status"
+  ],
+  "properties": {
+    "instance_id": {
+      "$ref": "common.schema.json#/$defs/ulid"
+    },
+    "org_id": {
+      "$ref": "common.schema.json#/$defs/ulid"
+    },
+    "product": {
+      "$ref": "common.schema.json#/$defs/product_shipped"
+    },
+    "serves_products": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/product_shipped"
+      },
+      "maxItems": 5,
+      "uniqueItems": true
+    },
+    "install_source": {
+      "$ref": "common.schema.json#/$defs/install_source"
+    },
+    "kind": {
+      "$ref": "common.schema.json#/$defs/instance_kind"
+    },
+    "status": {
+      "$ref": "common.schema.json#/$defs/instance_status"
+    },
+    "last_seen_bucket": {
+      "$ref": "common.schema.json#/$defs/last_seen_bucket"
+    },
+    "kid": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{11,64}$",
+      "maxLength": 64
+    }
+  }
+}

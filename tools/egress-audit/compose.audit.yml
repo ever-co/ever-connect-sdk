@@ -1,0 +1,69 @@
+# The audit overlay, filled in by run.mjs for each product service in process_services (written to
+# <artifacts>/compose.audit.generated.yml and passed after the product's own compose files).
+#
+# - Every compose network of the product becomes internal (no route out); `default` gets a fixed subnet.
+# - CoreDNS is the only resolver of the product processes: it logs every query, answers the
+#   compose names and NXDOMAIN for every other name.
+# - Each product process gets a namespace holder: the holder owns the network namespace, carries
+#   the service's name as an alias, points the shared resolv.conf at CoreDNS and starts first.
+#   The sniffer joins the holder's namespace, routes every address outside the sealed networks to
+#   a sink (CoreDNS's container, which forwards nothing) so a connection attempt leaves a SYN to
+#   see instead of failing silently, and starts capturing before the product process starts. The
+#   product joins the same namespace (network_mode: service:<holder>).
+# - The driver (scenario.mjs and the product adapter) runs one step at a time with
+#   `docker compose run`, on the sealed network but outside every sniffed namespace.
+# - The mock platform runs only in positive modes.
+services:
+  ever-audit-dns:
+    image: __DNS_IMAGE__
+    networks:
+      default:
+        ipv4_address: __DNS_IP__
+  __HOLDER__:
+    image: alpine:3.20
+    init: true
+    dns: [__DNS_IP__]
+    command: ["sh", "-c", "printf 'nameserver __DNS_IP__\\n' > /etc/resolv.conf && exec sleep infinity"]
+    networks:
+      default:
+        aliases: [__SERVICE__]
+  __SNIFFER__:
+    image: nicolaka/netshoot:v0.13
+    network_mode: service:__HOLDER__
+    cap_add: [NET_RAW, NET_ADMIN]
+    command:
+      - sh
+      - -c
+      - >-
+        ip route replace default via __DNS_IP__ ||
+        { echo 'ever-audit: NET_ADMIN refused: cannot route connection attempts to the sink'; exit 3; };
+        mkdir -p /captures &&
+        { tcpdump -i any -nn -U -w /captures/__SERVICE__.pcap '__FILTER__' 2>/dev/null & } &&
+        exec tcpdump -i any -nn -l '__FILTER__'
+  __SERVICE__:
+    network_mode: service:__HOLDER__
+    networks: !reset null
+  ever-audit-driver:
+    image: __DRIVER_IMAGE__
+    profiles: [ever-audit-driver]
+    # Compose names are looked up as they are written: search domains of the host (a Kubernetes
+    # runner adds several, with ndots:5) would send every lookup out first, and nothing on the
+    # sealed network answers those.
+    dns_opt: ["ndots:0"]
+    networks:
+      default: {}
+  mock-platform:
+    image: __MOCK_IMAGE__
+    networks:
+      default:
+        aliases: [mock-platform]
+    environment:
+      EVER_MOCK_CONFIG_JSON: __MOCK_CONFIG__
+networks:
+  default:
+    name: __PROJECT__-audit
+    internal: true
+    ipam:
+      config:
+        - subnet: __SUBNET__
+          ip_range: __IP_RANGE__

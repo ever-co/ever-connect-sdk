@@ -1,0 +1,4 @@
+# Build output: copied from contracts/ by scripts/copy-contracts.mjs
+/fixtures/
+/schemas/
+/integrations/

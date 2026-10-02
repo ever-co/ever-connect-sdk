@@ -1,0 +1,43 @@
+{
+  "key": "instance_url",
+  "scope_version": 1,
+  "screen_version": "1",
+  "blocks": {
+    "title": "Enable Installation address for {organization}",
+    "purpose": "Shows the public address of this installation to its own organization in app.ever.co, and on the public profile if the owner turns that section on.",
+    "leaves_installation": [
+      {
+        "field": "instance.public_url",
+        "form": "url",
+        "form_text": "as an address",
+        "when": "once",
+        "purpose": "Link to this installation from the organization's account pages",
+        "required": true
+      }
+    ],
+    "arrives_at_installation": [],
+    "platform_keeps": [
+      {
+        "field": "instance.public_url",
+        "retention": "Kept while the integration is enabled. Deleted when it is turned off or the installation disconnects."
+      }
+    ],
+    "how_often": [
+      "once"
+    ],
+    "where_to_change": "Integrations & data in this product, or Instances in app.ever.co; turning it off stops the data at once.",
+    "revoke_effect": "The stored address is removed.",
+    "legal": {
+      "terms_url": "https://ever.co/legal/terms",
+      "terms_version": "2026-10",
+      "dpa_url": "https://ever.co/legal/dpa",
+      "dpa_version": "2026-10",
+      "subprocessors_url": "https://ever.co/legal/subprocessors"
+    },
+    "authorisation": "I am authorised to enable this for {organization}"
+  },
+  "in_product": {
+    "allowed": false,
+    "step_up_max_age_s": 300
+  }
+}

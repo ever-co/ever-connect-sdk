@@ -1,0 +1,7 @@
+{
+  "description": "Inputs a verifier uses with these fixtures: the issuer the manifest names, the time to verify at (seconds), and where the TEST keys come from.",
+  "issuer": "https://mock-platform.test",
+  "now": 1793613600,
+  "roots_file": "keys/roots.json",
+  "test_keys": "derived at build time: seed = sha256(\"ever-connect-sdk/<label>\"); no private key file is committed"
+}

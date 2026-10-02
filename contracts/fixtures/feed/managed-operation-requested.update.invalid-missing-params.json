@@ -1,0 +1,30 @@
+{
+  "events": [
+    {
+      "id": "01JC68GWAH1D19DVN2Y6F441VM",
+      "type": "ever.registry.managed_operation.requested",
+      "version": 1,
+      "occurred_at": "2026-11-02T10:00:00Z",
+      "subject": {
+        "kind": "managed_operation",
+        "id": "01JSPN4RWPN7EETB8F20J1KWFS"
+      },
+      "org_id": "01JNB79NZW2S85GF4A96MMX6BT",
+      "instance_id": "01JNE7V9J03J6XQ2WN8H0Z88R5",
+      "actor": {
+        "kind": "system",
+        "id": "platform"
+      },
+      "data": {
+        "operation_id": "01JER7RATFSPTJST5RDZXPDDDK",
+        "org_id": "01JNB79NZW2S85GF4A96MMX6BT",
+        "instance_id": "01JNE7V9J03J6XQ2WN8H0Z88R5",
+        "kind": "update",
+        "not_before": "2026-11-02T10:00:00Z",
+        "expires_at": "2026-11-03T10:00:00Z"
+      }
+    }
+  ],
+  "last_id": "01JC68GWAH1D19DVN2Y6F441VM",
+  "has_more": false
+}

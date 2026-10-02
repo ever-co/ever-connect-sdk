@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ever-connect-sdk.invalid/egress-audit/adapter.schema.json",
+  "title": "egress-audit adapter",
+  "description": "The product adapter is an ES module whose default export has these members. Every hook is async, receives a context {baseUrl, mode, env, fetch, log} and runs inside the sealed audit network (in the driver container), so it reaches the product by its compose service name. Hooks that do not apply to a product may be omitted.",
+  "type": "object",
+  "properties": {
+    "login": { "description": "Signs in as the seeded admin and answers the headers later hooks send." },
+    "createFixtures": { "description": "Creates what a user would create (a tenant, an organization, a project, a Work...)." },
+    "openSettings": { "description": "Opens the settings pages that would render the module UI." },
+    "prepareLoadedOff": { "description": "Persists the operator's statistics toggle off and leaves the connection module unconnected." },
+    "triggerAll": { "description": "Exercises every trigger of the outbound-call table the product supports (every_trigger mode)." },
+    "env": {
+      "type": "object",
+      "description": "Extra environment per mode, without the product prefix (it is added by the harness).",
+      "additionalProperties": { "type": "object", "additionalProperties": { "type": ["string", "null"] } }
+    }
+  }
+}

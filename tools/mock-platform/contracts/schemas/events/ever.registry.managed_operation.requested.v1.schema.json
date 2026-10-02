@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://api.ever.co/v1/events/catalog/schemas/ever.registry.managed_operation.requested.v1.schema.json",
+  "title": "ever.registry.managed_operation.requested v1 data",
+  "description": "the feed notice products call `managed.operation_requested`: an owner or admin asked this installation to run a managed operation; the installation runs it only if its operator opted in locally and inside its policy window, then posts its result; an installation without an executor acknowledges and ignores it",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "operation_id",
+    "org_id",
+    "instance_id",
+    "kind",
+    "params",
+    "expires_at"
+  ],
+  "properties": {
+    "operation_id": {
+      "$ref": "common.schema.json#/$defs/ulid"
+    },
+    "org_id": {
+      "$ref": "common.schema.json#/$defs/ulid"
+    },
+    "instance_id": {
+      "$ref": "common.schema.json#/$defs/ulid"
+    },
+    "kind": {
+      "$ref": "common.schema.json#/$defs/managed_operation_kind"
+    },
+    "params": {
+      "type": "object",
+      "description": "closed per kind (see $defs)"
+    },
+    "not_before": {
+      "$ref": "common.schema.json#/$defs/datetime"
+    },
+    "expires_at": {
+      "$ref": "common.schema.json#/$defs/datetime"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "kind"
+        ],
+        "properties": {
+          "kind": {
+            "const": "update"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "params": {
+            "$ref": "#/$defs/params_update"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "kind"
+        ],
+        "properties": {
+          "kind": {
+            "const": "restore_check"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "params": {
+            "$ref": "#/$defs/params_restore_check"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "kind"
+        ],
+        "properties": {
+          "kind": {
+            "enum": [
+              "backup",
+              "health_report"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "params": {
+            "$ref": "#/$defs/params_none"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "params_update": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "target_version": {
+          "$ref": "common.schema.json#/$defs/semver",
+          "description": "absent = the latest stable release of the installation's channel"
+        },
+        "dry_run_only": {
+          "type": "boolean",
+          "description": "true = run the dry run and report; change nothing"
+        }
+      }
+    },
+    "params_restore_check": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "artefact_ref": {
+          "$ref": "common.schema.json#/$defs/external_id",
+          "description": "the backup to check; absent = the latest backup"
+        }
+      }
+    },
+    "params_none": {
+      "type": "object",
+      "additionalProperties": false,
+      "maxProperties": 0
+    }
+  },
+  "examples": [
+    {
+      "operation_id": "01JE0M4N5P6Q7R8S9T0V1W2X3Y",
+      "org_id": "01JBX1A2B3C4D5E6F7G8H9J0K1",
+      "instance_id": "01JC5M2R4T6V8X0Z2B4D6F8H0J",
+      "kind": "backup",
+      "params": {},
+      "not_before": "2026-11-02T01:00:00Z",
+      "expires_at": "2026-11-03T01:00:00Z"
+    },
+    {
+      "operation_id": "01JE0M4N5P6Q7R8S9T0V1W2X3Z",
+      "org_id": "01JBX1A2B3C4D5E6F7G8H9J0K1",
+      "instance_id": "01JC5M2R4T6V8X0Z2B4D6F8H0J",
+      "kind": "update",
+      "params": {
+        "target_version": "0.751.0"
+      },
+      "expires_at": "2026-11-03T01:00:00Z"
+    }
+  ]
+}

@@ -15,3 +15,6 @@ tools/egress-audit/selftest/.artifacts/
 .env
 .env.*
 tools/banned-phrases.private.json
+
+# egress audit evidence
+egress-audit-artifacts/
