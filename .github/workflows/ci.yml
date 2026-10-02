@@ -217,8 +217,8 @@ jobs:
           cache: pnpm
       - name: Install (frozen)
         run: pnpm install --frozen-lockfile
-      - name: Build the contracts package (the sample flow imports it)
-        run: pnpm --filter @ever-co/connect-contracts build
+      - name: Build the contracts and SDK packages (the sample flow and the managed scenario import them)
+        run: pnpm --filter @ever-co/connect-contracts --filter @ever-co/connect-sdk build
       - name: Every row and problem code, the sample flow, in-product consent and managed operations
         run: pnpm --filter ever-mock-platform test
       - name: The image builds and answers

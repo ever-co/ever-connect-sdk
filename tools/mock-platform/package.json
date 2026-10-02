@@ -25,6 +25,7 @@
     "ajv-formats": "3.0.1"
   },
   "devDependencies": {
-    "@ever-co/connect-contracts": "workspace:*"
+    "@ever-co/connect-contracts": "workspace:*",
+    "@ever-co/connect-sdk": "workspace:*"
   }
 }

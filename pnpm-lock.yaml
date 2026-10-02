@@ -56,6 +56,25 @@ importers:
         specifier: 8.20.0
         version: 8.20.0
 
+  packages/ts/connect-tools:
+    dependencies:
+      ajv:
+        specifier: 8.20.0
+        version: 8.20.0
+      ajv-formats:
+        specifier: 3.0.1
+        version: 3.0.1(ajv@8.20.0)
+      yaml:
+        specifier: 2.9.1
+        version: 2.9.1
+    devDependencies:
+      ever-egress-audit:
+        specifier: workspace:*
+        version: link:../../../tools/egress-audit
+      ever-mock-platform:
+        specifier: workspace:*
+        version: link:../../../tools/mock-platform
+
   tools/egress-audit:
     dependencies:
       ajv:
@@ -77,6 +96,9 @@ importers:
       '@ever-co/connect-contracts':
         specifier: workspace:*
         version: link:../../packages/ts/connect-contracts
+      '@ever-co/connect-sdk':
+        specifier: workspace:*
+        version: link:../../packages/ts/connect-sdk
 
 packages:
 
