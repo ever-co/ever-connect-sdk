@@ -20,14 +20,14 @@ Everything else under `contracts/` (the OpenAPI subset, the vendored schemas and
 ## 1. Regenerate
 
 ```sh
-EVER_PLATFORM_REPO=../platform pnpm sync   # the subset, the vendored schemas and catalog, VENDOR.json
+EVER_PLATFORM_REPO=../platform pnpm sync   # the subset, the vendored schemas, catalog, vectors and statistics fixtures, VENDOR.json
 node tools/split-integrations.mjs          # one definition per integration, constants, the scope lock
 pnpm fixtures                              # the signed fixtures (TEST keys from public seeds)
 pnpm generate                              # TypeScript and Rust types, rows, docs regions, generated.lock
 pnpm test && cargo test --workspace
 ```
 
-Each tool has a `--check` mode, and continuous integration runs them: `generate-check` (types, docs regions, integration definitions, fixtures and the vendored hashes), `contract-sync` (the subset and the vendored files equal the platform at the commit recorded in `contracts/VENDOR.json`), `ts`, `rust`, `fixtures-roundtrip` (TypeScript and Rust agree on every fixture), `mock-rows` and `tools`.
+Each tool has a `--check` mode, and continuous integration runs them: `generate-check` (types, docs regions, integration definitions, fixtures and the vendored hashes; `check-schema-drift.mjs --strict=stats` also holds the statistics contract to the strict rules: its schema, fixtures and calls are published by the platform and vendored byte for byte, and nothing of them is written here), `contract-sync` (the subset and the vendored files equal the platform at the commit recorded in `contracts/VENDOR.json`), `ts`, `rust`, `fixtures-roundtrip` (TypeScript and Rust agree on every fixture), `mock-rows` and `tools`.
 
 ---
 

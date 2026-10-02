@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import YAML from 'yaml';
-import { checkPins } from '../check-schema-drift.mjs';
+import { changelogChecksums, checkPins, checkScope } from '../check-schema-drift.mjs';
 import { REPO, readJson } from '../lib/common.mjs';
 import { applyTransform, CATALOG_PINS } from '../lib/vendor.mjs';
 import { checkRows } from '../sync-contract.mjs';
@@ -127,6 +127,34 @@ test('the vendored schemas match the checksums the platform pins (contracts/SCHE
   assert.deepEqual(checkPins(pins, files), []);
   assert.match(checkPins(pins.replace(pinned[1].sha256, '0'.repeat(64)), files)[0], /the platform pins/);
   assert.match(checkPins(`${'1'.repeat(64)}  contracts/other/x.json\n`, files)[0], /not vendored/);
+});
+
+test('--strict=stats: the statistics schema, fixtures and calls are published and vendored byte for byte', () => {
+  const vendorDoc = readJson(join(REPO, 'contracts/VENDOR.json'));
+  assert.deepEqual(checkScope('stats', vendorDoc), []);
+  const fixtures = vendorDoc.files.filter((e) => e.path.startsWith('contracts/fixtures/stats/')).map((e) => e.path);
+  assert.equal(fixtures.length, 19, 'expected.json, 5 valid and 13 invalid reports');
+  const mutate = (fn) => {
+    const doc = structuredClone(vendorDoc);
+    fn(doc);
+    return checkScope('stats', doc);
+  };
+  const entry = (doc, path) => doc.files.find((e) => e.path === path);
+  assert.match(mutate((d) => Object.assign(entry(d, fixtures[0]), { provisional: true, upstream: 'x' }))[0], /provisional/);
+  assert.match(mutate((d) => Object.assign(entry(d, 'contracts/schemas/ever.stats.v1.json'), { transform: 't' }))[0], /transform/);
+  assert.match(mutate((d) => d.authored.push({ path: 'contracts/fixtures/stats/', until: 'x' }))[0], /still authored/);
+  assert.match(mutate((d) => d.openapi.provisional_operations.push('ingestStatsReport'))[0], /ingestStatsReport/);
+  assert.match(
+    mutate((d) => {
+      d.files = d.files.filter((e) => e.path !== fixtures[1]);
+    })[0],
+    /not in VENDOR\.json/,
+  );
+  const extra = 'contracts/fixtures/stats/invalid/99-local.json';
+  assert.match(checkScope('stats', vendorDoc, { present: [...fixtures, extra] })[0], /99-local/);
+  assert.match(checkScope('nope', vendorDoc)[0], /no such scope/);
+  const sha = entry(vendorDoc, 'contracts/schemas/ever.stats.v1.json').sha256;
+  assert.deepEqual(changelogChecksums(['## v1', `- SHA-256: \`${sha}\``, ''].join('\n')), [sha]);
 });
 
 test('the catalog transform pins public names and statuses and drops hidden rows', () => {
