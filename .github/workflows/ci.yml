@@ -231,3 +231,40 @@ jobs:
             sleep 1
           done
           docker exec "$cid" wget -qO- http://127.0.0.1:8080/.well-known/ever-keys.json | grep -q '"manifest"'
+
+  tools:
+    name: tools
+    # The self-test needs Docker with NET_RAW and NET_ADMIN for the sniffers.
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || vars.RUNNER_LINUX_X64_8 || vars.RUNNER_LINUX_X64_4 || 'ubuntu-latest' }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install (frozen)
+        run: pnpm install --frozen-lockfile
+      - name: Harness unit tests (evidence recorded by real runs)
+        run: node --test tools/egress-audit/test/
+      - name: Docker and Compose
+        run: |
+          docker version --format 'docker {{.Server.Version}}'
+          if ! docker compose version >/dev/null 2>&1; then
+            mkdir -p "$HOME/.docker/cli-plugins"
+            curl --proto '=https' --tlsv1.2 --retry 5 -fsSL -o "$HOME/.docker/cli-plugins/docker-compose" \
+              "https://github.com/docker/compose/releases/download/v5.5.1/docker-compose-linux-x86_64"
+            chmod +x "$HOME/.docker/cli-plugins/docker-compose"
+          fi
+          docker compose version
+      - name: Self-test (off/leaky must fail, positive_stats without the mock must not pass)
+        run: node tools/egress-audit/run.mjs --selftest --artifacts egress-audit-artifacts
+      - name: Evidence (pcaps, DNS logs, report.json)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: egress-audit-selftest
+          path: egress-audit-artifacts
+          if-no-files-found: warn
+          retention-days: 14
