@@ -989,6 +989,13 @@
       "typed": false
     },
     {
+      "file": "stats/invalid/13-sent-at-with-time.json",
+      "kind": "schema",
+      "schema": "stats",
+      "valid": false,
+      "typed": false
+    },
+    {
       "file": "stats/valid/gauzy.json",
       "kind": "schema",
       "schema": "stats",

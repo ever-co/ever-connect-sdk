@@ -683,6 +683,18 @@ export const ERRORS = {
     }),
   ...integrationPairs(11, 'stats_link', calls.statsLink),
   '11:409:key_mismatch': async (env) => calls.statsLink(env, await connected(env, { enable: ['stats_link'] })),
+  '11:409:already_linked': async (env) => {
+    const first = await connected(env, { enable: ['stats_link'] });
+    await env.call('POST', '/v1/stats/reports', report());
+    await calls.statsLink(env, first);
+    const second = await env.connect({ code: 'EVC-TEST-0000-0004', product: 'works', key: testKey('connectNext') });
+    await env.admin('consent', { integration: 'stats_link' });
+    return env.call('POST', '/v1/instances/me/stats-link', {
+      token: second.token,
+      body: signStatsLinkStatement({ statsInstanceId: GOLDEN_ID, iat: env.now() }),
+      headers: idem('second'),
+    });
+  },
   '11:422:validation_failed': async (env) => {
     const c = await connected(env, { enable: ['stats_link'] });
     await env.call('POST', '/v1/stats/reports', report());
@@ -793,14 +805,16 @@ export const ERRORS = {
       body: { public_jwk: jwk(testKey('connectNext')) },
       headers: idem('kv'),
     }),
+  // No statistics key: the key is checked first (a missing signature is signature_invalid).
   '17:400:validation_failed': (env) =>
-    env.call('POST', '/v1/stats/reports', { raw: GOLDEN, headers: { 'ever-stats-key': testKey('stats').x } }),
+    env.call('POST', '/v1/stats/reports', { raw: GOLDEN, headers: { 'ever-stats-signature': report().headers['ever-stats-signature'] } }),
   '17:400:signature_invalid': (env) => env.call('POST', '/v1/stats/reports', { raw: GOLDEN, headers: report(Buffer.from('{}')).headers }),
   '17:409:key_mismatch': async (env) => {
     await env.call('POST', '/v1/stats/reports', report());
     return env.call('POST', '/v1/stats/reports', report(GOLDEN, testKey('statsOther')));
   },
   '17:413:validation_failed': (env) => env.call('POST', '/v1/stats/reports', report(fixture('stats/invalid/07-oversize.json'))),
+  '17:415:unsupported_media_type': (env) => env.call('POST', '/v1/stats/reports', { ...report(), contentType: 'text/plain' }),
   '17:422:schema_violation': (env) => env.call('POST', '/v1/stats/reports', report(fixture('stats/invalid/01-extra-field.json'))),
   '17:429:rate_limited': async (env) => {
     let r;

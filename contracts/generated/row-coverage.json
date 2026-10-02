@@ -394,9 +394,14 @@
           "documented": true
         },
         {
+          "status": 409,
+          "code": "already_linked",
+          "documented": true
+        },
+        {
           "status": 422,
           "code": "validation_failed",
-          "documented": false
+          "documented": true
         }
       ]
     },
@@ -659,7 +664,7 @@
         {
           "status": 400,
           "code": "signature_invalid",
-          "documented": false
+          "documented": true
         },
         {
           "status": 409,
@@ -669,6 +674,11 @@
         {
           "status": 413,
           "code": "validation_failed",
+          "documented": true
+        },
+        {
+          "status": 415,
+          "code": "unsupported_media_type",
           "documented": true
         },
         {

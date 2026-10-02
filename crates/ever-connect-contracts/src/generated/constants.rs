@@ -294,6 +294,7 @@ pub const PROBLEM_CODES: &[&str] = &[
     "product_mismatch",
     "product_not_supported",
     "key_mismatch",
+    "signature_invalid",
     "unlinked_org",
     "schema_violation",
     "mirror_owned_field",
@@ -339,5 +340,4 @@ pub const PROBLEM_CODES: &[&str] = &[
     "topic_private",
     "keys_unavailable",
     "internal_error",
-    "signature_invalid",
 ];

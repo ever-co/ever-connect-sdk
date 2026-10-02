@@ -3,7 +3,8 @@ name: CI
 # Jobs:
 #   public-safe         the gate's self-test, then every file, the branch name and the commit messages
 #   generate-check      the generated files, the integration definitions and the fixtures equal what
-#                       the tools produce from the contract; vendored files match VENDOR.json
+#                       the tools produce from the contract; vendored files match VENDOR.json, and
+#                       the statistics contract is held to the strict rules (published, byte for byte)
 #   contract-sync       the contract and the vendored files equal the ever-co/platform checkout they
 #                       were synchronised from (needs the read token; skipped with a notice without it)
 #   ts                  frozen install, Biome, build, type check and every TypeScript and tool test
@@ -86,6 +87,8 @@ jobs:
         run: node tools/fixtures/build-signed.mjs --check
       - name: Vendored files match VENDOR.json
         run: node tools/check-schema-drift.mjs
+      - name: The statistics contract is published and vendored byte for byte (strict)
+        run: node tools/check-schema-drift.mjs --strict=stats
 
   contract-sync:
     name: contract-sync
@@ -135,6 +138,7 @@ jobs:
           pnpm install --frozen-lockfile
           node tools/sync-contract.mjs --check
           node tools/check-schema-drift.mjs
+          node tools/check-schema-drift.mjs --strict=stats
 
   ts:
     name: ts

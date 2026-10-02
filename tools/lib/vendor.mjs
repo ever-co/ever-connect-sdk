@@ -24,9 +24,9 @@ export const CATALOG_PINS = {
 const STATIC = [
   {
     path: 'contracts/schemas/ever.stats.v1.json',
-    source: 'docs/specs/contracts/stats.v1.schema.json',
-    upstream: 'contracts/stats/ever.stats.v1.schema.json',
-    transform: 'json-drop-comment',
+    source: 'contracts/stats/ever.stats.v1.schema.json',
+    upstream: null,
+    transform: null,
   },
   {
     path: 'contracts/schemas/ever.entitlement.v1.json',
@@ -55,11 +55,6 @@ const STATIC = [
 ];
 
 const TRANSFORMS = {
-  'json-drop-comment': (text) => {
-    const doc = JSON.parse(text);
-    delete doc.$comment;
-    return `${JSON.stringify(doc, null, 2)}\n`;
-  },
   // The draft's description cites the platform's own design document by path; the public copy
   // keeps the sentence without the citation.
   'json-public-description': (text) => {
@@ -151,6 +146,29 @@ export function connectVectorEntries(platform) {
     .map((f) => ({ path: `${CONNECT_VECTORS.path}/${f}`, source: `${CONNECT_VECTORS.source}/${f}`, transform: null, upstream: null }));
 }
 
+/** Where the platform publishes its statistics fixtures and expected answers, and where this repository keeps them. */
+export const STATS_FIXTURES = { source: 'contracts/fixtures/stats', path: 'contracts/fixtures/stats' };
+
+/** The platform's statistics fixtures (every file, subfolders included), byte-identical, once it publishes them (else none). */
+export function statsFixtureEntries(platform) {
+  const root = join(platform, STATS_FIXTURES.source);
+  if (!existsSync(join(root, 'expected.json'))) return [];
+  const files = [];
+  const visit = (dir, prefix) => {
+    for (const name of readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+      if (name.isDirectory()) visit(join(dir, name.name), `${prefix}${name.name}/`);
+      else if (name.name.endsWith('.json')) files.push(`${prefix}${name.name}`);
+    }
+  };
+  visit(root, '');
+  return files.map((f) => ({
+    path: `${STATS_FIXTURES.path}/${f}`,
+    source: `${STATS_FIXTURES.source}/${f}`,
+    transform: null,
+    upstream: null,
+  }));
+}
+
 /**
  * Produces every vendored file from the checkout. Answers {files: {path: text}, entries: [...]}
  * where each entry records its source, transform, provisional flag and hashes.
@@ -159,7 +177,7 @@ export function vendor(platform) {
   const events = eventEntries(platform);
   const files = {};
   const entries = [];
-  for (const entry of [...STATIC, ...events.entries, ...connectVectorEntries(platform)]) {
+  for (const entry of [...STATIC, ...events.entries, ...connectVectorEntries(platform), ...statsFixtureEntries(platform)]) {
     const upstreamPath = entry.upstream ? join(platform, entry.upstream) : null;
     const fromUpstream = upstreamPath !== null && existsSync(upstreamPath);
     const source = fromUpstream ? entry.upstream : entry.source;

@@ -19,7 +19,7 @@
  * is the only way out.
  */
 import { EVENT_SCHEMAS, type EventEnvelope, type ManagedOperationResult } from '@ever-co/connect-contracts';
-import Ajv2020 from 'ajv/dist/2020';
+import Ajv2020 from 'ajv/dist/2020.js';
 import type { ManagedOperation, ManagedOperationExecutor, ManagedOperationOutcome, ManagedOperationResultSink } from './executor';
 
 export const MANAGED_REQUESTED = 'ever.registry.managed_operation.requested';

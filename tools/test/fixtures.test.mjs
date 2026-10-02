@@ -7,6 +7,7 @@ import { test } from 'node:test';
 import { REPO, readJson } from '../lib/common.mjs';
 import { verifyAssertion, verifyRotation } from '../mock-platform/src/assertion.mjs';
 import { fromB64url, sha256Hex, thumbprint } from '../mock-platform/src/crypto.mjs';
+import { checkStatsReport } from '../mock-platform/src/stats-ingest.mjs';
 import { validateComponent, validateEnvelope, validateEventData, validatePending, validateSchema } from '../mock-platform/src/validate.mjs';
 import { verifyEntitlement, verifyManifest } from './lib/reference-verify.mjs';
 
@@ -201,20 +202,25 @@ test('lookup vectors: every published hash recomputes from the test salt', () =>
   }
 });
 
-test('statistics fixtures: goldens validate, schema-layer invalids fail at their path, ingest-layer ones are planted', () => {
+test('statistics fixtures: the ingest checks give every fixture its expected status, code, path and field error code', () => {
   const { fixtures } = fixture('stats/expected.json');
+  const schema = readJson(join(REPO, 'contracts/schemas/ever.stats.v1.json'));
   assert.equal(Object.keys(fixtures).filter((f) => f.startsWith('valid/')).length, 5);
-  assert.equal(Object.keys(fixtures).filter((f) => f.startsWith('invalid/')).length, 12);
+  assert.equal(Object.keys(fixtures).filter((f) => f.startsWith('invalid/')).length, 13);
   for (const [file, e] of Object.entries(fixtures)) {
-    const raw = text(`stats/${file}`);
-    if (e.layer === 'ingest') {
-      if (file.includes('07-oversize')) assert.ok(Buffer.byteLength(raw) > 16384);
-      if (file.includes('11-integral-float')) assert.match(raw, /"invoices": 214\.0,/);
-      if (file.includes('12-duplicate-key')) assert.equal(raw.match(/"country":/g).length, 2);
+    const raw = readFileSync(join(F, 'stats', file));
+    const r = checkStatsReport(schema, raw);
+    if (e.status === 202) {
+      assert.equal(r.ok, true, file);
       continue;
     }
-    const r = validateSchema('stats', JSON.parse(raw));
-    assert.equal(r.ok, e.status === 202, file);
-    if (!r.ok) assert.equal(r.errors[0].path, e.path, file);
+    assert.equal(r.ok, false, file);
+    assert.deepEqual([r.status, r.code, r.errors[0].path, r.errors[0].code], [e.status, e.code, e.path, e.error], file);
+    // Schema-layer fixtures fail JSON Schema validation alone, at the same path.
+    if (e.layer === 'schema') {
+      const v = validateSchema('stats', JSON.parse(raw.toString('utf8')));
+      assert.equal(v.ok, false, file);
+      assert.equal(v.errors[0].path, e.path, file);
+    }
   }
 });

@@ -6,7 +6,9 @@ import { buildRequest, compare, loadCases, run } from '../conformance/run.mjs';
 
 test('every case passes against the mock, with the mock as the other side', async () => {
   const results = await run({ target: 'mock', againstMock: true });
-  assert.equal(results.length, loadCases().length);
+  // target_only cases (the published schema) are asked of a running platform only.
+  assert.equal(results.length, loadCases().filter((c) => !c.target_only).length);
+  assert.ok(loadCases().some((c) => c.id === 'stats-fixture:invalid/13-sent-at-with-time'));
   for (const r of results) assert.deepEqual(r.diffs, [], r.id);
 });
 

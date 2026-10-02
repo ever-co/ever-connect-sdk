@@ -1,6 +1,6 @@
 [package]
 name = "ever-connect-sdk"
-description = "Ever Platform connection SDK for Rust. This skeleton carries the managed-operation runner; the client, the verifiers and the statistics signer are added on top of it."
+description = "Ever Platform connection SDK for Rust: the managed-operation runner and the anonymous statistics signer; the client and the verifiers are added on top of it."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -13,8 +13,18 @@ categories = ["api-bindings"]
 [lints]
 workspace = true
 
+[features]
+default = ["stats"]
+# The anonymous statistics checks, signer and answer classification (no HTTP client).
+stats = ["dep:base64", "dep:ed25519-dalek", "dep:getrandom", "dep:regex", "dep:sha2"]
+
 [dependencies]
 ever-connect-contracts = { path = "../ever-connect-contracts" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 jsonschema = { workspace = true }
+base64 = { workspace = true, optional = true }
+ed25519-dalek = { workspace = true, optional = true }
+getrandom = { workspace = true, optional = true }
+regex = { workspace = true, optional = true }
+sha2 = { workspace = true, optional = true }

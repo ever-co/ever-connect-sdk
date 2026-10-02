@@ -500,27 +500,63 @@ describe('row 17: statistics reports', () => {
     expectProblem(expect, await env.call('POST', '/v1/stats/reports', signedReport(bytes, testKey('statsOther'))), 409, 'key_mismatch');
   });
 
-  it('checks the signature headers: a bad signature is signature_invalid, a wrong key id validation_failed', async () => {
+  it('checks the signature headers in the platform order: key, signature shape, key id, signature', async () => {
     env = await startMock();
     const bytes = statsFixture('valid/works.json');
     const r = signedReport(bytes);
-    expectProblem(
-      expect,
+    const header = async (res, status, code, path) => {
+      expectProblem(expect, res, status, code);
+      expect(res.body.errors[0]).toMatchObject({ path, code: 'invalid' });
+    };
+    await header(
       await env.call('POST', '/v1/stats/reports', { raw: Buffer.concat([bytes, Buffer.from(' ')]), headers: r.headers }),
       400,
       'signature_invalid',
+      '#Ever-Stats-Signature',
     );
-    expectProblem(
-      expect,
+    await header(
       await env.call('POST', '/v1/stats/reports', signedReport(bytes, testKey('stats'), { keyId: 'AAAAAAAAAAA' })),
       400,
-      'validation_failed',
+      'signature_invalid',
+      '#Ever-Stats-Key-Id',
     );
-    expectProblem(
-      expect,
+    await header(
       await env.call('POST', '/v1/stats/reports', { raw: bytes, headers: { 'ever-stats-key': testKey('stats').x } }),
       400,
+      'signature_invalid',
+      '#Ever-Stats-Signature',
+    );
+    await header(
+      await env.call('POST', '/v1/stats/reports', {
+        raw: bytes,
+        headers: { ...r.headers, 'ever-stats-signature': r.headers['ever-stats-signature'].slice(8) },
+      }),
+      400,
+      'signature_invalid',
+      '#Ever-Stats-Signature',
+    );
+    await header(
+      await env.call('POST', '/v1/stats/reports', { raw: bytes, headers: { 'ever-stats-signature': r.headers['ever-stats-signature'] } }),
+      400,
       'validation_failed',
+      '#Ever-Stats-Key',
+    );
+    // 32 bytes that are no point of the curve are no key.
+    await header(
+      await env.call('POST', '/v1/stats/reports', {
+        raw: bytes,
+        headers: { ...r.headers, 'ever-stats-key': 'AgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' },
+      }),
+      400,
+      'validation_failed',
+      '#Ever-Stats-Key',
+    );
+    // A bad key is named before a bad signature.
+    await header(
+      await env.call('POST', '/v1/stats/reports', { raw: bytes, headers: { 'ever-stats-key': 'short', 'ever-stats-signature': 'nope' } }),
+      400,
+      'validation_failed',
+      '#Ever-Stats-Key',
     );
     expectOk(
       expect,
@@ -530,22 +566,67 @@ describe('row 17: statistics reports', () => {
     );
   });
 
-  it('answers every invalid fixture with its expected status, code and path', async () => {
+  it('refuses another media type before the size, and the size before the signature', async () => {
+    env = await startMock();
+    const oversize = statsFixture('invalid/07-oversize.json');
+    expectProblem(
+      expect,
+      await env.call('POST', '/v1/stats/reports', { ...signedReport(oversize), contentType: 'text/plain' }),
+      415,
+      'unsupported_media_type',
+    );
+    const big = await env.call('POST', '/v1/stats/reports', { raw: oversize, headers: {} });
+    expectProblem(expect, big, 413, 'validation_failed');
+    expect(big.body.errors[0]).toMatchObject({ path: '', code: 'too_large' });
+    expectOk(
+      expect,
+      await env.call('POST', '/v1/stats/reports', {
+        ...signedReport(statsFixture('valid/gauzy.json')),
+        contentType: 'application/json; charset=utf-8',
+      }),
+      202,
+      'ingestStatsReport',
+    );
+  });
+
+  it('answers every invalid fixture with its expected status, code, path and field error code', async () => {
     env = await startMock();
     for (const [file, e] of Object.entries(statsExpected)) {
       if (e.status === 202) continue;
       const r = await env.call('POST', '/v1/stats/reports', signedReport(statsFixture(file)));
       expect(r.status, file).toBe(e.status);
       expect(r.body.code, file).toBe(e.code);
-      if (e.status === 422) expect(r.body.errors[0].path, file).toBe(e.path);
+      expect(r.body.errors[0].path, file).toBe(e.path);
+      expect(r.body.errors[0].code, file).toBe(e.error);
     }
+  });
+
+  it('names an unknown schema version, a day that does not exist, and never echoes a value', async () => {
+    env = await startMock();
+    const golden = JSON.parse(statsFixture('valid/gauzy.json').toString('utf8'));
+    const send = (doc) => env.call('POST', '/v1/stats/reports', signedReport(Buffer.from(JSON.stringify(doc))));
+    const v2 = await send({ ...golden, schema: 'ever.stats.v2' });
+    expectProblem(expect, v2, 422, 'schema_violation');
+    expect(v2.body.errors[0]).toMatchObject({ path: '/schema', code: 'schema_unknown' });
+    const feb = await send({ ...golden, sent_at: '2026-02-31' });
+    expect(feb.body.errors).toEqual([{ path: '/sent_at', code: 'range', message: 'not a calendar date' }]);
+    const canary = await send({ ...golden, country: 'Jane Doe <jane@example.com>', tenant_name: 'Jane Doe' });
+    expect(canary.body.errors.map((x) => [x.path, x.code])).toEqual([
+      ['/country', 'pattern'],
+      ['/tenant_name', 'unknown_field'],
+    ]);
+    expect(JSON.stringify(canary.body)).not.toMatch(/Jane|jane@/);
   });
 
   it('allows 24 reports a day per statistics id, then 429', async () => {
     env = await startMock();
     const bytes = statsFixture('valid/rec.json');
     for (let i = 0; i < 24; i += 1) expect((await env.call('POST', '/v1/stats/reports', signedReport(bytes))).status).toBe(202);
-    expectProblem(expect, await env.call('POST', '/v1/stats/reports', signedReport(bytes)), 429, 'rate_limited');
+    const limited = await env.call('POST', '/v1/stats/reports', signedReport(bytes));
+    expectProblem(expect, limited, 429, 'rate_limited');
+    const retryAfter = Number(limited.headers.get('retry-after'));
+    expect(retryAfter).toBeGreaterThan(0);
+    expect(retryAfter).toBeLessThanOrEqual(86400);
   });
 
   it('a connect-key rotation leaves the statistics pin alone', async () => {

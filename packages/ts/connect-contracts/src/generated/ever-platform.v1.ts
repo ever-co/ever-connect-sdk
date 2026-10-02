@@ -554,8 +554,10 @@ export interface paths {
         readonly get?: never;
         readonly put?: never;
         /**
-         * Link the anonymous stats identity to this instance
-         * @description Succeeds only when the key pinned by the stats endpoint equals the instance key (`409 key_mismatch` otherwise). This consented call is the only way the platform learns the link. The `stats_link` integration can be enabled only by the organization that owns the connection and takes effect after the server operator accepted it locally, also on a multi-tenant server; it is never offered on an Ever-operated instance.
+         * Links the installation's anonymous statistics id to it (integration `stats_link`, enabled by
+         *     the organization that connected it after the operator's local accept; never on an installation
+         *     Ever operates). The statement is signed with the statistics key and the call authenticated with
+         *     the connect key, so only an installation holding both keys links them. Only the id is stored.
          */
         readonly post: operations["instanceLinkStats"];
         readonly delete?: never;
@@ -961,32 +963,15 @@ export interface paths {
         readonly get?: never;
         readonly put?: never;
         /**
-         * Submit an anonymous usage report
-         * @description Credential-free by design: it must work with the Ever Platform
-         *     connection fully disabled and the instance never connected. The body is
-         *     validated against the closed `ever.stats.v1` schema; anything outside
-         *     the allow-list answers `422 schema_violation` with `errors[].path`, the
-         *     payload is dropped and only `(field_path, count)` rejection counters are
-         *     kept. The source IP is never stored.
-         *
-         *     Signature (trust on first use, an owner decision): `Ever-Stats-Key`
-         *     carries the instance's full Ed25519 public key (base64url, 32 bytes) on
-         *     every report, `Ever-Stats-Signature` carries `ed25519=` plus the
-         *     base64url signature over the raw body bytes, and the optional
-         *     `Ever-Stats-Key-Id` repeats the key id (`base64url(sha256(pub)[0:8])`);
-         *     when present it must equal the id computed from `Ever-Stats-Key`
-         *     (`400 validation_failed` otherwise). The first accepted report pins the
-         *     key to `instance_id`, so a never-connected instance can be pinned from
-         *     its first report; a different key for the same `instance_id` answers
-         *     `409 key_mismatch`. Header names carry no `X-` prefix (RFC 6648) and
-         *     equal the constants of the SDK's `SignedStatsReport` (conformance test in
-         *     CI).
-         *
-         *     Idempotency is by natural key, not by header: a repeated
-         *     `(instance_id, period)` on the same UTC day answers
-         *     `202 {accepted: true, superseded: true}` and the latest report wins.
-         *     Body limit 16 KiB. Rate limits: 24 reports per day per `instance_id`,
-         *     120 per minute per source address.
+         * Submits the anonymous usage report of an installation (`ever.stats.v1`, the schema served at
+         *     `GET /v1/stats/schema`). Credential-free by design: it works with the Ever Platform
+         *     connection disabled and an installation that never connected. The raw body, at most 16 384
+         *     bytes, is signed with the installation's statistics key (trust on first use: the first
+         *     accepted report pins the key to `instance_id`). Anything outside the closed schema answers
+         *     `422 schema_violation` with `errors[].path` and is dropped; only a counter of the refused field
+         *     is kept. The source address is never stored, not even hashed. A repeated `(instance_id,
+         *     period)` on the same UTC day replaces the earlier report. At most 24 reports per day per
+         *     `instance_id`, and 120 requests per minute per source address.
          */
         readonly post: operations["ingestStatsReport"];
         readonly delete?: never;
@@ -1441,7 +1426,7 @@ export interface components {
          *     unknown code by its HTTP status.
          * @enum {string}
          */
-        readonly ErrorCode: "validation_failed" | "not_found" | "unauthorized" | "forbidden_role" | "forbidden_scope" | "ambiguous_credentials" | "credential_revoked" | "instance_disconnected" | "instance_pending_approval" | "not_connection_owner" | "integration_disabled" | "integration_revoked" | "entitlement_required" | "tier_required" | "limit_exceeded" | "rate_limited" | "idempotency_mismatch" | "idempotency_in_progress" | "stale_version" | "module_disabled" | "handle_taken" | "handle_reserved" | "handle_retired" | "handle_invalid" | "handle_held" | "handle_held_by_you" | "code_invalid" | "code_expired" | "product_mismatch" | "product_not_supported" | "key_mismatch" | "unlinked_org" | "schema_violation" | "mirror_owned_field" | "illegal_transition" | "already_exists" | "already_completed" | "billing_active" | "sso_required" | "reauth_required" | "session_required" | "step_up_required" | "session_bound" | "authorization_pending" | "slow_down" | "expired_token" | "already_connected" | "already_linked" | "already_claimed" | "invalid_client" | "public_jwk_invalid" | "identifier_claimed" | "salt_version_unknown" | "salt_version_retired" | "hashes_invalid" | "lookup_key_required" | "required_component" | "resync_required" | "last_owner" | "last_auth_method" | "instances_linked" | "install_in_progress" | "slug_reserved" | "checklist_incomplete" | "scope_version_outdated" | "method_not_allowed" | "payload_too_large" | "unsupported_media_type" | "gone" | "unavailable" | "upstream" | "database_absent" | "database_unreachable" | "topic_private" | "keys_unavailable" | "internal_error";
+        readonly ErrorCode: "validation_failed" | "not_found" | "unauthorized" | "forbidden_role" | "forbidden_scope" | "ambiguous_credentials" | "credential_revoked" | "instance_disconnected" | "instance_pending_approval" | "not_connection_owner" | "integration_disabled" | "integration_revoked" | "entitlement_required" | "tier_required" | "limit_exceeded" | "rate_limited" | "idempotency_mismatch" | "idempotency_in_progress" | "stale_version" | "module_disabled" | "handle_taken" | "handle_reserved" | "handle_retired" | "handle_invalid" | "handle_held" | "handle_held_by_you" | "code_invalid" | "code_expired" | "product_mismatch" | "product_not_supported" | "key_mismatch" | "signature_invalid" | "unlinked_org" | "schema_violation" | "mirror_owned_field" | "illegal_transition" | "already_exists" | "already_completed" | "billing_active" | "sso_required" | "reauth_required" | "session_required" | "step_up_required" | "session_bound" | "authorization_pending" | "slow_down" | "expired_token" | "already_connected" | "already_linked" | "already_claimed" | "invalid_client" | "public_jwk_invalid" | "identifier_claimed" | "salt_version_unknown" | "salt_version_retired" | "hashes_invalid" | "lookup_key_required" | "required_component" | "resync_required" | "last_owner" | "last_auth_method" | "instances_linked" | "install_in_progress" | "slug_reserved" | "checklist_incomplete" | "scope_version_outdated" | "method_not_allowed" | "payload_too_large" | "unsupported_media_type" | "gone" | "unavailable" | "upstream" | "database_absent" | "database_unreachable" | "topic_private" | "keys_unavailable" | "internal_error";
         /**
          * @description One event on a webhook, the installation feed or SSE. Payloads carry identifiers and status
          *     only, never records; delivery is at-least-once: dedupe on `id`.
@@ -2474,420 +2459,48 @@ export interface components {
             readonly handle?: components["schemas"]["Handle"];
             readonly sso: boolean;
         };
+        /** @description The answer to an accepted report. */
         readonly StatsAccepted: {
-            /** @constant */
-            readonly accepted: true;
-            readonly report_id?: string;
-            /** @description `true` when an earlier report for the same `(instance_id, period)` was received the same day and replaced. */
-            readonly superseded?: boolean;
-        };
-        /** @description The two-key link statement. `statement_sig` is a compact JWS (header `{alg: EdDSA, typ: ever-stats-link+jwt}`) signed with the statistics key whose payload is `{stats_instance_id, stats_public_jwk, iat}`; the body repeats `stats_instance_id` and `stats_public_jwk`, which must equal the payload, and `iat` must be within 10 minutes of the server clock. The statistics key must be the one pinned for `stats_instance_id` by the first accepted report. */
-        readonly StatsLinkCreate: {
-            readonly statement_sig: string;
-            readonly stats_instance_id: components["schemas"]["Uuid"];
-            readonly stats_public_jwk: components["schemas"]["Jwk"];
+            /** @description Always `true`. */
+            readonly accepted: boolean;
+            /**
+             * @description `true` when an earlier report of the same `instance_id` and `period` arrived the same UTC
+             *     day and was replaced (absent otherwise).
+             */
+            readonly superseded?: boolean | null;
         };
         /**
-         * Ever Platform anonymous instance statistics v1
-         * @description One report per instance per calendar month (UTC). Every object is closed; every string is constrained by const, enum or pattern; every map key comes from a closed enum (an unknown value counts under other, never as its own key); amounts are integers in minor units (period totals). counts and aggregates may be empty objects: a frontend-only instance sends them empty. No name, e-mail, address, identifier of a person or counterparty, URL, hostname or free text can appear anywhere in a valid document.
+         * @description `POST /v1/instances/me/stats-link`: the installation links its anonymous statistics id to
+         *     itself. The statement is signed with the statistics key; the call is authenticated with the
+         *     connect key, so only an installation holding both can link them.
          */
-        readonly StatsReport: {
-            readonly aggregates: {
-                readonly credits_consumed?: components["schemas"]["StatsV1_count"];
-                readonly deployments?: components["schemas"]["StatsV1_count"];
-                readonly deployments_by_provider?: {
-                    readonly ever_works?: components["schemas"]["StatsV1_count"];
-                    readonly ever_works_apps?: components["schemas"]["StatsV1_count"];
-                    readonly k8s?: components["schemas"]["StatsV1_count"];
-                    readonly other?: components["schemas"]["StatsV1_count"];
-                    readonly vercel?: components["schemas"]["StatsV1_count"];
-                    readonly your_cluster?: components["schemas"]["StatsV1_count"];
-                };
-                readonly hours_tracked_min?: components["schemas"]["StatsV1_count"];
-                readonly invoiced_minor?: components["schemas"]["StatsV1_currency_map"];
-                readonly invoices?: components["schemas"]["StatsV1_count"];
-                readonly payments?: components["schemas"]["StatsV1_count"];
-                readonly payments_minor?: components["schemas"]["StatsV1_currency_map_signed"];
-                readonly runs?: components["schemas"]["StatsV1_count"];
-                readonly screenshots?: components["schemas"]["StatsV1_count"];
-                readonly storage_mb?: components["schemas"]["StatsV1_count"];
-                readonly translations_changed?: components["schemas"]["StatsV1_count"];
-                readonly videos?: components["schemas"]["StatsV1_count"];
-            };
+        readonly StatsLinkCreate: {
             /**
-             * @description Release channel derived by the builder from the version suffix; an unrecognised suffix maps to custom.
-             * @enum {unknown}
+             * @description A compact JWS (`alg: EdDSA`, `typ: ever-stats-link+jwt`) signed with the statistics key
+             *     over `{stats_instance_id, stats_public_jwk, iat}`, at most ten minutes old.
              */
-            readonly channel: "stable" | "rc" | "beta" | "dev" | "custom";
-            /** @description ISO 3166-1 alpha-2 declared by the operator (EVER_STATS_COUNTRY) or ZZ when undeclared. */
-            readonly country: string;
-            readonly counts: {
-                readonly agents?: components["schemas"]["StatsV1_count"];
-                readonly contacts?: components["schemas"]["StatsV1_count"];
-                readonly employees?: components["schemas"]["StatsV1_count"];
-                readonly employees_active?: components["schemas"]["StatsV1_count"];
-                readonly fleet_nodes?: components["schemas"]["StatsV1_count"];
-                readonly integrations_in_use?: {
-                    readonly activepieces?: components["schemas"]["StatsV1_count"];
-                    readonly ever_async?: components["schemas"]["StatsV1_count"];
-                    readonly ever_connect?: components["schemas"]["StatsV1_count"];
-                    readonly gauzy_ai?: components["schemas"]["StatsV1_count"];
-                    readonly github?: components["schemas"]["StatsV1_count"];
-                    readonly hubstaff?: components["schemas"]["StatsV1_count"];
-                    readonly import_export?: components["schemas"]["StatsV1_count"];
-                    readonly jira?: components["schemas"]["StatsV1_count"];
-                    readonly makecom?: components["schemas"]["StatsV1_count"];
-                    readonly other?: components["schemas"]["StatsV1_count"];
-                    readonly plane?: components["schemas"]["StatsV1_count"];
-                    readonly sim?: components["schemas"]["StatsV1_count"];
-                    readonly upwork?: components["schemas"]["StatsV1_count"];
-                    readonly zapier?: components["schemas"]["StatsV1_count"];
-                };
-                readonly locales?: components["schemas"]["StatsV1_count"];
-                readonly missions?: components["schemas"]["StatsV1_count"];
-                readonly organizations?: components["schemas"]["StatsV1_count"];
-                readonly plugins_enabled?: components["schemas"]["StatsV1_count"];
-                readonly project_clients?: components["schemas"]["StatsV1_count"];
-                readonly projects?: components["schemas"]["StatsV1_count"];
-                readonly tasks?: components["schemas"]["StatsV1_count"];
-                readonly teams?: components["schemas"]["StatsV1_count"];
-                readonly tenants?: components["schemas"]["StatsV1_count"];
-                readonly terms?: components["schemas"]["StatsV1_count"];
-                readonly translations?: components["schemas"]["StatsV1_count"];
-                readonly users?: components["schemas"]["StatsV1_count"];
-                readonly users_active_30d?: components["schemas"]["StatsV1_count"];
-                readonly works?: components["schemas"]["StatsV1_count"];
-                readonly works_by_kind?: {
-                    readonly app?: components["schemas"]["StatsV1_count"];
-                    readonly awesome_repo?: components["schemas"]["StatsV1_count"];
-                    readonly blog?: components["schemas"]["StatsV1_count"];
-                    readonly campaign?: components["schemas"]["StatsV1_count"];
-                    readonly company?: components["schemas"]["StatsV1_count"];
-                    readonly default?: components["schemas"]["StatsV1_count"];
-                    readonly directory?: components["schemas"]["StatsV1_count"];
-                    readonly landing_page?: components["schemas"]["StatsV1_count"];
-                    readonly other?: components["schemas"]["StatsV1_count"];
-                    readonly repo?: components["schemas"]["StatsV1_count"];
-                    readonly website?: components["schemas"]["StatsV1_count"];
-                };
-                readonly workspaces?: components["schemas"]["StatsV1_count"];
-            };
-            readonly features: {
-                readonly app_integration?: boolean;
-                readonly app_launcher_enabled?: boolean;
-                readonly app_works_enabled?: boolean;
-                readonly contact?: boolean;
-                readonly dashboard?: boolean;
-                readonly dashboard_task?: boolean;
-                readonly deploy_ever_works_enabled?: boolean;
-                readonly documents?: boolean;
-                readonly dynamic_plugins?: boolean;
-                readonly email_history?: boolean;
-                readonly email_template?: boolean;
-                readonly email_verification?: boolean;
-                readonly employee_appointment?: boolean;
-                readonly employee_approval?: boolean;
-                readonly employee_approval_policy?: boolean;
-                readonly employee_candidate?: boolean;
-                readonly employee_level?: boolean;
-                readonly employee_position?: boolean;
-                readonly employee_recurring_expense?: boolean;
-                readonly employee_time_activity?: boolean;
-                readonly employee_timeoff?: boolean;
-                readonly employee_timesheets?: boolean;
-                readonly employees?: boolean;
-                readonly estimate?: boolean;
-                readonly estimate_received?: boolean;
-                readonly expense?: boolean;
-                readonly file_storage?: boolean;
-                readonly gauzy_mirror?: boolean;
-                readonly goal?: boolean;
-                readonly goal_report?: boolean;
-                readonly goal_setting?: boolean;
-                readonly google_login?: boolean;
-                readonly import_export?: boolean;
-                readonly income?: boolean;
-                readonly invoice?: boolean;
-                readonly invoice_received?: boolean;
-                readonly invoice_recurring?: boolean;
-                readonly job?: boolean;
-                readonly manage_interview?: boolean;
-                readonly manage_invite?: boolean;
-                readonly mcp_enabled?: boolean;
-                readonly my_task?: boolean;
-                readonly open_stats?: boolean;
-                readonly organization?: boolean;
-                readonly organization_department?: boolean;
-                readonly organization_document?: boolean;
-                readonly organization_employment_type?: boolean;
-                readonly organization_equipment?: boolean;
-                readonly organization_help_center?: boolean;
-                readonly organization_inventory?: boolean;
-                readonly organization_project?: boolean;
-                readonly organization_recurring_expense?: boolean;
-                readonly organization_tag?: boolean;
-                readonly organization_team?: boolean;
-                readonly organization_vendor?: boolean;
-                readonly organizations?: boolean;
-                readonly payment?: boolean;
-                readonly payment_gateway?: boolean;
-                readonly pipeline?: boolean;
-                readonly pipeline_deal?: boolean;
-                readonly proposal?: boolean;
-                readonly proposal_template?: boolean;
-                readonly report?: boolean;
-                readonly roles_permission?: boolean;
-                readonly setting?: boolean;
-                readonly signups_enabled?: boolean;
-                readonly sms_gateway?: boolean;
-                readonly smtp?: boolean;
-                readonly subscriptions_enabled?: boolean;
-                readonly team_task?: boolean;
-                readonly time_tracking?: boolean;
-                readonly user?: boolean;
-            };
-            /** @description true = closed month (re-sent on days 1-3 of the following month); false = running total for the current month, superseded by later reports. */
-            readonly final: boolean;
-            /** @description Declared by EVER_INSTALL_SOURCE only; never inferred. */
-            readonly install_source: string;
-            /** @description Opaque UUID v4 generated by the product on first boot (ever_instance.instance_id). It is the stats_instance_id on the platform; the Registry never learns it unless the operator enables the consented stats_link integration. */
-            readonly instance_id: string;
-            /** @enum {unknown} */
-            readonly instance_kind: "backend" | "frontend";
-            /** @description Version of the ever-stats module / ever-connect-sdk that built the report (major.minor.patch, no suffix). */
-            readonly module_version: string;
-            /** @description Calendar month (UTC) the counters and aggregates describe. */
-            readonly period: string;
-            /** @enum {unknown} */
-            readonly product: "gauzy" | "teams" | "works" | "rec" | "traduora";
-            /** @description UUID v4 minted per report by the sender; the ingest dedupes on (instance_id, period, received day), not on report_id. */
-            readonly report_id: string;
-            /** @constant */
-            readonly schema: "ever.stats.v1";
-            /** @description UTC date (YYYY-MM-DD) the report was built. No time of day, so a report cannot be joined to a request log line. */
-            readonly sent_at: string;
-            /** @description Products this instance serves; a Gauzy API that also serves Ever Teams reports once with ["gauzy","teams"] (EVER_STATS_SERVES). */
-            readonly serves: readonly ("gauzy" | "teams" | "works" | "rec" | "traduora")[];
-            /** @description Product release version, major.minor.patch with no suffix: a fork's build string could name a company. The builder maps any pre-release or build suffix to channel. */
-            readonly version: string;
-        } & ({
-            readonly aggregates?: components["schemas"]["StatsV1_gauzy_aggregates"];
-            readonly counts?: components["schemas"]["StatsV1_gauzy_counts"];
-            readonly features?: components["schemas"]["StatsV1_gauzy_features"];
-            /** @constant */
-            readonly product: "gauzy";
-        } | {
-            readonly aggregates?: components["schemas"]["StatsV1_teams_aggregates"];
-            readonly counts?: components["schemas"]["StatsV1_teams_counts"];
-            readonly features?: components["schemas"]["StatsV1_teams_features"];
-            /** @constant */
-            readonly product: "teams";
-        } | {
-            readonly aggregates?: components["schemas"]["StatsV1_works_aggregates"];
-            readonly counts?: components["schemas"]["StatsV1_works_counts"];
-            readonly features?: components["schemas"]["StatsV1_works_features"];
-            /** @constant */
-            readonly product: "works";
-        } | {
-            readonly aggregates?: components["schemas"]["StatsV1_rec_aggregates"];
-            readonly counts?: components["schemas"]["StatsV1_rec_counts"];
-            readonly features?: components["schemas"]["StatsV1_rec_features"];
-            /** @constant */
-            readonly product: "rec";
-        } | {
-            readonly aggregates?: components["schemas"]["StatsV1_traduora_aggregates"];
-            readonly counts?: components["schemas"]["StatsV1_traduora_counts"];
-            readonly features?: components["schemas"]["StatsV1_traduora_features"];
-            /** @constant */
-            readonly product: "traduora";
-        });
-        /** @description Integer minor units (cents) of the currency named by the key; a period total, never a per-record value. */
-        readonly StatsV1_amount_minor: number;
-        /** @description Integer minor units; may be negative for refund-heavy periods. */
-        readonly StatsV1_amount_minor_signed: number;
-        readonly StatsV1_count: number;
-        readonly StatsV1_currency_map: {
-            readonly [key: string]: components["schemas"]["StatsV1_amount_minor"];
+            readonly statement_sig: string;
+            /** @description The anonymous statistics id (UUID v4) the installation reports under. */
+            readonly stats_instance_id: string;
+            /** @description The statistics key (the one its reports are signed with). */
+            readonly stats_public_jwk: components["schemas"]["StatsPublicJwk"];
         };
-        readonly StatsV1_currency_map_signed: {
-            readonly [key: string]: components["schemas"]["StatsV1_amount_minor_signed"];
-        };
-        readonly StatsV1_gauzy_aggregates: {
-            readonly hours_tracked_min?: components["schemas"]["StatsV1_count"];
-            readonly invoiced_minor?: components["schemas"]["StatsV1_currency_map"];
-            readonly invoices?: components["schemas"]["StatsV1_count"];
-            readonly payments?: components["schemas"]["StatsV1_count"];
-            readonly payments_minor?: components["schemas"]["StatsV1_currency_map_signed"];
-        };
-        readonly StatsV1_gauzy_counts: {
-            readonly contacts?: components["schemas"]["StatsV1_count"];
-            readonly employees?: components["schemas"]["StatsV1_count"];
-            readonly employees_active?: components["schemas"]["StatsV1_count"];
-            readonly integrations_in_use?: {
-                readonly activepieces?: components["schemas"]["StatsV1_count"];
-                readonly ever_async?: components["schemas"]["StatsV1_count"];
-                readonly ever_connect?: components["schemas"]["StatsV1_count"];
-                readonly gauzy_ai?: components["schemas"]["StatsV1_count"];
-                readonly github?: components["schemas"]["StatsV1_count"];
-                readonly hubstaff?: components["schemas"]["StatsV1_count"];
-                readonly import_export?: components["schemas"]["StatsV1_count"];
-                readonly jira?: components["schemas"]["StatsV1_count"];
-                readonly makecom?: components["schemas"]["StatsV1_count"];
-                readonly other?: components["schemas"]["StatsV1_count"];
-                readonly plane?: components["schemas"]["StatsV1_count"];
-                readonly sim?: components["schemas"]["StatsV1_count"];
-                readonly upwork?: components["schemas"]["StatsV1_count"];
-                readonly zapier?: components["schemas"]["StatsV1_count"];
-            };
-            readonly organizations?: components["schemas"]["StatsV1_count"];
-            readonly projects?: components["schemas"]["StatsV1_count"];
-            readonly tasks?: components["schemas"]["StatsV1_count"];
-            readonly teams?: components["schemas"]["StatsV1_count"];
-            readonly tenants?: components["schemas"]["StatsV1_count"];
-            readonly users?: components["schemas"]["StatsV1_count"];
-            readonly users_active_30d?: components["schemas"]["StatsV1_count"];
-        };
-        readonly StatsV1_gauzy_features: {
-            readonly app_integration?: boolean;
-            readonly contact?: boolean;
-            readonly dashboard?: boolean;
-            readonly dashboard_task?: boolean;
-            readonly documents?: boolean;
-            readonly email_history?: boolean;
-            readonly email_template?: boolean;
-            readonly email_verification?: boolean;
-            readonly employee_appointment?: boolean;
-            readonly employee_approval?: boolean;
-            readonly employee_approval_policy?: boolean;
-            readonly employee_candidate?: boolean;
-            readonly employee_level?: boolean;
-            readonly employee_position?: boolean;
-            readonly employee_recurring_expense?: boolean;
-            readonly employee_time_activity?: boolean;
-            readonly employee_timeoff?: boolean;
-            readonly employee_timesheets?: boolean;
-            readonly employees?: boolean;
-            readonly estimate?: boolean;
-            readonly estimate_received?: boolean;
-            readonly expense?: boolean;
-            readonly file_storage?: boolean;
-            readonly goal?: boolean;
-            readonly goal_report?: boolean;
-            readonly goal_setting?: boolean;
-            readonly import_export?: boolean;
-            readonly income?: boolean;
-            readonly invoice?: boolean;
-            readonly invoice_received?: boolean;
-            readonly invoice_recurring?: boolean;
-            readonly job?: boolean;
-            readonly manage_interview?: boolean;
-            readonly manage_invite?: boolean;
-            readonly my_task?: boolean;
-            readonly open_stats?: boolean;
-            readonly organization?: boolean;
-            readonly organization_department?: boolean;
-            readonly organization_document?: boolean;
-            readonly organization_employment_type?: boolean;
-            readonly organization_equipment?: boolean;
-            readonly organization_help_center?: boolean;
-            readonly organization_inventory?: boolean;
-            readonly organization_project?: boolean;
-            readonly organization_recurring_expense?: boolean;
-            readonly organization_tag?: boolean;
-            readonly organization_team?: boolean;
-            readonly organization_vendor?: boolean;
-            readonly organizations?: boolean;
-            readonly payment?: boolean;
-            readonly payment_gateway?: boolean;
-            readonly pipeline?: boolean;
-            readonly pipeline_deal?: boolean;
-            readonly proposal?: boolean;
-            readonly proposal_template?: boolean;
-            readonly report?: boolean;
-            readonly roles_permission?: boolean;
-            readonly setting?: boolean;
-            readonly sms_gateway?: boolean;
-            readonly smtp?: boolean;
-            readonly team_task?: boolean;
-            readonly time_tracking?: boolean;
-            readonly user?: boolean;
-        };
-        readonly StatsV1_rec_aggregates: {
-            readonly screenshots?: components["schemas"]["StatsV1_count"];
-            readonly storage_mb?: components["schemas"]["StatsV1_count"];
-            readonly videos?: components["schemas"]["StatsV1_count"];
-        };
-        readonly StatsV1_rec_counts: {
-            readonly teams?: components["schemas"]["StatsV1_count"];
-            readonly users?: components["schemas"]["StatsV1_count"];
-            readonly workspaces?: components["schemas"]["StatsV1_count"];
-        };
-        readonly StatsV1_rec_features: {
-            readonly gauzy_mirror?: boolean;
-            readonly google_login?: boolean;
-        };
-        readonly StatsV1_teams_aggregates: Record<string, never>;
-        readonly StatsV1_teams_counts: Record<string, never>;
-        readonly StatsV1_teams_features: Record<string, never>;
-        readonly StatsV1_traduora_aggregates: {
-            readonly translations_changed?: components["schemas"]["StatsV1_count"];
-        };
-        readonly StatsV1_traduora_counts: {
-            readonly locales?: components["schemas"]["StatsV1_count"];
-            readonly project_clients?: components["schemas"]["StatsV1_count"];
-            readonly projects?: components["schemas"]["StatsV1_count"];
-            readonly terms?: components["schemas"]["StatsV1_count"];
-            readonly translations?: components["schemas"]["StatsV1_count"];
-            readonly users?: components["schemas"]["StatsV1_count"];
-        };
-        readonly StatsV1_traduora_features: {
-            readonly google_login?: boolean;
-            readonly signups_enabled?: boolean;
-        };
-        readonly StatsV1_works_aggregates: {
-            readonly credits_consumed?: components["schemas"]["StatsV1_count"];
-            readonly deployments?: components["schemas"]["StatsV1_count"];
-            readonly deployments_by_provider?: {
-                readonly ever_works?: components["schemas"]["StatsV1_count"];
-                readonly ever_works_apps?: components["schemas"]["StatsV1_count"];
-                readonly k8s?: components["schemas"]["StatsV1_count"];
-                readonly other?: components["schemas"]["StatsV1_count"];
-                readonly vercel?: components["schemas"]["StatsV1_count"];
-                readonly your_cluster?: components["schemas"]["StatsV1_count"];
-            };
-            readonly runs?: components["schemas"]["StatsV1_count"];
-        };
-        readonly StatsV1_works_counts: {
-            readonly agents?: components["schemas"]["StatsV1_count"];
-            readonly fleet_nodes?: components["schemas"]["StatsV1_count"];
-            readonly missions?: components["schemas"]["StatsV1_count"];
-            readonly organizations?: components["schemas"]["StatsV1_count"];
-            readonly plugins_enabled?: components["schemas"]["StatsV1_count"];
-            readonly teams?: components["schemas"]["StatsV1_count"];
-            readonly tenants?: components["schemas"]["StatsV1_count"];
-            readonly users?: components["schemas"]["StatsV1_count"];
-            readonly works?: components["schemas"]["StatsV1_count"];
-            readonly works_by_kind?: {
-                readonly app?: components["schemas"]["StatsV1_count"];
-                readonly awesome_repo?: components["schemas"]["StatsV1_count"];
-                readonly blog?: components["schemas"]["StatsV1_count"];
-                readonly campaign?: components["schemas"]["StatsV1_count"];
-                readonly company?: components["schemas"]["StatsV1_count"];
-                readonly default?: components["schemas"]["StatsV1_count"];
-                readonly directory?: components["schemas"]["StatsV1_count"];
-                readonly landing_page?: components["schemas"]["StatsV1_count"];
-                readonly other?: components["schemas"]["StatsV1_count"];
-                readonly repo?: components["schemas"]["StatsV1_count"];
-                readonly website?: components["schemas"]["StatsV1_count"];
-            };
-        };
-        readonly StatsV1_works_features: {
-            readonly app_launcher_enabled?: boolean;
-            readonly app_works_enabled?: boolean;
-            readonly deploy_ever_works_enabled?: boolean;
-            readonly dynamic_plugins?: boolean;
-            readonly mcp_enabled?: boolean;
-            readonly subscriptions_enabled?: boolean;
+        /** @description The answer to a link: nothing beyond the status (the statistics id is never returned). */
+        readonly StatsLinked: Record<string, never>;
+        /** @description The statistics key of a link request, as a JWK (`kty: OKP`, `crv: Ed25519`). */
+        readonly StatsPublicJwk: {
+            /**
+             * @description `Ed25519`.
+             * @example Ed25519
+             */
+            readonly crv: string;
+            /**
+             * @description `OKP`.
+             * @example OKP
+             */
+            readonly kty: string;
+            /** @description base64url (no padding) of the 32 public-key bytes. */
+            readonly x: string;
         };
         /** @description How to reach a withheld organization. */
         readonly StepUp: {
@@ -3062,8 +2675,6 @@ export interface components {
                 readonly quantity: number;
             }[];
         };
-        /** Format: uuid */
-        readonly Uuid: string;
         readonly Vendor: {
             readonly handle: components["schemas"]["Handle"];
             readonly kind: components["schemas"]["VendorKind"];
@@ -4661,7 +4272,11 @@ export interface operations {
         readonly parameters: {
             readonly query?: never;
             readonly header: {
-                /** @description Client-generated key, unique per principal, <= 128 characters. See the `Idempotency` schema. */
+                /**
+                 * @description Client-generated key, unique per principal, at most 128 characters; remembered 24 h.
+                 *     The same key with the same request replays the first answer (`Idempotency-Replayed:
+                 *     true`); with a different request it answers `422 idempotency_mismatch`.
+                 */
                 readonly "Idempotency-Key": string;
             };
             readonly path?: never;
@@ -4673,16 +4288,16 @@ export interface operations {
             };
         };
         readonly responses: {
-            /** @description Linked. */
+            /** @description Linked (the statistics id is never returned) */
             readonly 200: {
                 headers: {
                     readonly [name: string]: unknown;
                 };
                 content: {
-                    readonly "application/json": components["schemas"]["Empty"];
+                    readonly "application/json": components["schemas"]["StatsLinked"];
                 };
             };
-            /** @description Principal lacks the role, scope, integration or entitlement, or the operation needs a fresh sign-in (`forbidden_role`, `forbidden_scope`, `integration_disabled`, `integration_revoked`, `instance_pending_approval`, `entitlement_required`, `tier_required`, `sso_required`, `reauth_required`, `session_required`: an Ever ID token issued to a product, installation or App client used anywhere except the two `everIdTokenRead` reads and the in-product consent write; `step_up_required`: that consent write without a sign-in in the last 300 s; `not_connection_owner`: an installation-wide integration changed by an organization that does not own the installation). */
+            /** @description `integration_disabled`: `stats_link` is not enabled for this installation, or Ever operates it */
             readonly 403: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -4691,28 +4306,18 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description State conflict (`handle_taken`, `already_exists`, `key_mismatch`, `idempotency_in_progress`, `illegal_transition`, `billing_active`, `job_in_progress` when another job for the same subject is running). */
+            /** @description `key_mismatch`: the statement is not signed by the key pinned for the statistics id; `already_linked`: another live installation holds it */
             readonly 409: {
                 headers: {
-                    /** @description Seconds to wait before retrying. */
-                    readonly "Retry-After"?: number;
                     readonly [name: string]: unknown;
                 };
                 content: {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Any other error, as a problem document. */
-            readonly default: {
+            /** @description `validation_failed`: the body, or a statement that is malformed, does not verify, does not repeat the request or is older than ten minutes */
+            readonly 422: {
                 headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
                     readonly [name: string]: unknown;
                 };
                 content: {
@@ -5771,38 +5376,39 @@ export interface operations {
         readonly parameters: {
             readonly query?: never;
             readonly header: {
-                /** @description base64url-encoded (unpadded) 32-byte Ed25519 public key of the instance; pinned on first sight. */
+                /**
+                 * @description The installation's Ed25519 statistics key: base64url without padding of the 32 public-key
+                 *     bytes. Pinned to `instance_id` on the first accepted report.
+                 */
                 readonly "Ever-Stats-Key": string;
-                /** @description Optional key id `base64url(sha256(public_key)[0:8])` (11 chars); must match `Ever-Stats-Key` when sent. */
-                readonly "Ever-Stats-Key-Id"?: string;
-                /** @description `ed25519=` followed by the base64url-encoded (unpadded) 64-byte Ed25519 signature over the raw request body. */
+                /**
+                 * @description Optional key id: base64url of the first 8 bytes of SHA-256 over the public key; must
+                 *     match `Ever-Stats-Key` when sent.
+                 */
+                readonly "Ever-Stats-Key-Id"?: string | null;
+                /** @description `ed25519=` followed by the base64url (no padding) signature over the exact request body. */
                 readonly "Ever-Stats-Signature": string;
             };
             readonly path?: never;
             readonly cookie?: never;
         };
+        /** @description An `ever.stats.v1` report (closed JSON Schema, `GET /v1/stats/schema`): integers only, every string bound by a constant, an enumeration or a pattern, at most 16 384 bytes. */
         readonly requestBody: {
             readonly content: {
-                readonly "application/json": components["schemas"]["StatsReport"];
+                readonly "application/json": Record<string, never>;
             };
         };
         readonly responses: {
-            /** @description Accepted (or superseded an earlier report for the same period today). */
+            /** @description Accepted, or accepted replacing a report of the same `instance_id` and `period` received the same UTC day (`superseded`) */
             readonly 202: {
                 headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
                     readonly [name: string]: unknown;
                 };
                 content: {
                     readonly "application/json": components["schemas"]["StatsAccepted"];
                 };
             };
-            /** @description Malformed request or ambiguous credentials (`ambiguous_credentials`: two authentication schemes on one request). */
+            /** @description `validation_failed`: `Ever-Stats-Key` is missing or not an Ed25519 public key; `signature_invalid`: the signature is missing, malformed or does not verify over the body, or `Ever-Stats-Key-Id` names another key */
             readonly 400: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -5811,18 +5417,16 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description State conflict (`handle_taken`, `already_exists`, `key_mismatch`, `idempotency_in_progress`, `illegal_transition`, `billing_active`, `job_in_progress` when another job for the same subject is running). */
+            /** @description `key_mismatch`: the `instance_id` is pinned to another key */
             readonly 409: {
                 headers: {
-                    /** @description Seconds to wait before retrying. */
-                    readonly "Retry-After"?: number;
                     readonly [name: string]: unknown;
                 };
                 content: {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Body larger than 16 KiB (`validation_failed`). */
+            /** @description `validation_failed`: the body is larger than 16 384 bytes (`errors[0].code` is `too_large`) */
             readonly 413: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -5831,7 +5435,16 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Validation failed; unknown fields are rejected on writes (`validation_failed`, `schema_violation`, `code_invalid`, `idempotency_mismatch`, `mirror_owned_field`, `limit_exceeded`). */
+            /** @description `unsupported_media_type`: the body is not `application/json` */
+            readonly 415: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `schema_violation`: the report is not valid JSON or breaks the schema (`errors[].path`, `errors[].code` one of `unknown_field`, `type`, `pattern`, `range`, `required`, `duplicate_key`, `schema_unknown`); the report is dropped */
             readonly 422: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -5840,34 +5453,18 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Rate limit exceeded for this principal class (`rate_limited`). */
+            /** @description `rate_limited`: the `instance_id` sent its reports for the UTC day, or the source address too many requests (`Retry-After`) */
             readonly 429: {
                 headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description Seconds to wait before retrying. */
-                    readonly "Retry-After"?: number;
                     readonly [name: string]: unknown;
                 };
                 content: {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Any other error, as a problem document. */
-            readonly default: {
+            /** @description The report store is unreachable; retry later */
+            readonly 503: {
                 headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
                     readonly [name: string]: unknown;
                 };
                 content: {

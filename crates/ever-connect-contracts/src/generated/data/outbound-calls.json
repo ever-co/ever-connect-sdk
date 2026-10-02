@@ -330,7 +330,7 @@
           "method": "POST",
           "path": "/v1/instances/me/stats-link",
           "operation_id": "instanceLinkStats",
-          "status": "provisional"
+          "status": "pinned"
         }
       ],
       "trigger": "integration stats_link enabled (self-hosted installations only)",
@@ -525,7 +525,7 @@
           "method": "POST",
           "path": "/v1/stats/reports",
           "operation_id": "ingestStatsReport",
-          "status": "provisional"
+          "status": "pinned"
         }
       ],
       "trigger": "statistics module loaded and enabled",

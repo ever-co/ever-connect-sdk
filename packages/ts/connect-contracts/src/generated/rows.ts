@@ -353,7 +353,7 @@ export const ROWS: readonly OutboundCallRow[] = [
         "method": "POST",
         "path": "/v1/instances/me/stats-link",
         "operation_id": "instanceLinkStats",
-        "status": "provisional"
+        "status": "pinned"
       }
     ],
     "trigger": "integration stats_link enabled (self-hosted installations only)",
@@ -548,7 +548,7 @@ export const ROWS: readonly OutboundCallRow[] = [
         "method": "POST",
         "path": "/v1/stats/reports",
         "operation_id": "ingestStatsReport",
-        "status": "provisional"
+        "status": "pinned"
       }
     ],
     "trigger": "statistics module loaded and enabled",
@@ -1489,9 +1489,14 @@ export const ROW_COVERAGE: readonly RowCoverage[] = [
         "documented": true
       },
       {
+        "status": 409,
+        "code": "already_linked",
+        "documented": true
+      },
+      {
         "status": 422,
         "code": "validation_failed",
-        "documented": false
+        "documented": true
       }
     ]
   },
@@ -1754,7 +1759,7 @@ export const ROW_COVERAGE: readonly RowCoverage[] = [
       {
         "status": 400,
         "code": "signature_invalid",
-        "documented": false
+        "documented": true
       },
       {
         "status": 409,
@@ -1764,6 +1769,11 @@ export const ROW_COVERAGE: readonly RowCoverage[] = [
       {
         "status": 413,
         "code": "validation_failed",
+        "documented": true
+      },
+      {
+        "status": 415,
+        "code": "unsupported_media_type",
         "documented": true
       },
       {

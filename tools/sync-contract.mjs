@@ -5,8 +5,9 @@
  *
  *   contracts/openapi/ever-platform.v1.yaml   the instance-facing subset of the Ever Platform API,
  *                                             every operation stamped with its outbound-call row
- *   contracts/schemas/**, contracts/integrations/catalog.v1.json, contracts/fixtures/lookup/…
- *                                             the vendored schemas, catalog and vectors
+ *   contracts/schemas/**, contracts/integrations/catalog.v1.json, contracts/fixtures/lookup/…,
+ *   contracts/fixtures/connect/vectors/**, contracts/fixtures/stats/**
+ *                                             the vendored schemas, catalog, vectors and fixtures
  *   contracts/VENDOR.json                     where each file came from, its sha256, and which
  *                                             sources are still provisional
  *
@@ -21,7 +22,7 @@ import { join, relative } from 'node:path';
 import YAML from 'yaml';
 import { diffOutputs, platformRepo, REPO, readJson, sha256, stableJson, walk, writeText } from './lib/common.mjs';
 import { buildSubset, METHODS, subsetYaml } from './lib/openapi-subset.mjs';
-import { CONNECT_VECTORS, vendor } from './lib/vendor.mjs';
+import { CONNECT_VECTORS, STATS_FIXTURES, vendor } from './lib/vendor.mjs';
 
 const SPEC_PATH = 'contracts/openapi/ever-platform.v1.yaml';
 const VENDOR_PATH = 'contracts/VENDOR.json';
@@ -93,8 +94,12 @@ export function build(platform) {
       'The calls an installation of an Ever product makes to Ever Platform: the operations that accept an instance token, the public operations a product calls (key manifest, connect, statistics, lookup salt) and the two Ever ID reads a product makes with the token of a person who signed in. Every operation carries `x-ever-row`, its row in the outbound-call table. Errors are `application/problem+json` with a stable `code`.',
   });
 
-  // Recorded overrides of design schemas (each with its reason in pending-upstream.json).
+  // Recorded overrides of design schemas (each with its reason in pending-upstream.json). The
+  // pinned contract is the server's truth: once it defines a schema, an override of it is stale.
+  const pinnedSchemas = readJson(join(platform, config.pinned)).components?.schemas ?? {};
   for (const [name, override] of Object.entries(pending.schema_overrides ?? {})) {
+    if (pinnedSchemas[name] !== undefined)
+      throw new Error(`schema override ${name}: the pinned contract defines it now; drop the override from pending-upstream.json`);
     if (!subset.spec.components.schemas[name]) throw new Error(`schema override ${name}: no such schema in the subset`);
     subset.spec.components.schemas[name] = override.schema;
   }
@@ -137,7 +142,9 @@ export function build(platform) {
       ...(vendored.entries.some((e) => e.path.startsWith(`${CONNECT_VECTORS.path}/`))
         ? []
         : [{ path: `${CONNECT_VECTORS.path}/`, until: 'the platform publishes its client-assertion vectors' }]),
-      { path: 'contracts/fixtures/stats/', until: 'the platform publishes the statistics fixtures and expected outcomes' },
+      ...(vendored.entries.some((e) => e.path.startsWith(`${STATS_FIXTURES.path}/`))
+        ? []
+        : [{ path: `${STATS_FIXTURES.path}/`, until: 'the platform publishes the statistics fixtures and expected outcomes' }]),
     ],
   };
 
@@ -180,9 +187,10 @@ function main() {
   const { files, vendorDoc } = build(platform);
   const current = {};
   // Files written before but no longer produced (an event schema that left the instance audience,
-  // an authored vector the platform's published set replaces).
+  // an authored vector or fixture the platform's published set replaces).
   const ownedDirs = ['contracts/schemas/events'];
-  if (vendorDoc.files.some((e) => e.path.startsWith(`${CONNECT_VECTORS.path}/`))) ownedDirs.push(CONNECT_VECTORS.path);
+  for (const vendored of [CONNECT_VECTORS, STATS_FIXTURES])
+    if (vendorDoc.files.some((e) => e.path.startsWith(`${vendored.path}/`))) ownedDirs.push(vendored.path);
   for (const dir of ownedDirs)
     for (const path of walk(join(REPO, dir)).map((p) => relative(REPO, p).split('\\').join('/')))
       if (!(path in files)) current[path] = readFileSync(join(REPO, path), 'utf8');

@@ -2,19 +2,19 @@
   "description": "Where every contract file of this repository comes from. Written by tools/sync-contract.mjs; checked by tools/check-schema-drift.mjs. `provisional` sources are drafts the platform has not published yet: tools/check-schema-drift.mjs --strict refuses them.",
   "platform": {
     "repository": "ever-co/platform",
-    "commit": "882d1faf6b8ec07cc389e325bf3c9930f57f8003"
+    "commit": "40af4a4b047a3ed31be1437440971dc5378b18b1"
   },
   "openapi": {
     "target": "contracts/openapi/ever-platform.v1.yaml",
-    "sha256": "d13a95de1904a62cfdcda4ef9375c6fc21dfc371ba1e98bbda0a27689bb6d17e",
+    "sha256": "5d25bd366702095a124e67a1f1ecfc6d0fc19ca05c2a6bb36aae40f11507bc26",
     "pinned": {
       "source": "contracts/openapi/ever-api.v1.json",
-      "sha256": "b9e90f27d76f3b62f5999ea6a01a355ee92092cc1c646c34ea197fbe7d87c718"
+      "sha256": "c4d0e330f01cc6ecc1b42384a968ba20ab9e8d12aecd5276e15c87bf72a79e1d"
     },
     "design": {
       "source": "docs/specs/api",
-      "sha256": "75697f9404ce1af63db37dee07e46e75ff17e482ba2041163a1d920cc835d733",
-      "files": 23
+      "sha256": "480709a7c5752b106da9da034c478440307801acac3bd53a9cd180a5330a0926",
+      "files": 22
     },
     "operations": 53,
     "provisional_operations": [
@@ -25,7 +25,6 @@
       "getConnectLegal",
       "getLookupSalt",
       "getLookupTestVectors",
-      "ingestStatsReport",
       "instanceAckRequest",
       "instanceCreateBillingLink",
       "instanceCreatePersonLink",
@@ -37,7 +36,6 @@
       "instanceGetIntegrations",
       "instanceGetLinkEntitlement",
       "instanceGetOidcClient",
-      "instanceLinkStats",
       "instanceListMirroredApps",
       "instanceMirrorApps",
       "instancePushOrgProfile",
@@ -66,9 +64,7 @@
         "file": "common.yaml"
       }
     ],
-    "schema_overrides": [
-      "StatsLinkCreate"
-    ],
+    "schema_overrides": [],
     "pending_upstream_rows": [
       18,
       31,
@@ -77,8 +73,8 @@
   },
   "events": {
     "source": "contracts/events/catalog.json",
-    "version": "1.1",
-    "sha256": "865be7b0dbbe2417e38ba207ab7f18033ac41916ea970dfa33b76ad120e7b1ef",
+    "version": "1.2",
+    "sha256": "3567de8d7704aac99241c9d9c391a762e943e34f27793d7e39eac9aef368f3d3",
     "instance_types": [
       "ever.consent.consent.granted",
       "ever.consent.consent.revoked",
@@ -111,12 +107,12 @@
   "files": [
     {
       "path": "contracts/schemas/ever.stats.v1.json",
-      "source": "docs/specs/contracts/stats.v1.schema.json",
-      "source_sha256": "6991b8356a441ab607be4cec0e4a6c200f3c0fc33f05f26cc47b915d30a6a026",
+      "source": "contracts/stats/ever.stats.v1.schema.json",
+      "source_sha256": "0cd746f7dec75117a6b812b7a832f9ceca4c97a6ecf65d22d6967a6475efc6e5",
       "sha256": "0cd746f7dec75117a6b812b7a832f9ceca4c97a6ecf65d22d6967a6475efc6e5",
-      "transform": "json-drop-comment",
-      "provisional": true,
-      "upstream": "contracts/stats/ever.stats.v1.schema.json"
+      "transform": null,
+      "provisional": false,
+      "upstream": null
     },
     {
       "path": "contracts/schemas/ever.entitlement.v1.json",
@@ -603,6 +599,177 @@
       "transform": null,
       "provisional": false,
       "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/stats/expected.json",
+      "source": "contracts/fixtures/stats/expected.json",
+      "source_sha256": "b86a1340ac9516c86353eb889d5e18e323e92c269042ba3be461169f481e669a",
+      "sha256": "b86a1340ac9516c86353eb889d5e18e323e92c269042ba3be461169f481e669a",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/stats/invalid/01-extra-field.json",
+      "source": "contracts/fixtures/stats/invalid/01-extra-field.json",
+      "source_sha256": "74131374b3081c4f418a5becdacf39f82784b9e7daabcf124465363596149702",
+      "sha256": "74131374b3081c4f418a5becdacf39f82784b9e7daabcf124465363596149702",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/stats/invalid/02-string-in-counts.json",
+      "source": "contracts/fixtures/stats/invalid/02-string-in-counts.json",
+      "source_sha256": "48b55e40e987eee6f84689d630438e7b4958f33e9ad391c77e312601d7eec0d1",
+      "sha256": "48b55e40e987eee6f84689d630438e7b4958f33e9ad391c77e312601d7eec0d1",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/stats/invalid/03-per-record-array.json",
+      "source": "contracts/fixtures/stats/invalid/03-per-record-array.json",
+      "source_sha256": "572e8fab615f2404ccd3a17ba9ed6c9d141f4e6e0d634f86e739c0324f5f75f1",
+      "sha256": "572e8fab615f2404ccd3a17ba9ed6c9d141f4e6e0d634f86e739c0324f5f75f1",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/stats/invalid/04-email-in-country.json",
+      "source": "contracts/fixtures/stats/invalid/04-email-in-country.json",
+      "source_sha256": "ceac87b844a32c1c083d726075c93cf47cb020adf25b276c1cb2200da4543b71",
+      "sha256": "ceac87b844a32c1c083d726075c93cf47cb020adf25b276c1cb2200da4543b71",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/stats/invalid/05-url-in-version.json",
+      "source": "contracts/fixtures/stats/invalid/05-url-in-version.json",
+      "source_sha256": "0b8b5a28cdc12e55b95f5254a5589ab73864945704672a876a07d6ec0551c8ef",
+      "sha256": "0b8b5a28cdc12e55b95f5254a5589ab73864945704672a876a07d6ec0551c8ef",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/stats/invalid/06-decimal-amount.json",
+      "source": "contracts/fixtures/stats/invalid/06-decimal-amount.json",
+      "source_sha256": "e332c4e1d45ca2e7ec6ee925638ecb799910d9ad20c8a7c0eaeb188902e58f59",
+      "sha256": "e332c4e1d45ca2e7ec6ee925638ecb799910d9ad20c8a7c0eaeb188902e58f59",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/stats/invalid/07-oversize.json",
+      "source": "contracts/fixtures/stats/invalid/07-oversize.json",
+      "source_sha256": "983f935f3f875859919636c3ae94d27ce8c7ea9d1242250a76c5fbf8abbd32f5",
+      "sha256": "983f935f3f875859919636c3ae94d27ce8c7ea9d1242250a76c5fbf8abbd32f5",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/stats/invalid/08-foreign-product-key.json",
+      "source": "contracts/fixtures/stats/invalid/08-foreign-product-key.json",
+      "source_sha256": "2c141ef2493f5c820bc242d40d5084e951c67ad68f94f8d6773e90534965256b",
+      "sha256": "2c141ef2493f5c820bc242d40d5084e951c67ad68f94f8d6773e90534965256b",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/stats/invalid/09-version-suffix.json",
+      "source": "contracts/fixtures/stats/invalid/09-version-suffix.json",
+      "source_sha256": "6823728bc99744fffd93b408d9e17b440654c42eb3979ffec5fd6ee79f85096f",
+      "sha256": "6823728bc99744fffd93b408d9e17b440654c42eb3979ffec5fd6ee79f85096f",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/stats/invalid/10-open-map-key.json",
+      "source": "contracts/fixtures/stats/invalid/10-open-map-key.json",
+      "source_sha256": "06e82f78dc3d24a8139896001f242897971da12c7891c7b1990a031f2c1fd1c1",
+      "sha256": "06e82f78dc3d24a8139896001f242897971da12c7891c7b1990a031f2c1fd1c1",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/stats/invalid/11-integral-float.json",
+      "source": "contracts/fixtures/stats/invalid/11-integral-float.json",
+      "source_sha256": "06352170d9b152d146a703248f5782e1c74cd8574c134d2eba5f1bac9f6c3922",
+      "sha256": "06352170d9b152d146a703248f5782e1c74cd8574c134d2eba5f1bac9f6c3922",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/stats/invalid/12-duplicate-key.json",
+      "source": "contracts/fixtures/stats/invalid/12-duplicate-key.json",
+      "source_sha256": "dca4b8bbdf5a799f905a2cd8a49bafc2366d3e606d0ed606b278b8d594aa4d86",
+      "sha256": "dca4b8bbdf5a799f905a2cd8a49bafc2366d3e606d0ed606b278b8d594aa4d86",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/stats/invalid/13-sent-at-with-time.json",
+      "source": "contracts/fixtures/stats/invalid/13-sent-at-with-time.json",
+      "source_sha256": "8ae8e336fe9f9c488df79c4b27510d1ec7a7f02166352722c7d5729403f7e3f5",
+      "sha256": "8ae8e336fe9f9c488df79c4b27510d1ec7a7f02166352722c7d5729403f7e3f5",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/stats/valid/gauzy.json",
+      "source": "contracts/fixtures/stats/valid/gauzy.json",
+      "source_sha256": "78615e517bf4713ee2d557a839200ac6c3e39451fd8ef26fdf8c7dff77fd7f39",
+      "sha256": "78615e517bf4713ee2d557a839200ac6c3e39451fd8ef26fdf8c7dff77fd7f39",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/stats/valid/rec.json",
+      "source": "contracts/fixtures/stats/valid/rec.json",
+      "source_sha256": "549399e0938e5a5e59f7a3efef24c755df3ca8c2048a68a3ffccb01dca29f548",
+      "sha256": "549399e0938e5a5e59f7a3efef24c755df3ca8c2048a68a3ffccb01dca29f548",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/stats/valid/teams.json",
+      "source": "contracts/fixtures/stats/valid/teams.json",
+      "source_sha256": "63ae795d84ebf08c14bf1b41d0cc085080c42909cbf367895d73399484767d38",
+      "sha256": "63ae795d84ebf08c14bf1b41d0cc085080c42909cbf367895d73399484767d38",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/stats/valid/traduora.json",
+      "source": "contracts/fixtures/stats/valid/traduora.json",
+      "source_sha256": "bb238a08867e558849f6ded6f7774a5d3369782de0a4e033936e08a9e09df911",
+      "sha256": "bb238a08867e558849f6ded6f7774a5d3369782de0a4e033936e08a9e09df911",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/stats/valid/works.json",
+      "source": "contracts/fixtures/stats/valid/works.json",
+      "source_sha256": "7e166873e2ddf6f1832bc2ba79e969dfa7d22509c29ca33a1b63a28606ef4491",
+      "sha256": "7e166873e2ddf6f1832bc2ba79e969dfa7d22509c29ca33a1b63a28606ef4491",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
     }
   ],
   "authored": [
@@ -613,10 +780,6 @@
     {
       "path": "contracts/schemas/ever.key-manifest.v1.json",
       "until": "the platform publishes the key manifest schema"
-    },
-    {
-      "path": "contracts/fixtures/stats/",
-      "until": "the platform publishes the statistics fixtures and expected outcomes"
     }
   ]
 }

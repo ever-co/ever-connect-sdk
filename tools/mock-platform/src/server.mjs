@@ -234,15 +234,14 @@ export function createMockPlatform(options = {}) {
         headers,
         query: url.searchParams,
         raw,
+        tooLarge,
         requestId,
         issuer: config.issuer,
         body: null,
         instance: null,
       };
-      if (tooLarge) {
-        if (route.operationId === 'ingestStatsReport') fail(413, 'validation_failed', 'the report is larger than 16 KiB');
-        fail(413, 'payload_too_large');
-      }
+      // The statistics handler answers its own size limit, after the media type (the platform's order).
+      if (tooLarge && route.operationId !== 'ingestStatsReport') fail(413, 'payload_too_large');
       if (route.security.includes('instanceToken')) authInstance(ctx);
       if (route.hasBody && route.operationId !== 'ingestStatsReport') {
         const type = String(headers['content-type'] ?? '');
