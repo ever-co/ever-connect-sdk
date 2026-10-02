@@ -5,6 +5,9 @@
  *
  *   contracts/integrations/<key>.json   one row of the vendored catalog (hidden keys get none),
  *                                       with the corrections of contracts/integrations/overrides.json
+ *   contracts/integrations/scope-versions.lock.json
+ *                                       the sha256 of each definition's scope with its scope_version:
+ *                                       a changed scope needs a higher scope_version (a new consent)
  *   contracts/constants.json            contracts_version, code patterns, install_sources, products,
  *                                       stats_headers (from the statistics operation's headers),
  *                                       feed_event_types (instance audience of the event catalog),
@@ -16,12 +19,31 @@
 import { existsSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import YAML from 'yaml';
-import { diffOutputs, REPO, readJson, stableJson, writeText } from './lib/common.mjs';
+import { diffOutputs, REPO, readJson, sha256, stableJson, writeText } from './lib/common.mjs';
 import { testRootEntry } from './mock-platform/src/keys.mjs';
 
 export const TEST_ROOT_ISSUER = 'http://mock-platform:8080';
 const INTEGRATIONS_DIR = 'contracts/integrations';
 const KEEP = new Set(['catalog.v1.json', 'overrides.json']);
+export const SCOPE_LOCK = 'scope-versions.lock.json';
+
+/**
+ * Pins each definition's scope to its scope_version. A scope that differs from the pinned one
+ * needs a higher scope_version, and a scope_version never goes down. Answers {lock, problems}.
+ */
+export function scopeLock(definitions, previous = {}) {
+  const lock = {};
+  const problems = [];
+  for (const def of definitions) {
+    const digest = sha256(stableJson(def.scope ?? []));
+    const before = previous[def.key];
+    if (before && def.scope_version < before.scope_version) problems.push(`${def.key}: scope_version went down from ${before.scope_version}`);
+    else if (before && before.scope_sha256 !== digest && def.scope_version <= before.scope_version)
+      problems.push(`${def.key}: the scope changed but scope_version stayed ${def.scope_version}; raise it (the change needs a new consent)`);
+    lock[def.key] = { scope_version: def.scope_version, scope_sha256: digest };
+  }
+  return { lock, problems };
+}
 
 export function entitlementFeatures() {
   const schema = readJson(join(REPO, 'contracts/schemas/ever.entitlement.v1.json'));
@@ -47,6 +69,7 @@ export function build() {
   const problems = [];
   const files = {};
   const keys = [];
+  const definitions = [];
 
   for (const row of catalog.integrations) {
     if (row.status === 'hidden') continue;
@@ -62,8 +85,16 @@ export function build() {
     def.docs_anchor = row.key;
     files[`${INTEGRATIONS_DIR}/${row.key}.json`] = stableJson(def, { sort: false });
     keys.push(row.key);
+    definitions.push(def);
   }
+  const lockPath = join(REPO, INTEGRATIONS_DIR, SCOPE_LOCK);
+  const scopes = scopeLock(definitions, existsSync(lockPath) ? readJson(lockPath).integrations : {});
+  problems.push(...scopes.problems);
   if (problems.length > 0) throw new Error(problems.join('\n'));
+  files[`${INTEGRATIONS_DIR}/${SCOPE_LOCK}`] = stableJson(
+    { description: 'sha256 of each integration scope with its scope_version (tools/split-integrations.mjs)', integrations: scopes.lock },
+    { sort: false },
+  );
 
   // Constants: refresh the fields read from the contract, keep everything else.
   const constants = readJson(join(REPO, 'contracts/constants.json'));
@@ -104,14 +135,14 @@ function main() {
       process.stderr.write(`split-integrations: out of date: ${differing.join(', ')}\nRun: node tools/split-integrations.mjs\n`);
       process.exit(1);
     }
-    process.stdout.write(`split-integrations: ok (${Object.keys(files).length - 1} definitions)\n`);
+    process.stdout.write(`split-integrations: ok (${Object.keys(files).length - 2} definitions)\n`);
     return;
   }
   for (const path of differing) {
     if (files[path] === undefined) rmSync(join(REPO, path));
     else writeText(join(REPO, path), files[path]);
   }
-  process.stdout.write(`split-integrations: ${differing.length} file(s) updated (${Object.keys(files).length - 1} definitions)\n`);
+  process.stdout.write(`split-integrations: ${differing.length} file(s) updated (${Object.keys(files).length - 2} definitions)\n`);
 }
 
 if (process.argv[1]?.endsWith('split-integrations.mjs')) {

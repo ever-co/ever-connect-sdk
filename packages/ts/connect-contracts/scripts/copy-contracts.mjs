@@ -11,4 +11,4 @@ for (const dir of ['fixtures', 'schemas', 'integrations']) {
   rmSync(join(pkg, dir), { recursive: true, force: true });
   cpSync(join(contracts, dir), join(pkg, dir), { recursive: true });
 }
-rmSync(join(pkg, 'integrations', 'overrides.json'), { force: true });
+for (const tooling of ['overrides.json', 'scope-versions.lock.json']) rmSync(join(pkg, 'integrations', tooling), { force: true });

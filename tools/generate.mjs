@@ -602,7 +602,16 @@ function renderIntro(ctx) {
     }
     return out.join(', ');
   };
-  return `Rows ${ranges(connect)} belong to the connection module and run only after you connect, each on the trigger it names. Row ${ranges(stats)} belongs to the statistics module. Rows ${ranges(consented)} run only while the named integration has an active consent recorded by Ever Platform. The table holds ${ctx.rowsDoc.rows.length} rows; a row marked *pending upstream* is answered by the mock platform and documented here before the Ever Platform API publishes it.`;
+  // The connect calls themselves are the rows a "do not connect" disables; every other connection
+  // row needs a connection.
+  const connecting = ctx.rowsDoc.rows.filter((r) => r.module === 'connect' && r.disable === 'do not connect').map((r) => r.row);
+  return `Rows ${ranges(connect)} belong to the connection module and row ${ranges(stats)} to the statistics module. Each row runs only on the trigger it names: the connect calls (rows ${connecting.join(', ')}) when an operator starts a connection, every other connection-module row only while connected. Rows ${ranges(consented)} also need an active consent for the named integration, recorded by Ever Platform. The table holds ${ctx.rowsDoc.rows.length} rows; a row marked *pending upstream* is answered by the mock platform and documented here before the Ever Platform API publishes it.`;
+}
+
+/** Every problem code an outbound call can receive, from the rows' documented error pairs. */
+function renderProblemCodes(ctx) {
+  const codes = [...new Set(ctx.rowsDoc.rows.flatMap((r) => (r.errors ?? []).map((e) => e[1])))].sort();
+  return codes.map((c) => `\`${c}\``).join(', ');
 }
 
 function fillRegion(text, name, body, file) {
@@ -622,6 +631,7 @@ function docs(ctx, calls) {
     text = fillRegion(text, 'outbound-intro', renderIntro(ctx), outbound);
     text = fillRegion(text, 'outbound-calls', renderTable(calls), outbound);
     text = fillRegion(text, 'outbound-groups', renderGroups(ctx), outbound);
+    text = fillRegion(text, 'outbound-problems', renderProblemCodes(ctx), outbound);
     out[outbound] = text;
   }
   const stats = 'docs/stats-schema.md';

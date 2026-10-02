@@ -40,6 +40,12 @@ export function checkRows(rowsDoc, operationIds, pending) {
   });
   const byOp = new Map();
   for (const r of rows) {
+    // Every row tells the operator what triggers it, what it carries, how often and how to stop it.
+    for (const field of ['title', 'module', 'group', 'trigger', 'payload', 'cadence', 'disable'])
+      if (typeof r[field] !== 'string' || r[field].trim() === '') problems.push(`row ${r.row} has no ${field}`);
+    if (!Number.isInteger(r.phase)) problems.push(`row ${r.row} has no phase`);
+    if (r.products !== 'all' && !(Array.isArray(r.products) && r.products.length > 0) && !r.integration)
+      problems.push(`row ${r.row} names no products`);
     for (const id of r.operation_ids) {
       if (byOp.has(id)) problems.push(`operation ${id} is named by rows ${byOp.get(id)} and ${r.row}`);
       byOp.set(id, r.row);
