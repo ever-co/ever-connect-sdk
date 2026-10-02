@@ -93,7 +93,7 @@ export const ROWS: readonly OutboundCallRow[] = [
         "method": "POST",
         "path": "/v1/connect/redeem",
         "operation_id": "connectRedeem",
-        "status": "provisional"
+        "status": "pinned"
       }
     ],
     "trigger": "the operator submits a connect code; EVER_CONNECT_CODE at first boot",
@@ -121,7 +121,7 @@ export const ROWS: readonly OutboundCallRow[] = [
         "method": "POST",
         "path": "/v1/instances/token",
         "operation_id": "instanceToken",
-        "status": "provisional"
+        "status": "pinned"
       }
     ],
     "trigger": "while connected: before the token expires, and after a 401",
@@ -149,7 +149,7 @@ export const ROWS: readonly OutboundCallRow[] = [
         "method": "POST",
         "path": "/v1/instances/me/tenant-links",
         "operation_id": "instanceCreateTenantLink",
-        "status": "provisional"
+        "status": "pinned"
       },
       {
         "method": "DELETE",
@@ -165,7 +165,7 @@ export const ROWS: readonly OutboundCallRow[] = [
       }
     ],
     "trigger": "an organization admin submits a link code, removes a link, or a single-organization product moves its link to a new organization id",
-    "payload": "link_code, product, product_tenant_id, product_org_id?",
+    "payload": "link_code, product, product_tenant_id, product_org_id?, display_name? of the tenant",
     "cadence": "on action",
     "disable": "do not link",
     "products": [
@@ -520,7 +520,7 @@ export const ROWS: readonly OutboundCallRow[] = [
         "method": "POST",
         "path": "/v1/instances/me/keys",
         "operation_id": "instanceRotateKey",
-        "status": "provisional"
+        "status": "pinned"
       }
     ],
     "trigger": "the operator disconnects; the connect key is rotated",
@@ -1144,6 +1144,11 @@ export const ROW_COVERAGE: readonly RowCoverage[] = [
     ],
     "errors": [
       {
+        "status": 404,
+        "code": "not_found",
+        "documented": true
+      },
+      {
         "status": 409,
         "code": "already_connected",
         "documented": true
@@ -1202,6 +1207,11 @@ export const ROW_COVERAGE: readonly RowCoverage[] = [
         "status": 401,
         "code": "credential_revoked",
         "documented": true
+      },
+      {
+        "status": 422,
+        "code": "validation_failed",
+        "documented": true
       }
     ]
   },
@@ -1235,6 +1245,11 @@ export const ROW_COVERAGE: readonly RowCoverage[] = [
     ],
     "errors": [
       {
+        "status": 401,
+        "code": "credential_revoked",
+        "documented": true
+      },
+      {
         "status": 403,
         "code": "instance_pending_approval",
         "documented": true
@@ -1247,7 +1262,7 @@ export const ROW_COVERAGE: readonly RowCoverage[] = [
       {
         "status": 409,
         "code": "already_linked",
-        "documented": false
+        "documented": true
       },
       {
         "status": 422,
@@ -1257,6 +1272,16 @@ export const ROW_COVERAGE: readonly RowCoverage[] = [
       {
         "status": 422,
         "code": "code_invalid",
+        "documented": true
+      },
+      {
+        "status": 422,
+        "code": "product_mismatch",
+        "documented": true
+      },
+      {
+        "status": 429,
+        "code": "rate_limited",
         "documented": true
       }
     ]

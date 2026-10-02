@@ -16,12 +16,12 @@
  * The check fails on any difference and names the operations (or files) that differ.
  */
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, rmSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import YAML from 'yaml';
 import { diffOutputs, platformRepo, REPO, readJson, sha256, stableJson, walk, writeText } from './lib/common.mjs';
 import { buildSubset, METHODS, subsetYaml } from './lib/openapi-subset.mjs';
-import { vendor } from './lib/vendor.mjs';
+import { CONNECT_VECTORS, vendor } from './lib/vendor.mjs';
 
 const SPEC_PATH = 'contracts/openapi/ever-platform.v1.yaml';
 const VENDOR_PATH = 'contracts/VENDOR.json';
@@ -134,7 +134,9 @@ export function build(platform) {
     authored: [
       { path: 'contracts/schemas/ever.consent.v1.json', until: 'the platform publishes the consent record schema' },
       { path: 'contracts/schemas/ever.key-manifest.v1.json', until: 'the platform publishes the key manifest schema' },
-      { path: 'contracts/fixtures/connect/vectors/', until: 'the platform publishes its client-assertion vectors' },
+      ...(vendored.entries.some((e) => e.path.startsWith(`${CONNECT_VECTORS.path}/`))
+        ? []
+        : [{ path: `${CONNECT_VECTORS.path}/`, until: 'the platform publishes its client-assertion vectors' }]),
       { path: 'contracts/fixtures/stats/', until: 'the platform publishes the statistics fixtures and expected outcomes' },
     ],
   };
@@ -177,9 +179,13 @@ function main() {
   const platform = platformRepo();
   const { files, vendorDoc } = build(platform);
   const current = {};
-  // Files written before but no longer produced (an event schema that left the instance audience).
-  for (const path of walk(join(REPO, 'contracts/schemas/events')).map((p) => relative(REPO, p).split('\\').join('/')))
-    if (!(path in files)) current[path] = readFileSync(join(REPO, path), 'utf8');
+  // Files written before but no longer produced (an event schema that left the instance audience,
+  // an authored vector the platform's published set replaces).
+  const ownedDirs = ['contracts/schemas/events'];
+  if (vendorDoc.files.some((e) => e.path.startsWith(`${CONNECT_VECTORS.path}/`))) ownedDirs.push(CONNECT_VECTORS.path);
+  for (const dir of ownedDirs)
+    for (const path of walk(join(REPO, dir)).map((p) => relative(REPO, p).split('\\').join('/')))
+      if (!(path in files)) current[path] = readFileSync(join(REPO, path), 'utf8');
   for (const path of Object.keys(files)) {
     try {
       current[path] = readFileSync(join(REPO, path), 'utf8');
@@ -212,6 +218,7 @@ function main() {
     process.exit(1);
   }
   for (const [path, text] of Object.entries(files)) writeText(join(REPO, path), text);
+  for (const path of Object.keys(current)) if (!(path in files)) rmSync(join(REPO, path));
   process.stdout.write(
     `sync-contract: wrote ${Object.keys(files).length} files (${vendorDoc.openapi.operations} operations, ${vendorDoc.openapi.provisional_operations.length} provisional; platform ${vendorDoc.platform.commit.slice(0, 12)})\n`,
   );

@@ -1,7 +1,8 @@
 // RFC 7523 client-assertion verification, as the platform specifies it: EdDSA only; the
 // installation looked up by `iss`; the current connect key, or the previous one inside the 7-day
 // overlap; iss = sub = the installation ULID (a UUID never authenticates); aud = the token
-// endpoint; exp at most 300 s after iat and iat within 300 s of the clock; jti never seen before.
+// endpoint; typ, when present, JWT; exp at most 300 s after iat and iat within 300 s of the clock;
+// nbf, when present, not in the future; jti 16-128 visible characters, never seen before.
 // Every failure is the same `invalid_client` to the caller; `reason` is for logs and tests only.
 import { decodeJws, verifyBytes } from './crypto.mjs';
 
@@ -19,6 +20,7 @@ export function verifyAssertion(token, ctx) {
   if (!decoded) return { ok: false, reason: 'malformed' };
   const { header, payload } = decoded;
   if (header.alg !== 'EdDSA' || 'crit' in header) return { ok: false, reason: 'algorithm' };
+  if ('typ' in header && header.typ !== 'JWT') return { ok: false, reason: 'type' };
   if (typeof payload.iss !== 'string' || !ULID.test(payload.iss)) return { ok: false, reason: 'issuer_not_an_instance_id' };
   if (payload.sub !== payload.iss) return { ok: false, reason: 'subject_differs' };
   const instance = ctx.instanceFor(payload.iss);
@@ -33,7 +35,8 @@ export function verifyAssertion(token, ctx) {
   if (payload.exp - payload.iat > maxTtlS) return { ok: false, reason: 'lifetime' };
   if (Math.abs(now - payload.iat) > maxSkewS) return { ok: false, reason: 'skew' };
   if (now >= payload.exp) return { ok: false, reason: 'expired' };
-  if (typeof payload.jti !== 'string' || payload.jti.length < 16) return { ok: false, reason: 'jti' };
+  if ('nbf' in payload && (!Number.isInteger(payload.nbf) || payload.nbf > now)) return { ok: false, reason: 'not_yet_valid' };
+  if (typeof payload.jti !== 'string' || !/^[\x21-\x7e]{16,128}$/.test(payload.jti)) return { ok: false, reason: 'jti' };
   if (ctx.seenJti(payload.jti)) return { ok: false, reason: 'replay' };
   return { ok: true, instanceId: payload.iss, kid: key.kid ?? header.kid, jti: payload.jti, exp: payload.exp };
 }

@@ -459,7 +459,7 @@ export type EntitlementV1Product = 'gauzy' | 'teams' | 'works' | 'rec' | 'traduo
 export type EntitlementV1ProductId = string;
 
 /**
- * The only wire format of the entitlement document (contracts/entitlement-document.md section 1.2). Served verbatim at GET /v1/entitlements/schema; vendored in the SDK as contracts/schemas/ever.entitlement.v1.json with a sha256 drift test; every signed document is validated against it by the issuer's tests. Closed at every level; handle is the only human-readable field.
+ * The only wire format of the entitlement document. Served verbatim at GET /v1/entitlements/schema; vendored in the SDK as contracts/schemas/ever.entitlement.v1.json with a sha256 drift test; every signed document is validated against it by the issuer's tests. Closed at every level; handle is the only human-readable field.
  */
 export interface EntitlementV1 {
   iss: string;
@@ -1153,7 +1153,7 @@ export type EverRegistryPersonDeletionRequestedV1CommonDatetime = string;
 export type EverRegistryPersonDeletionRequestedV1CommonHex64 = string;
 
 /**
- * subject_hash = sha256 of the (iss, sub) pair so an installation can find its person_link without receiving the raw subject; idempotent (T16)
+ * subject_hash = sha256 of the (iss, sub) pair so an installation can find its person_link without receiving the raw subject; idempotent
  */
 export interface EverRegistryPersonDeletionRequestedV1 {
   person_id: EverRegistryPersonDeletionRequestedV1CommonUlid;
@@ -2594,7 +2594,7 @@ export const SCHEMAS = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://api.ever.co/v1/entitlements/schema/ever.entitlement.v1",
     "title": "ever.entitlement.v1 JWS payload",
-    "description": "The only wire format of the entitlement document (contracts/entitlement-document.md section 1.2). Served verbatim at GET /v1/entitlements/schema; vendored in the SDK as contracts/schemas/ever.entitlement.v1.json with a sha256 drift test; every signed document is validated against it by the issuer's tests. Closed at every level; handle is the only human-readable field.",
+    "description": "The only wire format of the entitlement document. Served verbatim at GET /v1/entitlements/schema; vendored in the SDK as contracts/schemas/ever.entitlement.v1.json with a sha256 drift test; every signed document is validated against it by the issuer's tests. Closed at every level; handle is the only human-readable field.",
     "type": "object",
     "additionalProperties": false,
     "required": [
@@ -4951,7 +4951,7 @@ export const EVENT_SCHEMAS = {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "$id": "https://api.ever.co/v1/events/catalog/schemas/ever.registry.person.deletion_requested.v1.schema.json",
       "title": "ever.registry.person.deletion_requested v1 data",
-      "description": "subject_hash = sha256 of the (iss, sub) pair so an installation can find its person_link without receiving the raw subject; idempotent (T16)",
+      "description": "subject_hash = sha256 of the (iss, sub) pair so an installation can find its person_link without receiving the raw subject; idempotent",
       "type": "object",
       "additionalProperties": false,
       "required": [

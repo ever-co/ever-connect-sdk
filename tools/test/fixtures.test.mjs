@@ -25,11 +25,20 @@ test('request fixtures: valid bodies validate, every invalid twin fails at its p
   }
 });
 
-test('the redeem fixture and its null-id twin behave as the contract says', () => {
-  assert.equal(validateComponent('RedeemRequest', fixture('requests/redeem.json')).ok, true);
-  const twin = validateComponent('RedeemRequest', fixture('requests/redeem.invalid-null-id.json'));
-  assert.equal(twin.ok, false);
-  assert.equal(twin.errors[0].path, '/tenant/product_org_id');
+test('the redeem fixture and its twins behave as the contract says', () => {
+  const redeem = fixture('requests/redeem.json');
+  assert.equal(validateComponent('RedeemRequest', redeem).ok, true);
+  // The platform takes a null tenant field like an absent one.
+  assert.equal(validateComponent('RedeemRequest', { ...redeem, tenant: { ...redeem.tenant, product_org_id: null } }).ok, true);
+  for (const [twin, path] of [
+    ['missing-key', '/public_jwk'],
+    ['tenant-extra-field', '/tenant/email'],
+    ['extra-field', '/public_url'],
+  ]) {
+    const r = validateComponent('RedeemRequest', fixture(`requests/redeem.invalid-${twin}.json`));
+    assert.equal(r.ok, false, twin);
+    assert.equal(r.errors[0].path, path, twin);
+  }
 });
 
 test('feed fixtures: one valid page per instance-audience type; managed twins fail at their path', () => {

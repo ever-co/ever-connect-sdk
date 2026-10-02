@@ -54,6 +54,7 @@
       "products": "all",
       "phase": 2,
       "errors": [
+        [404, "not_found"],
         [409, "already_connected"],
         [422, "validation_failed"],
         [422, "code_invalid"],
@@ -78,7 +79,8 @@
       "phase": 2,
       "errors": [
         [401, "invalid_client"],
-        [401, "credential_revoked"]
+        [401, "credential_revoked"],
+        [422, "validation_failed"]
       ]
     },
     {
@@ -89,17 +91,20 @@
       "group": "connection",
       "auth": "instance token",
       "trigger": "an organization admin submits a link code, removes a link, or a single-organization product moves its link to a new organization id",
-      "payload": "link_code, product, product_tenant_id, product_org_id?",
+      "payload": "link_code, product, product_tenant_id, product_org_id?, display_name? of the tenant",
       "cadence": "on action",
       "disable": "do not link",
       "products": "all",
       "phase": 2,
       "errors": [
+        [401, "credential_revoked"],
         [403, "instance_pending_approval"],
         [404, "not_found"],
-        [409, "already_linked", "spec-gap"],
+        [409, "already_linked"],
         [422, "validation_failed"],
-        [422, "code_invalid"]
+        [422, "code_invalid"],
+        [422, "product_mismatch"],
+        [429, "rate_limited"]
       ]
     },
     {

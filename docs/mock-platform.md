@@ -67,7 +67,7 @@ Every key is optional; `tools/mock-platform/mock.config.example.json` shows the 
 | `lookup` | one salt version, one opted-in VAT number | lookup salts, opt-ins and claimed hashes |
 | `people` | one Ever ID person, owner of the organization | people the person tokens are issued for |
 | `limits` | the platform's rate limits | wrong codes per hour, heartbeat interval, entitlement reads per hour, statistics reports per day, lookup and discovery rates, device starts, webhook endpoints |
-| `faults` | none | `keys_unavailable`, `webhooks_module_disabled`, `revoke_credential_at_call` |
+| `faults` | none | `keys_unavailable`, `webhooks_module_disabled`, `revoke_credential_at_call`, `connect_issuance_off` (a deployment that issues no connect or link codes: a well-formed redeem or link-code redemption answers 404, a malformed body still 422) |
 
 ---
 
@@ -112,7 +112,7 @@ Every key is optional; `tools/mock-platform/mock.config.example.json` shows the 
 | `POST /__mock/managed/request` | `{kind, params, expires_in_s?}` | requests a managed operation (needs the `managed_operations` integration, else `403 integration_disabled`) |
 | `GET /__mock/managed/operations` | | the managed operations with their state and results |
 | `POST /__mock/webhook-delivery` | `{webhook_id, state?}` | a delivery of a webhook endpoint |
-| `POST /__mock/faults` | `{keys_unavailable?, webhooks_module_disabled?, revoke_credential_at_call?}` | switches faults on and off |
+| `POST /__mock/faults` | `{keys_unavailable?, webhooks_module_disabled?, revoke_credential_at_call?, connect_issuance_off?}` | switches faults on and off |
 | `POST /__mock/person-request` | `{kind: deletion \| export, …}` | a deletion or export request for a person on the feed |
 
 ---
@@ -124,4 +124,5 @@ The mock's own tests (`tools/mock-platform/test/`) are the reference for how to 
 - `rows.test.mjs`: the good path of every operation and every documented `(status, code)` pair, with every success answer validated against the contract's response schema;
 - `sample-flow.test.ts`: connect, link, entitlement, feed and statistics in the order a product runs them;
 - `in-product-consent.test.mjs`: the consent dialog after a fresh Ever ID sign-in;
-- `managed.test.mjs`: scenario `managed-backup`, a fixture executor on the SDK's managed-operation runner.
+- `managed.test.mjs`: scenario `managed-backup`, a fixture executor on the SDK's managed-operation runner;
+- `issuance.test.mjs`: a deployment that issues no connect codes (`connect_issuance_off`), and the assertion rules.

@@ -146,6 +146,17 @@ export function buildSubset({ platform, config, rowsByOperation, version, title,
     const name0 = segments[0];
     const key = `${file}#${pointer}`;
     if (designNames.has(key)) return { name: designNames.get(key) };
+    // A design schema whose name the pinned contract now uses for another concept keeps its own
+    // shape under the name sync.config.json gives it (design_renames), for the design operations.
+    const renamed = config.design_renames?.[name0]?.to;
+    if (renamed) {
+      designNames.set(key, renamed);
+      if (!collisions.some((c) => c.name === name0 && c.renamed === renamed))
+        collisions.push({ name: name0, renamed, file: basename(file) });
+      out[renamed] = null;
+      out[renamed] = convertDesignSchema(clone(node), file);
+      return { name: renamed };
+    }
     if (pinnedSchemas[name0] !== undefined) {
       designNames.set(key, name0);
       addPinned(name0);

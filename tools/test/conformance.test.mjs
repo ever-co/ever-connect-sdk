@@ -10,6 +10,14 @@ test('every case passes against the mock, with the mock as the other side', asyn
   for (const r of results) assert.deepEqual(r.diffs, [], r.id);
 });
 
+test('with issuance off, a well-formed redeem is 404 and a malformed one stays 422', async () => {
+  const results = await run({ target: 'mock', againstMock: true, profile: { issuance: 'off' }, modules: ['connect'] });
+  assert.ok(results.every((r) => r.module === 'connect'));
+  for (const r of results) assert.deepEqual(r.diffs, [], r.id);
+  assert.equal(results.find((r) => r.id === 'redeem-unknown-code').target, '404 not_found');
+  assert.equal(results.find((r) => r.id === 'redeem-malformed').target, '422 validation_failed');
+});
+
 test('the cases stay non-destructive: no connect code that works, no organization change', () => {
   for (const c of loadCases()) {
     const req = buildRequest(c, 'http://127.0.0.1:1');

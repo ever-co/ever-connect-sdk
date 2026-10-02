@@ -49,6 +49,11 @@
       ],
       "errors": [
         {
+          "status": 404,
+          "code": "not_found",
+          "documented": true
+        },
+        {
           "status": 409,
           "code": "already_connected",
           "documented": true
@@ -107,6 +112,11 @@
           "status": 401,
           "code": "credential_revoked",
           "documented": true
+        },
+        {
+          "status": 422,
+          "code": "validation_failed",
+          "documented": true
         }
       ]
     },
@@ -140,6 +150,11 @@
       ],
       "errors": [
         {
+          "status": 401,
+          "code": "credential_revoked",
+          "documented": true
+        },
+        {
           "status": 403,
           "code": "instance_pending_approval",
           "documented": true
@@ -152,7 +167,7 @@
         {
           "status": 409,
           "code": "already_linked",
-          "documented": false
+          "documented": true
         },
         {
           "status": 422,
@@ -162,6 +177,16 @@
         {
           "status": 422,
           "code": "code_invalid",
+          "documented": true
+        },
+        {
+          "status": 422,
+          "code": "product_mismatch",
+          "documented": true
+        },
+        {
+          "status": 429,
+          "code": "rate_limited",
           "documented": true
         }
       ]

@@ -67,7 +67,7 @@ export const DEFAULT_CONFIG = {
     device_starts_per_hour: 10,
     webhook_endpoints: 5,
   },
-  faults: { keys_unavailable: false, webhooks_module_disabled: false, revoke_credential_at_call: null },
+  faults: { keys_unavailable: false, webhooks_module_disabled: false, revoke_credential_at_call: null, connect_issuance_off: false },
 };
 
 function merge(base, over) {

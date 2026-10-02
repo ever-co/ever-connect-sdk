@@ -238,150 +238,88 @@
     },
     "/v1/connect/redeem": {
       "post": {
+        "summary": "Redeems a connect code with the installation's own Ed25519 connect key (Flow A): creates the\ninstance (or reconnects this organization's disconnected instance holding the same key) and\npins the key. A 24-hour code (`ever_sh`, `provisioning`, `partner`) redeems as\n`pending_approval`: until an owner or admin approves it, every instance route but\n`GET /v1/instances/me` answers `403 instance_pending_approval`. Unknown, expired, revoked,\nconsumed and malformed codes answer one byte-identical `422 code_invalid`; ten wrong codes in\nan hour from one caller answer `429`. A replay with the same `Idempotency-Key` returns the\noriginal answer.",
         "tags": [
           "entitlements"
         ],
-        "summary": "Code-first connect (redeem a connect code with the instance key)",
-        "description": "Creates the instance in one transaction, pins the presented public key\nand emits `instance.connected`. A 24-hour code redeemed outside its\noriginating session yields `status: pending_approval`. Unknown,\nexpired, revoked and consumed codes answer a byte-identical\n`422 code_invalid`; `422 product_mismatch` when the code was minted for\nanother product; `422 product_not_supported` for products that accept\nno connections. Replays with the same `Idempotency-Key` return the\noriginal answer.\n",
-        "x-ever-phase": 2,
-        "x-ever-auth": "public (the code)",
-        "x-ever-rate-limit": "connect",
         "x-ever-idempotent": true,
         "operationId": "connectRedeem",
-        "security": [],
+        "security": [
+          {}
+        ],
         "parameters": [
           {
-            "name": "Idempotency-Key",
+            "description": "Client-generated key, unique per principal, at most 128 characters; remembered 24 h.\nThe same key with the same request replays the first answer (`Idempotency-Replayed:\ntrue`); with a different request it answers `422 idempotency_mismatch`.",
             "in": "header",
+            "name": "Idempotency-Key",
             "required": true,
-            "description": "Client-generated key, unique per principal, <= 128 characters. See the `Idempotency` schema.",
             "schema": {
-              "type": "string",
+              "maxLength": 128,
               "minLength": 1,
-              "maxLength": 128
+              "type": "string"
             }
           }
         ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/RedeemRequest"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "201": {
-            "description": "Instance created.",
-            "headers": {
-              "Idempotency-Replayed": {
-                "description": "`true` when this response was replayed from a previous request with the same `Idempotency-Key`.",
-                "schema": {
-                  "type": "boolean"
-                }
-              }
-            },
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RedeemResponse"
                 }
               }
-            }
+            },
+            "description": "Connected (`status: active`) or waiting for approval (`status: pending_approval`)"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Connect codes are not issued on this deployment"
           },
           "409": {
-            "description": "`already_connected`: the presented key already holds an active connection (disconnect first); `key_mismatch` does not apply here.",
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
-            }
+            },
+            "description": "`already_connected`: the presented key already holds a connection (disconnect first)"
           },
           "422": {
-            "description": "Validation failed; unknown fields are rejected on writes (`validation_failed`, `schema_violation`, `code_invalid`, `idempotency_mismatch`, `mirror_owned_field`, `limit_exceeded`).",
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
-            }
+            },
+            "description": "`code_invalid` (unknown, expired, revoked, consumed or malformed: one answer), `product_mismatch`, `product_not_supported`, `public_jwk_invalid`, or the body does not validate"
           },
           "429": {
-            "description": "Rate limit exceeded for this principal class (`rate_limited`).",
-            "headers": {
-              "Retry-After": {
-                "description": "Seconds to wait before retrying.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Limit": {
-                "description": "IETF RateLimit header; requests allowed in the current window for this principal class.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Remaining": {
-                "description": "IETF RateLimit header; requests remaining in the current window.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Reset": {
-                "description": "IETF RateLimit header; seconds until the window resets.",
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            },
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
-            }
-          },
-          "default": {
-            "description": "Any other error, as a problem document.",
-            "headers": {
-              "x-request-id": {
-                "description": "The request id (generated or echoed). Quote it in support requests.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "RateLimit-Limit": {
-                "description": "IETF RateLimit header; requests allowed in the current window for this principal class.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Remaining": {
-                "description": "IETF RateLimit header; requests remaining in the current window.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Reset": {
-                "description": "IETF RateLimit header; seconds until the window resets.",
-                "schema": {
-                  "type": "integer"
-                }
-              }
             },
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
+            "description": "`rate_limited`: too many wrong codes from this caller (`Retry-After`)"
           }
         },
         "x-ever-row": 3
@@ -825,6 +763,7 @@
         "tags": [
           "registry"
         ],
+        "x-ever-pending-instance": true,
         "operationId": "getInstanceSelf",
         "security": [
           {
@@ -1754,14 +1693,12 @@
     },
     "/v1/instances/me/keys": {
       "post": {
+        "summary": "Rotates the instance's connect key: the new key signs assertions from now on, the replaced key\nkeeps minting tokens for 7 days (`previous_valid_until`), and tokens already minted stay valid\nuntil they expire. Only one replaced key is kept: rotating again inside the overlap drops the\nolder key at once, with every token minted with it (the way to cut a compromised key now). The\nnew key must be an Ed25519 public JWK no installation holds; the platform assigns its `kid`.",
         "tags": [
           "entitlements"
         ],
-        "summary": "Rotate the instance key (old key valid 7 days)",
-        "x-ever-phase": 2,
-        "x-ever-auth": "instance",
-        "x-ever-rate-limit": "instance",
         "x-ever-idempotent": true,
+        "x-ever-rate-limit": "instance",
         "operationId": "instanceRotateKey",
         "security": [
           {
@@ -1770,83 +1707,67 @@
         ],
         "parameters": [
           {
-            "name": "Idempotency-Key",
+            "description": "Client-generated key, unique per principal, at most 128 characters; remembered 24 h.\nThe same key with the same request replays the first answer (`Idempotency-Replayed:\ntrue`); with a different request it answers `422 idempotency_mismatch`.",
             "in": "header",
+            "name": "Idempotency-Key",
             "required": true,
-            "description": "Client-generated key, unique per principal, <= 128 characters. See the `Idempotency` schema.",
             "schema": {
-              "type": "string",
+              "maxLength": 128,
               "minLength": 1,
-              "maxLength": 128
+              "type": "string"
             }
           }
         ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/KeyRotate"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
-            "description": "Rotated.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/KeyRotated"
                 }
               }
-            }
+            },
+            "description": "Rotated"
           },
-          "422": {
-            "description": "Validation failed; unknown fields are rejected on writes (`validation_failed`, `schema_violation`, `code_invalid`, `idempotency_mismatch`, `mirror_owned_field`, `limit_exceeded`).",
+          "401": {
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "Any other error, as a problem document.",
-            "headers": {
-              "x-request-id": {
-                "description": "The request id (generated or echoed). Quote it in support requests.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "RateLimit-Limit": {
-                "description": "IETF RateLimit header; requests allowed in the current window for this principal class.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Remaining": {
-                "description": "IETF RateLimit header; requests remaining in the current window.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Reset": {
-                "description": "IETF RateLimit header; seconds until the window resets.",
-                "schema": {
-                  "type": "integer"
                 }
               }
             },
+            "description": "No valid instance token, or the credential is revoked"
+          },
+          "403": {
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
-            }
+            },
+            "description": "`instance_pending_approval`"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`public_jwk_invalid`: not an Ed25519 public key, the current key, or a key an installation holds"
           }
         },
         "x-ever-row": 16
@@ -2788,15 +2709,12 @@
     },
     "/v1/instances/me/tenant-links": {
       "post": {
+        "summary": "Attaches a product workspace to the Ever organization that minted the link code: a\n`tenant_link` with `link_method: link_code`, its `tenant_link.created` event to the\norganization and the installation. Unknown, expired, revoked, consumed and malformed codes\nanswer one `422 code_invalid`; one product tenant (and organization) links to one Ever\norganization (`409 already_linked`).",
         "tags": [
-          "registry"
+          "entitlements"
         ],
-        "summary": "Attach a product workspace with a link code",
-        "description": "`422 code_invalid` for unknown, expired, revoked or consumed codes (one message; no enumeration). Emits `tenant_link.created`; a per-link entitlement and integration states are created.",
-        "x-ever-phase": 2,
-        "x-ever-auth": "instance",
-        "x-ever-rate-limit": "instance",
         "x-ever-idempotent": true,
+        "x-ever-rate-limit": "instance",
         "operationId": "instanceCreateTenantLink",
         "security": [
           {
@@ -2805,93 +2723,97 @@
         ],
         "parameters": [
           {
-            "name": "Idempotency-Key",
+            "description": "Client-generated key, unique per principal, at most 128 characters; remembered 24 h.\nThe same key with the same request replays the first answer (`Idempotency-Replayed:\ntrue`); with a different request it answers `422 idempotency_mismatch`.",
             "in": "header",
+            "name": "Idempotency-Key",
             "required": true,
-            "description": "Client-generated key, unique per principal, <= 128 characters. See the `Idempotency` schema.",
             "schema": {
-              "type": "string",
+              "maxLength": 128,
               "minLength": 1,
-              "maxLength": 128
+              "type": "string"
             }
           }
         ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/TenantLinkCreate"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "201": {
-            "description": "Linked.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TenantLink"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Principal lacks the role, scope, integration or entitlement, or the operation needs a fresh sign-in (`forbidden_role`, `forbidden_scope`, `integration_disabled`, `integration_revoked`, `instance_pending_approval`, `entitlement_required`, `tier_required`, `sso_required`, `reauth_required`, `session_required`: an Ever ID token issued to a product, installation or App client used anywhere except the two `everIdTokenRead` reads and the in-product consent write; `step_up_required`: that consent write without a sign-in in the last 300 s; `not_connection_owner`: an installation-wide integration changed by an organization that does not own the installation).",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation failed; unknown fields are rejected on writes (`validation_failed`, `schema_violation`, `code_invalid`, `idempotency_mismatch`, `mirror_owned_field`, `limit_exceeded`).",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "Any other error, as a problem document.",
-            "headers": {
-              "x-request-id": {
-                "description": "The request id (generated or echoed). Quote it in support requests.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "RateLimit-Limit": {
-                "description": "IETF RateLimit header; requests allowed in the current window for this principal class.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Remaining": {
-                "description": "IETF RateLimit header; requests remaining in the current window.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Reset": {
-                "description": "IETF RateLimit header; seconds until the window resets.",
-                "schema": {
-                  "type": "integer"
+                  "$ref": "#/components/schemas/LinkedTenant"
                 }
               }
             },
+            "description": "Linked"
+          },
+          "401": {
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
-            }
+            },
+            "description": "No valid instance token, or the credential is revoked"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`instance_pending_approval`"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Link codes are not issued on this deployment"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`already_linked`: this product tenant is linked to another organization"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`code_invalid` (one answer), `product_mismatch`, or the body does not validate"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`rate_limited`: too many wrong codes from this caller (`Retry-After`)"
           }
         },
         "x-ever-row": 5
@@ -3703,19 +3625,15 @@
     },
     "/v1/instances/token": {
       "post": {
+        "summary": "Exchanges an RFC 7523 client assertion for a one-hour instance token (`client_credentials`\nwith `client_assertion_type = urn:ietf:params:oauth:client-assertion-type:jwt-bearer`, as\nJSON or as a form). An assertion that fails verification (unknown instance, a key that is\nneither the current one nor the replaced one inside its 7-day overlap, a bad signature, a\nreplayed `jti`, `exp` more than 300 s after `iat`, a clock skew over 300 s, an algorithm other\nthan `EdDSA`) answers `401 invalid_client`; a disconnected or revoked installation answers\n`401 credential_revoked` (it runs its local disconnect steps). The token is opaque, lives one\nhour, and is kept in memory only.",
         "tags": [
           "entitlements"
         ],
-        "summary": "Exchange an RFC 7523 assertion for a 1-hour instance token",
-        "description": "OAuth 2.0 `client_credentials` grant with RFC 7523 client authentication\n(`client_assertion_type = urn:ietf:params:oauth:client-assertion-type:jwt-bearer`).\nAn assertion that fails verification (unknown instance or `kid`, bad\nsignature, replayed `jti`, `exp` more than 5 minutes ahead, skew over\n300 s) answers `401 invalid_client`; a disconnected or revoked instance\nanswers `401 credential_revoked` (the product runs its local disconnect\nsteps).\n",
-        "x-ever-phase": 2,
-        "x-ever-auth": "instance assertion",
-        "x-ever-rate-limit": "instance",
-        "x-ever-idempotent": false,
         "operationId": "instanceToken",
-        "security": [],
+        "security": [
+          {}
+        ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -3727,72 +3645,39 @@
                 "$ref": "#/components/schemas/TokenRequest"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
-            "description": "Token.",
-            "headers": {
-              "Cache-Control": {
-                "schema": {
-                  "type": "string",
-                  "const": "no-store"
-                }
-              }
-            },
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TokenResponse"
                 }
               }
-            }
+            },
+            "description": "A token (`Cache-Control: no-store`)"
           },
           "401": {
-            "description": "Missing, expired or revoked credential (`unauthorized`, `credential_revoked`).",
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "Any other error, as a problem document.",
-            "headers": {
-              "x-request-id": {
-                "description": "The request id (generated or echoed). Quote it in support requests.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "RateLimit-Limit": {
-                "description": "IETF RateLimit header; requests allowed in the current window for this principal class.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Remaining": {
-                "description": "IETF RateLimit header; requests remaining in the current window.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Reset": {
-                "description": "IETF RateLimit header; seconds until the window resets.",
-                "schema": {
-                  "type": "integer"
                 }
               }
             },
+            "description": "`invalid_client` (the assertion was not accepted) or `credential_revoked` (the installation is disconnected or revoked)"
+          },
+          "422": {
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
-            }
+            },
+            "description": "The body does not validate (a `grant_type` or `client_assertion_type` other than the two above)"
           }
         },
         "x-ever-row": 4
@@ -5381,10 +5266,19 @@
           }
         }
       },
-      "ConnectCode": {
+      "ConnectCodeValue": {
         "type": "string",
         "description": "Connect code `EVC-XXXX-XXXX-XXXX` (Crockford base32, no I L O U; case-insensitive on input).",
         "pattern": "^EVC(-[0-9A-HJKMNP-TV-Za-hj-kmnp-tv-z]{4}){3}$"
+      },
+      "ConnectKind": {
+        "description": "The kind of deployment an installation is.",
+        "enum": [
+          "cloud",
+          "self_hosted",
+          "works_app"
+        ],
+        "type": "string"
       },
       "ConsentUrl": {
         "type": "object",
@@ -5819,7 +5713,7 @@
             "description": "32 random bytes, base64url; held by the instance only."
           },
           "user_code": {
-            "$ref": "#/components/schemas/ConnectCode"
+            "$ref": "#/components/schemas/ConnectCodeValue"
           },
           "verification_uri": {
             "type": "string",
@@ -6329,7 +6223,7 @@
       },
       "FeatureKey": {
         "type": "string",
-        "description": "The closed feature key set of the `ever.entitlement.v1` document\n(contracts/entitlement-document.md §1.2); the same keys are used by the plan\ncatalog and by `Integration.requires_feature`. Adding a key is additive;\nclients ignore unknown keys. Managed add-ons are the `managed` object, not\nfeatures.\n",
+        "description": "The closed feature key set of the `ever.entitlement.v1` document\n(see the entitlement document format); the same keys are used by the plan\ncatalog and by `Integration.requires_feature`. Adding a key is additive;\nclients ignore unknown keys. Managed add-ons are the `managed` object, not\nfeatures.\n",
         "enum": [
           "handle",
           "discoverability",
@@ -7352,7 +7246,7 @@
         "properties": {
           "manifest": {
             "type": "string",
-            "description": "Compact JWS signed by a pinned root key. Header\n`{\"alg\":\"EdDSA\",\"kid\":\"<root kid>\",\"typ\":\"ever-key-manifest+jwt\"}`;\npayload `{\"iss\":\"https://api.ever.co\",\"iat\":<unix s>,\"exp\":<iat + 30 d>,\n\"keys_sha256\":\"<hex sha256 of the RFC 8785 canonical keys array>\",\n\"root_kid\":\"<root kid>\"}` (contracts/entitlement-document.md §4).\nValidity is the payload's `iat`/`exp`; there are no separate\ntimestamps in the response.\n"
+            "description": "Compact JWS signed by a pinned root key. Header\n`{\"alg\":\"EdDSA\",\"kid\":\"<root kid>\",\"typ\":\"ever-key-manifest+jwt\"}`;\npayload `{\"iss\":\"https://api.ever.co\",\"iat\":<unix s>,\"exp\":<iat + 30 d>,\n\"keys_sha256\":\"<hex sha256 of the RFC 8785 canonical keys array>\",\n\"root_kid\":\"<root kid>\"}` (see the entitlement document format).\nValidity is the payload's `iat`/`exp`; there are no separate\ntimestamps in the response.\n"
           },
           "keys": {
             "type": "array",
@@ -7384,35 +7278,42 @@
         "type": "object"
       },
       "KeyRotate": {
-        "type": "object",
+        "additionalProperties": false,
+        "description": "A new connect key.",
+        "properties": {
+          "public_jwk": {
+            "description": "The new Ed25519 public JWK (no installation may hold it yet).",
+            "type": "object"
+          }
+        },
         "required": [
           "public_jwk"
         ],
-        "additionalProperties": false,
-        "properties": {
-          "public_jwk": {
-            "$ref": "#/components/schemas/Jwk"
-          }
-        }
+        "type": "object"
       },
       "KeyRotated": {
-        "type": "object",
+        "description": "A rotated key.",
+        "properties": {
+          "kid": {
+            "description": "The new key's id (sign assertions with it now).",
+            "type": "string"
+          },
+          "previous_kid": {
+            "description": "The replaced key's id.",
+            "type": "string"
+          },
+          "previous_valid_until": {
+            "description": "Until when the replaced key still mints tokens.",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
         "required": [
           "kid",
           "previous_kid",
           "previous_valid_until"
         ],
-        "properties": {
-          "kid": {
-            "type": "string"
-          },
-          "previous_kid": {
-            "type": "string"
-          },
-          "previous_valid_until": {
-            "$ref": "#/components/schemas/Timestamp"
-          }
-        }
+        "type": "object"
       },
       "Legal": {
         "type": "object",
@@ -7496,10 +7397,68 @@
           }
         ]
       },
-      "LinkCode": {
-        "type": "string",
-        "description": "Link code `EVL-XXXX-XXXX-XXXX` minted by an organization admin to attach a product workspace.",
-        "pattern": "^EVL(-[0-9A-HJKMNP-TV-Za-hj-kmnp-tv-z]{4}){3}$"
+      "LinkedTenant": {
+        "description": "A tenant link as the instance sees it (never who linked it).",
+        "properties": {
+          "display_name": {
+            "description": "The product tenant's name as reported.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "description": "The link.",
+            "type": "string"
+          },
+          "instance_id": {
+            "description": "The instance.",
+            "type": "string"
+          },
+          "link_method": {
+            "description": "How it was made (`link_code`, `explicit`, ...).",
+            "type": "string"
+          },
+          "linked_at": {
+            "description": "When it was made.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "org_id": {
+            "description": "The organization it links to.",
+            "type": "string"
+          },
+          "product": {
+            "description": "The product.",
+            "type": "string"
+          },
+          "product_org_id": {
+            "description": "The product organization, when there is one.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "product_tenant_id": {
+            "description": "The product tenant (`*`: the whole installation).",
+            "type": "string"
+          },
+          "state": {
+            "description": "`active`, `suspended`, `orphaned` or `unlinked`.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "org_id",
+          "instance_id",
+          "product",
+          "product_tenant_id",
+          "link_method",
+          "state",
+          "linked_at"
+        ],
+        "type": "object"
       },
       "ListingCard": {
         "type": "object",
@@ -8609,8 +8568,65 @@
         ]
       },
       "RedeemRequest": {
-        "type": "object",
-        "description": "Code-first connect. The instance-generated Ed25519 public key becomes its\ncredential; the same key signs anonymous stats. The body carries no\nCategory B data: the instance address is never sent here. It is set only\nby the owner in app.ever.co (`base_url` of `PATCH\n/v1/orgs/{org}/instances/{instance}`); any future instance-side\nsetter must carry `x-ever-integration: instance_url` and work only after\nthat consent exists.\n",
+        "additionalProperties": false,
+        "description": "Code-first connect: the installation redeems a connect code with its own Ed25519 connect\nkey, which becomes its credential. The connect key never signs anonymous statistics (those\nhave a key of their own). The body carries no address or any other field outside this\nschema: an instance's public address is set by the organization in app.ever.co, or later by\nthe instance through a consented integration.",
+        "properties": {
+          "code": {
+            "description": "The connect code, `EVC-XXXX-XXXX-XXXX` (case-insensitive).",
+            "type": "string"
+          },
+          "install_source": {
+            "description": "Where it was installed from, read from its environment (`self-hosted`, `ever.sh`,\n`partner:<slug>`, ...); never inferred.",
+            "example": "self-hosted",
+            "type": "string"
+          },
+          "kind": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ConnectKind",
+                "description": "Its kind (default `self_hosted`)."
+              }
+            ]
+          },
+          "product": {
+            "description": "The product the installation runs.",
+            "example": "gauzy",
+            "type": "string"
+          },
+          "public_jwk": {
+            "description": "Its connect key: an Ed25519 public JWK (`kty: OKP`, `crv: Ed25519`, `x`).",
+            "type": "object"
+          },
+          "serves_products": {
+            "description": "The products it serves besides its own (a Gauzy API serving Teams).",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "tenant": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RedeemTenant",
+                "description": "The tenant to link when the code pre-binds the organization."
+              }
+            ]
+          },
+          "version": {
+            "description": "Its version (`major.minor.patch[-suffix]`).",
+            "example": "96.1.0",
+            "type": "string"
+          }
+        },
         "required": [
           "code",
           "product",
@@ -8618,59 +8634,54 @@
           "install_source",
           "public_jwk"
         ],
-        "additionalProperties": false,
-        "properties": {
-          "code": {
-            "$ref": "#/components/schemas/ConnectCode"
-          },
-          "product": {
-            "$ref": "#/components/schemas/ProductCode"
-          },
-          "version": {
-            "$ref": "#/components/schemas/SemVer"
-          },
-          "install_source": {
-            "$ref": "#/components/schemas/InstallSource"
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "cloud",
-              "self_hosted",
-              "works_app"
-            ],
-            "default": "self_hosted"
-          },
-          "serves_products": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ProductCode"
-            }
-          },
-          "public_jwk": {
-            "$ref": "#/components/schemas/Jwk"
-          },
-          "tenant": {
-            "type": "object",
-            "description": "Tenant descriptor for the first link when the code pre-binds an organization.",
-            "additionalProperties": false,
-            "properties": {
-              "product_tenant_id": {
-                "type": "string"
-              },
-              "product_org_id": {
-                "type": "string"
-              },
-              "display_name": {
-                "type": "string",
-                "maxLength": 120
-              }
-            }
-          }
-        }
+        "type": "object"
       },
       "RedeemResponse": {
-        "type": "object",
+        "description": "The connected installation and where it calls next.",
+        "properties": {
+          "entitlement_endpoint": {
+            "description": "The entitlement document.",
+            "type": "string"
+          },
+          "feed_endpoint": {
+            "description": "The event feed.",
+            "type": "string"
+          },
+          "instance_id": {
+            "description": "The instance id: the assertion's `iss` and `sub`.",
+            "type": "string"
+          },
+          "keys": {
+            "description": "The key manifest as `/.well-known/ever-keys.json` serves it.",
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "kid": {
+            "description": "The key id the platform assigned to the presented key (the assertion's `kid`).",
+            "type": "string"
+          },
+          "link": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/LinkedTenant",
+                "description": "The tenant link the redeem created (a code that pre-binds the organization)."
+              }
+            ]
+          },
+          "status": {
+            "description": "`active`, or `pending_approval` (an owner or admin approves it with the key's\nfingerprint; until then every instance route but `GET /v1/instances/me` answers `403`).",
+            "type": "string"
+          },
+          "token_endpoint": {
+            "description": "`POST` an assertion here for a token.",
+            "type": "string"
+          }
+        },
         "required": [
           "instance_id",
           "kid",
@@ -8679,40 +8690,36 @@
           "entitlement_endpoint",
           "feed_endpoint"
         ],
+        "type": "object"
+      },
+      "RedeemTenant": {
+        "additionalProperties": false,
+        "description": "The tenant the redeem links when the code pre-binds the organization.",
         "properties": {
-          "instance_id": {
-            "$ref": "#/components/schemas/Ulid"
-          },
-          "kid": {
-            "type": "string",
-            "description": "Key id the platform assigned to the presented public key."
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "active",
-              "pending_approval"
+          "display_name": {
+            "description": "The product tenant's name, shown to the organization.",
+            "maxLength": 120,
+            "type": [
+              "string",
+              "null"
             ]
           },
-          "token_endpoint": {
-            "type": "string",
-            "format": "uri"
+          "product_org_id": {
+            "description": "The product organization's id.",
+            "type": [
+              "string",
+              "null"
+            ]
           },
-          "entitlement_endpoint": {
-            "type": "string",
-            "format": "uri"
-          },
-          "feed_endpoint": {
-            "type": "string",
-            "format": "uri"
-          },
-          "link": {
-            "$ref": "#/components/schemas/TenantLink"
-          },
-          "keys": {
-            "$ref": "#/components/schemas/KeyManifest"
+          "product_tenant_id": {
+            "description": "The product tenant's id (a multi-tenant product; a single-organization product links the\nwhole installation).",
+            "type": [
+              "string",
+              "null"
+            ]
           }
-        }
+        },
+        "type": "object"
       },
       "SaltSet": {
         "type": "object",
@@ -10189,34 +10196,46 @@
         "type": "object"
       },
       "TenantLinkCreate": {
-        "type": "object",
-        "description": "Redeem a link code minted by the organization admin; the organization comes from the code.",
+        "additionalProperties": false,
+        "description": "Redeem a link code: the product workspace becomes the same organization as the one that\nminted the code.",
+        "properties": {
+          "display_name": {
+            "description": "The product tenant's name, shown to the organization.",
+            "maxLength": 120,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "link_code": {
+            "description": "The link code, `EVL-XXXX-XXXX-XXXX` (case-insensitive).",
+            "type": "string"
+          },
+          "product": {
+            "description": "The product the workspace runs.",
+            "example": "gauzy",
+            "type": "string"
+          },
+          "product_org_id": {
+            "description": "The product organization's id.",
+            "maxLength": 128,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "product_tenant_id": {
+            "description": "The product tenant's id.",
+            "maxLength": 128,
+            "type": "string"
+          }
+        },
         "required": [
           "link_code",
           "product",
           "product_tenant_id"
         ],
-        "additionalProperties": false,
-        "properties": {
-          "link_code": {
-            "$ref": "#/components/schemas/LinkCode"
-          },
-          "product": {
-            "$ref": "#/components/schemas/ProductCode"
-          },
-          "product_tenant_id": {
-            "type": "string",
-            "maxLength": 128
-          },
-          "product_org_id": {
-            "type": "string",
-            "maxLength": 128
-          },
-          "display_name": {
-            "type": "string",
-            "maxLength": 120
-          }
-        }
+        "type": "object"
       },
       "TenantLinkRekey": {
         "type": "object",
@@ -10325,49 +10344,54 @@
         ]
       },
       "TokenRequest": {
-        "type": "object",
-        "description": "RFC 7523 JWT-bearer client authentication. Assertion claims `iss = sub = instance_id`, `aud = https://api.ever.co/v1/instances/token`, random `jti`, `exp <= 5 min`, `alg EdDSA`, header `kid`.",
+        "additionalProperties": false,
+        "description": "RFC 7523 client authentication with the `client_credentials` grant. The assertion is a\ncompact JWS (`alg: EdDSA`, `typ: JWT`, `kid`) signed with the connect key, with claims\n`iss = sub = <instance id>`, `aud = <api origin>/v1/instances/token`, a random `jti` (16-128\ncharacters, used once), `iat`, and `exp` at most 300 s after `iat`.",
+        "properties": {
+          "client_assertion": {
+            "description": "The signed assertion.",
+            "type": "string"
+          },
+          "client_assertion_type": {
+            "description": "`urn:ietf:params:oauth:client-assertion-type:jwt-bearer`.",
+            "example": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+            "type": "string"
+          },
+          "grant_type": {
+            "description": "`client_credentials`.",
+            "example": "client_credentials",
+            "type": "string"
+          }
+        },
         "required": [
           "grant_type",
           "client_assertion_type",
           "client_assertion"
         ],
-        "additionalProperties": false,
-        "properties": {
-          "grant_type": {
-            "type": "string",
-            "const": "client_credentials"
-          },
-          "client_assertion_type": {
-            "type": "string",
-            "const": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
-          },
-          "client_assertion": {
-            "type": "string"
-          }
-        }
+        "type": "object"
       },
       "TokenResponse": {
-        "type": "object",
+        "description": "An instance token.",
+        "properties": {
+          "access_token": {
+            "description": "`evit_…`: opaque, one hour; keep it in memory only.",
+            "type": "string"
+          },
+          "expires_in": {
+            "description": "Seconds it lives (3600).",
+            "format": "int64",
+            "type": "integer"
+          },
+          "token_type": {
+            "description": "`Bearer`.",
+            "type": "string"
+          }
+        },
         "required": [
           "access_token",
           "token_type",
           "expires_in"
         ],
-        "properties": {
-          "access_token": {
-            "type": "string",
-            "description": "Opaque `evit_...` token, 1 hour, keep in memory only."
-          },
-          "token_type": {
-            "type": "string",
-            "const": "Bearer"
-          },
-          "expires_in": {
-            "type": "integer",
-            "const": 3600
-          }
-        }
+        "type": "object"
       },
       "Ulid": {
         "type": "string",

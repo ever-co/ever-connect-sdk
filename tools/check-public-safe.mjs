@@ -6,7 +6,8 @@
  * Two sets of rules:
  *   - the generic rules in tools/public-safe.words.json (a product noun outside the technical
  *     allow-list of the egress harness and of commit messages, banned words, hosts, internal
- *     paths, draft markers and work-item identifiers);
+ *     paths, design-document references, draft markers, numbered section signs and work-item and
+ *     task identifiers);
  *   - a phrase list kept outside the repository, read from the environment variable
  *     EVER_BANNED_PHRASES_JSON (a CI secret) or from the git-ignored local file
  *     tools/banned-phrases.private.json. Without one, those rules are skipped with a note, so
@@ -214,6 +215,9 @@ function selfTest() {
     'bad-plan-id.md': 'PID',
     'bad-draft-marker.md': 'M1',
     'bad-internal-host.md': 'H1',
+    'bad-task-id.md': 'PID',
+    'bad-section-sign.md': 'S1',
+    'bad-design-doc.md': 'C1',
   };
   const problems = [];
   for (const [name, rule] of Object.entries(expectFail)) {

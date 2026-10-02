@@ -5,10 +5,15 @@
       "schema": "RedeemRequest",
       "valid": true
     },
-    "redeem.invalid-null-id.json": {
+    "redeem.invalid-missing-key.json": {
       "schema": "RedeemRequest",
       "valid": false,
-      "path": "/tenant/product_org_id"
+      "path": "/public_jwk"
+    },
+    "redeem.invalid-tenant-extra-field.json": {
+      "schema": "RedeemRequest",
+      "valid": false,
+      "path": "/tenant/email"
     },
     "redeem.invalid-extra-field.json": {
       "schema": "RedeemRequest",
@@ -28,10 +33,10 @@
       "schema": "TenantLinkCreate",
       "valid": true
     },
-    "tenant-link.invalid-null-id.json": {
+    "tenant-link.invalid-missing-tenant.json": {
       "schema": "TenantLinkCreate",
       "valid": false,
-      "path": "/product_org_id"
+      "path": "/product_tenant_id"
     },
     "tenant-link.invalid-extra-field.json": {
       "schema": "TenantLinkCreate",

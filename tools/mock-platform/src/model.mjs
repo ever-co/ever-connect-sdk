@@ -99,6 +99,22 @@ export function createLink(state, instance, { org, product, product_tenant_id, p
   return link;
 }
 
+/** A link as the connect routes answer it (the platform's LinkedTenant). */
+export function linkedTenantView(state, link) {
+  return {
+    id: link.id,
+    org_id: link.org_id,
+    instance_id: link.instance_id,
+    product: link.product,
+    product_tenant_id: link.product_tenant_id,
+    product_org_id: link.product_org_id,
+    display_name: link.display_name,
+    link_method: link.link_method,
+    state: link.state,
+    linked_at: state.iso(link.linked_at),
+  };
+}
+
 export function tenantLinkView(state, link) {
   return {
     id: link.id,
