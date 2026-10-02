@@ -53,7 +53,10 @@ test('integration keys are the non-hidden catalog keys and requires_feature name
   const catalog = readJson(join(REPO, 'contracts/integrations/catalog.v1.json'));
   const visible = catalog.integrations.filter((i) => i.status !== 'hidden').map((i) => i.key);
   assert.deepEqual(constants.integration_keys, visible);
-  assert.ok(!constants.integration_keys.includes('ever_agent'));
+  assert.ok(
+    catalog.integrations.every((i) => i.status !== 'hidden'),
+    'the vendored catalog lists no hidden row',
+  );
   const features = new Set(entitlementFeatures());
   for (const key of constants.integration_keys) {
     const def = readJson(join(REPO, 'contracts/integrations', `${key}.json`));

@@ -41,6 +41,7 @@ export const DRAFTS = [
         'To verify yourself: Docker Compose and `tcpdump` (see §7).',
         'To verify yourself: Docker Compose and `tcpdump` (see *How to verify yourself* below).',
       ],
+      ['the non-Ever hosts listed in §1;', 'the non-Ever hosts listed under *When nothing is sent*;'],
       [/^\*\*Nothing else\.\*\*.*$/m, NOTHING_ELSE],
       [
         /the `code` is stable: [^\n]*?\. The modules log/,

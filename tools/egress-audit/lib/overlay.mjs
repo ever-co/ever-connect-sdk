@@ -56,7 +56,27 @@ export function addressing(subnet = '10.231.7.0/24') {
 export function productModel(config) {
   const networks = new Set(['default']);
   for (const n of Object.keys(config.networks ?? {})) networks.add(n);
-  return { services: config.services ?? {}, networks: [...networks] };
+  const external = Object.entries(config.networks ?? {})
+    .filter(([, n]) => n?.external)
+    .map(([key]) => key);
+  return { services: config.services ?? {}, networks: [...networks], external };
+}
+
+/**
+ * Refuses what the overlay cannot seal: a Docker network that exists outside the project
+ * (`external`), and a service on the host's or another container's namespace. `network_mode: none`
+ * and `service:<compose service>` stay inside the sealed networks.
+ */
+export function checkSealable(product) {
+  for (const n of product.external ?? [])
+    throw new Error(`Docker network ${n} is external: the audit seals only the compose networks the files create`);
+  for (const [name, svc] of Object.entries(product.services)) {
+    const mode = svc?.network_mode;
+    if (mode === undefined || mode === null || mode === 'none') continue;
+    const target = /^service:(.+)$/.exec(mode)?.[1];
+    if (target && product.services[target]) continue;
+    throw new Error(`service ${name} sets network_mode ${mode}: the audit can seal only the compose networks`);
+  }
 }
 
 export const serviceNetworks = (svc) => {
@@ -94,6 +114,7 @@ function dependsOn(svc) {
  *        mock{image, config}|null}
  */
 export function buildOverlay(opts) {
+  checkSealable(opts.product);
   const t = template();
   const { subnet, ipRange, dnsIp } = addressing(opts.subnet);
   const values = {

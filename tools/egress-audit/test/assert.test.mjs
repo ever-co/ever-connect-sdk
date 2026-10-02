@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import { corednsQueries, evaluate, isInside, reverseAddress, snifferEvents } from '../assert.mjs';
+import { corednsQueries, errorHost, evaluate, isInside, reverseAddress, snifferEvents } from '../assert.mjs';
 import { loadModes } from '../assert-call-log.mjs';
 
 const sample = (name) => readFileSync(new URL(`./samples/${name}`, import.meta.url), 'utf8');
@@ -121,6 +121,50 @@ test('resolver errors: compose names are tolerated, other hosts fail', () => {
   assert.equal(evaluate(offEvidence({ ...base, logs: 'Error: connect ECONNREFUSED app:8080\ngetaddrinfo EAI_AGAIN app' })).exit, 0);
   const r = evaluate(offEvidence({ ...base, logs: 'Error: getaddrinfo ENOTFOUND telemetry.example.com' }));
   assert.equal(r.violations[0].rule, 'resolver_error');
+});
+
+// Lines recorded by real runs of probe products against the harness.
+const DNS_NULL_OUT = '05:50:04.223196 eth0  Out IP 10.231.32.2.59732 > 198.51.100.53.53: 4660+ NULL? api.ever.co. (29)';
+const DNS_COMPOSE_OUT = '05:50:44.680049 eth0  Out IP 10.231.32.2.40211 > 198.51.100.53.53: 4660+ A? app. (21)';
+const DNS_TO_AUDIT = '05:27:22.543555 eth0  Out IP 10.231.32.2.42831 > 10.231.32.253.53: 38088+ A? app. (21)';
+
+test('a DNS question sent straight to a resolver outside the sealed networks fails, whatever its type', () => {
+  const base = { subnet: '10.231.32.0/24', coredns: '' };
+  const nul = evaluate(offEvidence({ ...base, sniffer: `listening on any\n${DNS_NULL_OUT}` }));
+  assert.equal(nul.exit, 1);
+  assert.ok(nul.violations.some((v) => v.rule === 'egress_attempt' && v.proto === 'udp' && v.dst === '198.51.100.53' && v.port === 53));
+  assert.ok(nul.violations.some((v) => v.rule === 'dns_ever_host' && v.name === 'api.ever.co'));
+  const compose = evaluate(offEvidence({ ...base, sniffer: `listening on any\n${DNS_COMPOSE_OUT}` }));
+  assert.deepEqual(compose.violations, [{ rule: 'egress_attempt', service: 'app', proto: 'udp', dst: '198.51.100.53', port: 53 }]);
+  // The same question to the audit resolver stays inside.
+  assert.equal(evaluate(offEvidence({ ...base, sniffer: `listening on any\n${DNS_TO_AUDIT}` })).exit, 0);
+});
+
+test('a SYN is an attempt whatever other flags it carries; a SYN-ACK or received multicast is not', () => {
+  const syn = (flags) => `04:00:00.000000 eth0  Out IP 10.231.7.2.40000 > 203.0.113.10.443: Flags [${flags}], seq 1, win 64240, length 0`;
+  for (const flags of ['S', 'SEW', 'SE'])
+    assert.deepEqual(
+      snifferEvents(syn(flags), 'app').connections.map((c) => [c.proto, c.dst, c.dport]),
+      [['tcp', '203.0.113.10', 443]],
+      flags,
+    );
+  assert.deepEqual(snifferEvents(syn('S.'), 'app').connections, []);
+  const multicast = '04:00:00.000000 eth0  M   IP 10.231.7.9.5353 > 224.0.0.251.5353: 0 [1q] PTR (QM)? _ipp._tcp.local. (32)';
+  assert.deepEqual(snifferEvents(multicast, 'app').connections, []);
+});
+
+test('resolver errors: an address inside the sealed networks is tolerated; an IPv6 attempt without a packet fails', () => {
+  const base = { subnet: '10.231.32.0/24', sniffer: sample('clean.sniffer.txt'), coredns: '' };
+  assert.equal(errorHost('2026-10-02T05:52:46.222Z connect ECONNREFUSED 10.231.32.253:5432'), '10.231.32.253');
+  assert.equal(errorHost('connect ENETUNREACH 2001:db8::10:443 - Local (:::0)'), '2001:db8::10');
+  assert.equal(errorHost('getaddrinfo ENOTFOUND api.ever.co'), 'api.ever.co');
+  const inside = evaluate(offEvidence({ ...base, logs: '2026-10-02T05:52:46.222Z connect ECONNREFUSED 10.231.32.253:5432' }));
+  assert.equal(inside.exit, 0);
+  const v6 = evaluate(offEvidence({ ...base, logs: '2026-10-02T05:52:03.773Z connect ENETUNREACH 2001:db8::10:443 - Local (:::0)' }));
+  assert.equal(v6.exit, 1);
+  assert.equal(v6.violations[0].rule, 'resolver_error');
+  const host = evaluate(offEvidence({ ...base, logs: 'connect EHOSTUNREACH 203.0.113.10:443' }));
+  assert.equal(host.violations[0].rule, 'resolver_error');
 });
 
 test('a module route answering in the off mode fails; no probe at all is a fault', () => {

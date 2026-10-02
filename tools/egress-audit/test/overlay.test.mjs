@@ -93,6 +93,20 @@ test('a process service that is missing or brings its own namespace is refused',
   assert.throws(() => buildOverlay({ ...base, product: host, processServices: ['api'] }), /sets network_mode/);
 });
 
+test('what the overlay cannot seal is refused: host or another namespace on any service, an external Docker network', () => {
+  const base = { project: 'p', subnet: '10.231.42.0/24', dnsImage: 'd', env: {}, mock: null, processServices: ['api'] };
+  const withSidecar = (sidecar, networks = {}) =>
+    productModel({ services: { api: { image: 'example/api' }, sidecar: { image: 'example/side', ...sidecar } }, networks });
+  for (const mode of ['host', 'bridge', 'container:outside', 'service:nope'])
+    assert.throws(() => buildOverlay({ ...base, product: withSidecar({ network_mode: mode }) }), /sidecar sets network_mode/, mode);
+  assert.throws(
+    () => buildOverlay({ ...base, product: withSidecar({ networks: ['ext'] }, { ext: { external: true, name: 'proxy' } }) }),
+    /Docker network ext is external/,
+  );
+  for (const mode of ['none', 'service:api'])
+    assert.doesNotThrow(() => buildOverlay({ ...base, product: withSidecar({ network_mode: mode }) }), mode);
+});
+
 test('CoreDNS answers the compose names and NXDOMAIN for everything else', () => {
   const names = composeNames({ ...product.services, 'mock-platform': {} });
   assert.deepEqual(names, ['api', 'api-internal', 'db', 'example-db', 'mock-platform', 'worker']);
@@ -137,6 +151,13 @@ test('the config schema refuses Ever hosts in the allow-list; the self-test conf
     assert.throws(() => loadConfig(write('bad.json', { ...base, allowed_external_hosts: [host] })), UsageError, host);
   assert.throws(() => loadConfig(write('api.json', { ...base, process_services: ['worker'] })), /must be one of process_services/);
   assert.equal(loadConfig(join(HARNESS_DIR, 'selftest', 'egress-audit.config.json')).config.product, 'selftest');
+  // The off mode's 404 proof needs at least one route.
+  assert.throws(() => loadConfig(write('routes.json', { ...base, module_routes: [] })), UsageError);
+  // A product adds modes; it never redefines the harness's own.
+  const off = { env: {}, mock: false, module_routes: 'any', allowed_rows: [], required_rows: [] };
+  for (const name of ['off', 'loaded_off', 'positive_stats'])
+    assert.throws(() => loadConfig(write('modes.json', { ...base, modes: { [name]: off } })), /redefines a mode of the harness/, name);
+  assert.equal(loadConfig(write('extra.json', { ...base, modes: { connect_off_sign_in_on: off } })).config.product, 'gauzy');
 });
 
 test('--help lists the five modes (and the managed-operation control)', () => {

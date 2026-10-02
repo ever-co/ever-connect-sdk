@@ -31,7 +31,8 @@
     "health_url": { "description": "Reached from inside the audit network, by service name.", "type": "string", "pattern": "^http://[^\\s/]+(/\\S*)?$" },
     "health_timeout_s": { "type": "integer", "minimum": 5, "maximum": 1800 },
     "module_routes": {
-      "description": "Routes of the Ever Platform modules; in the off mode every one must answer 404.",
+      "description": "Routes of the Ever Platform modules (at least one); in the off mode every one must answer 404.",
+      "minItems": 1,
       "type": "array",
       "items": { "type": "string", "pattern": "^/" }
     },
@@ -45,7 +46,7 @@
       }
     },
     "artifacts_dir": { "description": "Where evidence and report.json go (default ./egress-audit-artifacts).", "type": "string" },
-    "wait_s": { "description": "Seconds to watch the product after the scenario (default 20).", "type": "integer", "minimum": 0, "maximum": 3600 },
+    "wait_s": { "description": "Seconds to watch the product after the scenario (default 120).", "type": "integer", "minimum": 0, "maximum": 3600 },
     "env_prefix": {
       "description": "Replaces the leading EVER_ of every mode variable (for example TR_EVER_).",
       "type": "string",
@@ -53,7 +54,7 @@
     },
     "adapter": { "description": "The adapter module (see adapter.schema.json).", "type": "string" },
     "subnet": { "description": "The sealed network's /24 (default 10.231.7.0/24).", "type": "string", "pattern": "^([0-9]{1,3}\\.){3}0/24$" },
-    "phase": { "description": "The highest program phase whose outbound-call rows apply (default 2).", "type": "integer", "minimum": 2, "maximum": 5 },
+    "phase": { "description": "The highest phase whose outbound-call rows apply (default 2).", "type": "integer", "minimum": 2, "maximum": 5 },
     "every_trigger_exclude_rows": { "type": "array", "items": { "type": "integer", "minimum": 1 } },
     "mock_image": { "description": "A published mock platform image; default: built from the bundled mock.", "type": "string" },
     "mock_config": { "description": "Merged into the mock platform configuration of positive modes.", "type": "object" },

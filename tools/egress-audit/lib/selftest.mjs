@@ -5,8 +5,20 @@ import { HARNESS_DIR, loadConfig, runAudit } from './runner.mjs';
 
 export const SELFTEST_RUNS = [
   { name: 'off/quiet', fixture: 'quiet', mode: 'off', expect: 0 },
-  // The failing control: a DNS query for an Ever host and a connection attempt, both seen.
-  { name: 'off/leaky', fixture: 'leaky', mode: 'off', expect: 1, rules: ['dns_ever_host', 'egress_attempt'] },
+  // The failing control: a DNS query for an Ever host, a SYN, a UDP datagram and a DNS question sent
+  // straight to an outside resolver, each seen.
+  {
+    name: 'off/leaky',
+    fixture: 'leaky',
+    mode: 'off',
+    expect: 1,
+    rules: ['dns_ever_host', 'egress_attempt'],
+    attempts: [
+      { proto: 'tcp', dst: '203.0.113.10', port: 443 },
+      { proto: 'udp', dst: '203.0.113.10', port: 443 },
+      { proto: 'udp', dst: '198.51.100.53', port: 53 },
+    ],
+  },
   { name: 'positive_stats/stats-sender', fixture: 'stats-sender', mode: 'positive_stats', expect: 0 },
   // Without the mock the positive run must not pass: nothing can have been accepted.
   { name: 'positive_stats/no-mock', fixture: 'stats-sender', mode: 'positive_stats', noMock: true, expect: 'non-zero' },
@@ -18,6 +30,9 @@ export function judge(run, report) {
   if (run.expect === 'non-zero' ? report.exit === 0 : report.exit !== run.expect)
     problems.push(`exit ${report.exit}, expected ${run.expect}`);
   for (const rule of run.rules ?? []) if (!report.violations.some((v) => v.rule === rule)) problems.push(`no ${rule} violation was seen`);
+  for (const a of run.attempts ?? [])
+    if (!report.violations.some((v) => v.rule === 'egress_attempt' && v.proto === a.proto && v.dst === a.dst && v.port === a.port))
+      problems.push(`no ${a.proto} attempt to ${a.dst}:${a.port} was seen`);
   return problems;
 }
 

@@ -128,7 +128,7 @@
       "path": "contracts/integrations/catalog.v1.json",
       "source": "docs/specs/seeds/integrations-catalog.yaml",
       "source_sha256": "cdf9c8cb4e96674f97af604a6bb284ec533d06a9b4b500d69c68117ddbb27d37",
-      "sha256": "de00a0cb3c19baf727acafd5bcc89b716a577b820b1cbc9c91c9d3f16a342771",
+      "sha256": "354339c12f0504ec34531f857b28d5df71bc98cf6fbaa435248f3942366c5f0d",
       "transform": "catalog-yaml",
       "provisional": true,
       "upstream": "contracts/integrations/catalog.v1.json"
