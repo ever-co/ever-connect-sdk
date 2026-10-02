@@ -1,0 +1,12 @@
+{
+  "ops": [
+    {
+      "op": "upsert",
+      "kind": "app",
+      "external_id": "work-1",
+      "external_version": 3,
+      "occurred_at": "2026-11-02T10:00:00Z",
+      "repository_url": "https://example.com/repo"
+    }
+  ]
+}

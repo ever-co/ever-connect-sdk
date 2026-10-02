@@ -1,0 +1,7 @@
+{
+  "public_jwk": {
+    "kty": "OKP",
+    "crv": "Ed25519",
+    "x": "BBSukYFIFF7Vlz1s69lGnEs3NjRSQv0x8iOoTte4cfE"
+  }
+}

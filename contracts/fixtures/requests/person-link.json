@@ -1,0 +1,7 @@
+{
+  "product_user_ref": "user-1",
+  "identity_issuer": "https://auth.ever.co",
+  "identity_subject": "275396402232829475",
+  "link_method": "explicit",
+  "product_tenant_id": "tenant-1"
+}

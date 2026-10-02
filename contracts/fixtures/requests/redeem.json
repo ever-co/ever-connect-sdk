@@ -1,0 +1,16 @@
+{
+  "code": "EVC-TEST-0000-0001",
+  "product": "gauzy",
+  "version": "96.2.1",
+  "install_source": "self-hosted",
+  "kind": "self_hosted",
+  "public_jwk": {
+    "kty": "OKP",
+    "crv": "Ed25519",
+    "x": "XOrehnhhK36sJQ4HZocoSpNrjjBfhTvnTslp7PQzO90"
+  },
+  "tenant": {
+    "product_tenant_id": "tenant-1",
+    "product_org_id": "org-1"
+  }
+}

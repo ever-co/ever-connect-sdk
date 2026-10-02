@@ -1,0 +1,103 @@
+{
+  "key": "profile_import",
+  "scope_version": 1,
+  "screen_version": "1",
+  "blocks": {
+    "title": "Enable Import into public profile for {organization}",
+    "purpose": "Copies your organization's name, website, description, logo and country into your ever.co profile draft, and only when you click 'Import into public profile'. You review the draft before anything is published.",
+    "leaves_installation": [
+      {
+        "field": "organization.name",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "on_action",
+        "purpose": "Profile display name",
+        "required": true
+      },
+      {
+        "field": "organization.website",
+        "form": "url",
+        "form_text": "as an address",
+        "when": "on_action",
+        "purpose": "Profile website link",
+        "required": false
+      },
+      {
+        "field": "organization.short_description",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "on_action",
+        "purpose": "Profile summary",
+        "required": false
+      },
+      {
+        "field": "organization.overview",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "on_action",
+        "purpose": "Profile about section",
+        "required": false
+      },
+      {
+        "field": "organization.imageUrl",
+        "form": "url",
+        "form_text": "as an address",
+        "when": "on_action",
+        "purpose": "Profile logo",
+        "required": false
+      },
+      {
+        "field": "organization.contact.country",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "on_action",
+        "purpose": "Profile country",
+        "required": false
+      }
+    ],
+    "arrives_at_installation": [],
+    "platform_keeps": [
+      {
+        "field": "organization.name",
+        "retention": "Kept as part of your profile until you change or delete it."
+      },
+      {
+        "field": "organization.website",
+        "retention": "Kept as part of your profile until you change or delete it."
+      },
+      {
+        "field": "organization.short_description",
+        "retention": "Kept as part of your profile until you change or delete it."
+      },
+      {
+        "field": "organization.overview",
+        "retention": "Kept as part of your profile until you change or delete it."
+      },
+      {
+        "field": "organization.imageUrl",
+        "retention": "Kept as part of your profile until you change or delete it."
+      },
+      {
+        "field": "organization.contact.country",
+        "retention": "Kept as part of your profile until you change or delete it."
+      }
+    ],
+    "how_often": [
+      "only when you act"
+    ],
+    "where_to_change": "Integrations & data in this product, or Instances in app.ever.co; turning it off stops the data at once.",
+    "revoke_effect": "Nothing further is copied. Profile fields you already published stay until you edit them.",
+    "legal": {
+      "terms_url": "https://ever.co/legal/terms",
+      "terms_version": "2026-10",
+      "dpa_url": "https://ever.co/legal/dpa",
+      "dpa_version": "2026-10",
+      "subprocessors_url": "https://ever.co/legal/subprocessors"
+    },
+    "authorisation": "I am authorised to enable this for {organization}"
+  },
+  "in_product": {
+    "allowed": true,
+    "step_up_max_age_s": 300
+  }
+}

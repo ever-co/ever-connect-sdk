@@ -1,0 +1,165 @@
+{
+  "description": "One FeedResponse page per instance-audience event type and per managed-operation kind. Invalid twins fail the event data schema at the given path (from the page root).",
+  "fixtures": {
+    "ever.consent.consent.granted.json": {
+      "type": "ever.consent.consent.granted",
+      "valid": true
+    },
+    "ever.consent.consent.revoked.json": {
+      "type": "ever.consent.consent.revoked",
+      "valid": true
+    },
+    "ever.consent.integration.disabled.json": {
+      "type": "ever.consent.integration.disabled",
+      "valid": true
+    },
+    "ever.consent.integration.enabled.json": {
+      "type": "ever.consent.integration.enabled",
+      "valid": true
+    },
+    "ever.consent.integration.scope_bumped.json": {
+      "type": "ever.consent.integration.scope_bumped",
+      "valid": true
+    },
+    "ever.entitlements.entitlement.issued.json": {
+      "type": "ever.entitlements.entitlement.issued",
+      "valid": true
+    },
+    "ever.entitlements.entitlement.revoked.json": {
+      "type": "ever.entitlements.entitlement.revoked",
+      "valid": true
+    },
+    "ever.entitlements.usage.limit_reached.json": {
+      "type": "ever.entitlements.usage.limit_reached",
+      "valid": true
+    },
+    "ever.registry.instance.approved.json": {
+      "type": "ever.registry.instance.approved",
+      "valid": true
+    },
+    "ever.registry.instance.connected.json": {
+      "type": "ever.registry.instance.connected",
+      "valid": true
+    },
+    "ever.registry.instance.disconnected.json": {
+      "type": "ever.registry.instance.disconnected",
+      "valid": true
+    },
+    "ever.registry.instance.key_rotated.json": {
+      "type": "ever.registry.instance.key_rotated",
+      "valid": true
+    },
+    "ever.registry.instance.revoked.json": {
+      "type": "ever.registry.instance.revoked",
+      "valid": true
+    },
+    "ever.registry.instance.seen.json": {
+      "type": "ever.registry.instance.seen",
+      "valid": true
+    },
+    "ever.registry.managed_operation.requested.json": {
+      "type": "ever.registry.managed_operation.requested",
+      "valid": true
+    },
+    "ever.registry.managed_operation.state_changed.json": {
+      "type": "ever.registry.managed_operation.state_changed",
+      "valid": true
+    },
+    "ever.registry.membership.created.json": {
+      "type": "ever.registry.membership.created",
+      "valid": true
+    },
+    "ever.registry.membership.removed.json": {
+      "type": "ever.registry.membership.removed",
+      "valid": true
+    },
+    "ever.registry.membership.role_changed.json": {
+      "type": "ever.registry.membership.role_changed",
+      "valid": true
+    },
+    "ever.registry.person.deletion_requested.json": {
+      "type": "ever.registry.person.deletion_requested",
+      "valid": true
+    },
+    "ever.registry.person.export_requested.json": {
+      "type": "ever.registry.person.export_requested",
+      "valid": true
+    },
+    "ever.registry.tenant_link.created.json": {
+      "type": "ever.registry.tenant_link.created",
+      "valid": true
+    },
+    "ever.registry.tenant_link.orphaned.json": {
+      "type": "ever.registry.tenant_link.orphaned",
+      "valid": true
+    },
+    "ever.registry.tenant_link.resumed.json": {
+      "type": "ever.registry.tenant_link.resumed",
+      "valid": true
+    },
+    "ever.registry.tenant_link.suspended.json": {
+      "type": "ever.registry.tenant_link.suspended",
+      "valid": true
+    },
+    "ever.registry.tenant_link.unlinked.json": {
+      "type": "ever.registry.tenant_link.unlinked",
+      "valid": true
+    },
+    "managed-operation-requested.update.json": {
+      "type": "ever.registry.managed_operation.requested",
+      "valid": true
+    },
+    "managed-operation-requested.update.invalid-unknown-param.json": {
+      "type": "ever.registry.managed_operation.requested",
+      "valid": false,
+      "path": "/events/0/data/params/shell"
+    },
+    "managed-operation-requested.update.invalid-missing-params.json": {
+      "type": "ever.registry.managed_operation.requested",
+      "valid": false,
+      "path": "/events/0/data/params"
+    },
+    "managed-operation-requested.backup.json": {
+      "type": "ever.registry.managed_operation.requested",
+      "valid": true
+    },
+    "managed-operation-requested.backup.invalid-unknown-param.json": {
+      "type": "ever.registry.managed_operation.requested",
+      "valid": false,
+      "path": "/events/0/data/params/shell"
+    },
+    "managed-operation-requested.backup.invalid-missing-params.json": {
+      "type": "ever.registry.managed_operation.requested",
+      "valid": false,
+      "path": "/events/0/data/params"
+    },
+    "managed-operation-requested.restore-check.json": {
+      "type": "ever.registry.managed_operation.requested",
+      "valid": true
+    },
+    "managed-operation-requested.restore-check.invalid-unknown-param.json": {
+      "type": "ever.registry.managed_operation.requested",
+      "valid": false,
+      "path": "/events/0/data/params/shell"
+    },
+    "managed-operation-requested.restore-check.invalid-missing-params.json": {
+      "type": "ever.registry.managed_operation.requested",
+      "valid": false,
+      "path": "/events/0/data/params"
+    },
+    "managed-operation-requested.health-report.json": {
+      "type": "ever.registry.managed_operation.requested",
+      "valid": true
+    },
+    "managed-operation-requested.health-report.invalid-unknown-param.json": {
+      "type": "ever.registry.managed_operation.requested",
+      "valid": false,
+      "path": "/events/0/data/params/shell"
+    },
+    "managed-operation-requested.health-report.invalid-missing-params.json": {
+      "type": "ever.registry.managed_operation.requested",
+      "valid": false,
+      "path": "/events/0/data/params"
+    }
+  }
+}

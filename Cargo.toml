@@ -1,0 +1,41 @@
+# The Rust half of the Ever Connect SDK.
+#
+#   crates/ever-connect-contracts   generated contract types and the contract files (constants,
+#                                   integration definitions, schemas) as typed accessors
+#   crates/xtask                    repository tasks: `cargo run -p xtask -- typify` writes the
+#                                   generated types (called by tools/generate.mjs)
+
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98"
+publish = false
+repository = "https://github.com/ever-co/ever-connect-sdk"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[workspace.lints.clippy]
+all = { level = "deny", priority = -1 }
+unwrap_used = "deny"
+expect_used = "deny"
+dbg_macro = "deny"
+todo = "deny"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# xtask only (code generation)
+typify = "=0.8.0"
+schemars = "=0.8.22"
+syn = { version = "2", features = ["full"] }
+prettyplease = "0.2"
+
+# tests only
+jsonschema = { version = "0.58", default-features = false }

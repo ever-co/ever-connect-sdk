@@ -1,0 +1,6 @@
+{
+  "grant_type": "client_credentials",
+  "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+  "client_assertion": "eyJhbGciOiJFZERTQSIsImtpZCI6InhOTFZKQVNLWmpVIiwidHlwIjoiSldUIn0.eyJpc3MiOiIwMUpORTdWOUowM0o2WFEyV044SDBaODhSNSIsInN1YiI6IjAxSk5FN1Y5SjAzSjZYUTJXTjhIMFo4OFI1IiwiYXVkIjoiaHR0cHM6Ly9tb2NrLXBsYXRmb3JtLnRlc3QvdjEvaW5zdGFuY2VzL3Rva2VuIiwianRpIjoieXM1aDB0VTJwYlFCU1NYWFJ1WGFPQSIsImlhdCI6MTc5MzYxMzYwMCwiZXhwIjoxNzkzNjEzOTAwfQ.fCNcgpm70HiM5rIYuNlSw7To2S0TwTRrm0PQyT41RhCeQCOQCqJx-FNWKbYuNhk_ADOkGV8ETxSTJwxHYrDJCw",
+  "scope": "openid"
+}

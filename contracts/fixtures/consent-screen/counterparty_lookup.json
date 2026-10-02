@@ -1,0 +1,67 @@
+{
+  "key": "counterparty_lookup",
+  "scope_version": 1,
+  "screen_version": "1",
+  "blocks": {
+    "title": "Enable Check contacts on Ever Platform for {organization}",
+    "purpose": "When you click 'Check on Ever Platform' on a contact, the installation sends salted hashes of that contact's VAT number, registration number or e-mail and gets back the handle of any organization that chose to be discoverable. The values themselves never leave the installation.",
+    "leaves_installation": [
+      {
+        "field": "contact.vat_number",
+        "form": "salted_hash",
+        "form_text": "as a salted one-way hash",
+        "when": "on_action",
+        "purpose": "Find an opted-in organization with this VAT number",
+        "required": false
+      },
+      {
+        "field": "contact.registration_number",
+        "form": "salted_hash",
+        "form_text": "as a salted one-way hash",
+        "when": "on_action",
+        "purpose": "Find an opted-in organization with this registration number",
+        "required": false
+      },
+      {
+        "field": "contact.email",
+        "form": "salted_hash",
+        "form_text": "as a salted one-way hash",
+        "when": "on_action",
+        "purpose": "Find an opted-in organization with this billing e-mail",
+        "required": false
+      }
+    ],
+    "arrives_at_installation": [],
+    "platform_keeps": [
+      {
+        "field": "contact.vat_number",
+        "retention": "Never stored. Only per-installation rate counters are kept."
+      },
+      {
+        "field": "contact.registration_number",
+        "retention": "Never stored. Only per-installation rate counters are kept."
+      },
+      {
+        "field": "contact.email",
+        "retention": "Never stored. Only per-installation rate counters are kept."
+      }
+    ],
+    "how_often": [
+      "only when you act"
+    ],
+    "where_to_change": "Integrations & data in this product, or Instances in app.ever.co; turning it off stops the data at once.",
+    "revoke_effect": "The button is hidden and cached results are purged.",
+    "legal": {
+      "terms_url": "https://ever.co/legal/terms",
+      "terms_version": "2026-10",
+      "dpa_url": "https://ever.co/legal/dpa",
+      "dpa_version": "2026-10",
+      "subprocessors_url": "https://ever.co/legal/subprocessors"
+    },
+    "authorisation": "I am authorised to enable this for {organization}"
+  },
+  "in_product": {
+    "allowed": true,
+    "step_up_max_age_s": 300
+  }
+}

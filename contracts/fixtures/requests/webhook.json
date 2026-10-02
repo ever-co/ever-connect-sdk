@@ -1,0 +1,6 @@
+{
+  "url": "https://gauzy.example.com/api/ever-connect/webhooks",
+  "event_filter": [
+    "ever.consent.*"
+  ]
+}

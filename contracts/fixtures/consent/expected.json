@@ -1,0 +1,47 @@
+{
+  "description": "Verdict of each consent record against ever.consent.v1.json; invalid records fail at the given path.",
+  "fixtures": {
+    "valid/app-ever-co.json": {
+      "valid": true
+    },
+    "valid/product-ui.json": {
+      "valid": true
+    },
+    "valid/cloud-terms.json": {
+      "valid": true
+    },
+    "valid/revoked.json": {
+      "valid": true
+    },
+    "invalid/product-ui-instance-url.json": {
+      "valid": false,
+      "path": "/integration_key",
+      "reason": "instance_url is enabled in app.ever.co only"
+    },
+    "invalid/product-ui-discoverable.json": {
+      "valid": false,
+      "path": "/integration_key",
+      "reason": "counterparty_discoverable is enabled in app.ever.co only"
+    },
+    "invalid/product-ui-without-evidence.json": {
+      "valid": false,
+      "path": "/evidence",
+      "reason": "an in-product consent records where it was given"
+    },
+    "invalid/cloud-terms-with-person.json": {
+      "valid": false,
+      "path": "/granted_by_person_id",
+      "reason": "a consent under the cloud terms has no grantor"
+    },
+    "invalid/evidence-ip-address.json": {
+      "valid": false,
+      "path": "/evidence/ip_address",
+      "reason": "evidence never holds an address"
+    },
+    "invalid/unknown-source.json": {
+      "valid": false,
+      "path": "/consent_source",
+      "reason": "a consent source outside the list"
+    }
+  }
+}

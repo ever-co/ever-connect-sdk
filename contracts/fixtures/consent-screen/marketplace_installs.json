@@ -1,0 +1,89 @@
+{
+  "key": "marketplace_installs",
+  "scope_version": 1,
+  "screen_version": "1",
+  "blocks": {
+    "title": "Enable Install apps from apps.ever.co for {organization}",
+    "purpose": "Lets you install an app you picked on apps.ever.co into this installation. The installation picks up the request and runs its normal plugin installer, then reports whether the install worked.",
+    "leaves_installation": [
+      {
+        "field": "install.status",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "on_change",
+        "purpose": "Report whether the install succeeded",
+        "required": true
+      }
+    ],
+    "arrives_at_installation": [
+      {
+        "field": "install.id",
+        "form": "id",
+        "form_text": "as an identifier",
+        "when": "on_action",
+        "purpose": "Identify the install request"
+      },
+      {
+        "field": "install.slug",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "on_action",
+        "purpose": "Which app to install"
+      },
+      {
+        "field": "install.package",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "on_action",
+        "purpose": "Package to install"
+      },
+      {
+        "field": "install.edition",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "on_action",
+        "purpose": "Edition chosen"
+      }
+    ],
+    "platform_keeps": [
+      {
+        "field": "install.id",
+        "retention": "Kept with the install record."
+      },
+      {
+        "field": "install.slug",
+        "retention": "Kept with the install record."
+      },
+      {
+        "field": "install.package",
+        "retention": "Kept with the install record."
+      },
+      {
+        "field": "install.edition",
+        "retention": "Kept with the install record."
+      },
+      {
+        "field": "install.status",
+        "retention": "Kept with the install record."
+      }
+    ],
+    "how_often": [
+      "only when you act",
+      "when the value changes"
+    ],
+    "where_to_change": "Integrations & data in this product, or Instances in app.ever.co; turning it off stops the data at once.",
+    "revoke_effect": "Install requests are no longer delivered. Installed apps stay installed.",
+    "legal": {
+      "terms_url": "https://ever.co/legal/terms",
+      "terms_version": "2026-10",
+      "dpa_url": "https://ever.co/legal/dpa",
+      "dpa_version": "2026-10",
+      "subprocessors_url": "https://ever.co/legal/subprocessors"
+    },
+    "authorisation": "I am authorised to enable this for {organization}"
+  },
+  "in_product": {
+    "allowed": true,
+    "step_up_max_age_s": 300
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "events": [
+    {
+      "id": "01JNAETTCVQ8NTFD2657XYRF5C",
+      "type": "ever.consent.integration.disabled",
+      "version": 1,
+      "occurred_at": "2026-11-02T10:00:00Z",
+      "subject": {
+        "kind": "integration",
+        "id": "01JTQJZWC8JY5ZNYGB9DX5T7V8"
+      },
+      "org_id": "01JNB79NZW2S85GF4A96MMX6BT",
+      "instance_id": "01JNE7V9J03J6XQ2WN8H0Z88R5",
+      "actor": {
+        "kind": "system",
+        "id": "platform"
+      },
+      "data": {
+        "org_id": "01JNB79NZW2S85GF4A96MMX6BT",
+        "instance_id": "01JNE7V9J03J6XQ2WN8H0Z88R5",
+        "tenant_link_id": "01JQ364DFGGXVQ8SEC043CKTSH",
+        "integration_key": "stats_link",
+        "enabled": true,
+        "consent_id": "01JEWFP015QQKY7FZHGQR7ZH35",
+        "reason": "consent"
+      }
+    }
+  ],
+  "last_id": "01JNAETTCVQ8NTFD2657XYRF5C",
+  "has_more": false
+}

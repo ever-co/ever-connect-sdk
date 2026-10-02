@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://api.ever.co/v1/events/catalog/schemas/ever.registry.membership.role_changed.v1.schema.json",
+  "title": "ever.registry.membership.role_changed v1 data",
+  "description": "data object of ever.registry.membership.role_changed. Organization audiences (sse_private, webhook) receive the first shape; the instance feed of every installation holding a tenant link to the organization receives the second, one event per tenant link: the Ever ID identity (issuer, subject) the product sees at sign-in, the product user when a person link exists, and the Ever role; never person_id or an e-mail (role sync in the products)",
+  "type": "object",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "org_id",
+        "person_id",
+        "role"
+      ],
+      "properties": {
+        "org_id": {
+          "$ref": "common.schema.json#/$defs/ulid"
+        },
+        "person_id": {
+          "$ref": "common.schema.json#/$defs/ulid"
+        },
+        "role": {
+          "$ref": "common.schema.json#/$defs/role"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tenant_link_id",
+        "identity_issuer",
+        "identity_subject",
+        "role"
+      ],
+      "properties": {
+        "tenant_link_id": {
+          "$ref": "common.schema.json#/$defs/ulid"
+        },
+        "identity_issuer": {
+          "$ref": "common.schema.json#/$defs/https_url"
+        },
+        "identity_subject": {
+          "$ref": "common.schema.json#/$defs/external_id"
+        },
+        "product_user_ref": {
+          "$ref": "common.schema.json#/$defs/product_id"
+        },
+        "role": {
+          "$ref": "common.schema.json#/$defs/role"
+        }
+      }
+    }
+  ],
+  "examples": [
+    {
+      "org_id": "01JBX1A2B3C4D5E6F7G8H9J0K1",
+      "person_id": "01JBX1A2B3C4D5E6F7G8H9J0P1",
+      "role": "admin"
+    },
+    {
+      "tenant_link_id": "01JC5M2R4T6V8X0Z2B4D6F8H0K",
+      "identity_issuer": "https://auth.ever.co",
+      "identity_subject": "275396402232829475",
+      "product_user_ref": "3f1c1d4a-7b2e-4f0a-9d3c-2a6b1e5f8c01",
+      "role": "admin"
+    }
+  ]
+}

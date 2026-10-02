@@ -1,0 +1,67 @@
+{
+  "key": "stats_link",
+  "scope_version": 1,
+  "screen_version": "1",
+  "blocks": {
+    "title": "Enable Link usage statistics to this organization for {organization}",
+    "purpose": "Connects the anonymous statistics identity of this self-hosted installation to your organization, so you can see your installation's latest statistics report in app.ever.co. Without this link, statistics stay anonymous. It is never offered on Ever Cloud, where one installation serves many organizations.",
+    "leaves_installation": [
+      {
+        "field": "instance.stats_instance_id",
+        "form": "id",
+        "form_text": "as an identifier",
+        "when": "once",
+        "purpose": "Match the installation's anonymous statistics identity to the connected installation",
+        "required": true
+      },
+      {
+        "field": "instance.stats_public_key",
+        "form": "id",
+        "form_text": "as an identifier",
+        "when": "once",
+        "purpose": "The public half of the separate statistics key, so the link can be checked against the key that signs the reports",
+        "required": true
+      },
+      {
+        "field": "instance.stats_link_signature",
+        "form": "id",
+        "form_text": "as an identifier",
+        "when": "once",
+        "purpose": "Signature made with the statistics key, proving that the connected installation holds it",
+        "required": true
+      }
+    ],
+    "arrives_at_installation": [],
+    "platform_keeps": [
+      {
+        "field": "instance.stats_instance_id",
+        "retention": "Kept while the integration is enabled."
+      },
+      {
+        "field": "instance.stats_public_key",
+        "retention": "Kept while the integration is enabled."
+      },
+      {
+        "field": "instance.stats_link_signature",
+        "retention": "Kept while the integration is enabled."
+      }
+    ],
+    "how_often": [
+      "once"
+    ],
+    "where_to_change": "Integrations & data in this product, or Instances in app.ever.co; turning it off stops the data at once.",
+    "revoke_effect": "The link is cleared. Later statistics reports are anonymous again.",
+    "legal": {
+      "terms_url": "https://ever.co/legal/terms",
+      "terms_version": "2026-10",
+      "dpa_url": "https://ever.co/legal/dpa",
+      "dpa_version": "2026-10",
+      "subprocessors_url": "https://ever.co/legal/subprocessors"
+    },
+    "authorisation": "I am authorised to enable this for {organization}"
+  },
+  "in_product": {
+    "allowed": true,
+    "step_up_max_age_s": 300
+  }
+}

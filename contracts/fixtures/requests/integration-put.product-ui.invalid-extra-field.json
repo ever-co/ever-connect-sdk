@@ -1,0 +1,12 @@
+{
+  "enabled": true,
+  "tenant_link_id": "01JHGF4PAY0P5JJ7J2A56VSRZM",
+  "consent": {
+    "scope_version": 1,
+    "dpa_version": "2026-10",
+    "accepted": true,
+    "screen_version": "1",
+    "ui_locale": "en",
+    "ip_address": "203.0.113.7"
+  }
+}

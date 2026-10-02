@@ -1,0 +1,21 @@
+{
+  "id": "01J2Z76QZYK9HN34TCKG2KYBDM",
+  "org_id": "01JNB79NZW2S85GF4A96MMX6BT",
+  "instance_id": "01JNE7V9J03J6XQ2WN8H0Z88R5",
+  "tenant_link_id": "01JHGF4PAY0P5JJ7J2A56VSRZM",
+  "integration_key": "usage_reporting",
+  "scope_version": 1,
+  "dpa_version": "2026-10",
+  "terms_version": "2026-10",
+  "granted_by_person_id": "01JV9DTN53Y4WCY615AVZA7MVQ",
+  "granted_at": "2026-11-02T10:00:00Z",
+  "consent_source": "cloud_terms",
+  "evidence": {
+    "screen_version": "1"
+  },
+  "revoked_at": null,
+  "revoked_by_person_id": null,
+  "revoke_reason": null,
+  "revoke_source": null,
+  "supersedes_id": null
+}

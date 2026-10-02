@@ -1,0 +1,67 @@
+{
+  "key": "counterparty_discoverable",
+  "scope_version": 1,
+  "screen_version": "1",
+  "blocks": {
+    "title": "Enable Let your partners find you for {organization}",
+    "purpose": "Publishes salted hashes of your own organization's tax ID, registration number and billing e-mail, so other organizations that already know these values can find your Ever Platform handle. Nothing is findable by browsing or searching. It is off everywhere, Ever Cloud included, until an owner of your organization turns it on in app.ever.co.",
+    "leaves_installation": [
+      {
+        "field": "organization.tax_id",
+        "form": "salted_hash",
+        "form_text": "as a salted one-way hash",
+        "when": "on_change",
+        "purpose": "Match lookups by tax ID",
+        "required": false
+      },
+      {
+        "field": "organization.registration_number",
+        "form": "salted_hash",
+        "form_text": "as a salted one-way hash",
+        "when": "on_change",
+        "purpose": "Match lookups by registration number",
+        "required": false
+      },
+      {
+        "field": "organization.billing_email",
+        "form": "salted_hash",
+        "form_text": "as a salted one-way hash",
+        "when": "on_change",
+        "purpose": "Match lookups by billing e-mail",
+        "required": false
+      }
+    ],
+    "arrives_at_installation": [],
+    "platform_keeps": [
+      {
+        "field": "organization.tax_id",
+        "retention": "Kept while the integration is enabled. Deleted when it is turned off."
+      },
+      {
+        "field": "organization.registration_number",
+        "retention": "Kept while the integration is enabled. Deleted when it is turned off."
+      },
+      {
+        "field": "organization.billing_email",
+        "retention": "Kept while the integration is enabled. Deleted when it is turned off."
+      }
+    ],
+    "how_often": [
+      "when the value changes"
+    ],
+    "where_to_change": "Integrations & data in this product, or Instances in app.ever.co; turning it off stops the data at once.",
+    "revoke_effect": "The stored hashes are deleted.",
+    "legal": {
+      "terms_url": "https://ever.co/legal/terms",
+      "terms_version": "2026-10",
+      "dpa_url": "https://ever.co/legal/dpa",
+      "dpa_version": "2026-10",
+      "subprocessors_url": "https://ever.co/legal/subprocessors"
+    },
+    "authorisation": "I am authorised to enable this for {organization}"
+  },
+  "in_product": {
+    "allowed": false,
+    "step_up_max_age_s": 300
+  }
+}

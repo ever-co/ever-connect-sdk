@@ -1,0 +1,8 @@
+{
+  "stats_instance_id": "f236c455-120b-4c91-b2d0-cfe8f3bcb9d6",
+  "stats_public_jwk": {
+    "kty": "OKP",
+    "crv": "Ed25519",
+    "x": "Inweq2-sIMiuuI2zaT07AWI5P0YSvD4RAnXKhD-IaCE"
+  }
+}

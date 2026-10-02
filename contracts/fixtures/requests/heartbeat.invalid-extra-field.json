@@ -1,0 +1,9 @@
+{
+  "version": "96.2.1",
+  "module_version": "1.0.0",
+  "serves_products": [
+    "gauzy",
+    "teams"
+  ],
+  "hostname": "gauzy.example.com"
+}

@@ -1,0 +1,15 @@
+# Lint rules for the instance-facing contract (tools/generate.mjs step 1). The spec ruleset checks
+# the document's structure; the generator additionally allows only `x-ever-*` extensions.
+extends:
+  - minimal
+rules:
+  struct: error
+  no-unresolved-refs: error
+  operation-operationId-unique: error
+  operation-operationId: error
+  path-parameters-defined: error
+  no-identical-paths: error
+  no-ambiguous-paths: warn
+  security-defined: error
+  info-license: off
+  no-server-example.com: error

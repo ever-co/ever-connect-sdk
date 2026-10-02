@@ -1,0 +1,344 @@
+{
+  "description": "Each request fixture, the contract schema it is checked against (pending:<operation> for a call pending upstream), the verdict, and for invalid twins the path of the first error.",
+  "fixtures": {
+    "redeem.json": {
+      "schema": "RedeemRequest",
+      "valid": true
+    },
+    "redeem.invalid-null-id.json": {
+      "schema": "RedeemRequest",
+      "valid": false,
+      "path": "/tenant/product_org_id"
+    },
+    "redeem.invalid-extra-field.json": {
+      "schema": "RedeemRequest",
+      "valid": false,
+      "path": "/public_url"
+    },
+    "token.json": {
+      "schema": "TokenRequest",
+      "valid": true
+    },
+    "token.invalid-extra-field.json": {
+      "schema": "TokenRequest",
+      "valid": false,
+      "path": "/scope"
+    },
+    "tenant-link.json": {
+      "schema": "TenantLinkCreate",
+      "valid": true
+    },
+    "tenant-link.invalid-null-id.json": {
+      "schema": "TenantLinkCreate",
+      "valid": false,
+      "path": "/product_org_id"
+    },
+    "tenant-link.invalid-extra-field.json": {
+      "schema": "TenantLinkCreate",
+      "valid": false,
+      "path": "/org_id"
+    },
+    "tenant-link-rekey.json": {
+      "schema": "TenantLinkRekey",
+      "valid": true
+    },
+    "tenant-link-rekey.invalid-extra-field.json": {
+      "schema": "TenantLinkRekey",
+      "valid": false,
+      "path": "/unexpected_field"
+    },
+    "heartbeat.json": {
+      "schema": "HeartbeatBody",
+      "valid": true
+    },
+    "heartbeat.invalid-null-id.json": {
+      "schema": "HeartbeatBody",
+      "valid": false,
+      "path": "/version"
+    },
+    "heartbeat.invalid-extra-field.json": {
+      "schema": "HeartbeatBody",
+      "valid": false,
+      "path": "/hostname"
+    },
+    "events-ack.json": {
+      "schema": "FeedAck",
+      "valid": true
+    },
+    "events-ack.invalid-extra-field.json": {
+      "schema": "FeedAck",
+      "valid": false,
+      "path": "/unexpected_field"
+    },
+    "set-integration.json": {
+      "schema": "InstanceIntegrationPut",
+      "valid": true
+    },
+    "set-integration.invalid-enable-attempt.json": {
+      "schema": "InstanceIntegrationPut",
+      "valid": false,
+      "path": "/enabled"
+    },
+    "set-integration.invalid-extra-field.json": {
+      "schema": "InstanceIntegrationPut",
+      "valid": false,
+      "path": "/unexpected_field"
+    },
+    "stats-link.json": {
+      "schema": "StatsLinkCreate",
+      "valid": true
+    },
+    "stats-link.invalid-missing-statement.json": {
+      "schema": "StatsLinkCreate",
+      "valid": false,
+      "path": "/statement_sig"
+    },
+    "stats-link.invalid-extra-field.json": {
+      "schema": "StatsLinkCreate",
+      "valid": false,
+      "path": "/instance_url"
+    },
+    "identifiers.json": {
+      "schema": "IdentifierHashes",
+      "valid": true
+    },
+    "identifiers.invalid-extra-field.json": {
+      "schema": "IdentifierHashes",
+      "valid": false,
+      "path": "/hashes/0/value"
+    },
+    "lookup.json": {
+      "schema": "LookupRequest",
+      "valid": true
+    },
+    "lookup.invalid-too-many.json": {
+      "schema": "LookupRequest",
+      "valid": false,
+      "path": "/hashes"
+    },
+    "lookup.invalid-extra-field.json": {
+      "schema": "LookupRequest",
+      "valid": false,
+      "path": "/unexpected_field"
+    },
+    "oidc-client.json": {
+      "schema": "OidcClientRequest",
+      "valid": true
+    },
+    "oidc-client.invalid-extra-field.json": {
+      "schema": "OidcClientRequest",
+      "valid": false,
+      "path": "/client_name"
+    },
+    "mirror.json": {
+      "schema": "MirrorBatch",
+      "valid": true
+    },
+    "mirror.invalid-extra-field.json": {
+      "schema": "MirrorBatch",
+      "valid": false,
+      "path": "/ops/0/repository_url"
+    },
+    "keys.json": {
+      "schema": "KeyRotate",
+      "valid": true
+    },
+    "keys.invalid-extra-field.json": {
+      "schema": "KeyRotate",
+      "valid": false,
+      "path": "/unexpected_field"
+    },
+    "person-link.json": {
+      "schema": "PersonLinkCreate",
+      "valid": true
+    },
+    "person-link.invalid-null-id.json": {
+      "schema": "PersonLinkCreate",
+      "valid": false,
+      "path": "/product_org_id"
+    },
+    "person-link.invalid-extra-field.json": {
+      "schema": "PersonLinkCreate",
+      "valid": false,
+      "path": "/email"
+    },
+    "ack.json": {
+      "schema": "AckRequest",
+      "valid": true
+    },
+    "ack.invalid-bad-result.json": {
+      "schema": "AckRequest",
+      "valid": false,
+      "path": "/result"
+    },
+    "ack.invalid-extra-field.json": {
+      "schema": "AckRequest",
+      "valid": false,
+      "path": "/email"
+    },
+    "identity-resolve.json": {
+      "schema": "IdentityResolveRequest",
+      "valid": true
+    },
+    "identity-resolve.invalid-extra-field.json": {
+      "schema": "IdentityResolveRequest",
+      "valid": false,
+      "path": "/unexpected_field"
+    },
+    "org-profile.json": {
+      "schema": "OrgProfilePush",
+      "valid": true
+    },
+    "org-profile.invalid-extra-field.json": {
+      "schema": "OrgProfilePush",
+      "valid": false,
+      "path": "/fields/email"
+    },
+    "usage.json": {
+      "schema": "UsageReport",
+      "valid": true
+    },
+    "usage.invalid-extra-field.json": {
+      "schema": "UsageReport",
+      "valid": false,
+      "path": "/items/0/employee_names"
+    },
+    "usage-readings.json": {
+      "schema": "UsageReadings",
+      "valid": true
+    },
+    "usage-readings.invalid-extra-field.json": {
+      "schema": "UsageReadings",
+      "valid": false,
+      "path": "/readings/0/hostname"
+    },
+    "billing-link.json": {
+      "schema": "BillingLinkCreate",
+      "valid": true
+    },
+    "billing-link.invalid-extra-field.json": {
+      "schema": "BillingLinkCreate",
+      "valid": false,
+      "path": "/email"
+    },
+    "intent-complete.json": {
+      "schema": "IntentComplete",
+      "valid": true
+    },
+    "intent-complete.invalid-null-id.json": {
+      "schema": "IntentComplete",
+      "valid": false,
+      "path": "/product_org_id"
+    },
+    "intent-complete.invalid-extra-field.json": {
+      "schema": "IntentComplete",
+      "valid": false,
+      "path": "/unexpected_field"
+    },
+    "install-status.json": {
+      "schema": "InstallStatus",
+      "valid": true
+    },
+    "install-status.invalid-extra-field.json": {
+      "schema": "InstallStatus",
+      "valid": false,
+      "path": "/unexpected_field"
+    },
+    "device.json": {
+      "schema": "DeviceRequest",
+      "valid": true
+    },
+    "device.invalid-extra-field.json": {
+      "schema": "DeviceRequest",
+      "valid": false,
+      "path": "/public_url"
+    },
+    "device-token.json": {
+      "schema": "DeviceTokenRequest",
+      "valid": true
+    },
+    "device-token.invalid-extra-field.json": {
+      "schema": "DeviceTokenRequest",
+      "valid": false,
+      "path": "/unexpected_field"
+    },
+    "webhook.json": {
+      "schema": "WebhookCreate",
+      "valid": true
+    },
+    "webhook.invalid-extra-field.json": {
+      "schema": "WebhookCreate",
+      "valid": false,
+      "path": "/unexpected_field"
+    },
+    "webhook-patch.json": {
+      "schema": "WebhookPatch",
+      "valid": true
+    },
+    "webhook-patch.invalid-extra-field.json": {
+      "schema": "WebhookPatch",
+      "valid": false,
+      "path": "/unexpected_field"
+    },
+    "integration-put.product-ui.json": {
+      "schema": "IntegrationPut",
+      "valid": true
+    },
+    "integration-put.product-ui.invalid-not-accepted.json": {
+      "schema": "IntegrationPut",
+      "valid": false,
+      "path": "/consent/accepted"
+    },
+    "integration-put.product-ui.invalid-extra-field.json": {
+      "schema": "IntegrationPut",
+      "valid": false,
+      "path": "/consent/ip_address"
+    },
+    "managed-operation-result.json": {
+      "schema": "ManagedOperationResult",
+      "valid": true
+    },
+    "managed-operation-result.invalid-file-name.json": {
+      "schema": "ManagedOperationResult",
+      "valid": false,
+      "path": "/file_name"
+    },
+    "managed-operation-result.invalid-bad-status.json": {
+      "schema": "ManagedOperationResult",
+      "valid": false,
+      "path": "/status"
+    },
+    "public-url.json": {
+      "schema": "pending:instancePutPublicUrl",
+      "valid": true
+    },
+    "public-url.invalid-plain-http.json": {
+      "schema": "pending:instancePutPublicUrl",
+      "valid": false,
+      "path": "/base_url"
+    },
+    "public-url.invalid-extra-field.json": {
+      "schema": "pending:instancePutPublicUrl",
+      "valid": false,
+      "path": "/unexpected_field"
+    },
+    "integration-accept.json": {
+      "schema": "pending:instanceAcceptIntegration",
+      "valid": true
+    },
+    "integration-accept.invalid-extra-field.json": {
+      "schema": "pending:instanceAcceptIntegration",
+      "valid": false,
+      "path": "/unexpected_field"
+    },
+    "provider-grant-status.json": {
+      "schema": "pending:instanceReportProviderGrantStatus",
+      "valid": true
+    },
+    "provider-grant-status.invalid-extra-field.json": {
+      "schema": "pending:instanceReportProviderGrantStatus",
+      "valid": false,
+      "path": "/email"
+    }
+  }
+}

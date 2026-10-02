@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://api.ever.co/v1/events/catalog/schemas/ever.registry.tenant_link.suspended.v1.schema.json",
+  "title": "ever.registry.tenant_link.suspended v1 data",
+  "description": "data object of ever.registry.tenant_link.suspended",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "tenant_link_id",
+    "org_id",
+    "instance_id",
+    "product",
+    "product_tenant_id",
+    "state"
+  ],
+  "properties": {
+    "tenant_link_id": {
+      "$ref": "common.schema.json#/$defs/ulid"
+    },
+    "org_id": {
+      "$ref": "common.schema.json#/$defs/ulid"
+    },
+    "instance_id": {
+      "$ref": "common.schema.json#/$defs/ulid"
+    },
+    "product": {
+      "$ref": "common.schema.json#/$defs/product_shipped"
+    },
+    "product_tenant_id": {
+      "$ref": "common.schema.json#/$defs/product_id"
+    },
+    "product_org_id": {
+      "$ref": "common.schema.json#/$defs/product_id"
+    },
+    "state": {
+      "$ref": "common.schema.json#/$defs/link_state"
+    },
+    "link_method": {
+      "enum": [
+        "provisioned",
+        "link_code",
+        "import",
+        "explicit",
+        "confirmed"
+      ]
+    }
+  }
+}

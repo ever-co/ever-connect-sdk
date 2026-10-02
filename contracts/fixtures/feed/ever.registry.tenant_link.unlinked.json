@@ -1,0 +1,32 @@
+{
+  "events": [
+    {
+      "id": "01J9F2CDZM7MB1QZCJV0GEJ1V4",
+      "type": "ever.registry.tenant_link.unlinked",
+      "version": 1,
+      "occurred_at": "2026-11-02T10:00:00Z",
+      "subject": {
+        "kind": "tenant_link",
+        "id": "01JXXH2JMESA86TK6R7BCQSJ0R"
+      },
+      "org_id": "01JNB79NZW2S85GF4A96MMX6BT",
+      "instance_id": "01JNE7V9J03J6XQ2WN8H0Z88R5",
+      "actor": {
+        "kind": "system",
+        "id": "platform"
+      },
+      "data": {
+        "tenant_link_id": "01JGAJ9PB63WHEBESZTMWTHDQK",
+        "org_id": "01JNB79NZW2S85GF4A96MMX6BT",
+        "instance_id": "01JNE7V9J03J6XQ2WN8H0Z88R5",
+        "product": "gauzy",
+        "product_tenant_id": "user-1",
+        "product_org_id": "user-1",
+        "state": "active",
+        "link_method": "provisioned"
+      }
+    }
+  ],
+  "last_id": "01J9F2CDZM7MB1QZCJV0GEJ1V4",
+  "has_more": false
+}

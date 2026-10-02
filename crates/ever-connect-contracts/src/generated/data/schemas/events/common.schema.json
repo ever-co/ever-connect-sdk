@@ -1,0 +1,440 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://api.ever.co/v1/events/catalog/schemas/common.schema.json",
+  "title": "Ever Platform event catalog: shared definitions",
+  "$defs": {
+    "ulid": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+      "maxLength": 26
+    },
+    "uuid": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "maxLength": 36
+    },
+    "datetime": {
+      "type": "string",
+      "pattern": "^20[0-9]{2}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]{1,3})?Z$",
+      "maxLength": 24
+    },
+    "hex64": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "maxLength": 64
+    },
+    "handle": {
+      "type": "string",
+      "pattern": "^[a-z](?:[a-z0-9]|-(?=[a-z0-9]))*$",
+      "minLength": 3,
+      "maxLength": 30,
+      "description": "Same grammar as the API Handle and the p_registry handle_text domain: letter first, 3-30 characters, single hyphens only."
+    },
+    "product": {
+      "enum": [
+        "gauzy",
+        "teams",
+        "works",
+        "rec",
+        "traduora",
+        "demand"
+      ]
+    },
+    "product_shipped": {
+      "enum": [
+        "gauzy",
+        "teams",
+        "works",
+        "rec",
+        "traduora"
+      ]
+    },
+    "install_source": {
+      "type": "string",
+      "pattern": "^(cloud|self-hosted|ever\\.sh|works_app|desktop|partner:[a-z0-9-]{2,32})$",
+      "maxLength": 40
+    },
+    "field_name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.]{0,63}$",
+      "maxLength": 64
+    },
+    "key": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.]{0,63}$",
+      "maxLength": 64
+    },
+    "integration_key": {
+      "type": "string",
+      "pattern": "^(ever_id_login|counterparty_lookup|counterparty_discoverable|profile_import|usage_reporting|app_sync|instance_url|stats_link|billing_link|webhooks|managed_operations|provider_access|marketplace_installs|partner:[a-z0-9-]{2,32})$",
+      "maxLength": 40
+    },
+    "period": {
+      "type": "string",
+      "pattern": "^20[0-9]{2}-(0[1-9]|1[0-2])$",
+      "maxLength": 7
+    },
+    "country": {
+      "type": "string",
+      "pattern": "^([A-Z]{2}|ZZ)$",
+      "maxLength": 2
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$",
+      "maxLength": 3
+    },
+    "semver": {
+      "type": "string",
+      "pattern": "^[0-9]{1,4}\\.[0-9]{1,4}\\.[0-9]{1,4}(-[0-9A-Za-z.]{1,16})?$",
+      "maxLength": 32
+    },
+    "https_url": {
+      "type": "string",
+      "pattern": "^https://[A-Za-z0-9.-]{1,253}(:[0-9]{2,5})?(/[A-Za-z0-9._~%!$&'()*+,;=:@/-]*)?(\\?[A-Za-z0-9._~%!$&'()*+,;=:@/?-]*)?$",
+      "maxLength": 2048
+    },
+    "product_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:*-]{1,64}$",
+      "maxLength": 64,
+      "description": "product-side identifier (uuid, slug or '*'); an id, never a name"
+    },
+    "external_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:-]{1,64}$",
+      "maxLength": 64
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9](?:[a-z0-9-]{0,62})$",
+      "maxLength": 63
+    },
+    "vocab": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_.-]{0,39}$",
+      "maxLength": 40,
+      "description": "open vocabulary token (deployment target model)"
+    },
+    "count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "id"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "api_key",
+            "app",
+            "app_deployment",
+            "billing_link",
+            "bundle",
+            "catalog_price",
+            "checkout_session",
+            "claim",
+            "connect_code",
+            "consent",
+            "credit_lot",
+            "customer",
+            "dispute",
+            "entitlement",
+            "handle",
+            "identifier",
+            "install",
+            "instance",
+            "integration",
+            "invoice",
+            "ledger_entry",
+            "listing",
+            "managed_operation",
+            "membership",
+            "module",
+            "org",
+            "person",
+            "provisioning_job",
+            "purchase",
+            "referral",
+            "stats_instance",
+            "subscription",
+            "tenant",
+            "tenant_link",
+            "usage",
+            "webhook_endpoint"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._:-]{1,64}$",
+          "maxLength": 64
+        }
+      }
+    },
+    "actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "id"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "person",
+            "instance",
+            "api_key",
+            "staff",
+            "service",
+            "system"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._:-]{1,64}$",
+          "maxLength": 64
+        }
+      }
+    },
+    "entitlement_subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "id"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "org",
+            "instance",
+            "link"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+          "maxLength": 26
+        }
+      }
+    },
+    "role": {
+      "enum": [
+        "owner",
+        "admin",
+        "member"
+      ]
+    },
+    "tier": {
+      "enum": [
+        "free",
+        "paid",
+        "bundle",
+        "included"
+      ]
+    },
+    "instance_status": {
+      "enum": [
+        "active",
+        "pending_approval",
+        "disconnected",
+        "revoked"
+      ]
+    },
+    "instance_kind": {
+      "enum": [
+        "cloud",
+        "self_hosted",
+        "works_app"
+      ]
+    },
+    "last_seen_bucket": {
+      "enum": [
+        "now",
+        "lt_1h",
+        "lt_24h",
+        "lt_7d",
+        "lt_30d",
+        "gt_30d",
+        "never"
+      ]
+    },
+    "link_state": {
+      "enum": [
+        "active",
+        "suspended",
+        "orphaned",
+        "unlinked"
+      ],
+      "description": "= p_registry.tenant_link.state = API TenantLink.state"
+    },
+    "app_status": {
+      "enum": [
+        "draft",
+        "registered",
+        "building",
+        "live",
+        "paused",
+        "archived",
+        "deleted"
+      ],
+      "description": "= p_registry.app.status = API App.status"
+    },
+    "deployment_status": {
+      "enum": [
+        "pending",
+        "ready",
+        "error",
+        "canceled",
+        "timeout",
+        "retired"
+      ],
+      "description": "= p_registry.app_deployment.status"
+    },
+    "listing_status": {
+      "enum": [
+        "draft",
+        "in_review",
+        "changes_requested",
+        "approved",
+        "published",
+        "suspended",
+        "archived"
+      ],
+      "description": "= p_listings.listing_status domain = API ListingStatus; unpublishing stores `approved` (the verb event ever.listings.listing.unpublished carries status approved)"
+    },
+    "install_mechanism": {
+      "enum": [
+        "works_blueprint",
+        "provision_product",
+        "instance_plugin",
+        "external_link",
+        "partner_referral"
+      ]
+    },
+    "install_state": {
+      "enum": [
+        "requested",
+        "pending_payment",
+        "installing",
+        "delivered",
+        "installed",
+        "failed",
+        "removed",
+        "cancelled"
+      ],
+      "description": "= p_listings.install.state = API Install.state; `cancelled` = stopped before it was installed, `removed` = removed after install"
+    },
+    "provisioning_state": {
+      "enum": [
+        "pending",
+        "running",
+        "awaiting_user",
+        "cooldown",
+        "partial",
+        "succeeded",
+        "failed",
+        "cancelled"
+      ],
+      "description": "= p_provisioning.job.status = API Job.status"
+    },
+    "identifier_kind": {
+      "enum": [
+        "vat",
+        "registration",
+        "email"
+      ]
+    },
+    "salted_hash": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "salt_version",
+        "hash"
+      ],
+      "properties": {
+        "salt_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "maxLength": 64
+        }
+      }
+    },
+    "provisioning_step_state": {
+      "enum": [
+        "pending",
+        "running",
+        "awaiting_user",
+        "succeeded",
+        "failed",
+        "skipped",
+        "abandoned"
+      ],
+      "description": "= p_provisioning.step.status = API Step.status"
+    },
+    "managed_operation_kind": {
+      "enum": [
+        "update",
+        "backup",
+        "restore_check",
+        "health_report"
+      ],
+      "description": "= p_registry.managed_operation.kind = API ManagedOperationKind"
+    },
+    "managed_operation_state": {
+      "enum": [
+        "requested",
+        "accepted",
+        "running",
+        "succeeded",
+        "failed",
+        "expired",
+        "cancelled"
+      ],
+      "description": "= p_registry.managed_operation.state = API ManagedOperationState; cancelled = stopped before it started"
+    },
+    "dpa_version": {
+      "type": "string",
+      "pattern": "^20[0-9]{2}-(0[1-9]|1[0-2])(\\.[0-9]{1,3})?$",
+      "maxLength": 11,
+      "description": "= p_consent.integration.dpa_version (TEXT, e.g. 2026-10)"
+    },
+    "consent_source": {
+      "enum": [
+        "app_ever_co",
+        "cloud_terms",
+        "product_ui"
+      ],
+      "description": "where a consent was given; product_ui = granted in the product's own consent dialog after a fresh Ever ID sign-in"
+    },
+    "plan_source": {
+      "enum": [
+        "community",
+        "stripe_subscription",
+        "licence_certificate",
+        "works_licence_purchase",
+        "cloud_plan",
+        "staff"
+      ],
+      "description": "= plan.source of ever.entitlement.v1 = API PlanSource = the stored effective-subscription source"
+    },
+    "connect_code_origin": {
+      "enum": [
+        "app",
+        "ever_sh",
+        "device",
+        "provisioning",
+        "partner"
+      ],
+      "description": "= p_entitlements.connect_code.origin = API ConnectCode.origin"
+    }
+  }
+}

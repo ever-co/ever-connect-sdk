@@ -1,0 +1,4 @@
+{
+  "redirect_uri": "https://gauzy.example.com/api/auth/ever/callback",
+  "logout_uri": "https://gauzy.example.com/api/auth/ever/backchannel-logout"
+}

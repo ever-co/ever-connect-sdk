@@ -1,0 +1,10 @@
+{
+  "tenant_link_id": "01JHGF4PAY0P5JJ7J2A56VSRZM",
+  "consent_id": "01JS3YBHRHBAF9ECJBPM1PWGR2",
+  "fields": {
+    "name": "Acme",
+    "website": "https://acme.example",
+    "country": "BG",
+    "email": "jane@example.com"
+  }
+}

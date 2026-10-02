@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://api.ever.co/v1/events/catalog/schemas/envelope.schema.json",
+  "title": "Ever Platform event envelope v1",
+  "description": "One envelope on webhooks, the installation feed and SSE. `data` is validated against the schema named by `type` and `version` (schemas/<type>.v<version>.schema.json).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "type",
+    "version",
+    "occurred_at",
+    "subject",
+    "data"
+  ],
+  "properties": {
+    "id": {
+      "$ref": "common.schema.json#/$defs/ulid"
+    },
+    "type": {
+      "type": "string",
+      "pattern": "^ever\\.[a-z_]+\\.[a-z_]+(\\.[a-z_]+){1,2}$",
+      "maxLength": 64
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "occurred_at": {
+      "$ref": "common.schema.json#/$defs/datetime"
+    },
+    "subject": {
+      "$ref": "common.schema.json#/$defs/subject"
+    },
+    "org_id": {
+      "$ref": "common.schema.json#/$defs/ulid"
+    },
+    "instance_id": {
+      "$ref": "common.schema.json#/$defs/ulid"
+    },
+    "actor": {
+      "$ref": "common.schema.json#/$defs/actor"
+    },
+    "data": {
+      "type": "object"
+    }
+  }
+}

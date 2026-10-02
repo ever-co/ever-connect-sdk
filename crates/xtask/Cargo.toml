@@ -1,0 +1,18 @@
+[package]
+name = "xtask"
+description = "Repository tasks of the Ever Connect SDK (generated Rust contract types)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+typify = { workspace = true }
+schemars = { workspace = true }
+serde_json = { workspace = true }
+syn = { workspace = true }
+prettyplease = { workspace = true }

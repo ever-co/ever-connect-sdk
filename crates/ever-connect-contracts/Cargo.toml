@@ -1,0 +1,20 @@
+[package]
+name = "ever-connect-contracts"
+description = "Ever Platform connection contracts: generated request and response types, the integration definitions, the wire constants and the JSON Schemas of the Ever Connect SDK."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+repository.workspace = true
+keywords = ["ever-platform", "contracts"]
+categories = ["api-bindings"]
+
+[lints]
+workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+jsonschema = { workspace = true }

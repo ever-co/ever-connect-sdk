@@ -1,0 +1,163 @@
+{
+  "key": "app_sync",
+  "scope_version": 1,
+  "screen_version": "1",
+  "blocks": {
+    "title": "Enable Apps and deployments for {organization}",
+    "purpose": "Lists the apps you build and deploy in Ever Works on your organization's account pages, and on your public profile if you choose. Only identifiers and status move. App content, repositories, budgets, agents and memory never leave Ever Works.",
+    "leaves_installation": [
+      {
+        "field": "work.id",
+        "form": "id",
+        "form_text": "as an identifier",
+        "when": "events",
+        "purpose": "Identify the app",
+        "required": true
+      },
+      {
+        "field": "work.kind",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "events",
+        "purpose": "App type",
+        "required": true
+      },
+      {
+        "field": "work.status",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "events",
+        "purpose": "App status",
+        "required": true
+      },
+      {
+        "field": "deployment.target",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "events",
+        "purpose": "Where the app runs",
+        "required": false
+      },
+      {
+        "field": "deployment.provider",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "events",
+        "purpose": "Where the app runs",
+        "required": false
+      },
+      {
+        "field": "deployment.shape",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "events",
+        "purpose": "Deployment kind",
+        "required": false
+      },
+      {
+        "field": "deployment.managed_by",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "events",
+        "purpose": "Who manages the deployment",
+        "required": false
+      },
+      {
+        "field": "deployment.url",
+        "form": "url",
+        "form_text": "as an address",
+        "when": "events",
+        "purpose": "Public address of a live app",
+        "required": false
+      },
+      {
+        "field": "organization.id",
+        "form": "id",
+        "form_text": "as an identifier",
+        "when": "events",
+        "purpose": "Match the Works organization to your Ever Platform organization",
+        "required": true
+      },
+      {
+        "field": "organization.slug",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "events",
+        "purpose": "Match the Works organization to your Ever Platform organization",
+        "required": true
+      },
+      {
+        "field": "member.joined_left",
+        "form": "id",
+        "form_text": "as an identifier",
+        "when": "events",
+        "purpose": "Keep organization membership links current (person link id only)",
+        "required": false
+      }
+    ],
+    "arrives_at_installation": [],
+    "platform_keeps": [
+      {
+        "field": "work.id",
+        "retention": "Kept while the integration is enabled."
+      },
+      {
+        "field": "work.kind",
+        "retention": "Kept while the integration is enabled."
+      },
+      {
+        "field": "work.status",
+        "retention": "Kept while the integration is enabled."
+      },
+      {
+        "field": "deployment.target",
+        "retention": "Kept while the integration is enabled."
+      },
+      {
+        "field": "deployment.provider",
+        "retention": "Kept while the integration is enabled."
+      },
+      {
+        "field": "deployment.shape",
+        "retention": "Kept while the integration is enabled."
+      },
+      {
+        "field": "deployment.managed_by",
+        "retention": "Kept while the integration is enabled."
+      },
+      {
+        "field": "deployment.url",
+        "retention": "Kept while the integration is enabled."
+      },
+      {
+        "field": "organization.id",
+        "retention": "Kept while the integration is enabled."
+      },
+      {
+        "field": "organization.slug",
+        "retention": "Kept while the integration is enabled."
+      },
+      {
+        "field": "member.joined_left",
+        "retention": "Kept while the integration is enabled."
+      }
+    ],
+    "how_often": [
+      "as events happen"
+    ],
+    "where_to_change": "Integrations & data in this product, or Instances in app.ever.co; turning it off stops the data at once.",
+    "revoke_effect": "Pending updates are drained and no further updates are sent.",
+    "legal": {
+      "terms_url": "https://ever.co/legal/terms",
+      "terms_version": "2026-10",
+      "dpa_url": "https://ever.co/legal/dpa",
+      "dpa_version": "2026-10",
+      "subprocessors_url": "https://ever.co/legal/subprocessors"
+    },
+    "authorisation": "I am authorised to enable this for {organization}"
+  },
+  "in_product": {
+    "allowed": true,
+    "step_up_max_age_s": 300
+  }
+}
