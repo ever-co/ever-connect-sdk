@@ -28,22 +28,26 @@ adapter and workflow.
 | `positive_managed` | connection module on, a managed operation requested | after the request, only the feed read and the result call |
 
 `modes.json` holds the environment of each mode. A product adds its own modes (for example
-"connection off, sign-in on") under `modes` in its config, in the same shape. Every mode also
-asserts the DNS and connection rules below.
+"connection off, sign-in on") under `modes` in its config, in the same shape and under a name of
+its own: a config that redefines one of the modes above is refused. Every mode also asserts the DNS
+and connection rules below.
 
 ## What is checked
 
 `assert.mjs` reads the evidence and writes `report.json`:
 
-1. **DNS.** Every name queried must be a compose service name (or alias, or container name), or in
-   `allowed_external_hosts`. Any name under `ever.co`, `ever.team`, `gauzy.co`, `ever.works`,
-   `rec.so` or `traduora.co` fails, whatever the allow-list says (the config schema refuses them).
-   Reverse lookups of addresses inside the sealed Docker networks are allowed.
-2. **Connection attempts.** No TCP SYN and no UDP packet (DNS aside) to an address outside the
-   sealed Docker networks; loopback is inside.
-3. **Product logs.** No `ENOTFOUND`, `ECONNREFUSED` or `EAI_AGAIN` for a host outside the compose
-   services.
-4. **Module routes.** In `off`, every route in `module_routes` answers 404.
+1. **DNS.** Every name queried, of any record type, must be a compose service name (or alias, or
+   container name), or in `allowed_external_hosts`. Any name under `ever.co`, `ever.team`,
+   `gauzy.co`, `ever.works`, `rec.so` or `traduora.co` fails, whatever the allow-list says (the
+   config schema refuses them). Reverse lookups of addresses inside the sealed Docker networks are
+   allowed.
+2. **Connection attempts.** No TCP SYN and no UDP datagram to an address outside the
+   sealed Docker networks; loopback is inside. A DNS question counts too: one sent to the audit
+   resolver stays inside, one sent straight to any other resolver fails, whatever its type.
+3. **Product logs.** No `ENOTFOUND`, `ECONNREFUSED`, `EAI_AGAIN`, `ENETUNREACH` or `EHOSTUNREACH`
+   for a host outside the compose services and the sealed Docker networks (a database that is not
+   up yet is inside).
+4. **Module routes.** In `off`, every route in `module_routes` (at least one) answers 404.
 5. **Call record.** In positive modes, the mock platform's record matches the mode's rows
    (`assert-call-log.mjs`).
 
@@ -57,7 +61,9 @@ tcpdump cannot capture`). A proven violation exits 1 even when part of the run f
 files:
 
 - **Sealed Docker networks.** Every Docker network of the compose files becomes `internal: true` (no route out); the
-  default one gets a fixed /24.
+  default one gets a fixed /24. What the overlay cannot seal is refused before anything starts: a
+  Docker network declared `external`, and a service with `network_mode` other than `none` or
+  `service:<compose service>` (the host's namespace or another container's).
 - **One resolver.** CoreDNS (`Corefile`) is the only resolver of the product processes. It logs
   every query, answers the compose names (through Docker's resolver of its own container) and
   NXDOMAIN for every other name, so nothing outside the compose services can be reached by name.
@@ -95,11 +101,11 @@ evidence.json` reproduces the verdict.
   "health_url": "http://api:3000/api/health",
   "module_routes": ["/api/ever-connect/status", "/api/ever-stats/status"],
   "adapter": "egress-audit.adapter.mjs",
-  "wait_s": 20
+  "wait_s": 120
 }
 ```
 
-Other fields: `services` (what to start; default every service), `build` (`docker compose up
+`wait_s` is how long the product is watched after the scenario (default 120). Other fields: `services` (what to start; default every service), `build` (`docker compose up
 --build`), `health_timeout_s`, `allowed_external_hosts`, `env_prefix` (replaces the leading `EVER_`
 of every mode variable, for example `TR_EVER_`), `subnet`, `phase` (the highest phase whose
 outbound-call rows apply), `every_trigger_exclude_rows`, `mock_image`, `mock_config`, `modes` and
@@ -120,7 +126,7 @@ compose service name.
 | Run | Fixture | Must |
 |---|---|---|
 | `off/quiet` | no outbound call, module routes 404 | pass (0) |
-| `off/leaky` | looks up `api.ever.co` and opens a socket to `203.0.113.10` at boot | fail (1), with both the DNS query and the connection attempt seen |
+| `off/leaky` | looks up `api.ever.co`, opens a socket to `203.0.113.10`, sends a UDP datagram to the same address and a DNS question straight to `198.51.100.53`, all at boot | fail (1), with the DNS query, the SYN and both datagrams seen |
 | `positive_stats/stats-sender` | posts one signed golden report | pass (0) |
 | `positive_stats/no-mock` | the same without the mock platform | not pass |
 | `positive_managed/managed-executor` | connects, runs a requested backup, posts one result | pass (0) |
@@ -155,6 +161,11 @@ steps:
 ## Limits
 
 - Only the services in `process_services` are sniffed; databases and other third-party services in
-  the compose files are sealed but not watched.
+  the compose files are sealed but not watched, and they keep Docker's resolver, so their DNS
+  queries are not in the log. List every service that runs product code.
 - A connection attempt to an IPv6 address fails inside the namespace without a packet; the DNS
-  query that would precede it (`AAAA`) is still seen.
+  query that would precede it (`AAAA`) is still seen, and so is the `ENETUNREACH` a Node process
+  logs for an address written in the code.
+- An attempt is seen only while the product is watched: a timer longer than the scenario plus
+  `wait_s` never fires in the run, so the modes shorten the statistics interval and products
+  shorten their own timers the same way.

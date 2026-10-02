@@ -171,6 +171,6 @@ The modules log the code and the request id, never the body of a request that ca
 2. Seal it off from the outside: `docker network create --internal ever-audit` and attach every service to it (add a CoreDNS container as the only resolver with `log` enabled if you want the DNS view).
 3. Capture connection attempts from the API container's namespace: `docker run --rm --net=container:<api container> nicolaka/netshoot tcpdump -i any -w /tmp/api.pcap 'tcp[tcpflags] & tcp-syn != 0 and tcp[tcpflags] & tcp-ack == 0'`.
 4. Use the product for a few minutes (sign in, create records, open the settings pages, call `/api/ever-stats/status` and `/api/ever-connect/status` and expect 404).
-5. Inspect: the pcap should hold no SYN to an address outside the Compose subnet; the DNS log should hold no name outside your Compose services and the non-Ever hosts listed in §1; the module URLs answered 404.
+5. Inspect: the pcap should hold no SYN to an address outside the Compose subnet; the DNS log should hold no name outside your Compose services and the non-Ever hosts listed under *When nothing is sent*; the module URLs answered 404.
 
 The same recipe with `EVER_STATS_ENABLED=true` shows exactly one request per day to `EVER_STATS_API_URL` (row 17). Turn on the connection module and connect, and you will see rows 1, 3, 4, 6, 7, 8 and 9: the key manifest, the redeem, the token, then the heartbeat, the event feed, the entitlement and the integration states. `ever-egress-audit` in this repository automates the recipe (see `tools/egress-audit/README.md`).
