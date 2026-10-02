@@ -61,7 +61,7 @@ export const adminRoutes = {
   'GET /__mock/state': ({ state }) => ({ body: stateDump(state) }),
 
   'POST /__mock/clock': ({ state, body }) => {
-    if (Number.isInteger(body?.set)) state.offset = body.set - state.config.clock.start;
+    if (Number.isInteger(body?.set)) state.offset = body.set - state.base();
     if (Number.isInteger(body?.advance)) state.offset += body.advance;
     expireOperations(state);
     return { body: { now: state.now(), iso: state.iso() } };

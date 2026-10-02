@@ -1,0 +1,12 @@
+[
+  {
+    "ts": "2026-10-02T04:04:25Z",
+    "method": "POST",
+    "path_template": "/v1/stats/reports",
+    "row": 17,
+    "status": 202,
+    "user_agent": "ever-connect-sdk/0.0.0-selftest (gauzy/1.0.0)",
+    "idempotency_key": null,
+    "body_sha256": "78615e517bf4713ee2d557a839200ac6c3e39451fd8ef26fdf8c7dff77fd7f39"
+  }
+]

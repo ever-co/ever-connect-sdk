@@ -1,0 +1,18 @@
+maxprocs: Leaving GOMAXPROCS=14: CPU quota undefined
+.:53
+app.:53
+mock-platform.:53
+CoreDNS-1.12.1
+linux/amd64, go1.24.1, 707c7c1
+[INFO] 10.231.108.3:36090 - 302 "AAAA IN mock-platform. udp 31 false 512" NOERROR qr,rd,ra 31 0.002351557s
+[INFO] 10.231.108.3:36090 - 65447 "A IN mock-platform. udp 31 false 512" NOERROR qr,rd,ra 60 0.002369273s
+[INFO] 10.231.108.3:52445 - 57363 "AAAA IN mock-platform. udp 31 false 512" NOERROR qr,rd,ra 31 0.001029952s
+[INFO] 10.231.108.3:52445 - 56877 "A IN mock-platform. udp 31 false 512" NOERROR qr,rd,ra 60 0.001144332s
+[INFO] 10.231.108.3:41881 - 65531 "A IN mock-platform. udp 31 false 512" NOERROR qr,rd,ra 60 0.000761994s
+[INFO] 10.231.108.3:41881 - 490 "AAAA IN mock-platform. udp 31 false 512" NOERROR qr,rd,ra 31 0.001176033s
+[INFO] 10.231.108.3:44805 - 11389 "A IN mock-platform. udp 31 false 512" NOERROR qr,rd,ra 60 0.001056924s
+[INFO] 10.231.108.3:44805 - 11848 "AAAA IN mock-platform. udp 31 false 512" NOERROR qr,rd,ra 31 0.001412911s
+[INFO] 10.231.108.3:48276 - 40510 "AAAA IN mock-platform. udp 31 false 512" NOERROR qr,rd,ra 31 0.00045898s
+[INFO] 10.231.108.3:48276 - 40204 "A IN mock-platform. udp 31 false 512" NOERROR qr,rd,ra 60 0.000498003s
+[INFO] 10.231.108.3:37816 - 62206 "AAAA IN mock-platform. udp 31 false 512" NOERROR qr,rd,ra 31 0.000688379s
+[INFO] 10.231.108.3:37816 - 61903 "A IN mock-platform. udp 31 false 512" NOERROR qr,rd,ra 60 0.00591372s

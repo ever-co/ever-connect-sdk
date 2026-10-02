@@ -1,0 +1,5 @@
+{
+  "name": "ever-egress-audit-selftest-fixture",
+  "private": true,
+  "type": "module"
+}

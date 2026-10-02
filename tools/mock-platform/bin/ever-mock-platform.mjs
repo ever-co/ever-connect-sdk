@@ -2,7 +2,10 @@
 // ever-mock-platform: the Ever Platform API mock for product CI.
 //
 //   ever-mock-platform [--port 8080] [--host 0.0.0.0] [--config mock.config.json]
-//                      [--record requests.jsonl] [--state-out state.json]
+//                      [--record requests.jsonl] [--state-out state.json] [--fixed-clock]
+//
+// The clock follows real time from start, so products can sign with their own clock; a config
+// with a `clock` entry, or --fixed-clock, keeps the deterministic clock of the tests instead.
 //
 // Controls: GET /__mock/requests, GET /__mock/state, POST /__mock/reset, POST /__mock/clock and the
 // other /__mock/* routes (see docs/mock-platform.md).
@@ -16,12 +19,19 @@ const arg = (name, fallback) => {
 };
 if (args.includes('--help') || args.includes('-h')) {
   process.stdout.write(
-    'ever-mock-platform [--port 8080] [--host 0.0.0.0] [--config <file>] [--record <file.jsonl>] [--state-out <file.json>]\n' +
+    'ever-mock-platform [--port 8080] [--host 0.0.0.0] [--config <file>] [--record <file.jsonl>] [--state-out <file.json>] [--fixed-clock]\n' +
       'Answers every outbound call of the Ever Platform modules with the platform contract; controls under /__mock/*.\n',
   );
   process.exit(0);
 }
-const config = arg('config') ? JSON.parse(readFileSync(arg('config'), 'utf8')) : {};
+// The configuration comes from --config <file>, or from EVER_MOCK_CONFIG_JSON (containers that get
+// no mounted file, such as the egress harness overlay).
+const config = arg('config')
+  ? JSON.parse(readFileSync(arg('config'), 'utf8'))
+  : process.env.EVER_MOCK_CONFIG_JSON
+    ? JSON.parse(process.env.EVER_MOCK_CONFIG_JSON)
+    : {};
+if (config.clock === undefined && !args.includes('--fixed-clock')) config.clock = { real: true };
 const mock = createMockPlatform({ config, record: arg('record', null), log: (m) => process.stderr.write(`${m}\n`) });
 const port = Number(arg('port', process.env.PORT ?? 8080));
 const host = arg('host', process.env.HOST ?? '0.0.0.0');

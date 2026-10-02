@@ -62,6 +62,7 @@
     "packages/ts/connect-contracts/src/generated/problems.ts": "4f4074473450a8c597d3751f77156297b85ef8218619ac7a5ea8e821209b84b9",
     "packages/ts/connect-contracts/src/generated/rows.ts": "61547c4249937c778b3c3fc4d14939246cb550b9c8f985ad9db39ba38eb09d7a",
     "packages/ts/connect-contracts/src/generated/schemas.ts": "a7b7d34db697ec4ec3d6e46bed24e1a86cbe7a42795cddb4ee210dd52737a27a",
+    "tools/egress-audit/selftest/stats-sender/report.json": "78615e517bf4713ee2d557a839200ac6c3e39451fd8ef26fdf8c7dff77fd7f39",
     "tools/mock-platform/contracts/constants.json": "ca273b4ba9fe75ffafb6cc58a659911fdd158adb5b5a77f15d9e145a131f0009",
     "tools/mock-platform/contracts/fixtures/lookup/test-vectors.json": "488cab5744e535def182c0bcca029e72c5b0dd4909cfc1a7ff6e81229fa0371b",
     "tools/mock-platform/contracts/generated/ever-platform.v1.json": "db05d78709277fe72d5da81362a3575e49cb85b81c770dcb90a48b7e6eacad40",

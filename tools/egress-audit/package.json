@@ -1,0 +1,29 @@
+{
+  "name": "ever-egress-audit",
+  "version": "0.1.0",
+  "description": "The egress audit of a product that hosts the Ever Platform modules: sealed compose networks, CoreDNS as the only resolver, a sniffer per product process, the mock platform's call record, and a self-test with a failing control.",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "ever-egress-audit": "./run.mjs"
+  },
+  "exports": {
+    "./assert": "./assert.mjs",
+    "./assert-call-log": "./assert-call-log.mjs",
+    "./static-hostnames": "./static-hostnames.mjs",
+    "./cloud-inference": "./cloud-inference.mjs",
+    "./overlay": "./lib/overlay.mjs",
+    "./runner": "./lib/runner.mjs"
+  },
+  "scripts": {
+    "test": "node --test \"test/*.test.mjs\"",
+    "selftest": "node run.mjs --selftest"
+  },
+  "dependencies": {
+    "ajv": "8.20.0",
+    "yaml": "2.9.1"
+  }
+}

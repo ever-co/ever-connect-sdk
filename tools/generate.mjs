@@ -702,6 +702,8 @@ export async function generateAll() {
   mockCopy('contracts/schemas/events/common.schema.json');
   for (const { file } of Object.values(ctx.events)) mockCopy(`contracts/schemas/events/${file}`);
   for (const key of ctx.constants.integration_keys) mockCopy(`contracts/integrations/${key}.json`);
+  // The egress self-test's statistics sender posts a golden report of the statistics schema.
+  files['tools/egress-audit/selftest/stats-sender/report.json'] = lf(readText('contracts/fixtures/stats/valid/gauzy.json'));
   files['crates/ever-connect-contracts/tests/typed/mod.rs'] = rustTypedDispatch(ctx);
 
   // rustfmt (pinned by rust-toolchain.toml) gives the Rust output the repository's style.

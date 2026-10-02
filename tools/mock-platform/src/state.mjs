@@ -84,6 +84,9 @@ export function makeConfig(config = {}) {
 export class MockState {
   constructor(config) {
     this.config = config;
+    // clock.real: the clock follows real time from the moment the mock starts (product CI, where
+    // products sign with their own clock); otherwise it stands still at clock.start (tests).
+    if (config.clock?.real) config.clock.start = Math.floor(Date.now() / 1000);
     this.reset();
   }
 
@@ -113,8 +116,13 @@ export class MockState {
     this.waiters = new Set();
   }
 
+  /** The clock before any offset: real time with clock.real, else clock.start. */
+  base() {
+    return this.config.clock.real ? Date.now() / 1000 : this.config.clock.start;
+  }
+
   now() {
-    return Math.floor(this.config.clock.start + this.offset);
+    return Math.floor(this.base() + this.offset);
   }
 
   iso(seconds = this.now()) {

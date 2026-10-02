@@ -1,0 +1,15 @@
+tcpdump: data link type LINUX_SLL2
+tcpdump: verbose output suppressed, use -v[v]... for full protocol decode
+listening on any, link-type LINUX_SLL2 (Linux cooked v2), snapshot length 262144 bytes
+04:03:44.837211 eth0  Out IP 10.231.31.2.58694 > 10.231.31.253.53: 15700+ A? api.ever.co. (29)
+04:03:44.837270 eth0  Out IP 10.231.31.2.58694 > 10.231.31.253.53: 16065+ AAAA? api.ever.co. (29)
+04:03:44.837634 eth0  In  IP 10.231.31.253.53 > 10.231.31.2.58694: 16065 NXDomain*- 0/0/0 (29)
+04:03:44.837746 eth0  In  IP 10.231.31.253.53 > 10.231.31.2.58694: 15700 NXDomain*- 0/0/0 (29)
+04:03:44.842577 eth0  Out IP 10.231.31.2.42936 > 203.0.113.10.443: Flags [S], seq 3953777120, win 64240, options [mss 1460,sackOK,TS val 250784540 ecr 0,nop,wscale 10], length 0
+04:03:45.841100 eth0  Out IP 10.231.31.2.42936 > 203.0.113.10.443: Flags [S], seq 3953777120, win 64240, options [mss 1460,sackOK,TS val 250785543 ecr 0,nop,wscale 10], length 0
+04:03:46.865135 eth0  Out IP 10.231.31.2.42936 > 203.0.113.10.443: Flags [S], seq 3953777120, win 64240, options [mss 1460,sackOK,TS val 250786567 ecr 0,nop,wscale 10], length 0
+04:03:46.985941 eth0  In  IP 10.231.31.3.39838 > 10.231.31.2.8080: Flags [S], seq 1646283479, win 64240, options [mss 1460,sackOK,TS val 1224393793 ecr 0,nop,wscale 10], length 0
+04:03:47.994996 eth0  In  IP 10.231.31.3.39852 > 10.231.31.2.8080: Flags [S], seq 3845830867, win 64240, options [mss 1460,sackOK,TS val 620098546 ecr 0,nop,wscale 10], length 0
+04:03:48.034752 eth0  In  IP 10.231.31.3.39858 > 10.231.31.2.8080: Flags [S], seq 2593126079, win 64240, options [mss 1460,sackOK,TS val 1915064361 ecr 0,nop,wscale 10], length 0
+04:03:57.639495 eth0  In  IP 10.231.31.3.44146 > 10.231.31.2.8080: Flags [S], seq 1880129987, win 64240, options [mss 1460,sackOK,TS val 1489915266 ecr 0,nop,wscale 10], length 0
+04:03:57.649518 eth0  In  IP 10.231.31.3.44158 > 10.231.31.2.8080: Flags [S], seq 409716373, win 64240, options [mss 1460,sackOK,TS val 2781065839 ecr 0,nop,wscale 10], length 0
