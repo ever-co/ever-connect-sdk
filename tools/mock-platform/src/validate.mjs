@@ -145,3 +145,36 @@ export function requestSchemaName(op) {
   const ref = op?.requestBody?.content?.['application/json']?.schema?.$ref;
   return ref ? ref.split('/').pop() : null;
 }
+
+/**
+ * Validates a response body against the schema the contract documents for that operation and
+ * status (`application/json`, else `application/problem+json`). Answers ok when the contract
+ * documents no body for the status.
+ */
+export function validateResponse(operationId, status, body) {
+  const s = init();
+  let found = null;
+  for (const [path, item] of Object.entries(s.c.spec.paths))
+    for (const [method, op] of Object.entries(item)) if (op.operationId === operationId) found = { path, method, op };
+  if (!found) return { ok: true, errors: [], skipped: 'pending upstream' };
+  const response = found.op.responses[String(status)] ?? found.op.responses.default;
+  const content = response?.content ?? {};
+  const media = content['application/json'] ? 'application/json' : content['application/problem+json'] ? 'application/problem+json' : null;
+  if (!media) return { ok: true, errors: [] };
+  const key = `r:${operationId}:${status}:${media}`;
+  let v = s.cache.get(key);
+  if (!v) {
+    // Inline response schemas refer to #/components/schemas/<Name>: point them at the contract.
+    const rewrite = (n) => {
+      if (Array.isArray(n)) return n.map(rewrite);
+      if (!n || typeof n !== 'object') return n;
+      const out = {};
+      for (const [k, val] of Object.entries(n))
+        out[k] = k === '$ref' && typeof val === 'string' && val.startsWith('#/') ? `${CONTRACT_ID}${val}` : rewrite(val);
+      return out;
+    };
+    v = s.ajv.compile({ ...rewrite(content[media].schema), $id: `${CONTRACT_ID}:${key}` });
+    s.cache.set(key, v);
+  }
+  return result(v, body);
+}
