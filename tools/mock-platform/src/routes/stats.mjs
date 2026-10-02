@@ -5,7 +5,7 @@
 // reader and the schema (422), the key pin (409) and the day window (429).
 
 import { contract } from '../contract.mjs';
-import { instanceKid, publicKeyFromX, verifyBytes } from '../crypto.mjs';
+import { fromB64url, instanceKid, isEd25519Point, publicKeyFromX, verifyBytes } from '../crypto.mjs';
 import { fail } from '../problem.mjs';
 import { checkStatsReport, MAX_REPORT_BYTES } from '../stats-ingest.mjs';
 
@@ -41,6 +41,7 @@ function verifySignature(headers, raw) {
   } catch {
     refuse('key');
   }
+  if (!isEd25519Point(fromB64url(key))) refuse('key');
   const signature = headers[SIGNATURE];
   const sig = typeof signature === 'string' && signature.startsWith(PREFIX) ? signature.slice(PREFIX.length) : null;
   if (!base64url(sig, 86)) refuse('shape');

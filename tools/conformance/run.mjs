@@ -105,7 +105,9 @@ export function buildRequest(c, base) {
     const mutate = c.stats.mutate ?? null;
     const key = conformanceKey(mutate === 'other-key' ? 'stats-other' : 'stats');
     headers['content-type'] = mutate === 'media-type' ? 'text/plain' : 'application/json';
-    if (mutate !== 'no-key') headers['ever-stats-key'] = key.x;
+    // A 32-byte value that is no point of the curve (y = 2): not an Ed25519 public key.
+    if (mutate === 'not-a-point') headers['ever-stats-key'] = 'AgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+    else if (mutate !== 'no-key') headers['ever-stats-key'] = key.x;
     const signed = mutate === 'signature' ? Buffer.from(`${body.toString('utf8')} `) : body;
     if (mutate !== 'no-signature') headers['ever-stats-signature'] = `ed25519=${signBytes(key.privateKey, signed)}`;
     if (mutate === 'key-id') headers['ever-stats-key-id'] = 'AAAAAAAAAAA';

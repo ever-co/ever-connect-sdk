@@ -165,6 +165,13 @@
       "expect": { "status": 400, "code": "validation_failed", "path": "#Ever-Stats-Key", "error": "invalid" }
     },
     {
+      "id": "stats-key-not-a-point",
+      "row": 17,
+      "module": "stats",
+      "stats": { "fixture": "stats/valid/gauzy.json", "mutate": "not-a-point" },
+      "expect": { "status": 400, "code": "validation_failed", "path": "#Ever-Stats-Key", "error": "invalid" }
+    },
+    {
       "id": "stats-missing-signature",
       "row": 17,
       "module": "stats",

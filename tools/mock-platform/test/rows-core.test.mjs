@@ -541,6 +541,16 @@ describe('row 17: statistics reports', () => {
       'validation_failed',
       '#Ever-Stats-Key',
     );
+    // 32 bytes that are no point of the curve are no key.
+    await header(
+      await env.call('POST', '/v1/stats/reports', {
+        raw: bytes,
+        headers: { ...r.headers, 'ever-stats-key': 'AgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' },
+      }),
+      400,
+      'validation_failed',
+      '#Ever-Stats-Key',
+    );
     // A bad key is named before a bad signature.
     await header(
       await env.call('POST', '/v1/stats/reports', { raw: bytes, headers: { 'ever-stats-key': 'short', 'ever-stats-signature': 'nope' } }),

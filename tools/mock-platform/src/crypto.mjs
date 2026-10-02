@@ -16,6 +16,35 @@ export function keyPairFromSeed(seed) {
   return { privateKey, x };
 }
 
+const P = 2n ** 255n - 19n;
+const mod = (a) => ((a % P) + P) % P;
+function modPow(base, exp) {
+  let result = 1n;
+  let b = mod(base);
+  let e = exp;
+  while (e > 0n) {
+    if (e & 1n) result = (result * b) % P;
+    b = (b * b) % P;
+    e >>= 1n;
+  }
+  return result;
+}
+const EDWARDS_D = mod(-121665n * modPow(121666n, P - 2n));
+
+/**
+ * Whether 32 bytes encode a point of the Ed25519 curve (the y coordinate, with the sign of x in
+ * the top bit): x² = (y² - 1) / (d·y² + 1) must have a root. A verifier refuses any other key
+ * before it looks at a signature; node:crypto alone does not check it.
+ */
+export function isEd25519Point(raw) {
+  if (raw.length !== 32) return false;
+  let y = 0n;
+  for (let i = 31; i >= 0; i -= 1) y = (y << 8n) | BigInt(i === 31 ? raw[i] & 0x7f : raw[i]);
+  const y2 = mod(y * y);
+  const ratio = mod((y2 - 1n) * modPow(EDWARDS_D * y2 + 1n, P - 2n));
+  return ratio === 0n || modPow(ratio, (P - 1n) / 2n) === 1n;
+}
+
 /** A public key object from the JWK `x` member; throws on anything that is not 32 bytes. */
 export function publicKeyFromX(x) {
   if (typeof x !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(x)) throw new Error('not an Ed25519 public key');
