@@ -1,0 +1,31 @@
+{
+  "description": "Which operations of the Ever Platform API form the instance-facing contract, and where tools/sync-contract.mjs reads them. An operation is selected when it accepts the instanceToken scheme or is listed in include_operation_ids; staff, person-session and internal routes are never selected. The pinned spec wins over the design for every operation and schema it already defines; design operations are provisional until the pinned spec carries them.",
+  "pinned": "contracts/openapi/ever-api.v1.json",
+  "design": "docs/specs/api/openapi.yaml",
+  "select_security": ["instanceToken"],
+  "include_operation_ids": [
+    "get_key_manifest",
+    "getConnectLegal",
+    "connectRedeem",
+    "instanceToken",
+    "connectDevice",
+    "connectDeviceToken",
+    "ingestStatsReport",
+    "getLookupSalt",
+    "getLookupTestVectors",
+    "discoverSso",
+    "getMyContext",
+    "listMyMemberships",
+    "putIntegrationState"
+  ],
+  "exclude_operation_ids": {
+    "subscribeRealtime": "the server-sent event stream serves the app.ever.co browser; installations read their events from the instance feed instead"
+  },
+  "never_path_prefixes": ["/internal", "/v1/staff"],
+  "never_security": ["staffSession"],
+  "keep_security": ["instanceToken", "everIdTokenRead", "everIdStepUpToken"],
+  "drop_extensions": ["x-ever-key-scopes"],
+  "design_operation_aliases": {
+    "getKeyManifest": "get_key_manifest"
+  }
+}

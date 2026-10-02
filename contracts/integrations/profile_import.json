@@ -1,0 +1,83 @@
+{
+  "key": "profile_import",
+  "name": "Import into public profile",
+  "description": "Copies your organization's name, website, description, logo and country into your ever.co profile draft, and only when you click 'Import into public profile'. You review the draft before anything is published.",
+  "category": "profile",
+  "owner_module": "registry",
+  "direction": "outbound",
+  "defaults": {
+    "cloud": true,
+    "self_hosted": false
+  },
+  "availability": {
+    "cloud": "enabled",
+    "self_hosted": "available"
+  },
+  "requires_feature": "profile.public",
+  "products": [
+    "gauzy",
+    "works"
+  ],
+  "phase": 3,
+  "status": "coming_soon",
+  "scope_version": 1,
+  "revoke_effect": "Nothing further is copied. Profile fields you already published stay until you edit them.",
+  "notes": "Gauzy field names are listed. Works sends displayName, legalName and countryCode under the same purposes.",
+  "scope": [
+    {
+      "field_path": "organization.name",
+      "direction": "to_ever",
+      "form": "clear",
+      "frequency": "on_action",
+      "required": true,
+      "purpose": "Profile display name",
+      "retention": "Kept as part of your profile until you change or delete it."
+    },
+    {
+      "field_path": "organization.website",
+      "direction": "to_ever",
+      "form": "url",
+      "frequency": "on_action",
+      "required": false,
+      "purpose": "Profile website link",
+      "retention": "Kept as part of your profile until you change or delete it."
+    },
+    {
+      "field_path": "organization.short_description",
+      "direction": "to_ever",
+      "form": "clear",
+      "frequency": "on_action",
+      "required": false,
+      "purpose": "Profile summary",
+      "retention": "Kept as part of your profile until you change or delete it."
+    },
+    {
+      "field_path": "organization.overview",
+      "direction": "to_ever",
+      "form": "clear",
+      "frequency": "on_action",
+      "required": false,
+      "purpose": "Profile about section",
+      "retention": "Kept as part of your profile until you change or delete it."
+    },
+    {
+      "field_path": "organization.imageUrl",
+      "direction": "to_ever",
+      "form": "url",
+      "frequency": "on_action",
+      "required": false,
+      "purpose": "Profile logo",
+      "retention": "Kept as part of your profile until you change or delete it."
+    },
+    {
+      "field_path": "organization.contact.country",
+      "direction": "to_ever",
+      "form": "clear",
+      "frequency": "on_action",
+      "required": false,
+      "purpose": "Profile country",
+      "retention": "Kept as part of your profile until you change or delete it."
+    }
+  ],
+  "docs_anchor": "profile_import"
+}

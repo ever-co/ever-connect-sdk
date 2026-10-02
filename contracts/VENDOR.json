@@ -1,0 +1,416 @@
+{
+  "description": "Where every contract file of this repository comes from. Written by tools/sync-contract.mjs; checked by tools/check-schema-drift.mjs. `provisional` sources are drafts the platform has not published yet: tools/check-schema-drift.mjs --strict refuses them.",
+  "platform": {
+    "repository": "ever-co/platform",
+    "commit": "90b7efcb666f2fa6a605dc5641aeba075a7f1621"
+  },
+  "openapi": {
+    "target": "contracts/openapi/ever-platform.v1.yaml",
+    "sha256": "048c75a35cc97419a70ff39a3d098391fd83ae96550f3de9612fe0488114091e",
+    "pinned": {
+      "source": "contracts/openapi/ever-api.v1.json",
+      "sha256": "54cbe0be263447f86c74e0273da5031b445a316cdc562f79d2f7655bcca2755f"
+    },
+    "design": {
+      "source": "docs/specs/api",
+      "sha256": "2943c827c137608ba6be65c5df242c2382933f9bc896412e1d19dc08cf69cf3d",
+      "files": 23
+    },
+    "operations": 53,
+    "provisional_operations": [
+      "completeProvisionIntent",
+      "connectDevice",
+      "connectDeviceToken",
+      "connectRedeem",
+      "discoverSso",
+      "getConnectLegal",
+      "getLookupSalt",
+      "getLookupTestVectors",
+      "ingestStatsReport",
+      "instanceAckRequest",
+      "instanceCreateBillingLink",
+      "instanceCreatePersonLink",
+      "instanceCreateTenantLink",
+      "instanceDeleteLinkIdentifiers",
+      "instanceDeletePersonLink",
+      "instanceDisableIntegration",
+      "instanceGetConsentUrl",
+      "instanceGetEntitlement",
+      "instanceGetIntegrations",
+      "instanceGetLinkEntitlement",
+      "instanceGetOidcClient",
+      "instanceLinkStats",
+      "instanceListMirroredApps",
+      "instanceMirrorApps",
+      "instancePushOrgProfile",
+      "instancePutLinkIdentifiers",
+      "instanceRekeyTenantLink",
+      "instanceReportInstallStatus",
+      "instanceReportManagedOperationResult",
+      "instanceReportUsage",
+      "instanceReportUsageReadings",
+      "instanceRequestOidcClient",
+      "instanceRotateKey",
+      "instanceToken",
+      "lookupCounterparties",
+      "putIntegrationState",
+      "resolveIdentity"
+    ],
+    "shape_differences": [
+      "Context",
+      "Identifier",
+      "Problem",
+      "TenantLink"
+    ],
+    "renamed_schemas": [],
+    "schema_overrides": [
+      "StatsLinkCreate"
+    ],
+    "pending_upstream_rows": [
+      18,
+      31,
+      32
+    ]
+  },
+  "events": {
+    "source": "contracts/events/catalog.json",
+    "version": "1.1",
+    "sha256": "a5f215027c90b159c1a0d9ab7b0c6c2c81590430b61d8d1fb7e371a3269d6509",
+    "instance_types": [
+      "ever.consent.consent.granted",
+      "ever.consent.consent.revoked",
+      "ever.consent.integration.disabled",
+      "ever.consent.integration.enabled",
+      "ever.consent.integration.scope_bumped",
+      "ever.entitlements.entitlement.issued",
+      "ever.entitlements.entitlement.revoked",
+      "ever.entitlements.usage.limit_reached",
+      "ever.registry.instance.approved",
+      "ever.registry.instance.connected",
+      "ever.registry.instance.disconnected",
+      "ever.registry.instance.key_rotated",
+      "ever.registry.instance.revoked",
+      "ever.registry.instance.seen",
+      "ever.registry.managed_operation.requested",
+      "ever.registry.managed_operation.state_changed",
+      "ever.registry.membership.created",
+      "ever.registry.membership.removed",
+      "ever.registry.membership.role_changed",
+      "ever.registry.person.deletion_requested",
+      "ever.registry.person.export_requested",
+      "ever.registry.tenant_link.created",
+      "ever.registry.tenant_link.orphaned",
+      "ever.registry.tenant_link.resumed",
+      "ever.registry.tenant_link.suspended",
+      "ever.registry.tenant_link.unlinked"
+    ]
+  },
+  "files": [
+    {
+      "path": "contracts/schemas/ever.stats.v1.json",
+      "source": "docs/specs/contracts/stats.v1.schema.json",
+      "source_sha256": "6991b8356a441ab607be4cec0e4a6c200f3c0fc33f05f26cc47b915d30a6a026",
+      "sha256": "0cd746f7dec75117a6b812b7a832f9ceca4c97a6ecf65d22d6967a6475efc6e5",
+      "transform": "json-drop-comment",
+      "provisional": true,
+      "upstream": "contracts/stats/ever.stats.v1.schema.json"
+    },
+    {
+      "path": "contracts/schemas/ever.entitlement.v1.json",
+      "source": "docs/specs/contracts/ever.entitlement.v1.schema.json",
+      "source_sha256": "f4a48ba7bd70bfddb85f220092806f8553945a8f9448ad234a0ca6e96b880197",
+      "sha256": "f4a48ba7bd70bfddb85f220092806f8553945a8f9448ad234a0ca6e96b880197",
+      "transform": null,
+      "provisional": true,
+      "upstream": "contracts/entitlements/ever.entitlement.v1.schema.json"
+    },
+    {
+      "path": "contracts/integrations/catalog.v1.json",
+      "source": "docs/specs/seeds/integrations-catalog.yaml",
+      "source_sha256": "cdf9c8cb4e96674f97af604a6bb284ec533d06a9b4b500d69c68117ddbb27d37",
+      "sha256": "de00a0cb3c19baf727acafd5bcc89b716a577b820b1cbc9c91c9d3f16a342771",
+      "transform": "catalog-yaml",
+      "provisional": true,
+      "upstream": "contracts/integrations/catalog.v1.json"
+    },
+    {
+      "path": "contracts/fixtures/lookup/test-vectors.json",
+      "source": "docs/specs/contracts/lookup.md",
+      "source_sha256": "d4c284fb451c3026a5d4ff50f038676febc21b2b6708867bdb269d1c4149dcb5",
+      "sha256": "488cab5744e535def182c0bcca029e72c5b0dd4909cfc1a7ff6e81229fa0371b",
+      "transform": "lookup-vectors",
+      "provisional": true,
+      "upstream": "contracts/lookup/test-vectors.json"
+    },
+    {
+      "path": "contracts/schemas/events/common.schema.json",
+      "source": "contracts/events/schemas/common.schema.json",
+      "source_sha256": "9a1da8dfba700b880cddb1d9bd93900faad71f7053b63200aed6cdada6229bdd",
+      "sha256": "9a1da8dfba700b880cddb1d9bd93900faad71f7053b63200aed6cdada6229bdd",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/schemas/events/envelope.schema.json",
+      "source": "contracts/events/schemas/envelope.schema.json",
+      "source_sha256": "46a1b09d31ffef3e05c7f9bcca211316c0e61ba4b62407b4b2798eb7ba6ea920",
+      "sha256": "46a1b09d31ffef3e05c7f9bcca211316c0e61ba4b62407b4b2798eb7ba6ea920",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/schemas/events/ever.consent.consent.granted.v1.schema.json",
+      "source": "contracts/events/schemas/ever.consent.consent.granted.v1.schema.json",
+      "source_sha256": "ffe6fc83b43c0528068257ff23358bf522cafb34f6fcf3218535d5b489bd5b3c",
+      "sha256": "ffe6fc83b43c0528068257ff23358bf522cafb34f6fcf3218535d5b489bd5b3c",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/schemas/events/ever.consent.consent.revoked.v1.schema.json",
+      "source": "contracts/events/schemas/ever.consent.consent.revoked.v1.schema.json",
+      "source_sha256": "118d3934f94bc113314f9c2821819c1fa71e02edcabc0e1e9cabb125760f7247",
+      "sha256": "118d3934f94bc113314f9c2821819c1fa71e02edcabc0e1e9cabb125760f7247",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/schemas/events/ever.consent.integration.disabled.v1.schema.json",
+      "source": "contracts/events/schemas/ever.consent.integration.disabled.v1.schema.json",
+      "source_sha256": "0594161fffedc80bd7cde226354104cd2244d320bc16531ba7563f2b723c9b30",
+      "sha256": "0594161fffedc80bd7cde226354104cd2244d320bc16531ba7563f2b723c9b30",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/schemas/events/ever.consent.integration.enabled.v1.schema.json",
+      "source": "contracts/events/schemas/ever.consent.integration.enabled.v1.schema.json",
+      "source_sha256": "7202f2c72f1b60304f3ff7e39d1912620f335eb82542165944f8160492fb7788",
+      "sha256": "7202f2c72f1b60304f3ff7e39d1912620f335eb82542165944f8160492fb7788",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/schemas/events/ever.consent.integration.scope_bumped.v1.schema.json",
+      "source": "contracts/events/schemas/ever.consent.integration.scope_bumped.v1.schema.json",
+      "source_sha256": "c0aafc4621f836e4cd2771c4d018af4e0045ddf25f93823cad7443d27a8bce13",
+      "sha256": "c0aafc4621f836e4cd2771c4d018af4e0045ddf25f93823cad7443d27a8bce13",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/schemas/events/ever.entitlements.entitlement.issued.v1.schema.json",
+      "source": "contracts/events/schemas/ever.entitlements.entitlement.issued.v1.schema.json",
+      "source_sha256": "dbd9b3f573199e6fe521fea55792fb5f0bb85e56bab48c54728832ab42095437",
+      "sha256": "dbd9b3f573199e6fe521fea55792fb5f0bb85e56bab48c54728832ab42095437",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/schemas/events/ever.entitlements.entitlement.revoked.v1.schema.json",
+      "source": "contracts/events/schemas/ever.entitlements.entitlement.revoked.v1.schema.json",
+      "source_sha256": "c88b9f272cdd6174c755218dd9a100fe8cfdfd5974248e6e691312d4c517c153",
+      "sha256": "c88b9f272cdd6174c755218dd9a100fe8cfdfd5974248e6e691312d4c517c153",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/schemas/events/ever.entitlements.usage.limit_reached.v1.schema.json",
+      "source": "contracts/events/schemas/ever.entitlements.usage.limit_reached.v1.schema.json",
+      "source_sha256": "818f8d0d2afe1df4e8151ecb8dd4e47b76f7cb382cfe5de1747f5dd2a6505ab8",
+      "sha256": "818f8d0d2afe1df4e8151ecb8dd4e47b76f7cb382cfe5de1747f5dd2a6505ab8",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/schemas/events/ever.registry.instance.approved.v1.schema.json",
+      "source": "contracts/events/schemas/ever.registry.instance.approved.v1.schema.json",
+      "source_sha256": "f4d7bf09d10445c19bad4444194050c1337216157051218dd03a8d4a37e6dfc5",
+      "sha256": "f4d7bf09d10445c19bad4444194050c1337216157051218dd03a8d4a37e6dfc5",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/schemas/events/ever.registry.instance.connected.v1.schema.json",
+      "source": "contracts/events/schemas/ever.registry.instance.connected.v1.schema.json",
+      "source_sha256": "7a92ff3a142d99586f62dc9b190a1e90ddb254d1572cce3dac2891d27df815d2",
+      "sha256": "7a92ff3a142d99586f62dc9b190a1e90ddb254d1572cce3dac2891d27df815d2",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/schemas/events/ever.registry.instance.disconnected.v1.schema.json",
+      "source": "contracts/events/schemas/ever.registry.instance.disconnected.v1.schema.json",
+      "source_sha256": "e36d58c30a63387d07f7b2eb865e658ed8ca9b3ad4ccc45f865011ae4c335290",
+      "sha256": "e36d58c30a63387d07f7b2eb865e658ed8ca9b3ad4ccc45f865011ae4c335290",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/schemas/events/ever.registry.instance.key_rotated.v1.schema.json",
+      "source": "contracts/events/schemas/ever.registry.instance.key_rotated.v1.schema.json",
+      "source_sha256": "d9490846376c74d8dda7f8876ddd220d528e113018678d623b5fd0714f5d8689",
+      "sha256": "d9490846376c74d8dda7f8876ddd220d528e113018678d623b5fd0714f5d8689",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/schemas/events/ever.registry.instance.revoked.v1.schema.json",
+      "source": "contracts/events/schemas/ever.registry.instance.revoked.v1.schema.json",
+      "source_sha256": "b2d68e0a79ad8df30415b5676cabf65a7645987e46261b8934668bd5513561a2",
+      "sha256": "b2d68e0a79ad8df30415b5676cabf65a7645987e46261b8934668bd5513561a2",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/schemas/events/ever.registry.instance.seen.v1.schema.json",
+      "source": "contracts/events/schemas/ever.registry.instance.seen.v1.schema.json",
+      "source_sha256": "2fa75eb47859b1bb4b0c8507dcfbe1219a3f92516929c41ae0aa1f33d274aa9c",
+      "sha256": "2fa75eb47859b1bb4b0c8507dcfbe1219a3f92516929c41ae0aa1f33d274aa9c",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/schemas/events/ever.registry.managed_operation.requested.v1.schema.json",
+      "source": "contracts/events/schemas/ever.registry.managed_operation.requested.v1.schema.json",
+      "source_sha256": "000ae8f5dbc975dbdc733d97f3216027484dbd0aa1c0a540ceddc23f8ac9943b",
+      "sha256": "000ae8f5dbc975dbdc733d97f3216027484dbd0aa1c0a540ceddc23f8ac9943b",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/schemas/events/ever.registry.managed_operation.state_changed.v1.schema.json",
+      "source": "contracts/events/schemas/ever.registry.managed_operation.state_changed.v1.schema.json",
+      "source_sha256": "d05dbe50c9e2943199d156e0107b7e1bc7a52e833c04ef73cd4c45caa57efb59",
+      "sha256": "d05dbe50c9e2943199d156e0107b7e1bc7a52e833c04ef73cd4c45caa57efb59",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/schemas/events/ever.registry.membership.created.v1.schema.json",
+      "source": "contracts/events/schemas/ever.registry.membership.created.v1.schema.json",
+      "source_sha256": "82bc8b833cf9bc743b07eadf3a4117a59ffe07c85f0b670b2bd2692c2a911fef",
+      "sha256": "82bc8b833cf9bc743b07eadf3a4117a59ffe07c85f0b670b2bd2692c2a911fef",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/schemas/events/ever.registry.membership.removed.v1.schema.json",
+      "source": "contracts/events/schemas/ever.registry.membership.removed.v1.schema.json",
+      "source_sha256": "0d74cf684c80ba0de57fecc73bb05a554c690474539b378b2e256b17ed60e7a2",
+      "sha256": "0d74cf684c80ba0de57fecc73bb05a554c690474539b378b2e256b17ed60e7a2",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/schemas/events/ever.registry.membership.role_changed.v1.schema.json",
+      "source": "contracts/events/schemas/ever.registry.membership.role_changed.v1.schema.json",
+      "source_sha256": "0c162fe7776ab29f03d9c48f5efdcafd854b345e1d40c9fa552c5c0e93595a80",
+      "sha256": "0c162fe7776ab29f03d9c48f5efdcafd854b345e1d40c9fa552c5c0e93595a80",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/schemas/events/ever.registry.person.deletion_requested.v1.schema.json",
+      "source": "contracts/events/schemas/ever.registry.person.deletion_requested.v1.schema.json",
+      "source_sha256": "aa530afcd300df0b0735a8d8a35dd8bf17816c9b728205ad8f375f544ae24029",
+      "sha256": "aa530afcd300df0b0735a8d8a35dd8bf17816c9b728205ad8f375f544ae24029",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/schemas/events/ever.registry.person.export_requested.v1.schema.json",
+      "source": "contracts/events/schemas/ever.registry.person.export_requested.v1.schema.json",
+      "source_sha256": "32f38a49e6fbc6751dee86f919c9d1ee0f421a68cff25cd27c5f11b19513df94",
+      "sha256": "32f38a49e6fbc6751dee86f919c9d1ee0f421a68cff25cd27c5f11b19513df94",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/schemas/events/ever.registry.tenant_link.created.v1.schema.json",
+      "source": "contracts/events/schemas/ever.registry.tenant_link.created.v1.schema.json",
+      "source_sha256": "c3c0a42c7d76dd6a0aefecfa415a279fcc2a2b5676cb0da9e4d1ffcdb171ffb3",
+      "sha256": "c3c0a42c7d76dd6a0aefecfa415a279fcc2a2b5676cb0da9e4d1ffcdb171ffb3",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/schemas/events/ever.registry.tenant_link.orphaned.v1.schema.json",
+      "source": "contracts/events/schemas/ever.registry.tenant_link.orphaned.v1.schema.json",
+      "source_sha256": "9afd8dbb34ccdcc0891a893aa757095cd23e14f903effc6e5877c26975386977",
+      "sha256": "9afd8dbb34ccdcc0891a893aa757095cd23e14f903effc6e5877c26975386977",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/schemas/events/ever.registry.tenant_link.resumed.v1.schema.json",
+      "source": "contracts/events/schemas/ever.registry.tenant_link.resumed.v1.schema.json",
+      "source_sha256": "d9bfad53802d7d3a33398e3c3f982f40a6af89b03a722769714a2b5628352a97",
+      "sha256": "d9bfad53802d7d3a33398e3c3f982f40a6af89b03a722769714a2b5628352a97",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/schemas/events/ever.registry.tenant_link.suspended.v1.schema.json",
+      "source": "contracts/events/schemas/ever.registry.tenant_link.suspended.v1.schema.json",
+      "source_sha256": "f064dd5fca7a2475f3a934bba98d36fe4788c6d9e0faf44eb0ef9ab7fcd77703",
+      "sha256": "f064dd5fca7a2475f3a934bba98d36fe4788c6d9e0faf44eb0ef9ab7fcd77703",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/schemas/events/ever.registry.tenant_link.unlinked.v1.schema.json",
+      "source": "contracts/events/schemas/ever.registry.tenant_link.unlinked.v1.schema.json",
+      "source_sha256": "e437939ff4810504bf910bbb499c1d9fdf18d9754453fb6de59bf1975f24458d",
+      "sha256": "e437939ff4810504bf910bbb499c1d9fdf18d9754453fb6de59bf1975f24458d",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    }
+  ],
+  "authored": [
+    {
+      "path": "contracts/schemas/ever.consent.v1.json",
+      "until": "the platform publishes the consent record schema"
+    },
+    {
+      "path": "contracts/schemas/ever.key-manifest.v1.json",
+      "until": "the platform publishes the key manifest schema"
+    },
+    {
+      "path": "contracts/fixtures/connect/vectors/",
+      "until": "the platform publishes its client-assertion vectors"
+    },
+    {
+      "path": "contracts/fixtures/stats/",
+      "until": "the platform publishes the statistics fixtures and expected outcomes"
+    }
+  ]
+}

@@ -1,0 +1,1235 @@
+{
+  "schema": "ever.integrations.catalog.v1",
+  "version": 1,
+  "updated": "2026-10-01",
+  "dpa_version": "2026-10",
+  "docs_base_url": "https://ever.sh/platform/connect",
+  "invariants": [
+    "Nothing leaves an installation for an integration that is not enabled. Handlers for disabled integrations answer 403 integration_disabled.",
+    "With EVER_CONNECT_ENABLED unset or false, the Ever Connect module is not loaded and the installation makes no calls to any Ever Platform host.",
+    "Only the fields listed under scope may move, and only in the listed form and at the listed frequency.",
+    "An installation operator can deny any integration for every tenant with EVER_CONNECT_INTEGRATIONS_DENY=<key,...>. The state becomes denied_by_policy, which tenant administrators cannot override.",
+    "Consent is granted by an organization owner or admin, in app.ever.co or in the product's own consent dialog after a fresh Ever ID sign-in; both record the same consent. Discoverability and the installation address are enabled in app.ever.co only. Each consent is recorded, can be revoked at any time, and every change is logged.",
+    "Integrations that act for the whole installation (instance_url, stats_link, ever_id_login, webhooks) can be enabled only by the organization that owns the installation's connection, and they start only after the installation's operator also accepts them on the installation, on multi-tenant servers too.",
+    "No per-record business data (invoices, amounts, customer lists, documents) is sent to Ever Platform by any integration in this catalog.",
+    "Anonymous usage statistics (ever.stats.v1) are not an integration. They follow their own published allow-list and are switched off with EVER_STATS_ENABLED=false."
+  ],
+  "integrations": [
+    {
+      "key": "instance_url",
+      "name": "Installation address",
+      "description": "Shows the public address of this installation to its own organization in app.ever.co, and on the public profile if the owner turns that section on.",
+      "category": "profile",
+      "owner_module": "registry",
+      "direction": "outbound",
+      "defaults": {
+        "cloud": true,
+        "self_hosted": false
+      },
+      "availability": {
+        "cloud": "enabled",
+        "self_hosted": "available"
+      },
+      "requires_feature": null,
+      "products": [
+        "gauzy",
+        "teams",
+        "works",
+        "rec",
+        "traduora"
+      ],
+      "phase": 2,
+      "status": "active",
+      "scope_version": 1,
+      "revoke_effect": "The stored address is removed.",
+      "scope": [
+        {
+          "field_path": "instance.public_url",
+          "direction": "to_ever",
+          "form": "url",
+          "frequency": "once",
+          "required": true,
+          "purpose": "Link to this installation from the organization's account pages",
+          "retention": "Kept while the integration is enabled. Deleted when it is turned off or the installation disconnects."
+        }
+      ]
+    },
+    {
+      "key": "stats_link",
+      "name": "Link usage statistics to this organization",
+      "description": "Connects the anonymous statistics identity of this self-hosted installation to your organization, so you can see your installation's latest statistics report in app.ever.co. Without this link, statistics stay anonymous. It is never offered on Ever Cloud, where one installation serves many organizations.",
+      "category": "stats",
+      "owner_module": "stats",
+      "direction": "outbound",
+      "defaults": {
+        "cloud": false,
+        "self_hosted": false
+      },
+      "availability": {
+        "cloud": "not_applicable",
+        "self_hosted": "available"
+      },
+      "requires_feature": null,
+      "products": [
+        "gauzy",
+        "teams",
+        "works",
+        "rec",
+        "traduora"
+      ],
+      "phase": 2,
+      "status": "active",
+      "scope_version": 1,
+      "revoke_effect": "The link is cleared. Later statistics reports are anonymous again.",
+      "scope": [
+        {
+          "field_path": "instance.stats_instance_id",
+          "direction": "to_ever",
+          "form": "id",
+          "frequency": "once",
+          "required": true,
+          "purpose": "Match the installation's anonymous statistics identity to the connected installation",
+          "retention": "Kept while the integration is enabled."
+        },
+        {
+          "field_path": "instance.stats_public_key",
+          "direction": "to_ever",
+          "form": "id",
+          "frequency": "once",
+          "required": true,
+          "purpose": "The public half of the separate statistics key, so the link can be checked against the key that signs the reports",
+          "retention": "Kept while the integration is enabled."
+        },
+        {
+          "field_path": "instance.stats_link_signature",
+          "direction": "to_ever",
+          "form": "id",
+          "frequency": "once",
+          "required": true,
+          "purpose": "Signature made with the statistics key, proving that the connected installation holds it",
+          "retention": "Kept while the integration is enabled."
+        }
+      ]
+    },
+    {
+      "key": "ever_id_login",
+      "name": "Sign in with Ever ID",
+      "description": "Adds Ever ID as an extra sign-in option in this installation. Existing sign-in methods keep working unchanged.",
+      "category": "identity",
+      "owner_module": "identity",
+      "direction": "both",
+      "defaults": {
+        "cloud": true,
+        "self_hosted": false
+      },
+      "availability": {
+        "cloud": "enabled",
+        "self_hosted": "available"
+      },
+      "requires_feature": "sso",
+      "products": [
+        "gauzy",
+        "works",
+        "rec",
+        "traduora"
+      ],
+      "phase": 2,
+      "status": "coming_soon",
+      "scope_version": 1,
+      "revoke_effect": "The Ever ID client for this installation is deleted and its local settings are cleared. Existing local sessions are not affected.",
+      "notes": "Ever Teams signs in through its Gauzy API, so it is covered by the gauzy row.",
+      "scope": [
+        {
+          "field_path": "instance.oidc.redirect_uris",
+          "direction": "to_ever",
+          "form": "url",
+          "frequency": "once",
+          "required": true,
+          "purpose": "Register the sign-in callback addresses of this installation",
+          "retention": "Kept while the integration is enabled."
+        },
+        {
+          "field_path": "instance.oidc.post_logout_uris",
+          "direction": "to_ever",
+          "form": "url",
+          "frequency": "once",
+          "required": false,
+          "purpose": "Register the sign-out return addresses",
+          "retention": "Kept while the integration is enabled."
+        },
+        {
+          "field_path": "instance.oidc.backchannel_logout_uri",
+          "direction": "to_ever",
+          "form": "url",
+          "frequency": "once",
+          "required": false,
+          "purpose": "Receive sign-out notices from Ever ID",
+          "retention": "Kept while the integration is enabled."
+        },
+        {
+          "field_path": "organization.display_name",
+          "direction": "to_ever",
+          "form": "clear",
+          "frequency": "once",
+          "required": true,
+          "purpose": "Name shown on the Ever ID sign-in screen",
+          "retention": "Kept while the integration is enabled."
+        },
+        {
+          "field_path": "oidc.issuer",
+          "direction": "from_ever",
+          "form": "url",
+          "frequency": "once",
+          "required": true,
+          "purpose": "Ever ID issuer address for this installation",
+          "retention": "Stored in the installation's own settings."
+        },
+        {
+          "field_path": "oidc.client_id",
+          "direction": "from_ever",
+          "form": "id",
+          "frequency": "once",
+          "required": true,
+          "purpose": "Client identifier for this installation",
+          "retention": "Stored in the installation's own settings."
+        },
+        {
+          "field_path": "oidc.client_secret",
+          "direction": "from_ever",
+          "form": "clear",
+          "frequency": "once",
+          "required": true,
+          "purpose": "Client secret, stored encrypted by the installation",
+          "retention": "Stored encrypted in the installation's own settings; environment variables take precedence."
+        }
+      ]
+    },
+    {
+      "key": "counterparty_lookup",
+      "name": "Check contacts on Ever Platform",
+      "description": "When you click 'Check on Ever Platform' on a contact, the installation sends salted hashes of that contact's VAT number, registration number or e-mail and gets back the handle of any organization that chose to be discoverable. The values themselves never leave the installation.",
+      "category": "lookup",
+      "owner_module": "lookup",
+      "direction": "outbound",
+      "defaults": {
+        "cloud": true,
+        "self_hosted": false
+      },
+      "availability": {
+        "cloud": "enabled",
+        "self_hosted": "available"
+      },
+      "requires_feature": "lookup",
+      "products": [
+        "gauzy",
+        "works"
+      ],
+      "phase": 2,
+      "status": "coming_soon",
+      "scope_version": 1,
+      "revoke_effect": "The button is hidden and cached results are purged.",
+      "notes": "Automatic checking when a contact is opened is a separate setting. It is off by default and is part of this scope text.",
+      "scope": [
+        {
+          "field_path": "contact.vat_number",
+          "direction": "to_ever",
+          "form": "salted_hash",
+          "frequency": "on_action",
+          "required": false,
+          "purpose": "Find an opted-in organization with this VAT number",
+          "retention": "Never stored. Only per-installation rate counters are kept."
+        },
+        {
+          "field_path": "contact.registration_number",
+          "direction": "to_ever",
+          "form": "salted_hash",
+          "frequency": "on_action",
+          "required": false,
+          "purpose": "Find an opted-in organization with this registration number",
+          "retention": "Never stored. Only per-installation rate counters are kept."
+        },
+        {
+          "field_path": "contact.email",
+          "direction": "to_ever",
+          "form": "salted_hash",
+          "frequency": "on_action",
+          "required": false,
+          "purpose": "Find an opted-in organization with this billing e-mail",
+          "retention": "Never stored. Only per-installation rate counters are kept."
+        }
+      ]
+    },
+    {
+      "key": "counterparty_discoverable",
+      "name": "Let your partners find you",
+      "description": "Publishes salted hashes of your own organization's tax ID, registration number and billing e-mail, so other organizations that already know these values can find your Ever Platform handle. Nothing is findable by browsing or searching. It is off everywhere, Ever Cloud included, until an owner of your organization turns it on in app.ever.co.",
+      "category": "lookup",
+      "owner_module": "registry",
+      "direction": "outbound",
+      "defaults": {
+        "cloud": false,
+        "self_hosted": false
+      },
+      "availability": {
+        "cloud": "available",
+        "self_hosted": "available"
+      },
+      "requires_feature": "discoverable",
+      "products": [
+        "gauzy",
+        "works",
+        "rec",
+        "traduora"
+      ],
+      "phase": 2,
+      "status": "coming_soon",
+      "scope_version": 1,
+      "revoke_effect": "The stored hashes are deleted.",
+      "scope": [
+        {
+          "field_path": "organization.tax_id",
+          "direction": "to_ever",
+          "form": "salted_hash",
+          "frequency": "on_change",
+          "required": false,
+          "purpose": "Match lookups by tax ID",
+          "retention": "Kept while the integration is enabled. Deleted when it is turned off."
+        },
+        {
+          "field_path": "organization.registration_number",
+          "direction": "to_ever",
+          "form": "salted_hash",
+          "frequency": "on_change",
+          "required": false,
+          "purpose": "Match lookups by registration number",
+          "retention": "Kept while the integration is enabled. Deleted when it is turned off."
+        },
+        {
+          "field_path": "organization.billing_email",
+          "direction": "to_ever",
+          "form": "salted_hash",
+          "frequency": "on_change",
+          "required": false,
+          "purpose": "Match lookups by billing e-mail",
+          "retention": "Kept while the integration is enabled. Deleted when it is turned off."
+        }
+      ]
+    },
+    {
+      "key": "profile_import",
+      "name": "Import into public profile",
+      "description": "Copies your organization's name, website, description, logo and country into your ever.co profile draft, and only when you click 'Import into public profile'. You review the draft before anything is published.",
+      "category": "profile",
+      "owner_module": "registry",
+      "direction": "outbound",
+      "defaults": {
+        "cloud": true,
+        "self_hosted": false
+      },
+      "availability": {
+        "cloud": "enabled",
+        "self_hosted": "available"
+      },
+      "requires_feature": "profile_public",
+      "products": [
+        "gauzy",
+        "works"
+      ],
+      "phase": 3,
+      "status": "coming_soon",
+      "scope_version": 1,
+      "revoke_effect": "Nothing further is copied. Profile fields you already published stay until you edit them.",
+      "notes": "Gauzy field names are listed. Works sends displayName, legalName and countryCode under the same purposes.",
+      "scope": [
+        {
+          "field_path": "organization.name",
+          "direction": "to_ever",
+          "form": "clear",
+          "frequency": "on_action",
+          "required": true,
+          "purpose": "Profile display name",
+          "retention": "Kept as part of your profile until you change or delete it."
+        },
+        {
+          "field_path": "organization.website",
+          "direction": "to_ever",
+          "form": "url",
+          "frequency": "on_action",
+          "required": false,
+          "purpose": "Profile website link",
+          "retention": "Kept as part of your profile until you change or delete it."
+        },
+        {
+          "field_path": "organization.short_description",
+          "direction": "to_ever",
+          "form": "clear",
+          "frequency": "on_action",
+          "required": false,
+          "purpose": "Profile summary",
+          "retention": "Kept as part of your profile until you change or delete it."
+        },
+        {
+          "field_path": "organization.overview",
+          "direction": "to_ever",
+          "form": "clear",
+          "frequency": "on_action",
+          "required": false,
+          "purpose": "Profile about section",
+          "retention": "Kept as part of your profile until you change or delete it."
+        },
+        {
+          "field_path": "organization.imageUrl",
+          "direction": "to_ever",
+          "form": "url",
+          "frequency": "on_action",
+          "required": false,
+          "purpose": "Profile logo",
+          "retention": "Kept as part of your profile until you change or delete it."
+        },
+        {
+          "field_path": "organization.contact.country",
+          "direction": "to_ever",
+          "form": "clear",
+          "frequency": "on_action",
+          "required": false,
+          "purpose": "Profile country",
+          "retention": "Kept as part of your profile until you change or delete it."
+        }
+      ]
+    },
+    {
+      "key": "usage_reporting",
+      "name": "Usage reporting",
+      "description": "Sends daily counts of the meters you choose (for example active employees or seats) for plans that are priced by usage. On Ever Cloud the row starts on under the Ever Cloud terms, because cloud plans are billed on these counts (for example per employee for Ever Gauzy and Ever Teams, on the latest successful count). A self-hosted installation sends nothing unless an administrator turns it on.",
+      "category": "entitlements",
+      "owner_module": "entitlements",
+      "direction": "outbound",
+      "defaults": {
+        "cloud": true,
+        "self_hosted": false
+      },
+      "availability": {
+        "cloud": "enabled",
+        "self_hosted": "disabled"
+      },
+      "requires_feature": "usage",
+      "products": [
+        "gauzy",
+        "works"
+      ],
+      "phase": 2,
+      "status": "active",
+      "scope_version": 1,
+      "revoke_effect": "Reports stop.",
+      "notes": "Ever Cloud: starts on under the Ever Cloud terms (for example Ever Gauzy and Ever Teams per-employee plans; a missed count never raises the bill above the last known number). Self-hosted: off unless an administrator consents.",
+      "scope": [
+        {
+          "field_path": "meters.active_employees",
+          "direction": "to_ever",
+          "form": "count",
+          "frequency": "daily",
+          "required": false,
+          "purpose": "Usage-based plan quantity",
+          "retention": "Daily totals kept for 24 months."
+        },
+        {
+          "field_path": "meters.active_users",
+          "direction": "to_ever",
+          "form": "count",
+          "frequency": "daily",
+          "required": false,
+          "purpose": "Usage-based plan quantity",
+          "retention": "Daily totals kept for 24 months."
+        },
+        {
+          "field_path": "meters.tracked_employees",
+          "direction": "to_ever",
+          "form": "count",
+          "frequency": "daily",
+          "required": false,
+          "purpose": "Usage-based plan quantity",
+          "retention": "Daily totals kept for 24 months."
+        },
+        {
+          "field_path": "meters.seats",
+          "direction": "to_ever",
+          "form": "count",
+          "frequency": "daily",
+          "required": false,
+          "purpose": "Usage-based plan quantity (Works)",
+          "retention": "Daily totals kept for 24 months."
+        },
+        {
+          "field_path": "meters.credits_used",
+          "direction": "to_ever",
+          "form": "count",
+          "frequency": "daily",
+          "required": false,
+          "purpose": "Usage-based plan quantity (Works)",
+          "retention": "Daily totals kept for 24 months."
+        }
+      ]
+    },
+    {
+      "key": "app_sync",
+      "name": "Apps and deployments",
+      "description": "Lists the apps you build and deploy in Ever Works on your organization's account pages, and on your public profile if you choose. Only identifiers and status move. App content, repositories, budgets, agents and memory never leave Ever Works.",
+      "category": "apps",
+      "owner_module": "registry",
+      "direction": "outbound",
+      "defaults": {
+        "cloud": true,
+        "self_hosted": false
+      },
+      "availability": {
+        "cloud": "enabled",
+        "self_hosted": "available"
+      },
+      "requires_feature": "apps",
+      "products": [
+        "works"
+      ],
+      "phase": 2,
+      "status": "active",
+      "scope_version": 1,
+      "revoke_effect": "Pending updates are drained and no further updates are sent.",
+      "scope": [
+        {
+          "field_path": "work.id",
+          "direction": "to_ever",
+          "form": "id",
+          "frequency": "events",
+          "required": true,
+          "purpose": "Identify the app",
+          "retention": "Kept while the integration is enabled."
+        },
+        {
+          "field_path": "work.kind",
+          "direction": "to_ever",
+          "form": "clear",
+          "frequency": "events",
+          "required": true,
+          "purpose": "App type",
+          "retention": "Kept while the integration is enabled."
+        },
+        {
+          "field_path": "work.status",
+          "direction": "to_ever",
+          "form": "clear",
+          "frequency": "events",
+          "required": true,
+          "purpose": "App status",
+          "retention": "Kept while the integration is enabled."
+        },
+        {
+          "field_path": "deployment.target",
+          "direction": "to_ever",
+          "form": "clear",
+          "frequency": "events",
+          "required": false,
+          "purpose": "Where the app runs",
+          "retention": "Kept while the integration is enabled."
+        },
+        {
+          "field_path": "deployment.provider",
+          "direction": "to_ever",
+          "form": "clear",
+          "frequency": "events",
+          "required": false,
+          "purpose": "Where the app runs",
+          "retention": "Kept while the integration is enabled."
+        },
+        {
+          "field_path": "deployment.shape",
+          "direction": "to_ever",
+          "form": "clear",
+          "frequency": "events",
+          "required": false,
+          "purpose": "Deployment kind",
+          "retention": "Kept while the integration is enabled."
+        },
+        {
+          "field_path": "deployment.managed_by",
+          "direction": "to_ever",
+          "form": "clear",
+          "frequency": "events",
+          "required": false,
+          "purpose": "Who manages the deployment",
+          "retention": "Kept while the integration is enabled."
+        },
+        {
+          "field_path": "deployment.url",
+          "direction": "to_ever",
+          "form": "url",
+          "frequency": "events",
+          "required": false,
+          "purpose": "Public address of a live app",
+          "retention": "Kept while the integration is enabled."
+        },
+        {
+          "field_path": "organization.id",
+          "direction": "to_ever",
+          "form": "id",
+          "frequency": "events",
+          "required": true,
+          "purpose": "Match the Works organization to your Ever Platform organization",
+          "retention": "Kept while the integration is enabled."
+        },
+        {
+          "field_path": "organization.slug",
+          "direction": "to_ever",
+          "form": "clear",
+          "frequency": "events",
+          "required": true,
+          "purpose": "Match the Works organization to your Ever Platform organization",
+          "retention": "Kept while the integration is enabled."
+        },
+        {
+          "field_path": "member.joined_left",
+          "direction": "to_ever",
+          "form": "id",
+          "frequency": "events",
+          "required": false,
+          "purpose": "Keep organization membership links current (person link id only)",
+          "retention": "Kept while the integration is enabled."
+        }
+      ]
+    },
+    {
+      "key": "billing_link",
+      "name": "Link cloud billing",
+      "description": "Links your existing Ever Gauzy Cloud billing account to your Ever Platform organization, so all your plans show in one place. Prices, limits and existing offers do not change.",
+      "category": "billing",
+      "owner_module": "billing",
+      "direction": "outbound",
+      "defaults": {
+        "cloud": true,
+        "self_hosted": false
+      },
+      "availability": {
+        "cloud": "enabled",
+        "self_hosted": "not_applicable"
+      },
+      "requires_feature": null,
+      "products": [
+        "gauzy"
+      ],
+      "phase": 2,
+      "status": "active",
+      "scope_version": 1,
+      "revoke_effect": "The link is removed. Billing itself continues unchanged.",
+      "scope": [
+        {
+          "field_path": "tenant.stripeCustomerId",
+          "direction": "to_ever",
+          "form": "id",
+          "frequency": "once",
+          "required": true,
+          "purpose": "Match the cloud tenant's billing customer to the organization's billing account",
+          "retention": "Kept while the integration is enabled."
+        }
+      ]
+    },
+    {
+      "key": "webhooks",
+      "name": "Event delivery",
+      "description": "Lets Ever Platform send signed notifications (for example 'your plan changed') to installations that can receive them. Installations that only make outbound connections use polling instead.",
+      "category": "events",
+      "owner_module": "events",
+      "direction": "inbound",
+      "defaults": {
+        "cloud": true,
+        "self_hosted": false
+      },
+      "availability": {
+        "cloud": "enabled",
+        "self_hosted": "available"
+      },
+      "requires_feature": null,
+      "products": [
+        "gauzy",
+        "works"
+      ],
+      "phase": 2,
+      "status": "active",
+      "scope_version": 1,
+      "revoke_effect": "The endpoint is deleted. The installation falls back to polling.",
+      "scope": [
+        {
+          "field_path": "webhook.endpoint_url",
+          "direction": "to_ever",
+          "form": "url",
+          "frequency": "once",
+          "required": true,
+          "purpose": "Where to deliver signed notifications",
+          "retention": "Kept while the integration is enabled."
+        },
+        {
+          "field_path": "event.payload_ids",
+          "direction": "from_ever",
+          "form": "id",
+          "frequency": "events",
+          "required": true,
+          "purpose": "Notifications carry identifiers only",
+          "retention": "Delivery log kept 30 days."
+        }
+      ]
+    },
+    {
+      "key": "managed_operations",
+      "name": "Managed updates and backups",
+      "description": "Lets an owner or admin ask this self-hosted installation, from app.ever.co, to run a maintenance operation: an update, a backup, a restore check or a health report. Requests reach the installation through its own outbound connection; the operator also turns the feature on locally and sets when and what may run. Backups stay in your own storage, and Ever Platform sees only each operation's status and size. Ever never connects in.",
+      "category": "entitlements",
+      "owner_module": "registry",
+      "direction": "both",
+      "defaults": {
+        "cloud": false,
+        "self_hosted": false
+      },
+      "availability": {
+        "cloud": "not_applicable",
+        "self_hosted": "available"
+      },
+      "requires_feature": "managed",
+      "products": [
+        "gauzy",
+        "works",
+        "rec",
+        "traduora"
+      ],
+      "phase": 2,
+      "status": "coming_soon",
+      "scope_version": 1,
+      "revoke_effect": "Queued operations are cancelled and nothing further runs.",
+      "notes": "Ever already operates its cloud installations, so this is offered on self-hosted installations only. It becomes active per product once that product can run the operations. Ever Teams is covered by its Ever Gauzy server.",
+      "scope": [
+        {
+          "field_path": "operation.id",
+          "direction": "from_ever",
+          "form": "id",
+          "frequency": "on_action",
+          "required": true,
+          "purpose": "Identify the requested operation",
+          "retention": "Kept with the organization's operation history."
+        },
+        {
+          "field_path": "operation.kind",
+          "direction": "from_ever",
+          "form": "clear",
+          "frequency": "on_action",
+          "required": true,
+          "purpose": "Which operation to run: update, backup, restore check or health report",
+          "retention": "Kept with the organization's operation history."
+        },
+        {
+          "field_path": "operation.params",
+          "direction": "from_ever",
+          "form": "clear",
+          "frequency": "on_action",
+          "required": false,
+          "purpose": "The fixed settings of that kind of operation (for example the target version of an update), and the time window it may run in",
+          "retention": "Kept with the organization's operation history."
+        },
+        {
+          "field_path": "result.status",
+          "direction": "to_ever",
+          "form": "clear",
+          "frequency": "on_action",
+          "required": true,
+          "purpose": "Whether the operation succeeded, failed or expired",
+          "retention": "Kept with the organization's operation history."
+        },
+        {
+          "field_path": "result.version",
+          "direction": "to_ever",
+          "form": "clear",
+          "frequency": "on_action",
+          "required": false,
+          "purpose": "Product version after an update",
+          "retention": "Kept with the organization's operation history."
+        },
+        {
+          "field_path": "result.size_bytes",
+          "direction": "to_ever",
+          "form": "count",
+          "frequency": "on_action",
+          "required": false,
+          "purpose": "Size of a backup or a health report",
+          "retention": "Kept with the organization's operation history."
+        },
+        {
+          "field_path": "result.artefact_ref",
+          "direction": "to_ever",
+          "form": "id",
+          "frequency": "on_action",
+          "required": false,
+          "purpose": "Name of the backup in your own storage, so you can find it; its content never leaves your storage",
+          "retention": "Kept with the organization's operation history."
+        }
+      ]
+    },
+    {
+      "key": "provider_access",
+      "name": "Grant a provider access",
+      "description": "Lets a service provider you choose on apps.ever.co (for example an accountant or payroll provider) work in your installation with a role and scope you pick. The grant shows in Integrations & data and you can revoke it at any time.",
+      "category": "marketplace",
+      "owner_module": "registry",
+      "direction": "both",
+      "defaults": {
+        "cloud": true,
+        "self_hosted": false
+      },
+      "availability": {
+        "cloud": "enabled",
+        "self_hosted": "available"
+      },
+      "requires_feature": "listings",
+      "products": [
+        "gauzy",
+        "works"
+      ],
+      "phase": 4,
+      "status": "coming_soon",
+      "scope_version": 1,
+      "revoke_effect": "The provider's access is removed from the installation.",
+      "notes": "The field list is provisional until the provider-access flow is specified (Phase 4).",
+      "scope": [
+        {
+          "field_path": "grant.provider_organization_id",
+          "direction": "from_ever",
+          "form": "id",
+          "frequency": "on_action",
+          "required": true,
+          "purpose": "Which provider is granted access",
+          "retention": "Kept while the grant exists."
+        },
+        {
+          "field_path": "grant.role",
+          "direction": "from_ever",
+          "form": "clear",
+          "frequency": "on_action",
+          "required": true,
+          "purpose": "Role the provider gets in the installation",
+          "retention": "Kept while the grant exists."
+        },
+        {
+          "field_path": "grant.status",
+          "direction": "to_ever",
+          "form": "clear",
+          "frequency": "on_change",
+          "required": true,
+          "purpose": "Show whether the grant is active",
+          "retention": "Kept while the grant exists."
+        }
+      ]
+    },
+    {
+      "key": "marketplace_installs",
+      "name": "Install apps from apps.ever.co",
+      "description": "Lets you install an app you picked on apps.ever.co into this installation. The installation picks up the request and runs its normal plugin installer, then reports whether the install worked.",
+      "category": "marketplace",
+      "owner_module": "listings",
+      "direction": "both",
+      "defaults": {
+        "cloud": true,
+        "self_hosted": false
+      },
+      "availability": {
+        "cloud": "enabled",
+        "self_hosted": "available"
+      },
+      "requires_feature": "listings",
+      "products": [
+        "gauzy",
+        "works"
+      ],
+      "phase": 4,
+      "status": "coming_soon",
+      "scope_version": 1,
+      "revoke_effect": "Install requests are no longer delivered. Installed apps stay installed.",
+      "scope": [
+        {
+          "field_path": "install.id",
+          "direction": "from_ever",
+          "form": "id",
+          "frequency": "on_action",
+          "required": true,
+          "purpose": "Identify the install request",
+          "retention": "Kept with the install record."
+        },
+        {
+          "field_path": "install.slug",
+          "direction": "from_ever",
+          "form": "clear",
+          "frequency": "on_action",
+          "required": true,
+          "purpose": "Which app to install",
+          "retention": "Kept with the install record."
+        },
+        {
+          "field_path": "install.package",
+          "direction": "from_ever",
+          "form": "clear",
+          "frequency": "on_action",
+          "required": true,
+          "purpose": "Package to install",
+          "retention": "Kept with the install record."
+        },
+        {
+          "field_path": "install.edition",
+          "direction": "from_ever",
+          "form": "clear",
+          "frequency": "on_action",
+          "required": false,
+          "purpose": "Edition chosen",
+          "retention": "Kept with the install record."
+        },
+        {
+          "field_path": "install.status",
+          "direction": "to_ever",
+          "form": "clear",
+          "frequency": "on_change",
+          "required": true,
+          "purpose": "Report whether the install succeeded",
+          "retention": "Kept with the install record."
+        }
+      ]
+    },
+    {
+      "key": "ever_agent",
+      "name": "Business assistant",
+      "description": "Lets your organization's assistant on ever.co answer from sources you choose and, with your approval, take actions in your installation. Each group below is granted separately.",
+      "category": "agent",
+      "owner_module": "agents",
+      "direction": "both",
+      "defaults": {
+        "cloud": false,
+        "self_hosted": false
+      },
+      "availability": {
+        "cloud": "available",
+        "self_hosted": "available"
+      },
+      "requires_feature": null,
+      "products": [
+        "gauzy",
+        "works"
+      ],
+      "phase": 5,
+      "status": "hidden",
+      "scope_version": 1,
+      "revoke_effect": "Every source and tool that used the revoked group is disabled immediately.",
+      "notes": "The names are reserved now and no code path uses them before the assistant ships. Groups are shown as separate sections on the consent screen. Read groups start on for Ever Cloud organizations once the assistant is enabled. Write groups always need an explicit grant.",
+      "scope_groups": [
+        {
+          "id": "agent.profile.read",
+          "default_cloud": true,
+          "needs_installation": false,
+          "title": "Public profile"
+        },
+        {
+          "id": "agent.listings.read",
+          "default_cloud": true,
+          "needs_installation": false,
+          "title": "Public listings"
+        },
+        {
+          "id": "agent.content.upload",
+          "default_cloud": false,
+          "needs_installation": false,
+          "title": "Documents and FAQ you add"
+        },
+        {
+          "id": "agent.website.read",
+          "default_cloud": false,
+          "needs_installation": false,
+          "title": "Pages of your verified website"
+        },
+        {
+          "id": "agent.leads.write",
+          "default_cloud": false,
+          "needs_installation": true,
+          "title": "Send leads to your installation"
+        },
+        {
+          "id": "agent.availability.read",
+          "default_cloud": true,
+          "needs_installation": true,
+          "title": "Read free time slots"
+        },
+        {
+          "id": "agent.appointments.write",
+          "default_cloud": false,
+          "needs_installation": true,
+          "title": "Book appointments"
+        },
+        {
+          "id": "agent.catalog.read",
+          "default_cloud": true,
+          "needs_installation": true,
+          "title": "Read products and list prices"
+        },
+        {
+          "id": "agent.quotes.write",
+          "default_cloud": false,
+          "needs_installation": true,
+          "title": "Create quote requests"
+        },
+        {
+          "id": "agent.works.delegate",
+          "default_cloud": false,
+          "needs_installation": true,
+          "title": "Hand tasks to Ever Works"
+        },
+        {
+          "id": "agent.handoff.notify",
+          "default_cloud": false,
+          "needs_installation": false,
+          "title": "Notify your team"
+        }
+      ],
+      "scope": [
+        {
+          "group": "agent.profile.read",
+          "field_path": "profile.public_projection",
+          "direction": "to_ever",
+          "form": "clear",
+          "frequency": "on_action",
+          "required": true,
+          "purpose": "Answer questions from what your public profile already shows",
+          "retention": "Not copied. Read at question time."
+        },
+        {
+          "group": "agent.listings.read",
+          "field_path": "listings.public",
+          "direction": "to_ever",
+          "form": "clear",
+          "frequency": "on_action",
+          "required": true,
+          "purpose": "Answer questions about your published listings",
+          "retention": "Not copied. Read at question time."
+        },
+        {
+          "group": "agent.content.upload",
+          "field_path": "documents.text",
+          "direction": "to_ever",
+          "form": "clear",
+          "frequency": "on_action",
+          "required": true,
+          "purpose": "Answer from documents and FAQ entries you add",
+          "retention": "Kept until you remove the document or turn the assistant off."
+        },
+        {
+          "group": "agent.website.read",
+          "field_path": "website.page_text",
+          "direction": "to_ever",
+          "form": "clear",
+          "frequency": "on_change",
+          "required": true,
+          "purpose": "Answer from pages of your verified website (paths you allow)",
+          "retention": "Kept until the source is removed. Refreshed weekly."
+        },
+        {
+          "group": "agent.leads.write",
+          "field_path": "lead.name",
+          "direction": "from_ever",
+          "form": "clear",
+          "frequency": "on_action",
+          "required": true,
+          "purpose": "Deliver a lead the visitor chose to leave",
+          "retention": "Stored in your installation."
+        },
+        {
+          "group": "agent.leads.write",
+          "field_path": "lead.email",
+          "direction": "from_ever",
+          "form": "clear",
+          "frequency": "on_action",
+          "required": false,
+          "purpose": "Deliver a lead the visitor chose to leave",
+          "retention": "Stored in your installation."
+        },
+        {
+          "group": "agent.leads.write",
+          "field_path": "lead.phone",
+          "direction": "from_ever",
+          "form": "clear",
+          "frequency": "on_action",
+          "required": false,
+          "purpose": "Deliver a lead the visitor chose to leave",
+          "retention": "Stored in your installation."
+        },
+        {
+          "group": "agent.leads.write",
+          "field_path": "lead.message",
+          "direction": "from_ever",
+          "form": "clear",
+          "frequency": "on_action",
+          "required": false,
+          "purpose": "Deliver a lead the visitor chose to leave",
+          "retention": "Stored in your installation."
+        },
+        {
+          "group": "agent.leads.write",
+          "field_path": "lead.source",
+          "direction": "from_ever",
+          "form": "clear",
+          "frequency": "on_action",
+          "required": true,
+          "purpose": "Say where the lead came from",
+          "retention": "Stored in your installation."
+        },
+        {
+          "group": "agent.leads.write",
+          "field_path": "lead.conversation_summary",
+          "direction": "from_ever",
+          "form": "clear",
+          "frequency": "on_action",
+          "required": false,
+          "purpose": "Summary of the chat, only if the visitor agreed",
+          "retention": "Stored in your installation."
+        },
+        {
+          "group": "agent.availability.read",
+          "field_path": "availability.event_type_names",
+          "direction": "to_ever",
+          "form": "clear",
+          "frequency": "on_action",
+          "required": true,
+          "purpose": "Offer the meeting types you allow",
+          "retention": "Not stored beyond the conversation."
+        },
+        {
+          "group": "agent.availability.read",
+          "field_path": "availability.free_slots",
+          "direction": "to_ever",
+          "form": "clear",
+          "frequency": "on_action",
+          "required": true,
+          "purpose": "Offer free times, without any attendee data",
+          "retention": "Not stored beyond the conversation."
+        },
+        {
+          "group": "agent.appointments.write",
+          "field_path": "appointment.start_end",
+          "direction": "from_ever",
+          "form": "clear",
+          "frequency": "on_action",
+          "required": true,
+          "purpose": "Book the slot the visitor picked, after your approval if you require it",
+          "retention": "Stored in your installation."
+        },
+        {
+          "group": "agent.appointments.write",
+          "field_path": "appointment.event_type",
+          "direction": "from_ever",
+          "form": "id",
+          "frequency": "on_action",
+          "required": true,
+          "purpose": "Book the meeting type",
+          "retention": "Stored in your installation."
+        },
+        {
+          "group": "agent.appointments.write",
+          "field_path": "appointment.attendee_contact",
+          "direction": "from_ever",
+          "form": "clear",
+          "frequency": "on_action",
+          "required": true,
+          "purpose": "Let your installation send the invitation",
+          "retention": "Stored in your installation."
+        },
+        {
+          "group": "agent.catalog.read",
+          "field_path": "catalog.item_names",
+          "direction": "to_ever",
+          "form": "clear",
+          "frequency": "on_action",
+          "required": true,
+          "purpose": "Give non-binding estimates",
+          "retention": "Not stored beyond the conversation."
+        },
+        {
+          "group": "agent.catalog.read",
+          "field_path": "catalog.item_descriptions",
+          "direction": "to_ever",
+          "form": "clear",
+          "frequency": "on_action",
+          "required": false,
+          "purpose": "Give non-binding estimates",
+          "retention": "Not stored beyond the conversation."
+        },
+        {
+          "group": "agent.catalog.read",
+          "field_path": "catalog.list_prices",
+          "direction": "to_ever",
+          "form": "clear",
+          "frequency": "on_action",
+          "required": true,
+          "purpose": "Give non-binding estimates (list prices only, never customer-specific prices)",
+          "retention": "Not stored beyond the conversation."
+        },
+        {
+          "group": "agent.catalog.read",
+          "field_path": "catalog.currency",
+          "direction": "to_ever",
+          "form": "clear",
+          "frequency": "on_action",
+          "required": true,
+          "purpose": "Give non-binding estimates",
+          "retention": "Not stored beyond the conversation."
+        },
+        {
+          "group": "agent.quotes.write",
+          "field_path": "quote_request.line_items",
+          "direction": "from_ever",
+          "form": "clear",
+          "frequency": "on_action",
+          "required": true,
+          "purpose": "Create a draft quote request for your review",
+          "retention": "Stored in your installation."
+        },
+        {
+          "group": "agent.quotes.write",
+          "field_path": "quote_request.contact",
+          "direction": "from_ever",
+          "form": "clear",
+          "frequency": "on_action",
+          "required": true,
+          "purpose": "Who asked for the quote",
+          "retention": "Stored in your installation."
+        },
+        {
+          "group": "agent.works.delegate",
+          "field_path": "task.title_body",
+          "direction": "from_ever",
+          "form": "clear",
+          "frequency": "on_action",
+          "required": true,
+          "purpose": "Hand a task to your Ever Works workspace after your approval",
+          "retention": "Stored in Ever Works."
+        },
+        {
+          "group": "agent.works.delegate",
+          "field_path": "task.status",
+          "direction": "to_ever",
+          "form": "clear",
+          "frequency": "on_change",
+          "required": true,
+          "purpose": "Tell the visitor when the task is done",
+          "retention": "Kept with the conversation (default 30 days)."
+        },
+        {
+          "group": "agent.handoff.notify",
+          "field_path": "handoff.summary_and_contact",
+          "direction": "from_ever",
+          "form": "clear",
+          "frequency": "on_action",
+          "required": true,
+          "purpose": "Notify your team that a visitor asked for a person",
+          "retention": "Delivered to the channel you chose."
+        }
+      ]
+    }
+  ]
+}

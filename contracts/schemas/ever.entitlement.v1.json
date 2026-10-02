@@ -1,0 +1,380 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://api.ever.co/v1/entitlements/schema/ever.entitlement.v1",
+  "title": "ever.entitlement.v1 JWS payload",
+  "description": "The only wire format of the entitlement document (contracts/entitlement-document.md section 1.2). Served verbatim at GET /v1/entitlements/schema; vendored in the SDK as contracts/schemas/ever.entitlement.v1.json with a sha256 drift test; every signed document is validated against it by the issuer's tests. Closed at every level; handle is the only human-readable field.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "iss",
+    "aud",
+    "sub",
+    "jti",
+    "iat",
+    "nbf",
+    "exp",
+    "ever"
+  ],
+  "properties": {
+    "iss": {
+      "type": "string",
+      "pattern": "^https://[a-z0-9.-]{1,253}(:[0-9]{2,5})?$",
+      "maxLength": 270
+    },
+    "aud": {
+      "const": "ever-connect"
+    },
+    "sub": {
+      "type": "string",
+      "pattern": "^(org|instance|link):[0-9A-HJKMNP-TV-Z]{26}$",
+      "maxLength": 35
+    },
+    "jti": {
+      "$ref": "#/$defs/ulid"
+    },
+    "iat": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "nbf": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "exp": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "ever": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "seq",
+        "org_id",
+        "handle",
+        "tenant_id",
+        "tier",
+        "plan",
+        "products",
+        "features",
+        "limits",
+        "meters",
+        "managed",
+        "grace_s",
+        "refresh_after_s"
+      ],
+      "properties": {
+        "schema": {
+          "const": "ever.entitlement.v1"
+        },
+        "seq": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "org_id": {
+          "$ref": "#/$defs/ulid"
+        },
+        "handle": {
+          "type": "string",
+          "pattern": "^[a-z](?:[a-z0-9]|-(?=[a-z0-9]))*$",
+          "minLength": 3,
+          "maxLength": 30
+        },
+        "tenant_id": {
+          "$ref": "#/$defs/ulid"
+        },
+        "instance_id": {
+          "$ref": "#/$defs/ulid"
+        },
+        "tenant_link_id": {
+          "$ref": "#/$defs/ulid"
+        },
+        "tenant": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "product",
+            "product_tenant_id"
+          ],
+          "properties": {
+            "product": {
+              "$ref": "#/$defs/product"
+            },
+            "product_tenant_id": {
+              "$ref": "#/$defs/product_id"
+            },
+            "product_org_id": {
+              "$ref": "#/$defs/product_id"
+            }
+          }
+        },
+        "tier": {
+          "enum": [
+            "free",
+            "paid",
+            "bundle",
+            "included"
+          ]
+        },
+        "plan": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "source"
+          ],
+          "properties": {
+            "code": {
+              "type": "string",
+              "pattern": "^(community|ever_[a-z]+_(cloud|selfhosted)_[a-z_]+_(monthly|annual|lifetime)|[a-z_]+:[a-z_]+:[a-z_]+)$",
+              "maxLength": 80
+            },
+            "source": {
+              "enum": [
+                "community",
+                "stripe_subscription",
+                "licence_certificate",
+                "works_licence_purchase",
+                "cloud_plan",
+                "staff"
+              ]
+            },
+            "ref": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{1,64}$",
+              "maxLength": 64
+            }
+          }
+        },
+        "products": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 6,
+          "items": {
+            "$ref": "#/$defs/product"
+          }
+        },
+        "licence_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 50,
+          "items": {
+            "type": "string",
+            "pattern": "^EVER-(WORKS|GAUZY|TEAMS|REC|DEMAND|TRADUORA|PLATFORM)-(ST|SB|EN)-[0-9A-F]{8}$",
+            "maxLength": 32
+          }
+        },
+        "features": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "handle",
+            "discoverability",
+            "lookup",
+            "profile.public",
+            "profile.badges",
+            "listings",
+            "marketplace.buy",
+            "instances.multi",
+            "ever_id_login",
+            "app_sync",
+            "usage_reporting",
+            "provider_access"
+          ],
+          "properties": {
+            "handle": {
+              "type": "boolean"
+            },
+            "discoverability": {
+              "type": "boolean"
+            },
+            "lookup": {
+              "type": "boolean"
+            },
+            "profile.public": {
+              "type": "boolean"
+            },
+            "profile.badges": {
+              "type": "boolean"
+            },
+            "listings": {
+              "type": "boolean"
+            },
+            "marketplace.buy": {
+              "type": "boolean"
+            },
+            "instances.multi": {
+              "type": "boolean"
+            },
+            "ever_id_login": {
+              "type": "boolean"
+            },
+            "app_sync": {
+              "type": "boolean"
+            },
+            "usage_reporting": {
+              "type": "boolean"
+            },
+            "provider_access": {
+              "type": "boolean"
+            }
+          }
+        },
+        "limits": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "instances.connected",
+            "listings.published",
+            "api.rpm",
+            "members",
+            "webhooks.endpoints",
+            "lookup.hashes_per_day",
+            "lookup.queries_per_min"
+          ],
+          "properties": {
+            "instances.connected": {
+              "type": "integer",
+              "minimum": -1
+            },
+            "listings.published": {
+              "type": "integer",
+              "minimum": -1
+            },
+            "api.rpm": {
+              "type": "integer",
+              "minimum": -1
+            },
+            "members": {
+              "type": "integer",
+              "minimum": -1
+            },
+            "webhooks.endpoints": {
+              "type": "integer",
+              "minimum": -1
+            },
+            "lookup.hashes_per_day": {
+              "type": "integer",
+              "minimum": -1
+            },
+            "lookup.queries_per_min": {
+              "type": "integer",
+              "minimum": -1
+            }
+          }
+        },
+        "meters": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "instances.connected": {
+              "$ref": "#/$defs/meter"
+            },
+            "listings.published": {
+              "$ref": "#/$defs/meter"
+            },
+            "members": {
+              "$ref": "#/$defs/meter"
+            },
+            "apps.registered": {
+              "$ref": "#/$defs/meter"
+            },
+            "webhooks.endpoints": {
+              "$ref": "#/$defs/meter"
+            },
+            "api.requests": {
+              "$ref": "#/$defs/meter"
+            },
+            "lookup.queries": {
+              "$ref": "#/$defs/meter"
+            },
+            "lookup.hashes": {
+              "$ref": "#/$defs/meter"
+            },
+            "employees.reported": {
+              "$ref": "#/$defs/meter"
+            },
+            "stats.reports": {
+              "$ref": "#/$defs/meter"
+            }
+          }
+        },
+        "managed": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "updates",
+            "backups",
+            "support_level"
+          ],
+          "properties": {
+            "updates": {
+              "type": "boolean"
+            },
+            "backups": {
+              "type": "boolean"
+            },
+            "support_level": {
+              "enum": [
+                "community",
+                "standard",
+                "priority"
+              ]
+            }
+          }
+        },
+        "grace_s": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "refresh_after_s": {
+          "type": "integer",
+          "minimum": 60
+        }
+      }
+    }
+  },
+  "$defs": {
+    "ulid": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+      "maxLength": 26
+    },
+    "product": {
+      "enum": [
+        "gauzy",
+        "teams",
+        "works",
+        "rec",
+        "traduora",
+        "demand"
+      ]
+    },
+    "product_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:*-]{1,64}$",
+      "maxLength": 64
+    },
+    "meter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "used",
+        "period"
+      ],
+      "properties": {
+        "used": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "period": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^20[0-9]{2}-(0[1-9]|1[0-2])$"
+        }
+      }
+    }
+  }
+}

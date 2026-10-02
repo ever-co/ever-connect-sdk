@@ -1,0 +1,11 @@
+{
+  "description": "Corrections tools/split-integrations.mjs applies when it splits the vendored catalog into one definition file per key. Each one exists because the catalog and another platform contract disagree; it is removed when the catalog is corrected. requires_feature must name a key of the entitlement document's features object (or be null), so a product can gate an integration on exactly the feature its entitlement carries.",
+  "requires_feature": {
+    "sso": { "to": "ever_id_login", "why": "the entitlement document names the Ever ID sign-in feature ever_id_login" },
+    "discoverable": { "to": "discoverability", "why": "the entitlement document names the feature discoverability" },
+    "profile_public": { "to": "profile.public", "why": "the entitlement document names the feature profile.public" },
+    "usage": { "to": "usage_reporting", "why": "the entitlement document names the feature usage_reporting" },
+    "apps": { "to": "app_sync", "why": "the entitlement document names the feature app_sync" },
+    "managed": { "to": null, "why": "the entitlement document carries managed operations as managed.updates and managed.backups, outside the features object" }
+  }
+}

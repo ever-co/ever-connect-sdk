@@ -1,0 +1,56 @@
+{
+  "key": "counterparty_lookup",
+  "name": "Check contacts on Ever Platform",
+  "description": "When you click 'Check on Ever Platform' on a contact, the installation sends salted hashes of that contact's VAT number, registration number or e-mail and gets back the handle of any organization that chose to be discoverable. The values themselves never leave the installation.",
+  "category": "lookup",
+  "owner_module": "lookup",
+  "direction": "outbound",
+  "defaults": {
+    "cloud": true,
+    "self_hosted": false
+  },
+  "availability": {
+    "cloud": "enabled",
+    "self_hosted": "available"
+  },
+  "requires_feature": "lookup",
+  "products": [
+    "gauzy",
+    "works"
+  ],
+  "phase": 2,
+  "status": "coming_soon",
+  "scope_version": 1,
+  "revoke_effect": "The button is hidden and cached results are purged.",
+  "notes": "Automatic checking when a contact is opened is a separate setting. It is off by default and is part of this scope text.",
+  "scope": [
+    {
+      "field_path": "contact.vat_number",
+      "direction": "to_ever",
+      "form": "salted_hash",
+      "frequency": "on_action",
+      "required": false,
+      "purpose": "Find an opted-in organization with this VAT number",
+      "retention": "Never stored. Only per-installation rate counters are kept."
+    },
+    {
+      "field_path": "contact.registration_number",
+      "direction": "to_ever",
+      "form": "salted_hash",
+      "frequency": "on_action",
+      "required": false,
+      "purpose": "Find an opted-in organization with this registration number",
+      "retention": "Never stored. Only per-installation rate counters are kept."
+    },
+    {
+      "field_path": "contact.email",
+      "direction": "to_ever",
+      "form": "salted_hash",
+      "frequency": "on_action",
+      "required": false,
+      "purpose": "Find an opted-in organization with this billing e-mail",
+      "retention": "Never stored. Only per-installation rate counters are kept."
+    }
+  ],
+  "docs_anchor": "counterparty_lookup"
+}

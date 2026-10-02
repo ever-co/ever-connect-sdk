@@ -1,0 +1,57 @@
+{
+  "key": "counterparty_discoverable",
+  "name": "Let your partners find you",
+  "description": "Publishes salted hashes of your own organization's tax ID, registration number and billing e-mail, so other organizations that already know these values can find your Ever Platform handle. Nothing is findable by browsing or searching. It is off everywhere, Ever Cloud included, until an owner of your organization turns it on in app.ever.co.",
+  "category": "lookup",
+  "owner_module": "registry",
+  "direction": "outbound",
+  "defaults": {
+    "cloud": false,
+    "self_hosted": false
+  },
+  "availability": {
+    "cloud": "available",
+    "self_hosted": "available"
+  },
+  "requires_feature": "discoverability",
+  "products": [
+    "gauzy",
+    "works",
+    "rec",
+    "traduora"
+  ],
+  "phase": 2,
+  "status": "coming_soon",
+  "scope_version": 1,
+  "revoke_effect": "The stored hashes are deleted.",
+  "scope": [
+    {
+      "field_path": "organization.tax_id",
+      "direction": "to_ever",
+      "form": "salted_hash",
+      "frequency": "on_change",
+      "required": false,
+      "purpose": "Match lookups by tax ID",
+      "retention": "Kept while the integration is enabled. Deleted when it is turned off."
+    },
+    {
+      "field_path": "organization.registration_number",
+      "direction": "to_ever",
+      "form": "salted_hash",
+      "frequency": "on_change",
+      "required": false,
+      "purpose": "Match lookups by registration number",
+      "retention": "Kept while the integration is enabled. Deleted when it is turned off."
+    },
+    {
+      "field_path": "organization.billing_email",
+      "direction": "to_ever",
+      "form": "salted_hash",
+      "frequency": "on_change",
+      "required": false,
+      "purpose": "Match lookups by billing e-mail",
+      "retention": "Kept while the integration is enabled. Deleted when it is turned off."
+    }
+  ],
+  "docs_anchor": "counterparty_discoverable"
+}

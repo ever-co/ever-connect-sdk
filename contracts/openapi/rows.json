@@ -1,0 +1,674 @@
+{
+  "description": "Every outbound call the Ever Platform modules of a product can make, one row per purpose. tools/sync-contract.mjs stamps x-ever-row on each operation of contracts/openapi/ever-platform.v1.yaml and fails when a selected operation has no row or a row names a missing operation; tools/generate.mjs renders docs/outbound-calls.md and contracts/generated/outbound-calls.json from it. `errors` lists the (status, code) pairs each row documents; a third element `spec-gap` marks a pair the mock implements before the platform contract documents that status for the operation. Rows marked `pending_upstream` have no operation in the platform contract yet: their bodies live in pending-upstream.json.",
+  "products_all": ["gauzy", "teams", "works", "rec", "traduora"],
+  "groups": {
+    "session": "Keys, tokens, heartbeat, entitlements and notices",
+    "connection": "Connect, link and disconnect",
+    "integration": "Integrations, each with its own consent and scope",
+    "receipt": "Receipts for a person's deletion or export request",
+    "sign_in": "Company sign-in discovery",
+    "stats": "Anonymous usage statistics"
+  },
+  "rows": [
+    {
+      "row": 1,
+      "title": "Key manifest",
+      "operation_ids": ["get_key_manifest"],
+      "module": "connect",
+      "group": "session",
+      "auth": "none",
+      "trigger": "first signature verification; every 24 h; an unknown key id",
+      "payload": "none (read)",
+      "cadence": "at most every 24 h; at most once per 10 min on an unknown key id",
+      "disable": "disconnect, or leave EVER_CONNECT_ENABLED unset",
+      "products": "all",
+      "phase": 2,
+      "errors": [[503, "keys_unavailable"]]
+    },
+    {
+      "row": 2,
+      "title": "Legal texts",
+      "operation_ids": ["getConnectLegal"],
+      "module": "connect",
+      "group": "session",
+      "auth": "none",
+      "trigger": "connect or link",
+      "payload": "none (read: links to the terms, the data-processing agreement and the sub-processor list)",
+      "cadence": "once per connect or link",
+      "disable": "do not connect",
+      "products": "all",
+      "phase": 2,
+      "errors": []
+    },
+    {
+      "row": 3,
+      "title": "Redeem a connect code",
+      "operation_ids": ["connectRedeem"],
+      "module": "connect",
+      "group": "connection",
+      "auth": "none (the connect code)",
+      "trigger": "the operator submits a connect code; EVER_CONNECT_CODE at first boot",
+      "payload": "code, product, version, install_source, kind (self_hosted; cloud on deployments Ever operates), serves_products[], public_jwk (the connect key), tenant {product_tenant_id, product_org_id?, display_name}? (absent values are omitted, never sent as null); never the installation's address",
+      "cadence": "once",
+      "disable": "do not connect",
+      "products": "all",
+      "phase": 2,
+      "errors": [
+        [409, "already_connected"],
+        [422, "validation_failed"],
+        [422, "code_invalid"],
+        [422, "product_mismatch"],
+        [422, "product_not_supported"],
+        [422, "public_jwk_invalid"],
+        [429, "rate_limited"]
+      ]
+    },
+    {
+      "row": 4,
+      "title": "Instance token",
+      "operation_ids": ["instanceToken"],
+      "module": "connect",
+      "group": "session",
+      "auth": "client assertion signed with the connect key",
+      "trigger": "while connected: before the token expires, and after a 401",
+      "payload": "grant_type, client_assertion_type, client_assertion (issuer and subject are the Ever Platform instance id returned at connect, never the statistics instance id)",
+      "cadence": "every 50 min while connected; on a 401",
+      "disable": "disconnect",
+      "products": "all",
+      "phase": 2,
+      "errors": [
+        [401, "invalid_client"],
+        [401, "credential_revoked"]
+      ]
+    },
+    {
+      "row": 5,
+      "title": "Tenant links",
+      "operation_ids": ["instanceCreateTenantLink", "instanceUnlinkTenantLink", "instanceRekeyTenantLink"],
+      "module": "connect",
+      "group": "connection",
+      "auth": "instance token",
+      "trigger": "an organization admin submits a link code, removes a link, or a single-organization product moves its link to a new organization id",
+      "payload": "link_code, product, product_tenant_id, product_org_id?",
+      "cadence": "on action",
+      "disable": "do not link",
+      "products": "all",
+      "phase": 2,
+      "errors": [
+        [403, "instance_pending_approval"],
+        [404, "not_found"],
+        [409, "already_linked", "spec-gap"],
+        [422, "validation_failed"],
+        [422, "code_invalid"]
+      ]
+    },
+    {
+      "row": 6,
+      "title": "Heartbeat and instance status",
+      "operation_ids": ["instanceHeartbeat", "getInstanceSelf"],
+      "module": "connect",
+      "group": "session",
+      "auth": "instance token",
+      "trigger": "while connected; the status read also while an approval is pending and when an admin opens the connection page",
+      "payload": "version, module_version?, serves_products[]? (heartbeat); none (status read)",
+      "cadence": "within 5 min of boot, then every 24 h",
+      "disable": "disconnect",
+      "products": "all",
+      "phase": 2,
+      "errors": [
+        [401, "credential_revoked"],
+        [403, "instance_pending_approval"],
+        [403, "instance_disconnected"],
+        [422, "validation_failed"],
+        [429, "rate_limited"]
+      ]
+    },
+    {
+      "row": 7,
+      "title": "Event feed",
+      "operation_ids": ["instancePollEvents", "instanceAckEvents"],
+      "module": "connect",
+      "group": "session",
+      "auth": "instance token",
+      "trigger": "while connected",
+      "payload": "cursor only",
+      "cadence": "continuous long-poll (wait=25), or one read every 15 min with EVER_CONNECT_FEED_MODE=interval",
+      "disable": "disconnect",
+      "products": "all",
+      "phase": 2,
+      "errors": [
+        [410, "resync_required"],
+        [422, "validation_failed"]
+      ]
+    },
+    {
+      "row": 8,
+      "title": "Entitlement documents",
+      "operation_ids": ["instanceGetEntitlement", "instanceGetLinkEntitlement"],
+      "module": "connect",
+      "group": "session",
+      "auth": "instance token (If-None-Match)",
+      "trigger": "while connected: every 6 h, at boot, on an entitlement notice, on demand",
+      "payload": "none (read; If-None-Match with the cached sequence number)",
+      "cadence": "every 6 h; on boot; on a change notice; on demand",
+      "disable": "disconnect",
+      "products": "all",
+      "phase": 2,
+      "errors": [
+        [404, "not_found"],
+        [429, "rate_limited"]
+      ]
+    },
+    {
+      "row": 9,
+      "title": "Integration states and consent links",
+      "operation_ids": ["instanceGetIntegrations", "instanceGetConsentUrl"],
+      "module": "connect",
+      "group": "integration",
+      "auth": "instance token",
+      "trigger": "after a consent notice; on return from app.ever.co; when an admin opens the integrations tab",
+      "payload": "integration, link, return (query)",
+      "cadence": "on action or notice",
+      "disable": "disconnect",
+      "products": "all",
+      "phase": 2,
+      "errors": [[422, "validation_failed"]]
+    },
+    {
+      "row": 10,
+      "title": "Disable an integration locally",
+      "operation_ids": ["instanceDisableIntegration"],
+      "module": "connect",
+      "group": "integration",
+      "auth": "instance token",
+      "trigger": "an admin disables an integration locally; an operator policy denies it",
+      "payload": "enabled: false, reason (instance or policy), tenant_link_id?",
+      "cadence": "on action",
+      "disable": "none needed: this call only ever disables",
+      "products": "all",
+      "phase": 2,
+      "errors": [
+        [404, "not_found"],
+        [422, "validation_failed"]
+      ]
+    },
+    {
+      "row": 11,
+      "title": "Link statistics to the organization",
+      "operation_ids": ["instanceLinkStats"],
+      "module": "connect",
+      "group": "integration",
+      "integration": "stats_link",
+      "auth": "instance token",
+      "trigger": "integration stats_link enabled (self-hosted installations only)",
+      "payload": "stats_instance_id, stats_public_jwk, statement_sig: a statement signed with the separate statistics key, sent under the connect-key token, so app.ever.co can show the installation's last report",
+      "cadence": "once; again after Reset instance identity",
+      "disable": "disable stats_link",
+      "phase": 2,
+      "errors": [
+        [403, "integration_disabled"],
+        [403, "integration_revoked"],
+        [409, "key_mismatch"],
+        [422, "validation_failed", "spec-gap"]
+      ]
+    },
+    {
+      "row": 12,
+      "title": "Discoverable identifiers",
+      "operation_ids": ["instancePutLinkIdentifiers", "instanceDeleteLinkIdentifiers"],
+      "module": "connect",
+      "group": "integration",
+      "integration": "counterparty_discoverable",
+      "auth": "instance token",
+      "trigger": "the organization opted in to being discoverable in app.ever.co; its identifiers change; it opts out",
+      "payload": "hashes[{kind, salt_version, hash}] of the organization's own tax id, registration number and billing e-mail",
+      "cadence": "on opt-in, on change, on opt-out",
+      "disable": "disable counterparty_discoverable",
+      "phase": 4,
+      "errors": [
+        [403, "integration_disabled"],
+        [403, "integration_revoked"],
+        [409, "identifier_claimed"]
+      ]
+    },
+    {
+      "row": 13,
+      "title": "Counterparty lookup",
+      "operation_ids": ["getLookupSalt", "getLookupTestVectors", "lookupCounterparties"],
+      "module": "connect",
+      "group": "integration",
+      "integration": "counterparty_lookup",
+      "auth": "none (salt and test vectors); instance token and Ever-Link-Id (lookup)",
+      "trigger": "daily salt refresh; a user clicks Check on Ever Platform on a contact",
+      "payload": "salt_version, hashes[at most 100] of a contact's tax id, registration number or e-mail",
+      "cadence": "on click, and one salt read a day",
+      "disable": "disable counterparty_lookup",
+      "phase": 4,
+      "errors": [
+        [401, "credential_revoked"],
+        [403, "integration_disabled"],
+        [403, "integration_revoked"],
+        [403, "entitlement_required"],
+        [422, "salt_version_unknown"],
+        [422, "salt_version_retired"],
+        [422, "hashes_invalid"],
+        [429, "rate_limited"]
+      ]
+    },
+    {
+      "row": 14,
+      "title": "Ever ID sign-in client",
+      "operation_ids": ["instanceRequestOidcClient", "instanceGetOidcClient"],
+      "module": "connect",
+      "group": "integration",
+      "integration": "ever_id_login",
+      "auth": "instance token",
+      "trigger": "integration ever_id_login enabled; then a status read until the client is ready",
+      "payload": "redirect_uri, logout_uri (the sign-in callback and back-channel logout addresses); the answer carries the client id and, once, the client secret",
+      "cadence": "once per installation (one client serves every linked organization), then a read every few seconds until ready",
+      "disable": "disable ever_id_login (the client is removed on the Ever Platform side)",
+      "phase": 2,
+      "errors": [
+        [403, "integration_disabled"],
+        [403, "integration_revoked"],
+        [404, "not_found"],
+        [409, "already_exists"]
+      ]
+    },
+    {
+      "row": 15,
+      "title": "App mirror",
+      "operation_ids": ["instanceMirrorApps", "instanceListMirroredApps"],
+      "module": "connect",
+      "group": "integration",
+      "integration": "app_sync",
+      "auth": "instance token",
+      "trigger": "integration app_sync enabled and an app or deployment changes; nightly reconciliation",
+      "payload": "app and deployment identifiers, kind, status, deployment {target, provider, shape, managed_by, url}, organization id; member joined or left (ids only)",
+      "cadence": "every 30 s when there is something to send; nightly",
+      "disable": "disable app_sync",
+      "phase": 2,
+      "errors": [
+        [403, "integration_disabled"],
+        [403, "integration_revoked"],
+        [413, "payload_too_large"]
+      ]
+    },
+    {
+      "row": 16,
+      "title": "Disconnect and connect-key rotation",
+      "operation_ids": ["instanceDisconnect", "instanceRotateKey"],
+      "module": "connect",
+      "group": "connection",
+      "auth": "instance token",
+      "trigger": "the operator disconnects; the connect key is rotated",
+      "payload": "none (disconnect); public_jwk of the new connect key (rotation; the statistics key is never rotated by this call)",
+      "cadence": "on action",
+      "disable": "none needed: operator action only",
+      "products": "all",
+      "phase": 2,
+      "errors": [
+        [401, "credential_revoked"],
+        [403, "instance_pending_approval"],
+        [422, "public_jwk_invalid"]
+      ]
+    },
+    {
+      "row": 17,
+      "title": "Anonymous usage statistics report",
+      "operation_ids": ["ingestStatsReport"],
+      "module": "stats",
+      "group": "stats",
+      "auth": "none: the body is signed with the statistics key carried in the signature headers",
+      "trigger": "statistics module loaded and enabled",
+      "payload": "the ever.stats.v1 document: statistics instance id, product, version, channel, install source, coarse country, month, allow-listed counts, feature flags and integer aggregates",
+      "cadence": "once a day at a jittered time; at boot when the last send is older than 24 h; a final re-send of the previous month on days 1-3",
+      "disable": "EVER_STATS_ENABLED=false, or the settings toggle",
+      "products": "all",
+      "phase": 2,
+      "errors": [
+        [400, "validation_failed"],
+        [400, "signature_invalid", "spec-gap"],
+        [409, "key_mismatch"],
+        [413, "validation_failed"],
+        [422, "schema_violation"],
+        [429, "rate_limited"]
+      ]
+    },
+    {
+      "row": 18,
+      "title": "Installation address",
+      "operation_ids": [],
+      "pending_upstream": true,
+      "module": "connect",
+      "group": "integration",
+      "integration": "instance_url",
+      "auth": "instance token",
+      "trigger": "integration instance_url enabled in app.ever.co by the organization that owns the connection and accepted by the operator; revoked",
+      "payload": "base_url (the installation's public address)",
+      "cadence": "once; again when the address changes",
+      "disable": "disable instance_url (the address is removed from Ever Platform)",
+      "phase": 2,
+      "errors": [
+        [403, "integration_disabled"],
+        [403, "integration_revoked"],
+        [422, "validation_failed"]
+      ]
+    },
+    {
+      "row": 19,
+      "title": "Person links",
+      "operation_ids": ["instanceCreatePersonLink", "instanceDeletePersonLink"],
+      "module": "connect",
+      "group": "integration",
+      "integration": "ever_id_login",
+      "auth": "instance token",
+      "trigger": "a user of the installation links or unlinks Ever ID; a one-time sync of links that existed before the installation connected",
+      "payload": "product_user_ref (the product's user id), identity_issuer, identity_subject, link_method, product_tenant_id?, product_org_id?, tenant_link_id?, display_name? of the tenant; never an e-mail or a person's name",
+      "cadence": "on action",
+      "disable": "disable ever_id_login",
+      "phase": 2,
+      "errors": [
+        [403, "integration_disabled"],
+        [403, "integration_revoked"],
+        [404, "not_found", "spec-gap"],
+        [422, "validation_failed", "spec-gap"]
+      ]
+    },
+    {
+      "row": 20,
+      "title": "Receipt for a deletion or export request",
+      "operation_ids": ["instanceAckRequest"],
+      "module": "connect",
+      "group": "receipt",
+      "auth": "instance token",
+      "trigger": "a deletion or export request for a person arrived on the event feed and was handled",
+      "payload": "job_id, result (deleted, anonymised, retained_legal, no_account, forwarded_to_controller, exported or failed), optional non-identifying detail",
+      "cadence": "once per request",
+      "disable": "disconnect",
+      "products": "all",
+      "phase": 2,
+      "errors": [
+        [404, "not_found"],
+        [422, "validation_failed"]
+      ]
+    },
+    {
+      "row": 21,
+      "title": "Import into public profile",
+      "operation_ids": ["instancePushOrgProfile"],
+      "module": "connect",
+      "group": "integration",
+      "integration": "profile_import",
+      "auth": "instance token",
+      "trigger": "an admin clicks Import into public profile",
+      "payload": "the declared public-profile fields only (name, website, short description, logo address, country)",
+      "cadence": "on click",
+      "disable": "disable profile_import",
+      "phase": 3,
+      "errors": [
+        [403, "integration_disabled"],
+        [403, "integration_revoked"],
+        [422, "validation_failed"]
+      ]
+    },
+    {
+      "row": 22,
+      "title": "Identity resolution",
+      "operation_ids": ["resolveIdentity"],
+      "module": "connect",
+      "group": "integration",
+      "integration": "ever_id_login",
+      "auth": "instance token",
+      "trigger": "a backend that holds only an Ever ID token needs the Ever Platform context of that sign-in",
+      "payload": "issuer, subject, id_token?",
+      "cadence": "only on such a sign-in",
+      "disable": "disable ever_id_login",
+      "phase": 2,
+      "errors": [
+        [403, "integration_disabled"],
+        [403, "integration_revoked"],
+        [404, "not_found"]
+      ]
+    },
+    {
+      "row": 23,
+      "title": "Signed-in person's context",
+      "operation_ids": ["getMyContext", "listMyMemberships"],
+      "module": "connect",
+      "group": "integration",
+      "integration": "ever_id_login",
+      "auth": "the person's Ever ID token received at sign-in (read-only; answers only for organizations linked to this installation)",
+      "trigger": "an Ever ID sign-in whose token lacks the Ever Platform claims",
+      "payload": "none (read)",
+      "cadence": "only on such a sign-in",
+      "disable": "disable ever_id_login",
+      "phase": 2,
+      "errors": [[401, "unauthorized"]]
+    },
+    {
+      "row": 24,
+      "title": "Company sign-in discovery",
+      "operation_ids": ["discoverSso"],
+      "module": "connect",
+      "group": "sign_in",
+      "auth": "none",
+      "trigger": "a user picks Sign in with your company",
+      "payload": "email_domain (a domain, never an address)",
+      "cadence": "on click",
+      "disable": "disconnect",
+      "products": ["gauzy", "works", "rec", "traduora"],
+      "phase": 4,
+      "errors": [
+        [422, "validation_failed", "spec-gap"],
+        [429, "rate_limited"]
+      ]
+    },
+    {
+      "row": 25,
+      "title": "Cloud billing link",
+      "operation_ids": ["instanceCreateBillingLink"],
+      "module": "connect",
+      "group": "integration",
+      "integration": "billing_link",
+      "auth": "instance token and Ever-Link-Id",
+      "trigger": "integration billing_link enabled (installations Ever operates only)",
+      "payload": "product_tenant_id, the payment customer reference of the linked tenant",
+      "cadence": "once per link",
+      "disable": "disable billing_link",
+      "phase": 2,
+      "errors": [
+        [403, "integration_disabled"],
+        [403, "integration_revoked"],
+        [422, "validation_failed"]
+      ]
+    },
+    {
+      "row": 26,
+      "title": "Complete a provisioning hand-off",
+      "operation_ids": ["completeProvisionIntent"],
+      "module": "connect",
+      "group": "connection",
+      "auth": "instance token",
+      "trigger": "a provisioning hand-off the person confirmed on a product screen",
+      "payload": "instance_id, product_tenant_id, product_org_id?, product_user_ref?, urls?, result, refusal_reason?",
+      "cadence": "once per hand-off",
+      "disable": "leave EVER_CONNECT_PROVISION_ENABLED unset",
+      "products": ["gauzy", "works", "rec", "traduora"],
+      "phase": 3,
+      "errors": [
+        [404, "not_found"],
+        [409, "illegal_transition"],
+        [410, "gone"],
+        [422, "validation_failed"]
+      ]
+    },
+    {
+      "row": 27,
+      "title": "Usage reports",
+      "operation_ids": ["instanceReportUsage", "instanceReportUsageReadings"],
+      "module": "connect",
+      "group": "integration",
+      "integration": "usage_reporting",
+      "auth": "instance token and Ever-Link-Id",
+      "trigger": "integration usage_reporting enabled (on under the cloud terms on Ever Cloud; off on self-hosted installations unless an admin consents)",
+      "payload": "the consented meters only (counts, never names or ids of people)",
+      "cadence": "daily",
+      "disable": "disable usage_reporting",
+      "phase": 2,
+      "errors": [
+        [403, "integration_disabled"],
+        [403, "integration_revoked"],
+        [422, "validation_failed"]
+      ]
+    },
+    {
+      "row": 28,
+      "title": "Install status",
+      "operation_ids": ["instanceReportInstallStatus"],
+      "module": "connect",
+      "group": "integration",
+      "integration": "marketplace_installs",
+      "auth": "instance token",
+      "trigger": "an install request picked from apps.ever.co was handled by the installation's plugin installer",
+      "payload": "state, detail? (a fixed token), external_ref?, version?",
+      "cadence": "once per install step",
+      "disable": "disable marketplace_installs",
+      "phase": 4,
+      "errors": [
+        [403, "integration_disabled"],
+        [403, "integration_revoked"],
+        [404, "not_found"],
+        [409, "illegal_transition"]
+      ]
+    },
+    {
+      "row": 29,
+      "title": "Device-first connect",
+      "operation_ids": ["connectDevice", "connectDeviceToken"],
+      "module": "connect",
+      "group": "connection",
+      "auth": "none (device start); device code and client assertion (token poll)",
+      "trigger": "the operator chooses Show a code instead",
+      "payload": "product, version, install_source, kind, serves_products[], public_jwk (start); device_code, client_assertion (poll)",
+      "cadence": "once, then a poll at the interval the platform answers until approved or expired",
+      "disable": "do not connect",
+      "products": "all",
+      "phase": 3,
+      "errors": [
+        [400, "authorization_pending"],
+        [400, "slow_down"],
+        [400, "expired_token"],
+        [409, "key_mismatch", "spec-gap"],
+        [422, "validation_failed"],
+        [422, "product_not_supported"],
+        [429, "rate_limited"]
+      ]
+    },
+    {
+      "row": 30,
+      "title": "Webhook endpoint",
+      "operation_ids": ["instanceCreateWebhook", "updateWebhook", "deleteWebhook", "rotateWebhookSecret", "testWebhook", "listWebhookDeliveries", "redeliverWebhook"],
+      "module": "connect",
+      "group": "integration",
+      "integration": "webhooks",
+      "auth": "instance token",
+      "trigger": "integration webhooks enabled on an installation that can receive requests; the operator manages its endpoint",
+      "payload": "url (the installation's own callback address), event_filter[]",
+      "cadence": "on action",
+      "disable": "disable webhooks (the endpoint is deleted)",
+      "phase": 2,
+      "errors": [
+        [403, "integration_disabled"],
+        [403, "integration_revoked"],
+        [404, "module_disabled"],
+        [409, "illegal_transition"],
+        [422, "validation_failed"],
+        [422, "limit_exceeded"]
+      ]
+    },
+    {
+      "row": 31,
+      "title": "Operator accepts an installation-wide integration",
+      "operation_ids": [],
+      "pending_upstream": true,
+      "module": "connect",
+      "group": "integration",
+      "auth": "instance token",
+      "trigger": "the operator accepts or declines an installation-wide integration that waits for the local accept",
+      "payload": "consent_id, accepted",
+      "cadence": "on action",
+      "disable": "none needed: operator action only",
+      "products": "all",
+      "phase": 2,
+      "errors": [
+        [404, "not_found"],
+        [409, "illegal_transition"]
+      ]
+    },
+    {
+      "row": 32,
+      "title": "Provider access grants",
+      "operation_ids": [],
+      "pending_upstream": true,
+      "module": "connect",
+      "group": "integration",
+      "integration": "provider_access",
+      "auth": "instance token",
+      "trigger": "a provider access notice arrived on the event feed and was handled",
+      "payload": "none (read of the grant); grant_id, status, product_user_ref (status report)",
+      "cadence": "once per grant change",
+      "disable": "disable provider_access",
+      "phase": 4,
+      "errors": [
+        [403, "integration_disabled"],
+        [403, "integration_revoked"],
+        [409, "illegal_transition"]
+      ]
+    },
+    {
+      "row": 33,
+      "title": "In-product consent",
+      "operation_ids": ["putIntegrationState"],
+      "module": "connect",
+      "group": "integration",
+      "auth": "the person's Ever ID token from a fresh sign-in through this installation's own client (auth_time at most 300 s old)",
+      "trigger": "an organization owner or admin confirms the in-product consent dialog after a fresh Ever ID sign-in",
+      "payload": "enabled, tenant_link_id?, consent {scope_version, dpa_version, accepted, screen_version?, ui_locale?}",
+      "cadence": "on action",
+      "disable": "never offered for instance_url and counterparty_discoverable; without an Ever ID client the product links to app.ever.co instead",
+      "products": "all",
+      "phase": 2,
+      "errors": [
+        [403, "step_up_required"],
+        [403, "session_required"],
+        [403, "forbidden_role"],
+        [403, "not_connection_owner"],
+        [404, "not_found"],
+        [422, "validation_failed"],
+        [422, "scope_version_outdated"]
+      ]
+    },
+    {
+      "row": 34,
+      "title": "Managed operation result",
+      "operation_ids": ["instanceReportManagedOperationResult"],
+      "module": "connect",
+      "group": "integration",
+      "integration": "managed_operations",
+      "auth": "instance token",
+      "trigger": "the product's executor finished an operation an owner or admin requested, with the managed_operations integration consented and the operator's local opt-in",
+      "payload": "status, version?, artefact_ref?, size_bytes? (status and size only; never backup content, file names or customer data)",
+      "cadence": "once per operation status",
+      "disable": "disable managed_operations, or leave the local opt-in off",
+      "phase": 3,
+      "errors": [
+        [403, "integration_disabled"],
+        [403, "integration_revoked"],
+        [404, "not_found"],
+        [409, "illegal_transition"],
+        [422, "validation_failed"]
+      ]
+    }
+  ]
+}
