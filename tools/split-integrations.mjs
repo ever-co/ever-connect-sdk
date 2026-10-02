@@ -37,9 +37,12 @@ export function scopeLock(definitions, previous = {}) {
   for (const def of definitions) {
     const digest = sha256(stableJson(def.scope ?? []));
     const before = previous[def.key];
-    if (before && def.scope_version < before.scope_version) problems.push(`${def.key}: scope_version went down from ${before.scope_version}`);
+    if (before && def.scope_version < before.scope_version)
+      problems.push(`${def.key}: scope_version went down from ${before.scope_version}`);
     else if (before && before.scope_sha256 !== digest && def.scope_version <= before.scope_version)
-      problems.push(`${def.key}: the scope changed but scope_version stayed ${def.scope_version}; raise it (the change needs a new consent)`);
+      problems.push(
+        `${def.key}: the scope changed but scope_version stayed ${def.scope_version}; raise it (the change needs a new consent)`,
+      );
     lock[def.key] = { scope_version: def.scope_version, scope_sha256: digest };
   }
   return { lock, problems };

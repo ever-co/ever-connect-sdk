@@ -25,7 +25,7 @@ const DRAFT_DIR = 'docs/docs-drafts';
 const region = (name) => [`<!-- generated:${name} -->`, `<!-- /generated:${name} -->`];
 
 const NOTHING_ELSE =
-  '**Nothing else.** A row that names an integration runs only while that integration has an active consent recorded by Ever Platform, given on app.ever.co or in the product after a fresh Ever ID sign-in; the integrations that act for the whole installation also need the operator to accept them on the installation. Apart from the connect calls themselves, every connection-module row runs only while connected; row 17 runs only while statistics are enabled. This table is generated from the SDK\'s operation table in continuous integration, so a request the SDK can make and this page does not list fails the build.';
+  "**Nothing else.** A row that names an integration runs only while that integration has an active consent recorded by Ever Platform, given on app.ever.co or in the product after a fresh Ever ID sign-in; the integrations that act for the whole installation also need the operator to accept them on the installation. Apart from the connect calls themselves, every connection-module row runs only while connected; row 17 runs only while statistics are enabled. This table is generated from the SDK's operation table in continuous integration, so a request the SDK can make and this page does not list fails the build.";
 
 export const DRAFTS = [
   {
@@ -37,7 +37,10 @@ export const DRAFTS = [
       { heading: 'Rows grouped by what they are for', block: 'table', name: 'outbound-groups' },
     ],
     fixes: [
-      ['To verify yourself: Docker Compose and `tcpdump` (see §7).', 'To verify yourself: Docker Compose and `tcpdump` (see *How to verify yourself* below).'],
+      [
+        'To verify yourself: Docker Compose and `tcpdump` (see §7).',
+        'To verify yourself: Docker Compose and `tcpdump` (see *How to verify yourself* below).',
+      ],
       [/^\*\*Nothing else\.\*\*.*$/m, NOTHING_ELSE],
       [
         /the `code` is stable: [^\n]*?\. The modules log/,
@@ -62,7 +65,7 @@ export const DRAFTS = [
       ['The schema is published in the open-source SDK', 'The schema is published in the SDK'],
       [
         /The signature uses a key pair your installation generated on first boot; [^\n]*?The key proves continuity, not identity: the platform learns nothing about who you are from it\./,
-        'The signature uses the statistics key, an Ed25519 key pair your installation generates on first boot for statistics only; the platform remembers the public key on first sight so that nobody else can submit reports under your `instance_id`. It is separate from the key of an Ever Platform connection: the connection key only authenticates the connection\'s calls and rotates on its own, and rotating it changes nothing here. The statistics key proves continuity, not identity: the platform learns nothing about who you are from it.',
+        "The signature uses the statistics key, an Ed25519 key pair your installation generates on first boot for statistics only; the platform remembers the public key on first sight so that nobody else can submit reports under your `instance_id`. It is separate from the key of an Ever Platform connection: the connection key only authenticates the connection's calls and rotates on its own, and rotating it changes nothing here. The statistics key proves continuity, not identity: the platform learns nothing about who you are from it.",
       ],
       [
         /generates a new `instance_id` and key pair; the old series can no longer be continued; if the installation is connected to Ever Platform it is disconnected at the same time/,
@@ -75,8 +78,14 @@ export const DRAFTS = [
     to: 'docs/integrations.md',
     regions: [{ heading: 'Catalog (v1)', block: 'table', name: 'integrations-catalog' }],
     fixes: [
-      ['(`instance_url`, `stats_link`, `ever_id_login`, `webhooks`)', '(`instance_url`, `stats_link`, `ever_id_login`, `webhooks`, `managed_operations`)'],
-      ['*What this installation sends, and when* (rows 9–15, 18 and 20–24)', '*What this installation sends, and when* (every row that names an integration)'],
+      [
+        '(`instance_url`, `stats_link`, `ever_id_login`, `webhooks`)',
+        '(`instance_url`, `stats_link`, `ever_id_login`, `webhooks`, `managed_operations`)',
+      ],
+      [
+        '*What this installation sends, and when* (rows 9–15, 18 and 20–24)',
+        '*What this installation sends, and when* (every row that names an integration)',
+      ],
     ],
   },
 ];
@@ -93,7 +102,8 @@ export function stripComments(text) {
 export function applyFix(text, [find, replace], where) {
   const present = typeof find === 'string' ? text.includes(find) : find.test(text);
   if (present) {
-    if (typeof find === 'string' && text.split(find).length > 2) throw new Error(`${where}: the correction for "${find.slice(0, 50)}" matches more than once`);
+    if (typeof find === 'string' && text.split(find).length > 2)
+      throw new Error(`${where}: the correction for "${find.slice(0, 50)}" matches more than once`);
     return typeof find === 'string' ? text.split(find).join(replace) : text.replace(find, () => replace);
   }
   if (text.includes(replace)) return text;
@@ -131,7 +141,8 @@ export function markRegion(text, { heading, block, name }, where) {
     end = i + 1;
   } else if (block === 'intro') {
     while (i < lines.length && lines[i].trim() === '') i += 1;
-    if (lines[i]?.startsWith('|') || lines[i]?.startsWith('<!--') || isHeading(lines[i] ?? '')) throw new Error(`${where}: no paragraph under "${heading}"`);
+    if (lines[i]?.startsWith('|') || lines[i]?.startsWith('<!--') || isHeading(lines[i] ?? ''))
+      throw new Error(`${where}: no paragraph under "${heading}"`);
     start = i;
     while (i < lines.length && lines[i].trim() !== '') i += 1;
     end = i;
@@ -170,7 +181,9 @@ function main() {
     } else writeText(target, out);
   }
   if (check && differing.length > 0) {
-    process.stderr.write(`copy-draft: ${differing.join(', ')} differ from the drafts; run node tools/copy-draft.mjs, then node tools/generate.mjs\n`);
+    process.stderr.write(
+      `copy-draft: ${differing.join(', ')} differ from the drafts; run node tools/copy-draft.mjs, then node tools/generate.mjs\n`,
+    );
     return 1;
   }
   process.stdout.write(check ? 'copy-draft: ok\n' : `copy-draft: ${DRAFTS.length} docs written; now run node tools/generate.mjs\n`);
