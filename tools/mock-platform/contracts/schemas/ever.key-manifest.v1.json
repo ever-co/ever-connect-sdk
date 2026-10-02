@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://api.ever.co/v1/entitlements/schema/ever.key-manifest.v1",
+  "title": "Ever Platform key manifest v1",
+  "description": "The body of GET /.well-known/ever-keys.json: the published signing keys and a compact JWS (header {alg: EdDSA, kid: <root kid>, typ: ever-key-manifest+jwt}) signed by a pinned root key whose payload is {iss, iat, exp, keys_sha256, root_kid}; keys_sha256 is the hex SHA-256 of the RFC 8785 canonical JSON of the served keys array. A verifier trusts a key only when the manifest verifies against a pinned root and keys_sha256 matches the served array. Authored in this repository until the platform publishes the schema; the field set follows the platform's KeyManifestBody.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["manifest", "keys"],
+  "properties": {
+    "manifest": {
+      "type": "string",
+      "maxLength": 65536,
+      "pattern": "^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$"
+    },
+    "keys": {
+      "type": "array",
+      "maxItems": 64,
+      "items": { "$ref": "#/$defs/key" }
+    }
+  },
+  "$defs": {
+    "key": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kty", "crv", "kid", "x", "use", "alg", "ever_purpose", "state", "not_before"],
+      "properties": {
+        "kty": { "const": "OKP" },
+        "crv": { "const": "Ed25519" },
+        "kid": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,64}$", "maxLength": 64 },
+        "x": { "type": "string", "pattern": "^[A-Za-z0-9_-]{43}$", "maxLength": 43 },
+        "use": { "const": "sig" },
+        "alg": { "const": "EdDSA" },
+        "ever_purpose": { "enum": ["assertion", "intent", "entitlement"] },
+        "state": { "enum": ["active", "previous"] },
+        "not_before": { "type": "string", "format": "date-time" },
+        "not_after": { "oneOf": [{ "type": "string", "format": "date-time" }, { "type": "null" }] }
+      }
+    },
+    "payload": {
+      "description": "The manifest JWS payload (not part of the served body; used by verifiers and fixtures).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["iss", "iat", "exp", "keys_sha256", "root_kid"],
+      "properties": {
+        "iss": { "type": "string", "maxLength": 256 },
+        "iat": { "type": "integer", "minimum": 0 },
+        "exp": { "type": "integer", "minimum": 0 },
+        "keys_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "root_kid": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,64}$" }
+      }
+    }
+  }
+}

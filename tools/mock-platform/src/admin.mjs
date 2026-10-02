@@ -292,6 +292,28 @@ export const adminRoutes = {
     body: [...state.operations.values()].map((o) => ({ ...stateChangedData(o), results: o.results })),
   }),
 
+  // A delivery of a webhook endpoint in a given state (to redeliver a failed one).
+  'POST /__mock/webhook-delivery': ({ state, body }) => {
+    const instance = need(state.instance(body?.instance_id));
+    const e = instance.webhooks[body?.webhook_id];
+    if (!e) fail(404, 'not_found', 'no such webhook endpoint');
+    const d = {
+      id: state.ulid('delivery'),
+      endpoint_id: e.id,
+      event_id: state.ulid('event'),
+      event_type: 'ever.consent.integration.enabled',
+      attempt: 1,
+      state: body?.state ?? 'failed',
+      created_at: state.iso(),
+      delivered_at: null,
+      response_status: 500,
+      error: 'upstream_5xx',
+      next_attempt_at: null,
+    };
+    e.deliveries.push(d);
+    return { status: 201, body: { delivery_id: d.id } };
+  },
+
   'POST /__mock/faults': ({ state, body }) => {
     Object.assign(state.faults, body ?? {});
     return { body: state.faults };

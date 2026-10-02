@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://api.ever.co/v1/events/catalog/schemas/ever.registry.person.deletion_requested.v1.schema.json",
+  "title": "ever.registry.person.deletion_requested v1 data",
+  "description": "subject_hash = sha256 of the (iss, sub) pair so an installation can find its person_link without receiving the raw subject; idempotent (T16)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "person_id",
+    "job_id",
+    "respond_by",
+    "subject_hash"
+  ],
+  "properties": {
+    "person_id": {
+      "$ref": "common.schema.json#/$defs/ulid"
+    },
+    "job_id": {
+      "$ref": "common.schema.json#/$defs/ulid"
+    },
+    "respond_by": {
+      "$ref": "common.schema.json#/$defs/datetime"
+    },
+    "subject_hash": {
+      "$ref": "common.schema.json#/$defs/hex64"
+    }
+  }
+}

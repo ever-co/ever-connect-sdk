@@ -64,6 +64,7 @@ export const DEFAULT_CONFIG = {
     stats_reports_per_day: 24,
     lookup_queries_per_min: 60,
     sso_discover_per_min: 60,
+    device_starts_per_hour: 10,
     webhook_endpoints: 5,
   },
   faults: { keys_unavailable: false, webhooks_module_disabled: false, revoke_credential_at_call: null },

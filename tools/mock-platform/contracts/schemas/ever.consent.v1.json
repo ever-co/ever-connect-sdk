@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://api.ever.co/v1/consent/schema/ever.consent.v1",
+  "title": "Ever Platform consent record v1",
+  "description": "The consent record Ever Platform keeps for one integration of one installation (and tenant link), and that a product mirrors next to its local integration state. A record is immutable; a revocation sets revoked_at. Evidence never holds an IP address or a user agent. consent_source product_ui is a consent given in the product's own dialog after a fresh Ever ID sign-in; it never applies to counterparty_discoverable or instance_url, which are enabled in app.ever.co only. Authored in this repository until the platform publishes the schema.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "org_id", "instance_id", "integration_key", "scope_version", "dpa_version", "granted_by_person_id", "granted_at", "consent_source"],
+  "properties": {
+    "id": { "$ref": "#/$defs/ulid" },
+    "org_id": { "$ref": "#/$defs/ulid" },
+    "instance_id": { "$ref": "#/$defs/ulid" },
+    "tenant_link_id": { "oneOf": [{ "$ref": "#/$defs/ulid" }, { "type": "null" }] },
+    "integration_key": { "type": "string", "pattern": "^[a-z][a-z0-9_]{1,40}$", "maxLength": 41 },
+    "scope_version": { "type": "integer", "minimum": 1 },
+    "dpa_version": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}(-[0-9]{2})?$", "maxLength": 10 },
+    "terms_version": { "oneOf": [{ "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}(-[0-9]{2})?$", "maxLength": 10 }, { "type": "null" }] },
+    "granted_by_person_id": { "oneOf": [{ "$ref": "#/$defs/ulid" }, { "type": "null" }] },
+    "granted_at": { "$ref": "#/$defs/timestamp" },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ui": { "type": "string", "pattern": "^(app\\.ever\\.co|product:(gauzy|teams|works|rec|traduora))$", "maxLength": 16 },
+        "screen_version": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,32}$", "maxLength": 32 },
+        "request_id": { "type": "string", "pattern": "^[A-Za-z0-9._:-]{1,64}$", "maxLength": 64 },
+        "ui_locale": { "type": "string", "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$", "maxLength": 35 }
+      }
+    },
+    "consent_source": { "enum": ["app_ever_co", "cloud_terms", "product_ui"] },
+    "revoked_at": { "oneOf": [{ "$ref": "#/$defs/timestamp" }, { "type": "null" }] },
+    "revoked_by_person_id": { "oneOf": [{ "$ref": "#/$defs/ulid" }, { "type": "null" }] },
+    "revoke_reason": { "enum": ["owner", "superseded", "instance_disconnected", "org_deleted", "policy", "staff", null] },
+    "revoke_source": { "enum": ["platform", "instance", "policy", null] },
+    "supersedes_id": { "oneOf": [{ "$ref": "#/$defs/ulid" }, { "type": "null" }] }
+  },
+  "allOf": [
+    {
+      "if": { "required": ["consent_source"], "properties": { "consent_source": { "const": "cloud_terms" } } },
+      "then": { "properties": { "granted_by_person_id": { "type": "null" } } }
+    },
+    {
+      "if": { "required": ["consent_source"], "properties": { "consent_source": { "const": "product_ui" } } },
+      "then": {
+        "required": ["evidence"],
+        "properties": {
+          "integration_key": { "not": { "enum": ["counterparty_discoverable", "instance_url"] } },
+          "evidence": {
+            "required": ["ui"],
+            "properties": { "ui": { "pattern": "^product:(gauzy|teams|works|rec|traduora)$" } }
+          }
+        }
+      }
+    },
+    {
+      "if": { "required": ["consent_source"], "properties": { "consent_source": { "const": "app_ever_co" } } },
+      "then": { "properties": { "evidence": { "properties": { "ui": { "const": "app.ever.co" } } } } }
+    }
+  ],
+  "$defs": {
+    "ulid": { "type": "string", "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$", "maxLength": 26 },
+    "timestamp": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?Z$", "maxLength": 27 }
+  }
+}

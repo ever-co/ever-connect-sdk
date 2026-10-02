@@ -2,16 +2,19 @@
 import { activeLinks, createLink, tenantLinkView } from '../model.mjs';
 import { fail } from '../problem.mjs';
 
-const linkEventData = (link) => ({
-  tenant_link_id: link.id,
-  org_id: link.org_id,
-  instance_id: link.instance_id,
-  product: link.product,
-  product_tenant_id: link.product_tenant_id,
-  product_org_id: link.product_org_id,
-  state: link.state,
-  link_method: link.link_method,
-});
+const linkEventData = (link) => {
+  const data = {
+    tenant_link_id: link.id,
+    org_id: link.org_id,
+    instance_id: link.instance_id,
+    product: link.product,
+    product_tenant_id: link.product_tenant_id,
+    state: link.state,
+    link_method: link.link_method,
+  };
+  if (link.product_org_id) data.product_org_id = link.product_org_id;
+  return data;
+};
 
 export const linkHandlers = {
   instanceCreateTenantLink({ state, instance, body }) {

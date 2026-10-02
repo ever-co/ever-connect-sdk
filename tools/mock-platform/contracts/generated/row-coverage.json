@@ -1,0 +1,1308 @@
+{
+  "description": "Every (row, status, problem code) the outbound-call table documents. The mock platform test suite answers each pair; `documented: false` marks a pair the platform contract does not document yet for that operation.",
+  "rows": [
+    {
+      "row": 1,
+      "operations": [
+        {
+          "operation_id": "get_key_manifest",
+          "method": "GET",
+          "path": "/.well-known/ever-keys.json",
+          "success": [
+            200
+          ]
+        }
+      ],
+      "errors": [
+        {
+          "status": 503,
+          "code": "keys_unavailable",
+          "documented": true
+        }
+      ]
+    },
+    {
+      "row": 2,
+      "operations": [
+        {
+          "operation_id": "getConnectLegal",
+          "method": "GET",
+          "path": "/v1/connect/legal",
+          "success": [
+            200
+          ]
+        }
+      ],
+      "errors": []
+    },
+    {
+      "row": 3,
+      "operations": [
+        {
+          "operation_id": "connectRedeem",
+          "method": "POST",
+          "path": "/v1/connect/redeem",
+          "success": [
+            201
+          ]
+        }
+      ],
+      "errors": [
+        {
+          "status": 409,
+          "code": "already_connected",
+          "documented": true
+        },
+        {
+          "status": 422,
+          "code": "validation_failed",
+          "documented": true
+        },
+        {
+          "status": 422,
+          "code": "code_invalid",
+          "documented": true
+        },
+        {
+          "status": 422,
+          "code": "product_mismatch",
+          "documented": true
+        },
+        {
+          "status": 422,
+          "code": "product_not_supported",
+          "documented": true
+        },
+        {
+          "status": 422,
+          "code": "public_jwk_invalid",
+          "documented": true
+        },
+        {
+          "status": 429,
+          "code": "rate_limited",
+          "documented": true
+        }
+      ]
+    },
+    {
+      "row": 4,
+      "operations": [
+        {
+          "operation_id": "instanceToken",
+          "method": "POST",
+          "path": "/v1/instances/token",
+          "success": [
+            200
+          ]
+        }
+      ],
+      "errors": [
+        {
+          "status": 401,
+          "code": "invalid_client",
+          "documented": true
+        },
+        {
+          "status": 401,
+          "code": "credential_revoked",
+          "documented": true
+        }
+      ]
+    },
+    {
+      "row": 5,
+      "operations": [
+        {
+          "operation_id": "instanceCreateTenantLink",
+          "method": "POST",
+          "path": "/v1/instances/me/tenant-links",
+          "success": [
+            201
+          ]
+        },
+        {
+          "operation_id": "instanceUnlinkTenantLink",
+          "method": "DELETE",
+          "path": "/v1/instances/me/tenant-links/{link}",
+          "success": [
+            204
+          ]
+        },
+        {
+          "operation_id": "instanceRekeyTenantLink",
+          "method": "PATCH",
+          "path": "/v1/instances/me/tenant-links/{link}",
+          "success": [
+            200
+          ]
+        }
+      ],
+      "errors": [
+        {
+          "status": 403,
+          "code": "instance_pending_approval",
+          "documented": true
+        },
+        {
+          "status": 404,
+          "code": "not_found",
+          "documented": true
+        },
+        {
+          "status": 409,
+          "code": "already_linked",
+          "documented": false
+        },
+        {
+          "status": 422,
+          "code": "validation_failed",
+          "documented": true
+        },
+        {
+          "status": 422,
+          "code": "code_invalid",
+          "documented": true
+        }
+      ]
+    },
+    {
+      "row": 6,
+      "operations": [
+        {
+          "operation_id": "instanceHeartbeat",
+          "method": "POST",
+          "path": "/v1/instances/me/heartbeat",
+          "success": [
+            200
+          ]
+        },
+        {
+          "operation_id": "getInstanceSelf",
+          "method": "GET",
+          "path": "/v1/instances/me",
+          "success": [
+            200
+          ]
+        }
+      ],
+      "errors": [
+        {
+          "status": 401,
+          "code": "credential_revoked",
+          "documented": true
+        },
+        {
+          "status": 403,
+          "code": "instance_pending_approval",
+          "documented": true
+        },
+        {
+          "status": 403,
+          "code": "instance_disconnected",
+          "documented": true
+        },
+        {
+          "status": 422,
+          "code": "validation_failed",
+          "documented": true
+        },
+        {
+          "status": 429,
+          "code": "rate_limited",
+          "documented": true
+        }
+      ]
+    },
+    {
+      "row": 7,
+      "operations": [
+        {
+          "operation_id": "instancePollEvents",
+          "method": "GET",
+          "path": "/v1/instances/me/events",
+          "success": [
+            200
+          ]
+        },
+        {
+          "operation_id": "instanceAckEvents",
+          "method": "POST",
+          "path": "/v1/instances/me/events/ack",
+          "success": [
+            200
+          ]
+        }
+      ],
+      "errors": [
+        {
+          "status": 410,
+          "code": "resync_required",
+          "documented": true
+        },
+        {
+          "status": 422,
+          "code": "validation_failed",
+          "documented": true
+        }
+      ]
+    },
+    {
+      "row": 8,
+      "operations": [
+        {
+          "operation_id": "instanceGetEntitlement",
+          "method": "GET",
+          "path": "/v1/instances/me/entitlement",
+          "success": [
+            200,
+            304
+          ]
+        },
+        {
+          "operation_id": "instanceGetLinkEntitlement",
+          "method": "GET",
+          "path": "/v1/instances/me/tenant-links/{link}/entitlement",
+          "success": [
+            200,
+            304
+          ]
+        }
+      ],
+      "errors": [
+        {
+          "status": 404,
+          "code": "not_found",
+          "documented": true
+        },
+        {
+          "status": 429,
+          "code": "rate_limited",
+          "documented": true
+        }
+      ]
+    },
+    {
+      "row": 9,
+      "operations": [
+        {
+          "operation_id": "instanceGetIntegrations",
+          "method": "GET",
+          "path": "/v1/instances/me/integrations",
+          "success": [
+            200
+          ]
+        },
+        {
+          "operation_id": "instanceGetConsentUrl",
+          "method": "GET",
+          "path": "/v1/instances/me/consent-url",
+          "success": [
+            200
+          ]
+        }
+      ],
+      "errors": [
+        {
+          "status": 422,
+          "code": "validation_failed",
+          "documented": true
+        }
+      ]
+    },
+    {
+      "row": 10,
+      "operations": [
+        {
+          "operation_id": "instanceDisableIntegration",
+          "method": "PUT",
+          "path": "/v1/instances/me/integrations/{key}",
+          "success": [
+            200
+          ]
+        }
+      ],
+      "errors": [
+        {
+          "status": 404,
+          "code": "not_found",
+          "documented": true
+        },
+        {
+          "status": 422,
+          "code": "validation_failed",
+          "documented": true
+        }
+      ]
+    },
+    {
+      "row": 11,
+      "operations": [
+        {
+          "operation_id": "instanceLinkStats",
+          "method": "POST",
+          "path": "/v1/instances/me/stats-link",
+          "success": [
+            200
+          ]
+        }
+      ],
+      "errors": [
+        {
+          "status": 403,
+          "code": "integration_disabled",
+          "documented": true
+        },
+        {
+          "status": 403,
+          "code": "integration_revoked",
+          "documented": true
+        },
+        {
+          "status": 409,
+          "code": "key_mismatch",
+          "documented": true
+        },
+        {
+          "status": 422,
+          "code": "validation_failed",
+          "documented": false
+        }
+      ]
+    },
+    {
+      "row": 12,
+      "operations": [
+        {
+          "operation_id": "instancePutLinkIdentifiers",
+          "method": "PUT",
+          "path": "/v1/instances/me/tenant-links/{link}/identifiers",
+          "success": [
+            200
+          ]
+        },
+        {
+          "operation_id": "instanceDeleteLinkIdentifiers",
+          "method": "DELETE",
+          "path": "/v1/instances/me/tenant-links/{link}/identifiers",
+          "success": [
+            204
+          ]
+        }
+      ],
+      "errors": [
+        {
+          "status": 403,
+          "code": "integration_disabled",
+          "documented": true
+        },
+        {
+          "status": 403,
+          "code": "integration_revoked",
+          "documented": true
+        },
+        {
+          "status": 409,
+          "code": "identifier_claimed",
+          "documented": true
+        }
+      ]
+    },
+    {
+      "row": 13,
+      "operations": [
+        {
+          "operation_id": "getLookupSalt",
+          "method": "GET",
+          "path": "/v1/lookup/salt",
+          "success": [
+            200
+          ]
+        },
+        {
+          "operation_id": "getLookupTestVectors",
+          "method": "GET",
+          "path": "/v1/lookup/test-vectors",
+          "success": [
+            200
+          ]
+        },
+        {
+          "operation_id": "lookupCounterparties",
+          "method": "POST",
+          "path": "/v1/lookup",
+          "success": [
+            200
+          ]
+        }
+      ],
+      "errors": [
+        {
+          "status": 401,
+          "code": "credential_revoked",
+          "documented": true
+        },
+        {
+          "status": 403,
+          "code": "integration_disabled",
+          "documented": true
+        },
+        {
+          "status": 403,
+          "code": "integration_revoked",
+          "documented": true
+        },
+        {
+          "status": 403,
+          "code": "entitlement_required",
+          "documented": true
+        },
+        {
+          "status": 422,
+          "code": "salt_version_unknown",
+          "documented": true
+        },
+        {
+          "status": 422,
+          "code": "salt_version_retired",
+          "documented": true
+        },
+        {
+          "status": 422,
+          "code": "hashes_invalid",
+          "documented": true
+        },
+        {
+          "status": 429,
+          "code": "rate_limited",
+          "documented": true
+        }
+      ]
+    },
+    {
+      "row": 14,
+      "operations": [
+        {
+          "operation_id": "instanceRequestOidcClient",
+          "method": "POST",
+          "path": "/v1/instances/me/oidc-client",
+          "success": [
+            202
+          ]
+        },
+        {
+          "operation_id": "instanceGetOidcClient",
+          "method": "GET",
+          "path": "/v1/instances/me/oidc-client",
+          "success": [
+            200
+          ]
+        }
+      ],
+      "errors": [
+        {
+          "status": 403,
+          "code": "integration_disabled",
+          "documented": true
+        },
+        {
+          "status": 403,
+          "code": "integration_revoked",
+          "documented": true
+        },
+        {
+          "status": 404,
+          "code": "not_found",
+          "documented": true
+        },
+        {
+          "status": 409,
+          "code": "already_exists",
+          "documented": true
+        }
+      ]
+    },
+    {
+      "row": 15,
+      "operations": [
+        {
+          "operation_id": "instanceMirrorApps",
+          "method": "POST",
+          "path": "/v1/instances/me/mirror/apps",
+          "success": [
+            200
+          ]
+        },
+        {
+          "operation_id": "instanceListMirroredApps",
+          "method": "GET",
+          "path": "/v1/instances/me/mirror/apps",
+          "success": [
+            200
+          ]
+        }
+      ],
+      "errors": [
+        {
+          "status": 403,
+          "code": "integration_disabled",
+          "documented": true
+        },
+        {
+          "status": 403,
+          "code": "integration_revoked",
+          "documented": true
+        },
+        {
+          "status": 413,
+          "code": "payload_too_large",
+          "documented": true
+        }
+      ]
+    },
+    {
+      "row": 16,
+      "operations": [
+        {
+          "operation_id": "instanceDisconnect",
+          "method": "POST",
+          "path": "/v1/instances/me/disconnect",
+          "success": [
+            200
+          ]
+        },
+        {
+          "operation_id": "instanceRotateKey",
+          "method": "POST",
+          "path": "/v1/instances/me/keys",
+          "success": [
+            200
+          ]
+        }
+      ],
+      "errors": [
+        {
+          "status": 401,
+          "code": "credential_revoked",
+          "documented": true
+        },
+        {
+          "status": 403,
+          "code": "instance_pending_approval",
+          "documented": true
+        },
+        {
+          "status": 422,
+          "code": "public_jwk_invalid",
+          "documented": true
+        }
+      ]
+    },
+    {
+      "row": 17,
+      "operations": [
+        {
+          "operation_id": "ingestStatsReport",
+          "method": "POST",
+          "path": "/v1/stats/reports",
+          "success": [
+            202
+          ]
+        }
+      ],
+      "errors": [
+        {
+          "status": 400,
+          "code": "validation_failed",
+          "documented": true
+        },
+        {
+          "status": 400,
+          "code": "signature_invalid",
+          "documented": false
+        },
+        {
+          "status": 409,
+          "code": "key_mismatch",
+          "documented": true
+        },
+        {
+          "status": 413,
+          "code": "validation_failed",
+          "documented": true
+        },
+        {
+          "status": 422,
+          "code": "schema_violation",
+          "documented": true
+        },
+        {
+          "status": 429,
+          "code": "rate_limited",
+          "documented": true
+        }
+      ]
+    },
+    {
+      "row": 18,
+      "operations": [
+        {
+          "operation_id": "instancePutPublicUrl",
+          "method": "PUT",
+          "path": "/v1/instances/me/public-url",
+          "success": [
+            200
+          ]
+        },
+        {
+          "operation_id": "instanceDeletePublicUrl",
+          "method": "DELETE",
+          "path": "/v1/instances/me/public-url",
+          "success": [
+            204
+          ]
+        }
+      ],
+      "errors": [
+        {
+          "status": 403,
+          "code": "integration_disabled",
+          "documented": true
+        },
+        {
+          "status": 403,
+          "code": "integration_revoked",
+          "documented": true
+        },
+        {
+          "status": 422,
+          "code": "validation_failed",
+          "documented": true
+        }
+      ]
+    },
+    {
+      "row": 19,
+      "operations": [
+        {
+          "operation_id": "instanceCreatePersonLink",
+          "method": "POST",
+          "path": "/v1/instances/me/person-links",
+          "success": [
+            201
+          ]
+        },
+        {
+          "operation_id": "instanceDeletePersonLink",
+          "method": "DELETE",
+          "path": "/v1/instances/me/person-links/{ref}",
+          "success": [
+            204
+          ]
+        }
+      ],
+      "errors": [
+        {
+          "status": 403,
+          "code": "integration_disabled",
+          "documented": true
+        },
+        {
+          "status": 403,
+          "code": "integration_revoked",
+          "documented": true
+        },
+        {
+          "status": 404,
+          "code": "not_found",
+          "documented": false
+        },
+        {
+          "status": 422,
+          "code": "validation_failed",
+          "documented": false
+        }
+      ]
+    },
+    {
+      "row": 20,
+      "operations": [
+        {
+          "operation_id": "instanceAckRequest",
+          "method": "POST",
+          "path": "/v1/instances/me/ack",
+          "success": [
+            204
+          ]
+        }
+      ],
+      "errors": [
+        {
+          "status": 404,
+          "code": "not_found",
+          "documented": true
+        },
+        {
+          "status": 422,
+          "code": "validation_failed",
+          "documented": true
+        }
+      ]
+    },
+    {
+      "row": 21,
+      "operations": [
+        {
+          "operation_id": "instancePushOrgProfile",
+          "method": "POST",
+          "path": "/v1/instances/me/org-profile",
+          "success": [
+            200
+          ]
+        }
+      ],
+      "errors": [
+        {
+          "status": 403,
+          "code": "integration_disabled",
+          "documented": true
+        },
+        {
+          "status": 403,
+          "code": "integration_revoked",
+          "documented": true
+        },
+        {
+          "status": 422,
+          "code": "validation_failed",
+          "documented": true
+        }
+      ]
+    },
+    {
+      "row": 22,
+      "operations": [
+        {
+          "operation_id": "resolveIdentity",
+          "method": "POST",
+          "path": "/v1/identity/resolve",
+          "success": [
+            200
+          ]
+        }
+      ],
+      "errors": [
+        {
+          "status": 403,
+          "code": "integration_disabled",
+          "documented": true
+        },
+        {
+          "status": 403,
+          "code": "integration_revoked",
+          "documented": true
+        },
+        {
+          "status": 404,
+          "code": "not_found",
+          "documented": true
+        }
+      ]
+    },
+    {
+      "row": 23,
+      "operations": [
+        {
+          "operation_id": "getMyContext",
+          "method": "GET",
+          "path": "/v1/me/context",
+          "success": [
+            200
+          ]
+        },
+        {
+          "operation_id": "listMyMemberships",
+          "method": "GET",
+          "path": "/v1/me/memberships",
+          "success": [
+            200
+          ]
+        }
+      ],
+      "errors": [
+        {
+          "status": 401,
+          "code": "unauthorized",
+          "documented": true
+        }
+      ]
+    },
+    {
+      "row": 24,
+      "operations": [
+        {
+          "operation_id": "discoverSso",
+          "method": "GET",
+          "path": "/v1/sso/discover",
+          "success": [
+            200
+          ]
+        }
+      ],
+      "errors": [
+        {
+          "status": 422,
+          "code": "validation_failed",
+          "documented": false
+        },
+        {
+          "status": 429,
+          "code": "rate_limited",
+          "documented": true
+        }
+      ]
+    },
+    {
+      "row": 25,
+      "operations": [
+        {
+          "operation_id": "instanceCreateBillingLink",
+          "method": "POST",
+          "path": "/v1/instances/me/billing-links",
+          "success": [
+            201
+          ]
+        }
+      ],
+      "errors": [
+        {
+          "status": 403,
+          "code": "integration_disabled",
+          "documented": true
+        },
+        {
+          "status": 403,
+          "code": "integration_revoked",
+          "documented": true
+        },
+        {
+          "status": 422,
+          "code": "validation_failed",
+          "documented": true
+        }
+      ]
+    },
+    {
+      "row": 26,
+      "operations": [
+        {
+          "operation_id": "completeProvisionIntent",
+          "method": "POST",
+          "path": "/v1/provision-intents/{jti}/complete",
+          "success": [
+            200
+          ]
+        }
+      ],
+      "errors": [
+        {
+          "status": 404,
+          "code": "not_found",
+          "documented": true
+        },
+        {
+          "status": 409,
+          "code": "illegal_transition",
+          "documented": true
+        },
+        {
+          "status": 410,
+          "code": "gone",
+          "documented": true
+        },
+        {
+          "status": 422,
+          "code": "validation_failed",
+          "documented": true
+        }
+      ]
+    },
+    {
+      "row": 27,
+      "operations": [
+        {
+          "operation_id": "instanceReportUsage",
+          "method": "POST",
+          "path": "/v1/instances/me/usage",
+          "success": [
+            202
+          ]
+        },
+        {
+          "operation_id": "instanceReportUsageReadings",
+          "method": "POST",
+          "path": "/v1/instances/me/usage-readings",
+          "success": [
+            202
+          ]
+        }
+      ],
+      "errors": [
+        {
+          "status": 403,
+          "code": "integration_disabled",
+          "documented": true
+        },
+        {
+          "status": 403,
+          "code": "integration_revoked",
+          "documented": true
+        },
+        {
+          "status": 422,
+          "code": "validation_failed",
+          "documented": true
+        }
+      ]
+    },
+    {
+      "row": 28,
+      "operations": [
+        {
+          "operation_id": "instanceReportInstallStatus",
+          "method": "POST",
+          "path": "/v1/installs/{install}/status",
+          "success": [
+            200
+          ]
+        }
+      ],
+      "errors": [
+        {
+          "status": 403,
+          "code": "integration_disabled",
+          "documented": true
+        },
+        {
+          "status": 403,
+          "code": "integration_revoked",
+          "documented": true
+        },
+        {
+          "status": 404,
+          "code": "not_found",
+          "documented": true
+        },
+        {
+          "status": 409,
+          "code": "illegal_transition",
+          "documented": true
+        }
+      ]
+    },
+    {
+      "row": 29,
+      "operations": [
+        {
+          "operation_id": "connectDevice",
+          "method": "POST",
+          "path": "/v1/connect/device",
+          "success": [
+            200
+          ]
+        },
+        {
+          "operation_id": "connectDeviceToken",
+          "method": "POST",
+          "path": "/v1/connect/token",
+          "success": [
+            200
+          ]
+        }
+      ],
+      "errors": [
+        {
+          "status": 400,
+          "code": "authorization_pending",
+          "documented": true
+        },
+        {
+          "status": 400,
+          "code": "slow_down",
+          "documented": true
+        },
+        {
+          "status": 400,
+          "code": "expired_token",
+          "documented": true
+        },
+        {
+          "status": 409,
+          "code": "key_mismatch",
+          "documented": false
+        },
+        {
+          "status": 422,
+          "code": "validation_failed",
+          "documented": true
+        },
+        {
+          "status": 422,
+          "code": "product_not_supported",
+          "documented": true
+        },
+        {
+          "status": 429,
+          "code": "rate_limited",
+          "documented": true
+        }
+      ]
+    },
+    {
+      "row": 30,
+      "operations": [
+        {
+          "operation_id": "instanceCreateWebhook",
+          "method": "POST",
+          "path": "/v1/instances/me/webhooks",
+          "success": [
+            201
+          ]
+        },
+        {
+          "operation_id": "updateWebhook",
+          "method": "PATCH",
+          "path": "/v1/webhooks/{webhook}",
+          "success": [
+            200
+          ]
+        },
+        {
+          "operation_id": "deleteWebhook",
+          "method": "DELETE",
+          "path": "/v1/webhooks/{webhook}",
+          "success": [
+            204
+          ]
+        },
+        {
+          "operation_id": "rotateWebhookSecret",
+          "method": "POST",
+          "path": "/v1/webhooks/{webhook}/rotate-secret",
+          "success": [
+            200
+          ]
+        },
+        {
+          "operation_id": "testWebhook",
+          "method": "POST",
+          "path": "/v1/webhooks/{webhook}/test",
+          "success": [
+            202
+          ]
+        },
+        {
+          "operation_id": "listWebhookDeliveries",
+          "method": "GET",
+          "path": "/v1/webhooks/{webhook}/deliveries",
+          "success": [
+            200
+          ]
+        },
+        {
+          "operation_id": "redeliverWebhook",
+          "method": "POST",
+          "path": "/v1/deliveries/{delivery}/redeliver",
+          "success": [
+            202
+          ]
+        }
+      ],
+      "errors": [
+        {
+          "status": 403,
+          "code": "integration_disabled",
+          "documented": true
+        },
+        {
+          "status": 403,
+          "code": "integration_revoked",
+          "documented": true
+        },
+        {
+          "status": 404,
+          "code": "module_disabled",
+          "documented": true
+        },
+        {
+          "status": 409,
+          "code": "illegal_transition",
+          "documented": true
+        },
+        {
+          "status": 422,
+          "code": "validation_failed",
+          "documented": true
+        },
+        {
+          "status": 422,
+          "code": "limit_exceeded",
+          "documented": true
+        }
+      ]
+    },
+    {
+      "row": 31,
+      "operations": [
+        {
+          "operation_id": "instanceAcceptIntegration",
+          "method": "POST",
+          "path": "/v1/instances/me/integrations/{key}/accept",
+          "success": [
+            200
+          ]
+        }
+      ],
+      "errors": [
+        {
+          "status": 404,
+          "code": "not_found",
+          "documented": true
+        },
+        {
+          "status": 409,
+          "code": "illegal_transition",
+          "documented": true
+        }
+      ]
+    },
+    {
+      "row": 32,
+      "operations": [
+        {
+          "operation_id": "instanceGetProviderGrant",
+          "method": "GET",
+          "path": "/v1/instances/me/provider-grants/{grant}",
+          "success": [
+            200
+          ]
+        },
+        {
+          "operation_id": "instanceReportProviderGrantStatus",
+          "method": "POST",
+          "path": "/v1/instances/me/provider-grants/{grant}/status",
+          "success": [
+            200
+          ]
+        }
+      ],
+      "errors": [
+        {
+          "status": 403,
+          "code": "integration_disabled",
+          "documented": true
+        },
+        {
+          "status": 403,
+          "code": "integration_revoked",
+          "documented": true
+        },
+        {
+          "status": 409,
+          "code": "illegal_transition",
+          "documented": true
+        }
+      ]
+    },
+    {
+      "row": 33,
+      "operations": [
+        {
+          "operation_id": "putIntegrationState",
+          "method": "PUT",
+          "path": "/v1/orgs/{org}/instances/{instance}/integrations/{key}",
+          "success": [
+            200
+          ]
+        }
+      ],
+      "errors": [
+        {
+          "status": 403,
+          "code": "step_up_required",
+          "documented": true
+        },
+        {
+          "status": 403,
+          "code": "session_required",
+          "documented": true
+        },
+        {
+          "status": 403,
+          "code": "forbidden_role",
+          "documented": true
+        },
+        {
+          "status": 403,
+          "code": "not_connection_owner",
+          "documented": true
+        },
+        {
+          "status": 404,
+          "code": "not_found",
+          "documented": true
+        },
+        {
+          "status": 422,
+          "code": "validation_failed",
+          "documented": true
+        },
+        {
+          "status": 422,
+          "code": "scope_version_outdated",
+          "documented": true
+        }
+      ]
+    },
+    {
+      "row": 34,
+      "operations": [
+        {
+          "operation_id": "instanceReportManagedOperationResult",
+          "method": "POST",
+          "path": "/v1/instances/me/managed-operations/{operation}/result",
+          "success": [
+            200
+          ]
+        }
+      ],
+      "errors": [
+        {
+          "status": 403,
+          "code": "integration_disabled",
+          "documented": true
+        },
+        {
+          "status": 403,
+          "code": "integration_revoked",
+          "documented": true
+        },
+        {
+          "status": 404,
+          "code": "not_found",
+          "documented": true
+        },
+        {
+          "status": 409,
+          "code": "illegal_transition",
+          "documented": true
+        },
+        {
+          "status": 422,
+          "code": "validation_failed",
+          "documented": true
+        }
+      ]
+    }
+  ]
+}

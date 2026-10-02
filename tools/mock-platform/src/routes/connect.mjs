@@ -165,7 +165,9 @@ export const connectHandlers = {
     };
   },
 
-  connectDevice({ state, body, issuer }) {
+  connectDevice({ state, body, req }) {
+    const wait = state.hit(`device-starts|${req.socket.remoteAddress}`, state.config.limits.device_starts_per_hour, 3600);
+    if (wait > 0) fail(429, 'rate_limited', undefined, { retry_after_s: wait });
     if (body.product === 'demand') fail(422, 'product_not_supported');
     if (!validJwk(body.public_jwk)) fail(422, 'public_jwk_invalid');
     const deviceCode = b64url(randomBytes(32));

@@ -17,7 +17,8 @@
       "!packages/ts/connect-contracts/schemas",
       "!packages/ts/connect-contracts/integrations",
       "!packages/ts/connect-tools/contracts",
-      "!tools/fixtures/public-safe"
+      "!tools/fixtures/public-safe",
+      "!tools/mock-platform/contracts"
     ]
   },
   "formatter": {

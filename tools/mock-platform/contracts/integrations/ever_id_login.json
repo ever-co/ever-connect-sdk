@@ -1,0 +1,94 @@
+{
+  "key": "ever_id_login",
+  "name": "Sign in with Ever ID",
+  "description": "Adds Ever ID as an extra sign-in option in this installation. Existing sign-in methods keep working unchanged.",
+  "category": "identity",
+  "owner_module": "identity",
+  "direction": "both",
+  "defaults": {
+    "cloud": true,
+    "self_hosted": false
+  },
+  "availability": {
+    "cloud": "enabled",
+    "self_hosted": "available"
+  },
+  "requires_feature": "ever_id_login",
+  "products": [
+    "gauzy",
+    "works",
+    "rec",
+    "traduora"
+  ],
+  "phase": 2,
+  "status": "coming_soon",
+  "scope_version": 1,
+  "revoke_effect": "The Ever ID client for this installation is deleted and its local settings are cleared. Existing local sessions are not affected.",
+  "notes": "Ever Teams signs in through its Gauzy API, so it is covered by the gauzy row.",
+  "scope": [
+    {
+      "field_path": "instance.oidc.redirect_uris",
+      "direction": "to_ever",
+      "form": "url",
+      "frequency": "once",
+      "required": true,
+      "purpose": "Register the sign-in callback addresses of this installation",
+      "retention": "Kept while the integration is enabled."
+    },
+    {
+      "field_path": "instance.oidc.post_logout_uris",
+      "direction": "to_ever",
+      "form": "url",
+      "frequency": "once",
+      "required": false,
+      "purpose": "Register the sign-out return addresses",
+      "retention": "Kept while the integration is enabled."
+    },
+    {
+      "field_path": "instance.oidc.backchannel_logout_uri",
+      "direction": "to_ever",
+      "form": "url",
+      "frequency": "once",
+      "required": false,
+      "purpose": "Receive sign-out notices from Ever ID",
+      "retention": "Kept while the integration is enabled."
+    },
+    {
+      "field_path": "organization.display_name",
+      "direction": "to_ever",
+      "form": "clear",
+      "frequency": "once",
+      "required": true,
+      "purpose": "Name shown on the Ever ID sign-in screen",
+      "retention": "Kept while the integration is enabled."
+    },
+    {
+      "field_path": "oidc.issuer",
+      "direction": "from_ever",
+      "form": "url",
+      "frequency": "once",
+      "required": true,
+      "purpose": "Ever ID issuer address for this installation",
+      "retention": "Stored in the installation's own settings."
+    },
+    {
+      "field_path": "oidc.client_id",
+      "direction": "from_ever",
+      "form": "id",
+      "frequency": "once",
+      "required": true,
+      "purpose": "Client identifier for this installation",
+      "retention": "Stored in the installation's own settings."
+    },
+    {
+      "field_path": "oidc.client_secret",
+      "direction": "from_ever",
+      "form": "clear",
+      "frequency": "once",
+      "required": true,
+      "purpose": "Client secret, stored encrypted by the installation",
+      "retention": "Stored encrypted in the installation's own settings; environment variables take precedence."
+    }
+  ],
+  "docs_anchor": "ever_id_login"
+}

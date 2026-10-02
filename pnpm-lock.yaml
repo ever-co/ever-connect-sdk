@@ -55,6 +55,10 @@ importers:
       ajv-formats:
         specifier: 3.0.1
         version: 3.0.1(ajv@8.20.0)
+    devDependencies:
+      '@ever-co/connect-contracts':
+        specifier: workspace:*
+        version: link:../../packages/ts/connect-contracts
 
 packages:
 

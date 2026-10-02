@@ -1,0 +1,94 @@
+{
+  "key": "managed_operations",
+  "name": "Managed updates and backups",
+  "description": "Lets an owner or admin ask this self-hosted installation, from app.ever.co, to run a maintenance operation: an update, a backup, a restore check or a health report. Requests reach the installation through its own outbound connection; the operator also turns the feature on locally and sets when and what may run. Backups stay in your own storage, and Ever Platform sees only each operation's status and size. Ever never connects in.",
+  "category": "entitlements",
+  "owner_module": "registry",
+  "direction": "both",
+  "defaults": {
+    "cloud": false,
+    "self_hosted": false
+  },
+  "availability": {
+    "cloud": "not_applicable",
+    "self_hosted": "available"
+  },
+  "requires_feature": null,
+  "products": [
+    "gauzy",
+    "works",
+    "rec",
+    "traduora"
+  ],
+  "phase": 2,
+  "status": "coming_soon",
+  "scope_version": 1,
+  "revoke_effect": "Queued operations are cancelled and nothing further runs.",
+  "notes": "Ever already operates its cloud installations, so this is offered on self-hosted installations only. It becomes active per product once that product can run the operations. Ever Teams is covered by its Ever Gauzy server.",
+  "scope": [
+    {
+      "field_path": "operation.id",
+      "direction": "from_ever",
+      "form": "id",
+      "frequency": "on_action",
+      "required": true,
+      "purpose": "Identify the requested operation",
+      "retention": "Kept with the organization's operation history."
+    },
+    {
+      "field_path": "operation.kind",
+      "direction": "from_ever",
+      "form": "clear",
+      "frequency": "on_action",
+      "required": true,
+      "purpose": "Which operation to run: update, backup, restore check or health report",
+      "retention": "Kept with the organization's operation history."
+    },
+    {
+      "field_path": "operation.params",
+      "direction": "from_ever",
+      "form": "clear",
+      "frequency": "on_action",
+      "required": false,
+      "purpose": "The fixed settings of that kind of operation (for example the target version of an update), and the time window it may run in",
+      "retention": "Kept with the organization's operation history."
+    },
+    {
+      "field_path": "result.status",
+      "direction": "to_ever",
+      "form": "clear",
+      "frequency": "on_action",
+      "required": true,
+      "purpose": "Whether the operation succeeded, failed or expired",
+      "retention": "Kept with the organization's operation history."
+    },
+    {
+      "field_path": "result.version",
+      "direction": "to_ever",
+      "form": "clear",
+      "frequency": "on_action",
+      "required": false,
+      "purpose": "Product version after an update",
+      "retention": "Kept with the organization's operation history."
+    },
+    {
+      "field_path": "result.size_bytes",
+      "direction": "to_ever",
+      "form": "count",
+      "frequency": "on_action",
+      "required": false,
+      "purpose": "Size of a backup or a health report",
+      "retention": "Kept with the organization's operation history."
+    },
+    {
+      "field_path": "result.artefact_ref",
+      "direction": "to_ever",
+      "form": "id",
+      "frequency": "on_action",
+      "required": false,
+      "purpose": "Name of the backup in your own storage, so you can find it; its content never leaves your storage",
+      "retention": "Kept with the organization's operation history."
+    }
+  ],
+  "docs_anchor": "managed_operations"
+}

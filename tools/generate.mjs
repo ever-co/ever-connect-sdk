@@ -677,6 +677,31 @@ export async function generateAll() {
   for (const { file } of Object.values(ctx.events)) copy(`contracts/schemas/events/${file}`, `schemas/events/${file}`);
   for (const key of ctx.constants.integration_keys) copy(`contracts/integrations/${key}.json`, `integrations/${key}.json`);
   files[`${RS}/constants.rs`] = rustConstants(ctx, dataFiles);
+
+  // The mock platform carries the contract files it serves and validates against, so its
+  // directory (and its image) builds on its own.
+  const MOCK = 'tools/mock-platform/contracts';
+  const mockCopy = (from) => {
+    files[`${MOCK}/${from.replace(/^contracts\//, '')}`] = from.startsWith('contracts/generated/') ? files[from] : lf(readText(from));
+  };
+  for (const f of [
+    'contracts/generated/ever-platform.v1.json',
+    'contracts/generated/outbound-calls.json',
+    'contracts/generated/row-coverage.json',
+  ])
+    mockCopy(f);
+  for (const f of [
+    'contracts/openapi/pending-upstream.json',
+    'contracts/constants.json',
+    'contracts/integrations/catalog.v1.json',
+    'contracts/fixtures/lookup/test-vectors.json',
+  ])
+    mockCopy(f);
+  for (const d of SCHEMA_DOCS) mockCopy(`contracts/schemas/${d.file}`);
+  mockCopy('contracts/schemas/events/envelope.schema.json');
+  mockCopy('contracts/schemas/events/common.schema.json');
+  for (const { file } of Object.values(ctx.events)) mockCopy(`contracts/schemas/events/${file}`);
+  for (const key of ctx.constants.integration_keys) mockCopy(`contracts/integrations/${key}.json`);
   files['crates/ever-connect-contracts/tests/typed/mod.rs'] = rustTypedDispatch(ctx);
 
   // rustfmt (pinned by rust-toolchain.toml) gives the Rust output the repository's style.

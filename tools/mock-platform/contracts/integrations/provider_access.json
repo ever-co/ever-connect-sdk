@@ -1,0 +1,56 @@
+{
+  "key": "provider_access",
+  "name": "Grant a provider access",
+  "description": "Lets a service provider you choose on apps.ever.co (for example an accountant or payroll provider) work in your installation with a role and scope you pick. The grant shows in Integrations & data and you can revoke it at any time.",
+  "category": "marketplace",
+  "owner_module": "registry",
+  "direction": "both",
+  "defaults": {
+    "cloud": true,
+    "self_hosted": false
+  },
+  "availability": {
+    "cloud": "enabled",
+    "self_hosted": "available"
+  },
+  "requires_feature": "listings",
+  "products": [
+    "gauzy",
+    "works"
+  ],
+  "phase": 4,
+  "status": "coming_soon",
+  "scope_version": 1,
+  "revoke_effect": "The provider's access is removed from the installation.",
+  "notes": "The field list is provisional until the provider-access flow is specified (Phase 4).",
+  "scope": [
+    {
+      "field_path": "grant.provider_organization_id",
+      "direction": "from_ever",
+      "form": "id",
+      "frequency": "on_action",
+      "required": true,
+      "purpose": "Which provider is granted access",
+      "retention": "Kept while the grant exists."
+    },
+    {
+      "field_path": "grant.role",
+      "direction": "from_ever",
+      "form": "clear",
+      "frequency": "on_action",
+      "required": true,
+      "purpose": "Role the provider gets in the installation",
+      "retention": "Kept while the grant exists."
+    },
+    {
+      "field_path": "grant.status",
+      "direction": "to_ever",
+      "form": "clear",
+      "frequency": "on_change",
+      "required": true,
+      "purpose": "Show whether the grant is active",
+      "retention": "Kept while the grant exists."
+    }
+  ],
+  "docs_anchor": "provider_access"
+}

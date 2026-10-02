@@ -1,0 +1,40 @@
+{
+  "key": "instance_url",
+  "name": "Installation address",
+  "description": "Shows the public address of this installation to its own organization in app.ever.co, and on the public profile if the owner turns that section on.",
+  "category": "profile",
+  "owner_module": "registry",
+  "direction": "outbound",
+  "defaults": {
+    "cloud": true,
+    "self_hosted": false
+  },
+  "availability": {
+    "cloud": "enabled",
+    "self_hosted": "available"
+  },
+  "requires_feature": null,
+  "products": [
+    "gauzy",
+    "teams",
+    "works",
+    "rec",
+    "traduora"
+  ],
+  "phase": 2,
+  "status": "active",
+  "scope_version": 1,
+  "revoke_effect": "The stored address is removed.",
+  "scope": [
+    {
+      "field_path": "instance.public_url",
+      "direction": "to_ever",
+      "form": "url",
+      "frequency": "once",
+      "required": true,
+      "purpose": "Link to this installation from the organization's account pages",
+      "retention": "Kept while the integration is enabled. Deleted when it is turned off or the installation disconnects."
+    }
+  ],
+  "docs_anchor": "instance_url"
+}
