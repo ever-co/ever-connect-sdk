@@ -3,7 +3,7 @@
   "scope_version": 1,
   "screen_version": "1",
   "blocks": {
-    "title": "Enable Managed updates and backups for {organization}",
+    "title": "Enable Maintenance operations for {organization}",
     "purpose": "Lets an owner or admin ask this self-hosted installation, from app.ever.co, to run a maintenance operation: an update, a backup, a restore check or a health report. Requests reach the installation through its own outbound connection; the operator also turns the feature on locally and sets when and what may run. Backups stay in your own storage, and Ever Platform sees only each operation's status and size. Ever never connects in.",
     "leaves_installation": [
       {
