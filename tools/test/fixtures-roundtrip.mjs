@@ -9,7 +9,7 @@
  * fails.
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
@@ -44,7 +44,8 @@ function validators() {
   const spec = read('contracts/generated/ever-platform.v1.json');
   loose.addSchema({ $id: CONTRACT, components: { schemas: spec.components.schemas } });
   const pending = {};
-  for (const op of read('contracts/openapi/pending-upstream.json').operations) if (op.request) pending[op.operation_id] = strict.compile(op.request);
+  for (const op of read('contracts/openapi/pending-upstream.json').operations)
+    if (op.request) pending[op.operation_id] = strict.compile(op.request);
   return {
     component: (name) => loose.getSchema(`${CONTRACT}#/components/schemas/${name}`),
     pending: (id) => pending[id],
@@ -65,7 +66,8 @@ export function tsVerdicts() {
     if (entry.kind === 'component') valid = v.component(entry.schema)(doc);
     else if (entry.kind === 'pending') valid = v.pending(entry.schema)(doc);
     else if (entry.kind === 'schema') valid = v.doc(entry.schema)(doc);
-    else if (entry.kind === 'feed') valid = v.component('FeedResponse')(doc) && doc.events.every((e) => v.envelope()(e) && v.event(entry.schema)(e.data));
+    else if (entry.kind === 'feed')
+      valid = v.component('FeedResponse')(doc) && doc.events.every((e) => v.envelope()(e) && v.event(entry.schema)(e.data));
     else throw new Error(`${entry.file}: unknown kind ${entry.kind}`);
     verdicts[entry.file] = valid;
     if (valid !== entry.valid) problems.push(`${entry.file}: ajv says valid=${valid}, the index says ${entry.valid}`);
@@ -82,7 +84,11 @@ function main() {
   writeFileSync(join(out, 'ts.json'), `${JSON.stringify(verdicts, null, 2)}\n`);
   const rustPath = join(out, 'rust.json');
   if (!existsSync(rustPath) || process.argv.includes('--run-cargo')) {
-    execFileSync(process.env.CARGO ?? 'cargo', ['test', '--quiet', '--locked', '-p', 'ever-connect-contracts', '--test', 'fixtures_roundtrip'], { cwd: REPO, stdio: 'inherit' });
+    execFileSync(
+      process.env.CARGO ?? 'cargo',
+      ['test', '--quiet', '--locked', '-p', 'ever-connect-contracts', '--test', 'fixtures_roundtrip'],
+      { cwd: REPO, stdio: 'inherit' },
+    );
   }
   const rust = JSON.parse(readFileSync(rustPath, 'utf8'));
   for (const file of new Set([...Object.keys(verdicts), ...Object.keys(rust)])) {
@@ -97,4 +103,4 @@ function main() {
   process.stdout.write(`fixtures-roundtrip: ok (${count} fixtures, ${valid} valid, ${count - valid} invalid; TypeScript and Rust agree)\n`);
 }
 
-if (process.argv[1] && process.argv[1].endsWith('fixtures-roundtrip.mjs')) main();
+if (process.argv[1]?.endsWith('fixtures-roundtrip.mjs')) main();

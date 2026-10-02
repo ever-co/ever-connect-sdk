@@ -1,7 +1,7 @@
 // Every fixture says what it claims: valid fixtures validate, invalid ones fail with their expected
 // code and path, signed fixtures verify (or fail) exactly as their expected outcome says.
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { REPO, readJson } from '../lib/common.mjs';
@@ -58,7 +58,11 @@ test('key manifests verify against the TEST root, and the broken ones fail with 
     const r = verifyManifest(body, roots, ctx.issuer, ctx.now);
     assert.equal(r.ok, e.valid, file);
     if (!e.valid) assert.equal(r.code, e.code, file);
-    else assert.deepEqual(r.keys.map((k) => k.kid), e.trusted_kids);
+    else
+      assert.deepEqual(
+        r.keys.map((k) => k.kid),
+        e.trusted_kids,
+      );
   }
 });
 
@@ -73,7 +77,14 @@ test('entitlement documents: the valid ones verify, every invalid one fails with
     const jws = text(`entitlement/${file}`).trim();
     const subject = ctx.expected_subject_by_file[file] ?? ctx.expected_subject;
     const cached = file in ctx.cached_by_file ? ctx.cached_by_file[file] : ctx.cached;
-    const r = verifyEntitlement(jws, { keys: manifest.keys, issuer: ctx.expected_issuer, instanceId: ctx.expected_instance_id, subject, cached, now: ctx.now });
+    const r = verifyEntitlement(jws, {
+      keys: manifest.keys,
+      issuer: ctx.expected_issuer,
+      instanceId: ctx.expected_instance_id,
+      subject,
+      cached,
+      now: ctx.now,
+    });
     assert.equal(r.ok, e.valid, `${file}: ${r.code ?? 'ok'}`);
     if (e.valid) {
       assert.equal(r.claims.ever.seq, e.seq);
@@ -103,10 +114,14 @@ test('consent screens: seven blocks per non-hidden key, in-product consent refus
     const b = screen.blocks;
     assert.equal(b.title, `Enable ${def.name} for {organization}`);
     assert.equal(b.purpose, def.description);
-    assert.deepEqual(b.leaves_installation.map((r) => r.field), def.scope.filter((r) => r.direction === 'to_ever').map((r) => r.field_path));
+    assert.deepEqual(
+      b.leaves_installation.map((r) => r.field),
+      def.scope.filter((r) => r.direction === 'to_ever').map((r) => r.field_path),
+    );
     assert.equal(b.platform_keeps.length, def.scope.length);
     assert.ok(b.how_often.length > 0 && b.where_to_change && b.authorisation.includes('{organization}'));
-    for (const k of ['terms_url', 'terms_version', 'dpa_url', 'dpa_version', 'subprocessors_url']) assert.ok(b.legal[k], `${key}: legal ${k}`);
+    for (const k of ['terms_url', 'terms_version', 'dpa_url', 'dpa_version', 'subprocessors_url'])
+      assert.ok(b.legal[k], `${key}: legal ${k}`);
     assert.equal(screen.in_product.allowed, !['counterparty_discoverable', 'instance_url'].includes(key));
   }
 });
@@ -121,7 +136,8 @@ test('client-assertion vectors: the platform rules give each vector its expected
     const r = verifyAssertion(v.assertion, {
       now: c.now,
       audience: c.audience,
-      instanceFor: (iss) => (iss === c.instance_id ? { current_key: c.current_key, previous_key: c.previous_key, rotated_at: c.rotated_at } : null),
+      instanceFor: (iss) =>
+        iss === c.instance_id ? { current_key: c.current_key, previous_key: c.previous_key, rotated_at: c.rotated_at } : null,
       seenJti: (jti) => c.seen_jti.includes(jti),
     });
     assert.equal(r.ok ? 200 : 401, v.expected.status, `${file}: ${r.reason ?? 'ok'}`);

@@ -13,10 +13,10 @@
  *   node tools/split-integrations.mjs           write
  *   node tools/split-integrations.mjs --check   regenerate and compare
  */
-import { existsSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import YAML from 'yaml';
-import { REPO, diffOutputs, readJson, stableJson, writeText } from './lib/common.mjs';
+import { diffOutputs, REPO, readJson, stableJson, writeText } from './lib/common.mjs';
 import { testRootEntry } from './mock-platform/src/keys.mjs';
 
 export const TEST_ROOT_ISSUER = 'http://mock-platform:8080';
@@ -114,7 +114,7 @@ function main() {
   process.stdout.write(`split-integrations: ${differing.length} file(s) updated (${Object.keys(files).length - 1} definitions)\n`);
 }
 
-if (process.argv[1] && process.argv[1].endsWith('split-integrations.mjs')) {
+if (process.argv[1]?.endsWith('split-integrations.mjs')) {
   try {
     main();
   } catch (error) {

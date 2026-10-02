@@ -1,7 +1,7 @@
 import { PENDING_PROBLEM_CODES, PROBLEM_CODES, type ProblemCode } from './generated/problems';
 
-export { PENDING_PROBLEM_CODES, PROBLEM_CODES };
 export type { ProblemCode };
+export { PENDING_PROBLEM_CODES, PROBLEM_CODES };
 
 /** One field-level failure of a validation problem. */
 export interface FieldError {

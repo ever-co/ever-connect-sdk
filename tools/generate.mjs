@@ -19,14 +19,14 @@
  * Output is deterministic: sorted keys, LF, no timestamps or tool versions, pinned tools.
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { compile } from 'json-schema-to-typescript';
 import openapiTS, { astToString } from 'openapi-typescript';
 import YAML from 'yaml';
-import { REPO, diffOutputs, readJson, sha256, stableJson, writeText } from './lib/common.mjs';
+import { diffOutputs, REPO, readJson, sha256, stableJson, writeText } from './lib/common.mjs';
 import { forRust, inlineCommon, typeName } from './lib/schema-prep.mjs';
 import { checkRows } from './sync-contract.mjs';
 
@@ -95,7 +95,9 @@ function lint(ctx) {
   for (const { method, path, op } of operations(ctx.spec)) {
     const where = `${method.toUpperCase()} ${path} (${op.operationId})`;
     if (!Number.isInteger(op['x-ever-row'])) problems.push(`${where}: no x-ever-row`);
-    const typed = (schema) => schema && (schema.$ref || schema.type || schema.oneOf || schema.anyOf || schema.allOf || schema.properties || 'const' in schema || schema.enum);
+    const typed = (schema) =>
+      schema &&
+      (schema.$ref || schema.type || schema.oneOf || schema.anyOf || schema.allOf || schema.properties || 'const' in schema || schema.enum);
     for (const [mt, media] of Object.entries(op.requestBody?.content ?? {}))
       if (!typed(media.schema)) problems.push(`${where}: request body ${mt} has no typed schema`);
     for (const [status, response] of Object.entries(op.responses ?? {})) {
@@ -108,7 +110,8 @@ function lint(ctx) {
   problems.push(...checkRows(ctx.rowsDoc, ids, ctx.pending).problems);
   for (const r of ctx.rowsDoc.rows) {
     for (const op of operations(ctx.spec).filter((o) => r.operation_ids.includes(o.op.operationId)))
-      if (op.op['x-ever-row'] !== r.row) problems.push(`${op.op.operationId}: x-ever-row ${op.op['x-ever-row']} but rows.json says ${r.row}`);
+      if (op.op['x-ever-row'] !== r.row)
+        problems.push(`${op.op.operationId}: x-ever-row ${op.op['x-ever-row']} but rows.json says ${r.row}`);
   }
   // Hidden catalog keys never reach the generated output.
   const hidden = ctx.catalog.integrations.filter((i) => i.status === 'hidden').map((i) => i.key);
@@ -120,7 +123,7 @@ function lint(ctx) {
 
   const pkg = require.resolve('@redocly/cli/package.json', { paths: [REPO] });
   const bin = readJson(pkg).bin;
-  const cli = join(pkg, '..', typeof bin === 'string' ? bin : bin.redocly ?? Object.values(bin)[0]);
+  const cli = join(pkg, '..', typeof bin === 'string' ? bin : (bin.redocly ?? Object.values(bin)[0]));
   try {
     execFileSync(process.execPath, [cli, 'lint', SPEC, '--config', 'redocly.yaml', '--format', 'stylish'], {
       cwd: REPO,
@@ -171,7 +174,9 @@ function prefixTypes(ts, root) {
 
 async function schemaTypes(ctx) {
   const parts = [TS_HEADER, '// Types of the JSON Schemas and the schema documents themselves.\n\n'];
-  parts.push('/** A JSON Schema document, as shipped in this package. */\nexport type JsonSchemaDocument = { readonly [key: string]: unknown };\n\n');
+  parts.push(
+    '/** A JSON Schema document, as shipped in this package. */\nexport type JsonSchemaDocument = { readonly [key: string]: unknown };\n\n',
+  );
   for (const doc of SCHEMA_DOCS) {
     const ts = await compile(forTypescript(ctx.schemas[doc.key]), doc.type, JSTT);
     parts.push(`${prefixTypes(ts.trim(), doc.type)}\n\n`);
@@ -189,12 +194,16 @@ async function schemaTypes(ctx) {
   for (const type of eventTypes) parts.push(`  '${type}': ${eventNames[type]};\n`);
   parts.push('}\n\n/** An event type an installation receives on its feed. */\nexport type FeedEventType = keyof EventDataByType;\n\n');
   parts.push('/** The JSON Schema documents (closed contracts). */\nexport const SCHEMAS = {\n');
-  for (const doc of SCHEMA_DOCS) parts.push(`  ${doc.key}: ${literal(ctx.schemas[doc.key]).replace(/\n/g, '\n  ')} as JsonSchemaDocument,\n`);
-  parts.push('} as const;\n\n/** The event schemas: the shared envelope and common definitions, and one `data` schema per type. */\nexport const EVENT_SCHEMAS = {\n');
+  for (const doc of SCHEMA_DOCS)
+    parts.push(`  ${doc.key}: ${literal(ctx.schemas[doc.key]).replace(/\n/g, '\n  ')} as JsonSchemaDocument,\n`);
+  parts.push(
+    '} as const;\n\n/** The event schemas: the shared envelope and common definitions, and one `data` schema per type. */\nexport const EVENT_SCHEMAS = {\n',
+  );
   parts.push(`  envelope: ${literal(ctx.envelope).replace(/\n/g, '\n  ')} as JsonSchemaDocument,\n`);
   parts.push(`  common: ${literal(ctx.common).replace(/\n/g, '\n  ')} as JsonSchemaDocument,\n`);
   parts.push('  data: {\n');
-  for (const type of eventTypes) parts.push(`    '${type}': ${literal(ctx.events[type].schema).replace(/\n/g, '\n    ')} as JsonSchemaDocument,\n`);
+  for (const type of eventTypes)
+    parts.push(`    '${type}': ${literal(ctx.events[type].schema).replace(/\n/g, '\n    ')} as JsonSchemaDocument,\n`);
   parts.push('  },\n} as const;\n');
   return parts.join('');
 }
@@ -202,7 +211,8 @@ async function schemaTypes(ctx) {
 // ---------------------------------------------------------------------------------------- step 4
 function rustBundle(ctx) {
   const components = {};
-  for (const [name, schema] of Object.entries(ctx.spec.components.schemas)) Object.assign(components, forRust(schema, `${name}_`, { rootName: name }));
+  for (const [name, schema] of Object.entries(ctx.spec.components.schemas))
+    Object.assign(components, forRust(schema, `${name}_`, { rootName: name }));
   const modules = SCHEMA_DOCS.map((d) => ({
     name: d.module,
     doc: `Types of \`contracts/schemas/${d.file}\`.`,
@@ -219,7 +229,13 @@ function rustBundle(ctx) {
   const header = (what) => `${RS_HEADER}//! ${what}\n#![allow(missing_docs, clippy::all, unused_imports, irrefutable_let_patterns)]\n`;
   return {
     files: [
-      { file: 'openapi.rs', header: header('Request and response types of the instance-facing contract.'), modules: [{ name: 'components', doc: 'Every component schema of `contracts/openapi/ever-platform.v1.yaml`.', definitions: components }] },
+      {
+        file: 'openapi.rs',
+        header: header('Request and response types of the instance-facing contract.'),
+        modules: [
+          { name: 'components', doc: 'Every component schema of `contracts/openapi/ever-platform.v1.yaml`.', definitions: components },
+        ],
+      },
       { file: 'schemas.rs', header: header('Types of the JSON Schemas and the instance-audience event data.'), modules },
     ],
   };
@@ -302,7 +318,15 @@ ${events.map(([t, m, n]) => `        ${JSON.stringify(t)} => rt::<schemas::${m}:
 function rustfmt(source) {
   const bin = process.env.RUSTFMT ?? 'rustfmt';
   try {
-    return lf(execFileSync(bin, ['--edition', '2024', '--emit', 'stdout'], { cwd: REPO, input: source, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] }));
+    return lf(
+      execFileSync(bin, ['--edition', '2024', '--emit', 'stdout'], {
+        cwd: REPO,
+        input: source,
+        encoding: 'utf8',
+        maxBuffer: 64 * 1024 * 1024,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      }),
+    );
   } catch (error) {
     throw new Error(`rustfmt failed:\n${error.stderr?.toString() ?? error.message}`);
   }
@@ -312,7 +336,9 @@ function rustfmt(source) {
 function integrationsTs(ctx) {
   const keys = ctx.constants.integration_keys;
   const out = [TS_HEADER, '// The integration definitions (contracts/integrations/<key>.json), typed.\n\n'];
-  out.push(`/** Every integration key a product can show (hidden catalog keys are never listed). */\nexport type IntegrationKey =\n${keys.map((k) => `  | '${k}'`).join('\n')};\n\n`);
+  out.push(
+    `/** Every integration key a product can show (hidden catalog keys are never listed). */\nexport type IntegrationKey =\n${keys.map((k) => `  | '${k}'`).join('\n')};\n\n`,
+  );
   out.push(`export const INTEGRATION_KEYS = ${literal(keys)} as const satisfies readonly IntegrationKey[];\n\n`);
   out.push(`/** One row of what an integration moves. */
 export interface IntegrationScopeRow {
@@ -371,7 +397,9 @@ function outboundCalls(ctx) {
     contracts_version: ctx.constants.contracts_version,
     rows: ctx.rowsDoc.rows.map((r) => {
       const endpoints = r.pending_upstream
-        ? ctx.pending.operations.filter((p) => p.row === r.row).map((p) => ({ method: p.method, path: p.path, operation_id: p.operation_id, status: 'pending_upstream' }))
+        ? ctx.pending.operations
+            .filter((p) => p.row === r.row)
+            .map((p) => ({ method: p.method, path: p.path, operation_id: p.operation_id, status: 'pending_upstream' }))
         : r.operation_ids.map((id) => {
             const o = ops.find((x) => x.op.operationId === id);
             return {
@@ -381,7 +409,7 @@ function outboundCalls(ctx) {
               status: ctx.vendorDoc.openapi.provisional_operations.includes(id) ? 'provisional' : 'pinned',
             };
           });
-      const products = r.integration ? ctx.integrations[r.integration]?.products ?? [] : r.products === 'all' ? productsAll : r.products;
+      const products = r.integration ? (ctx.integrations[r.integration]?.products ?? []) : r.products === 'all' ? productsAll : r.products;
       return {
         row: r.row,
         title: r.title,
@@ -407,10 +435,26 @@ function rowCoverage(ctx) {
   const problems = [];
   const rows = ctx.rowsDoc.rows.map((r) => {
     const rowOps = r.pending_upstream
-      ? ctx.pending.operations.filter((p) => p.row === r.row).map((p) => ({ operation_id: p.operation_id, method: p.method, path: p.path, success: Object.keys(p.responses).filter((s) => /^2/.test(s)).map(Number) }))
+      ? ctx.pending.operations
+          .filter((p) => p.row === r.row)
+          .map((p) => ({
+            operation_id: p.operation_id,
+            method: p.method,
+            path: p.path,
+            success: Object.keys(p.responses)
+              .filter((s) => /^2/.test(s))
+              .map(Number),
+          }))
       : r.operation_ids.map((id) => {
           const o = ops.find((x) => x.op.operationId === id);
-          return { operation_id: id, method: o.method.toUpperCase(), path: o.path, success: Object.keys(o.op.responses).filter((s) => /^(2|304)/.test(s)).map(Number) };
+          return {
+            operation_id: id,
+            method: o.method.toUpperCase(),
+            path: o.path,
+            success: Object.keys(o.op.responses)
+              .filter((s) => /^(2|304)/.test(s))
+              .map(Number),
+          };
         });
     const documented = new Set(
       r.pending_upstream
@@ -420,7 +464,8 @@ function rowCoverage(ctx) {
     const errors = r.errors.map(([status, code, flag]) => {
       if (!codes.has(code)) problems.push(`row ${r.row}: ${code} is not a problem code of the contract`);
       const isDocumented = flag !== 'spec-gap';
-      if (isDocumented && !documented.has(String(status))) problems.push(`row ${r.row}: status ${status} is not documented for its operations (mark it spec-gap)`);
+      if (isDocumented && !documented.has(String(status)))
+        problems.push(`row ${r.row}: status ${status} is not documented for its operations (mark it spec-gap)`);
       return { status, code, documented: isDocumented };
     });
     return { row: r.row, operations: rowOps, errors };
@@ -507,10 +552,14 @@ function renderTable(calls) {
   const productNames = { gauzy: 'Gauzy', teams: 'Teams', works: 'Works', rec: 'Rec', traduora: 'Traduora' };
   const lines = ['| # | Endpoint | Trigger | Payload | Cadence | How to disable | Products |', '|---|---|---|---|---|---|---|'];
   for (const r of calls.rows) {
-    const endpoints = r.endpoints.map((e) => `\`${e.method} ${e.path}\`${e.status === 'pending_upstream' ? ' (pending upstream)' : ''}`).join('<br>');
+    const endpoints = r.endpoints
+      .map((e) => `\`${e.method} ${e.path}\`${e.status === 'pending_upstream' ? ' (pending upstream)' : ''}`)
+      .join('<br>');
     const products = r.products.length === 5 ? 'all' : r.products.map((p) => productNames[p] ?? p).join(', ');
     const integration = r.integration ? ` Integration \`${r.integration}\`.` : '';
-    lines.push(`| ${r.row} | ${endpoints} | ${esc(r.trigger)}.${integration} | ${esc(r.payload)} | ${esc(r.cadence)} | ${esc(r.disable)} | ${products} |`);
+    lines.push(
+      `| ${r.row} | ${endpoints} | ${esc(r.trigger)}.${integration} | ${esc(r.payload)} | ${esc(r.cadence)} | ${esc(r.disable)} | ${products} |`,
+    );
   }
   return lines.join('\n');
 }
@@ -526,7 +575,9 @@ function renderGroups(ctx) {
     stats: '`EVER_STATS_ENABLED=false` or the settings toggle',
   };
   for (const [group, label] of Object.entries(ctx.rowsDoc.groups)) {
-    const rows = ctx.rowsDoc.rows.filter((r) => r.group === group).map((r) => (r.integration ? `${r.row} \`${r.integration}\`` : String(r.row)));
+    const rows = ctx.rowsDoc.rows
+      .filter((r) => r.group === group)
+      .map((r) => (r.integration ? `${r.row} \`${r.integration}\`` : String(r.row)));
     lines.push(`| ${label} | ${rows.join(', ')} | ${disable[group]} |`);
   }
   return lines.join('\n');
@@ -584,7 +635,9 @@ function docs(ctx, calls) {
     const lines = ['| Key | What it does | Direction | Ever Cloud / self-hosted | Products | Status |', '|---|---|---|---|---|---|'];
     for (const key of ctx.constants.integration_keys) {
       const d = ctx.integrations[key];
-      lines.push(`| \`${key}\` | ${d.name}: ${d.description.replace(/\|/g, '\\|')} | ${d.direction} | ${d.availability.cloud} / ${d.availability.self_hosted} | ${d.products.join(', ')} | ${d.status.replace('_', ' ')} |`);
+      lines.push(
+        `| \`${key}\` | ${d.name}: ${d.description.replace(/\|/g, '\\|')} | ${d.direction} | ${d.availability.cloud} / ${d.availability.self_hosted} | ${d.products.join(', ')} | ${d.status.replace('_', ' ')} |`,
+      );
     }
     out[integrationsDoc] = fillRegion(lf(readText(integrationsDoc)), 'integrations-catalog', lines.join('\n'), integrationsDoc);
   }
@@ -630,7 +683,11 @@ export async function generateAll() {
   for (const path of Object.keys(files).filter((p) => p.endsWith('.rs'))) files[path] = rustfmt(files[path]);
 
   Object.assign(files, docs(ctx, calls));
-  const lock = Object.fromEntries(Object.keys(files).sort().map((p) => [p, sha256(files[p])]));
+  const lock = Object.fromEntries(
+    Object.keys(files)
+      .sort()
+      .map((p) => [p, sha256(files[p])]),
+  );
   files['generated.lock'] = stableJson({ description: 'sha256 of every file tools/generate.mjs writes', files: lock }, { sort: false });
   return files;
 }
@@ -639,7 +696,8 @@ async function main() {
   const check = process.argv.includes('--check');
   const files = await generateAll();
   const current = {};
-  for (const path of Object.keys(files)) current[path] = existsSync(join(REPO, path)) ? lf(readFileSync(join(REPO, path), 'utf8')) : undefined;
+  for (const path of Object.keys(files))
+    current[path] = existsSync(join(REPO, path)) ? lf(readFileSync(join(REPO, path), 'utf8')) : undefined;
   // Generated files that are no longer produced (a removed integration or event type).
   for (const dir of [`${RS}/data/integrations`, `${RS}/data/schemas/events`]) {
     if (!existsSync(join(REPO, dir))) continue;
@@ -651,7 +709,9 @@ async function main() {
   const differing = diffOutputs(files, current);
   if (check) {
     if (differing.length > 0) {
-      process.stderr.write(`generate --check: ${differing.length} generated file(s) differ from the contract:\n  ${differing.join('\n  ')}\nRun: pnpm generate\n`);
+      process.stderr.write(
+        `generate --check: ${differing.length} generated file(s) differ from the contract:\n  ${differing.join('\n  ')}\nRun: pnpm generate\n`,
+      );
       process.exit(1);
     }
     try {
@@ -670,7 +730,7 @@ async function main() {
   process.stdout.write(`generate: ${differing.length} file(s) written (${Object.keys(files).length} generated files)\n`);
 }
 
-if (process.argv[1] && process.argv[1].endsWith('generate.mjs')) {
+if (process.argv[1]?.endsWith('generate.mjs')) {
   main().catch((error) => {
     process.stderr.write(`generate: ${error.message}\n`);
     process.exit(1);

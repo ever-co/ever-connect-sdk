@@ -19,8 +19,8 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import YAML from 'yaml';
-import { REPO, diffOutputs, platformRepo, readJson, sha256, stableJson, walk, writeText } from './lib/common.mjs';
-import { METHODS, buildSubset, subsetYaml } from './lib/openapi-subset.mjs';
+import { diffOutputs, platformRepo, REPO, readJson, sha256, stableJson, walk, writeText } from './lib/common.mjs';
+import { buildSubset, METHODS, subsetYaml } from './lib/openapi-subset.mjs';
 import { vendor } from './lib/vendor.mjs';
 
 const SPEC_PATH = 'contracts/openapi/ever-platform.v1.yaml';
@@ -47,7 +47,8 @@ export function checkRows(rowsDoc, operationIds, pending) {
     }
     if (r.pending_upstream) {
       if (r.operation_ids.length > 0) problems.push(`row ${r.row} is pending upstream but names operations`);
-      if (!pending.operations.some((p) => p.row === r.row)) problems.push(`row ${r.row} is pending upstream but has no entry in pending-upstream.json`);
+      if (!pending.operations.some((p) => p.row === r.row))
+        problems.push(`row ${r.row} is pending upstream but has no entry in pending-upstream.json`);
     } else if (r.operation_ids.length === 0) {
       problems.push(`row ${r.row} names no operation`);
     }
@@ -181,8 +182,7 @@ function main() {
     }
   }
   // The platform commit alone is not drift: a later checkout with identical sources passes.
-  const normalise = (path, text) =>
-    path === VENDOR_PATH && text ? text.replace(/"commit": "[^"]*"/, '"commit": "-"') : text;
+  const normalise = (path, text) => (path === VENDOR_PATH && text ? text.replace(/"commit": "[^"]*"/, '"commit": "-"') : text);
   const expected = Object.fromEntries(Object.entries(files).map(([p, t]) => [p, normalise(p, t)]));
   const actual = Object.fromEntries(Object.entries(current).map(([p, t]) => [p, normalise(p, t)]));
   const differing = diffOutputs(expected, actual);
@@ -200,7 +200,9 @@ function main() {
         lines.push(`${path}: ${files[path] === undefined ? 'no longer produced' : current[path] === undefined ? 'missing' : 'differs'}`);
       }
     }
-    process.stderr.write(`sync-contract: the committed contract differs from the platform checkout:\n  ${lines.join('\n  ')}\nRun: EVER_PLATFORM_REPO=<checkout> node tools/sync-contract.mjs\n`);
+    process.stderr.write(
+      `sync-contract: the committed contract differs from the platform checkout:\n  ${lines.join('\n  ')}\nRun: EVER_PLATFORM_REPO=<checkout> node tools/sync-contract.mjs\n`,
+    );
     process.exit(1);
   }
   for (const [path, text] of Object.entries(files)) writeText(join(REPO, path), text);
@@ -209,7 +211,7 @@ function main() {
   );
 }
 
-if (process.argv[1] && process.argv[1].endsWith('sync-contract.mjs')) {
+if (process.argv[1]?.endsWith('sync-contract.mjs')) {
   try {
     main();
   } catch (error) {

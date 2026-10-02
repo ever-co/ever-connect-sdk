@@ -6,8 +6,8 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { REPO, readJson } from '../lib/common.mjs';
 import { generateAll } from '../generate.mjs';
+import { REPO, readJson } from '../lib/common.mjs';
 
 const check = (env = {}) =>
   spawnSync(process.execPath, ['tools/generate.mjs', '--check'], { cwd: REPO, encoding: 'utf8', env: { ...process.env, ...env } });

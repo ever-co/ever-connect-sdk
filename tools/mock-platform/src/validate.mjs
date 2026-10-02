@@ -22,7 +22,8 @@ function init() {
   for (const schema of Object.values(c.eventSchemas)) ajv.addSchema(schema);
   for (const schema of Object.values(c.schemas)) ajv.addSchema(schema);
   const pendingSchemas = {};
-  for (const op of c.pending.operations) if (op.request) pendingSchemas[op.operation_id] = ajv.compile({ ...op.request, $id: `${CONTRACT_ID}:pending:${op.operation_id}` });
+  for (const op of c.pending.operations)
+    if (op.request) pendingSchemas[op.operation_id] = ajv.compile({ ...op.request, $id: `${CONTRACT_ID}:pending:${op.operation_id}` });
   state = { ajv, c, cache: new Map(), pendingSchemas };
   return state;
 }
@@ -44,7 +45,7 @@ const ajvCode = (keyword) =>
     minLength: 'out_of_range',
   })[keyword] ?? 'invalid';
 
-const escape = (s) => String(s).replace(/~/g, '~0').replace(/\//g, '~1');
+const escapePointer = (s) => String(s).replace(/~/g, '~0').replace(/\//g, '~1');
 
 /** Ajv errors as field errors, the most specific first, without the combinator noise. */
 export function fieldErrors(errors, data) {
@@ -53,15 +54,21 @@ export function fieldErrors(errors, data) {
   for (const e of errors ?? []) {
     if (['oneOf', 'anyOf', 'if', 'allOf'].includes(e.keyword)) continue;
     let path = e.instancePath;
-    if (e.keyword === 'required') path = `${path}/${escape(e.params.missingProperty)}`;
+    if (e.keyword === 'required') path = `${path}/${escapePointer(e.params.missingProperty)}`;
     if (e.keyword === 'additionalProperties' || e.keyword === 'unevaluatedProperties')
-      path = `${path}/${escape(e.params.additionalProperty ?? e.params.unevaluatedProperty)}`;
+      path = `${path}/${escapePointer(e.params.additionalProperty ?? e.params.unevaluatedProperty)}`;
     // A branch of a oneOf that does not apply (its discriminating const failed) is not the answer.
     if (e.keyword === 'const' && /\/oneOf\/\d+\//.test(e.schemaPath)) continue;
     const key = `${path}|${ajvCode(e.keyword)}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    out.push({ path, code: ajvCode(e.keyword), message: e.message ?? 'is invalid', depth: path.split('/').length, branch: branchOf(e.schemaPath) });
+    out.push({
+      path,
+      code: ajvCode(e.keyword),
+      message: e.message ?? 'is invalid',
+      depth: path.split('/').length,
+      branch: branchOf(e.schemaPath),
+    });
   }
   // Prefer the oneOf branch that matches the document (statistics: the report's product).
   const product = data && typeof data === 'object' ? data.product : undefined;

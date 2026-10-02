@@ -94,7 +94,6 @@ const VALIDATION_ONLY = new Set([
   'default',
 ]);
 
-
 const SCHEMA_KEYS = ['type', 'properties', '$ref', 'oneOf', 'anyOf', 'allOf', 'enum', 'const', 'items', 'additionalProperties'];
 
 /** A `$defs` member that only groups other definitions (no schema keyword of its own). */
@@ -122,7 +121,8 @@ export function forRust(schema, prefix, { rootName } = {}) {
     defs[rename(path)] = strip(def);
   };
   function strip(node) {
-    if (Array.isArray(node)) return node.map(strip).filter((n) => !(n && typeof n === 'object' && !Array.isArray(n) && Object.keys(n).length === 0));
+    if (Array.isArray(node))
+      return node.map(strip).filter((n) => !(n && typeof n === 'object' && !Array.isArray(n) && Object.keys(n).length === 0));
     if (!node || typeof node !== 'object') return node;
     const out = {};
     for (const [k, v] of Object.entries(node)) {

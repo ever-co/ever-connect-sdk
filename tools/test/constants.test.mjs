@@ -11,12 +11,19 @@ import { entitlementFeatures } from '../split-integrations.mjs';
 
 const constants = readJson(join(REPO, 'contracts/constants.json'));
 const spec = YAML.parse(readFileSync(join(REPO, 'contracts/openapi/ever-platform.v1.yaml'), 'utf8'));
-const opById = (id) => Object.values(spec.paths).flatMap((i) => Object.values(i)).find((o) => o?.operationId === id);
+const opById = (id) =>
+  Object.values(spec.paths)
+    .flatMap((i) => Object.values(i))
+    .find((o) => o?.operationId === id);
 
 test('the statistics header names come from the statistics operation', () => {
   const headers = opById('ingestStatsReport').parameters.filter((p) => p.in === 'header');
   assert.deepEqual(constants.stats_headers, { key: 'Ever-Stats-Key', signature: 'Ever-Stats-Signature', key_id: 'Ever-Stats-Key-Id' });
-  for (const name of Object.values(constants.stats_headers)) assert.ok(headers.some((h) => h.name === name), `${name} is not a header of the operation`);
+  for (const name of Object.values(constants.stats_headers))
+    assert.ok(
+      headers.some((h) => h.name === name),
+      `${name} is not a header of the operation`,
+    );
   assert.equal(headers.find((h) => h.name === constants.stats_headers.key).required, true);
   assert.equal(headers.find((h) => h.name === constants.stats_headers.signature).required, true);
   for (const h of headers) assert.ok(!/^x-/i.test(h.name), 'no X- prefix');

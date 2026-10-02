@@ -1,7 +1,7 @@
 // Finds and loads the contract files: from this repository (tools/mock-platform/src -> contracts/)
 // or from the packaged copy next to the package (`<package>/contracts`). EVER_MOCK_CONTRACTS_DIR
 // overrides both.
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 

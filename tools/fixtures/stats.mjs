@@ -136,7 +136,12 @@ export function statsFixtures() {
     .map((line) => `${' '.repeat(400)}${line}`)
     .join('\n')}\n`;
   if (Buffer.byteLength(padded) <= 17 * 1024) throw new Error('07-oversize is not over 17 KiB');
-  invalid('07-oversize', null, '', 'the body is larger than 16 KiB', { status: 413, code: 'validation_failed', layer: 'ingest', text: padded });
+  invalid('07-oversize', null, '', 'the body is larger than 16 KiB', {
+    status: 413,
+    code: 'validation_failed',
+    layer: 'ingest',
+    text: padded,
+  });
   invalid('08-foreign-product-key', { ...g, counts: { ...g.counts, works: 3 } }, '/counts/works', 'a Works key inside a Gauzy report');
   invalid('09-version-suffix', { ...g, version: '1.2.3-acme-corp-prod' }, '/version', 'a build suffix could name a company');
   invalid(
@@ -148,7 +153,10 @@ export function statsFixtures() {
   // JSON Schema treats 214.0 as an integer; the ingest refuses non-integer number syntax itself.
   const integral = json(g).replace('"invoices": 214,', '"invoices": 214.0,');
   if (!integral.includes('214.0')) throw new Error('11-integral-float was not planted');
-  invalid('11-integral-float', null, '/aggregates/invoices', 'a number written with a fraction is not an integer on the wire', { layer: 'ingest', text: integral });
+  invalid('11-integral-float', null, '/aggregates/invoices', 'a number written with a fraction is not an integer on the wire', {
+    layer: 'ingest',
+    text: integral,
+  });
   const duplicate = json(g).replace('"country": "ZZ",', '"country": "ZZ",\n  "country": "BG",');
   if (!duplicate.includes('"country": "BG"')) throw new Error('12-duplicate-key was not planted');
   invalid('12-duplicate-key', null, '/country', 'a key may appear once', { layer: 'ingest', text: duplicate });

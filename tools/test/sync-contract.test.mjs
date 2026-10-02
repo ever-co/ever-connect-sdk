@@ -21,7 +21,10 @@ test('the table has 34 contiguous rows and every row is covered by the spec or p
   rowsDoc.rows.forEach((r, i) => assert.equal(r.row, i + 1));
   for (const r of rowsDoc.rows) {
     if (r.pending_upstream) {
-      assert.ok(pending.operations.some((p) => p.row === r.row), `row ${r.row} has no pending-upstream entry`);
+      assert.ok(
+        pending.operations.some((p) => p.row === r.row),
+        `row ${r.row} has no pending-upstream entry`,
+      );
       continue;
     }
     for (const id of r.operation_ids) {
@@ -41,7 +44,15 @@ test('no staff, internal or person-session operation is left', () => {
     assert.ok(!path.startsWith('/v1/staff'), `${path} is a staff route`);
     assert.ok(!path.startsWith('/internal'), `${path} is an internal route`);
     const schemes = (op.security ?? []).flatMap((s) => Object.keys(s));
-    for (const banned of ['personSession', 'staffSession', 'orgApiKey', 'onboardingToken', 'deletionLinkToken', 'everIdToken', 'webhookSignature'])
+    for (const banned of [
+      'personSession',
+      'staffSession',
+      'orgApiKey',
+      'onboardingToken',
+      'deletionLinkToken',
+      'everIdToken',
+      'webhookSignature',
+    ])
       assert.ok(!schemes.includes(banned), `${op.operationId} accepts ${banned}`);
   }
   for (const banned of ['personSession', 'staffSession', 'orgApiKey'])
@@ -53,7 +64,10 @@ test('the installation address (row 18) and the other pending rows are only in p
     assert.ok(!spec.paths[p.path]?.[p.method.toLowerCase()], `${p.method} ${p.path} is in the spec although pending upstream`);
   }
   const row18 = pending.operations.filter((p) => p.row === 18);
-  assert.deepEqual(row18.map((p) => `${p.method} ${p.path}`).sort(), ['DELETE /v1/instances/me/public-url', 'PUT /v1/instances/me/public-url']);
+  assert.deepEqual(row18.map((p) => `${p.method} ${p.path}`).sort(), [
+    'DELETE /v1/instances/me/public-url',
+    'PUT /v1/instances/me/public-url',
+  ]);
   assert.deepEqual(Object.keys(row18.find((p) => p.method === 'PUT').request.properties), ['base_url']);
 });
 
@@ -71,7 +85,15 @@ test('the redeem body carries no address and every request body is closed', () =
 
 test('operationIds are kept verbatim from the platform', () => {
   const ids = new Set(ops.map((o) => o.op.operationId));
-  for (const id of ['get_key_manifest', 'connectRedeem', 'instanceToken', 'ingestStatsReport', 'getLookupSalt', 'instanceHeartbeat', 'instancePollEvents'])
+  for (const id of [
+    'get_key_manifest',
+    'connectRedeem',
+    'instanceToken',
+    'ingestStatsReport',
+    'getLookupSalt',
+    'instanceHeartbeat',
+    'instancePollEvents',
+  ])
     assert.ok(ids.has(id), `${id} is missing`);
 });
 

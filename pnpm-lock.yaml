@@ -45,6 +45,8 @@ importers:
         specifier: 2.9.1
         version: 2.9.1
 
+  packages/ts/connect-contracts: {}
+
 packages:
 
   '@apidevtools/json-schema-ref-parser@11.9.3':

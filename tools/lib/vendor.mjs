@@ -65,7 +65,10 @@ const TRANSFORMS = {
     const section = text.split('### 3.1')[1]?.split('\n## ')[0] ?? '';
     const vectors = [];
     for (const line of section.split('\n')) {
-      const cells = line.split('|').slice(1, -1).map((c) => c.trim());
+      const cells = line
+        .split('|')
+        .slice(1, -1)
+        .map((c) => c.trim());
       if (cells.length !== 5 || !/^(vat|registration|email)$/.test(cells[0])) continue;
       const unquote = (cell) => {
         const m = /^`(.*)`$/.exec(cell);
@@ -89,7 +92,10 @@ const TRANSFORMS = {
 export function eventEntries(platform) {
   const catalogPath = join(platform, 'contracts', 'events', 'catalog.json');
   const catalog = JSON.parse(readFileSync(catalogPath, 'utf8'));
-  const types = catalog.events.filter((e) => e.audience.includes('instance')).map((e) => e.type).sort();
+  const types = catalog.events
+    .filter((e) => e.audience.includes('instance'))
+    .map((e) => e.type)
+    .sort();
   const entries = [
     { path: 'contracts/schemas/events/common.schema.json', source: 'contracts/events/schemas/common.schema.json' },
     { path: 'contracts/schemas/events/envelope.schema.json', source: 'contracts/events/schemas/envelope.schema.json' },

@@ -58,28 +58,19 @@ export interface StepUpTokenClaims {
 export type StepUpGrantBody = components['schemas']['IntegrationPut'];
 
 /** The state the consent write answers (`consent_source: product_ui` for a step-up consent). */
-export type StepUpGrantResponse =
-  operations['putIntegrationState']['responses'][200]['content']['application/json'];
+export type StepUpGrantResponse = operations['putIntegrationState']['responses'][200]['content']['application/json'];
 
 /** Integration keys that never take an in-product consent: they are enabled in app.ever.co only. */
-export const STEP_UP_EXCLUDED_KEYS = [
-  'counterparty_discoverable',
-  'instance_url',
-] as const satisfies readonly IntegrationKey[];
+export const STEP_UP_EXCLUDED_KEYS = ['counterparty_discoverable', 'instance_url'] as const satisfies readonly IntegrationKey[];
 
 /** Whether an integration may be consented in the product's own dialog. */
-export const stepUpAllowed = (key: IntegrationKey): boolean =>
-  !(STEP_UP_EXCLUDED_KEYS as readonly string[]).includes(key);
+export const stepUpAllowed = (key: IntegrationKey): boolean => !(STEP_UP_EXCLUDED_KEYS as readonly string[]).includes(key);
 
 /**
  * Whether a step-up sign-in is fresh enough at `nowS` (seconds): at most `maxAgeS` old and not
  * from the future (60 s of clock skew allowed).
  */
-export function isStepUpFresh(
-  claims: Pick<StepUpTokenClaims, 'auth_time'>,
-  nowS: number,
-  maxAgeS: number = STEP_UP_MAX_AGE_S,
-): boolean {
+export function isStepUpFresh(claims: Pick<StepUpTokenClaims, 'auth_time'>, nowS: number, maxAgeS: number = STEP_UP_MAX_AGE_S): boolean {
   const t = claims.auth_time;
   return Number.isInteger(t) && nowS - t <= maxAgeS && t <= nowS + 60;
 }

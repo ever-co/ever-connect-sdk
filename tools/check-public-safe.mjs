@@ -77,9 +77,7 @@ function headingsByLine(lines) {
 
 function nounAllowed(file, line, heading) {
   const inPath = WORDS.noun.allowed_paths.some((p) => file.startsWith(p));
-  const inSection = WORDS.noun.allowed_sections.some(
-    (s) => s.file === file && heading.replace(/^[0-9.]+\s+/, '').startsWith(s.heading),
-  );
+  const inSection = WORDS.noun.allowed_sections.some((s) => s.file === file && heading.replace(/^[0-9.]+\s+/, '').startsWith(s.heading));
   if (!inPath && !inSection) return false;
   // Every occurrence on the line must be part of a technical term.
   let rest = line;
@@ -203,8 +201,7 @@ function branchName() {
 function loadPhraseRules() {
   const env = process.env.EVER_BANNED_PHRASES_JSON;
   if (env && env.trim() !== '') return { source: 'the CI secret', rules: compilePhraseList(JSON.parse(env)) };
-  if (existsSync(LOCAL_LIST))
-    return { source: 'the local file', rules: compilePhraseList(JSON.parse(readFileSync(LOCAL_LIST, 'utf8'))) };
+  if (existsSync(LOCAL_LIST)) return { source: 'the local file', rules: compilePhraseList(JSON.parse(readFileSync(LOCAL_LIST, 'utf8'))) };
   return { source: null, rules: [] };
 }
 

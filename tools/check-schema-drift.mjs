@@ -12,7 +12,7 @@
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { REPO, platformRepo, readJson, sha256 } from './lib/common.mjs';
+import { platformRepo, REPO, readJson, sha256 } from './lib/common.mjs';
 import { applyTransform } from './lib/vendor.mjs';
 
 export const AUTHORED_UPSTREAM = {
@@ -53,14 +53,17 @@ export function checkDrift({ platform, strict }) {
       const producedSha = sha256(produced);
       if (producedSha !== localSha) errors.push(`${entry.path}: platform ${entry.source} gives ${producedSha}, vendored ${localSha}`);
     }
-    if (strict && entry.provisional) errors.push(`${entry.path}: provisional source ${entry.source} (the platform has not published ${entry.upstream} yet)`);
+    if (strict && entry.provisional)
+      errors.push(`${entry.path}: provisional source ${entry.source} (the platform has not published ${entry.upstream} yet)`);
   }
 
   if (platform) {
     const pinned = join(platform, vendorDoc.openapi.pinned.source);
     const pinnedSha = sha256(readFileSync(pinned));
     if (pinnedSha !== vendorDoc.openapi.pinned.sha256)
-      errors.push(`${vendorDoc.openapi.pinned.source}: platform ${pinnedSha}, synced ${vendorDoc.openapi.pinned.sha256}: run tools/sync-contract.mjs`);
+      errors.push(
+        `${vendorDoc.openapi.pinned.source}: platform ${pinnedSha}, synced ${vendorDoc.openapi.pinned.sha256}: run tools/sync-contract.mjs`,
+      );
     const catalog = join(platform, vendorDoc.events.source);
     const catalogSha = sha256(readFileSync(catalog));
     if (catalogSha !== vendorDoc.events.sha256)
@@ -73,7 +76,9 @@ export function checkDrift({ platform, strict }) {
     }
   }
   if (strict && vendorDoc.openapi.provisional_operations.length > 0)
-    errors.push(`contract: ${vendorDoc.openapi.provisional_operations.length} operation(s) still come from the design, not the pinned spec`);
+    errors.push(
+      `contract: ${vendorDoc.openapi.provisional_operations.length} operation(s) still come from the design, not the pinned spec`,
+    );
   if (strict && vendorDoc.openapi.pending_upstream_rows.length > 0)
     errors.push(`contract: rows ${vendorDoc.openapi.pending_upstream_rows.join(', ')} are still pending upstream`);
   return { errors, warnings };
@@ -82,7 +87,8 @@ export function checkDrift({ platform, strict }) {
 function main() {
   const strict = process.argv.includes('--strict');
   const platform = platformRepo({ required: false });
-  if (!platform) process.stdout.write('check-schema-drift: warning: EVER_PLATFORM_REPO is unset; comparing committed files with VENDOR.json only\n');
+  if (!platform)
+    process.stdout.write('check-schema-drift: warning: EVER_PLATFORM_REPO is unset; comparing committed files with VENDOR.json only\n');
   const { errors, warnings } = checkDrift({ platform, strict });
   for (const w of warnings) process.stdout.write(`check-schema-drift: warning: ${w}\n`);
   if (errors.length > 0) {
@@ -92,4 +98,4 @@ function main() {
   process.stdout.write(`check-schema-drift: ok${strict ? ' (strict)' : ''}${platform ? '' : ' (local only)'}\n`);
 }
 
-if (process.argv[1] && process.argv[1].endsWith('check-schema-drift.mjs')) main();
+if (process.argv[1]?.endsWith('check-schema-drift.mjs')) main();

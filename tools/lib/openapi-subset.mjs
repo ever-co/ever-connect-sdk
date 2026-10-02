@@ -8,7 +8,19 @@ import { sortKeys } from './common.mjs';
 export const METHODS = ['get', 'put', 'post', 'delete', 'patch'];
 
 const SCHEMA_MAP_KEYS = ['properties', 'patternProperties', '$defs', 'definitions', 'dependentSchemas'];
-const SCHEMA_ONE_KEYS = ['items', 'additionalProperties', 'not', 'propertyNames', 'contains', 'if', 'then', 'else', 'unevaluatedProperties', 'unevaluatedItems', 'contentSchema'];
+const SCHEMA_ONE_KEYS = [
+  'items',
+  'additionalProperties',
+  'not',
+  'propertyNames',
+  'contains',
+  'if',
+  'then',
+  'else',
+  'unevaluatedProperties',
+  'unevaluatedItems',
+  'contentSchema',
+];
 const SCHEMA_LIST_KEYS = ['allOf', 'anyOf', 'oneOf', 'prefixItems'];
 
 const clone = (v) => (v === undefined ? v : JSON.parse(JSON.stringify(v)));
@@ -78,8 +90,7 @@ export function buildSubset({ platform, config, rowsByOperation, version, title,
   const aliases = config.design_operation_aliases ?? {};
 
   const isNever = (path, op, doc) =>
-    config.never_path_prefixes.some((p) => path.startsWith(p)) ||
-    securityNames(op, doc).some((s) => config.never_security.includes(s));
+    config.never_path_prefixes.some((p) => path.startsWith(p)) || securityNames(op, doc).some((s) => config.never_security.includes(s));
   const isSelected = (path, op, doc) => {
     if (isNever(path, op, doc)) return false;
     if (config.exclude_operation_ids[op.operationId]) return false;
@@ -191,13 +202,10 @@ export function buildSubset({ platform, config, rowsByOperation, version, title,
       if (current.schema) current.schema = convertDesignSchema(current.schema, at);
     }
     if (kind === 'requestBody' || kind === 'response') {
-      for (const media of Object.values(current.content ?? {}))
-        if (media.schema) media.schema = convertDesignSchema(media.schema, at);
+      for (const media of Object.values(current.content ?? {})) if (media.schema) media.schema = convertDesignSchema(media.schema, at);
     }
     if (kind === 'response' && current.headers) {
-      current.headers = Object.fromEntries(
-        Object.entries(current.headers).map(([h, v]) => [h, inlineDesign(v, at, 'header')]),
-      );
+      current.headers = Object.fromEntries(Object.entries(current.headers).map(([h, v]) => [h, inlineDesign(v, at, 'header')]));
     }
     return current;
   };
@@ -246,7 +254,8 @@ export function buildSubset({ platform, config, rowsByOperation, version, title,
     );
     if (params.length > 0) op.parameters = params;
     if (src.requestBody)
-      op.requestBody = source === 'pinned' ? inlinePinned(src.requestBody, 'requestBody') : inlineDesign(src.requestBody, entry.file, 'requestBody');
+      op.requestBody =
+        source === 'pinned' ? inlinePinned(src.requestBody, 'requestBody') : inlineDesign(src.requestBody, entry.file, 'requestBody');
     op.responses = Object.fromEntries(
       Object.entries(src.responses ?? {}).map(([code, r]) => [
         code,
@@ -289,7 +298,11 @@ export function buildSubset({ platform, config, rowsByOperation, version, title,
     securitySchemes[name] = copy;
   }
 
-  const schemas = Object.fromEntries(Object.keys(out).sort().map((n) => [n, out[n]]));
+  const schemas = Object.fromEntries(
+    Object.keys(out)
+      .sort()
+      .map((n) => [n, out[n]]),
+  );
   const spec = {
     openapi: '3.1.0',
     info: { title, version, description, contact: clone(pinned.info?.contact ?? { name: 'Ever Co.' }) },

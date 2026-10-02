@@ -24,7 +24,10 @@ test('one valid request per kind; an unknown or missing param fails at its path'
   for (const kind of KINDS) {
     const page = fixture(`feed/managed-operation-requested.${kind}.json`);
     assert.equal(validateEventData(type, page.events[0].data).ok, true, kind);
-    for (const [suffix, path] of [['unknown-param', /^\/params\//], ['missing-params', /^\/params$/]]) {
+    for (const [suffix, path] of [
+      ['unknown-param', /^\/params\//],
+      ['missing-params', /^\/params$/],
+    ]) {
       const bad = fixture(`feed/managed-operation-requested.${kind}.invalid-${suffix}.json`).events[0].data;
       const r = validateEventData(type, bad);
       assert.equal(r.ok, false, `${kind} ${suffix}`);
@@ -41,7 +44,12 @@ test('the result body carries status and size only; a file name or an unknown st
   const status = validateComponent('ManagedOperationResult', fixture('requests/managed-operation-result.invalid-bad-status.json'));
   assert.equal(status.errors[0].path, '/status');
   const spec = YAML.parse(readFileSync(join(REPO, 'contracts/openapi/ever-platform.v1.yaml'), 'utf8'));
-  assert.deepEqual(Object.keys(spec.components.schemas.ManagedOperationResult.properties).sort(), ['artefact_ref', 'size_bytes', 'status', 'version']);
+  assert.deepEqual(Object.keys(spec.components.schemas.ManagedOperationResult.properties).sort(), [
+    'artefact_ref',
+    'size_bytes',
+    'status',
+    'version',
+  ]);
 });
 
 test('the result call is its own row, gated by the managed_operations integration', () => {

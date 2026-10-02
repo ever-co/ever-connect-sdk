@@ -1,8 +1,8 @@
 // The statistics schema is closed: every string is constrained, every object is closed or a typed
 // keyed map, no free-string array. Both known-good controls must fail, or the walk proves nothing.
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
 import { join } from 'node:path';
+import { test } from 'node:test';
 import { REPO, readJson } from '../lib/common.mjs';
 
 const FORBIDDEN_FORMATS = new Set(['email', 'uri', 'hostname', 'ipv4', 'ipv6']);
@@ -19,7 +19,8 @@ export function closedSchemaViolations(schema) {
     }
     if (!node || typeof node !== 'object') return;
     if ('const' in node || 'enum' in node) {
-      for (const e of node.enum ?? []) if (typeof e === 'string' && e.length > MAX_STRING) out.push(`${path}: enum member longer than ${MAX_STRING}`);
+      for (const e of node.enum ?? [])
+        if (typeof e === 'string' && e.length > MAX_STRING) out.push(`${path}: enum member longer than ${MAX_STRING}`);
     } else if (node.type === 'string') {
       if (!('pattern' in node)) out.push(`${path}: free string`);
       if (!Number.isInteger(node.maxLength) || node.maxLength > MAX_STRING) out.push(`${path}: no maxLength`);
@@ -35,7 +36,8 @@ export function closedSchemaViolations(schema) {
       return;
     }
     for (const key of ['properties', '$defs']) for (const [k, v] of Object.entries(node[key] ?? {})) walk(v, `${path}/${key}/${k}`);
-    for (const key of ['items', 'additionalProperties', 'propertyNames']) if (node[key] && typeof node[key] === 'object') walk(node[key], `${path}/${key}`);
+    for (const key of ['items', 'additionalProperties', 'propertyNames'])
+      if (node[key] && typeof node[key] === 'object') walk(node[key], `${path}/${key}`);
     for (const key of ['oneOf', 'anyOf', 'allOf']) if (node[key]) walk(node[key], `${path}/${key}`);
   };
   walk(schema, '#');

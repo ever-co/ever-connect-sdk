@@ -35,7 +35,7 @@ export function verifyEntitlement(jws, { keys, issuer, instanceId, subject, cach
   if (header.typ !== ENTITLEMENT_TYP) return { ok: false, code: 'bad_typ' };
   if (header.alg !== 'EdDSA' || 'crit' in header) return { ok: false, code: 'bad_alg' };
   const key = keys.find((k) => k.kid === header.kid);
-  if (!key || key.ever_purpose !== 'entitlement' || !['active', 'previous'].includes(key.state)) return { ok: false, code: 'unknown_kid' };
+  if (key?.ever_purpose !== 'entitlement' || !['active', 'previous'].includes(key.state)) return { ok: false, code: 'unknown_kid' };
   if (!verifyBytes(key.x, decoded.signingInput, decoded.signature)) return { ok: false, code: 'bad_signature' };
   if (payload.ever?.schema !== 'ever.entitlement.v1') return { ok: false, code: 'schema_violation' };
   if (payload.iss !== issuer) return { ok: false, code: 'issuer_mismatch' };
