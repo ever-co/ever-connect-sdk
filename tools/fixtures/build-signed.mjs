@@ -590,7 +590,40 @@ export function buildAll() {
     ...connectVectors(),
     ...Object.fromEntries(Object.entries(statsFixtures()).map(([p, t]) => [`stats/${p}`, t])),
   };
+  files['index.json'] = json(fixtureIndex(files));
   return Object.fromEntries(Object.entries(files).map(([p, t]) => [`${FIXTURES}/${p}`, t]));
+}
+
+/**
+ * The schema-bound JSON fixtures and their verdicts, for the TypeScript/Rust round trip: `kind` is
+ * `component` (a schema of the contract), `pending` (a body pending upstream), `schema` (one of
+ * the JSON Schemas) or `feed` (a FeedResponse page whose events carry catalog data). `typed`
+ * fixtures also deserialize into the generated types and back.
+ */
+function fixtureIndex(files) {
+  const entries = [];
+  const read = (p) => JSON.parse(files[p]);
+  for (const [name, e] of Object.entries(read('requests/expected.json').fixtures)) {
+    const pending = e.schema.startsWith('pending:');
+    entries.push({ file: `requests/${name}`, kind: pending ? 'pending' : 'component', schema: pending ? e.schema.slice(8) : e.schema, valid: e.valid, typed: e.valid && !pending });
+  }
+  for (const [name, e] of Object.entries(read('feed/expected.json').fixtures))
+    entries.push({ file: `feed/${name}`, kind: 'feed', schema: e.type, valid: e.valid, typed: e.valid });
+  for (const name of ['manifest.valid', 'manifest.keys-sha256-mismatch', 'manifest.unknown-root'])
+    entries.push({ file: `keys/${name}.json`, kind: 'schema', schema: 'keyManifest', valid: true, typed: true });
+  for (const name of ['instance', 'link']) entries.push({ file: `entitlement/valid/${name}.claims.json`, kind: 'schema', schema: 'entitlement', valid: true, typed: true });
+  for (const [name, e] of Object.entries(read('consent/expected.json').fixtures))
+    entries.push({ file: `consent/${name}`, kind: 'schema', schema: 'consent', valid: e.valid, typed: e.valid });
+  for (const [name, e] of Object.entries(read('stats/expected.json').fixtures)) {
+    // Ingest-layer fixtures are schema-valid documents the ingest refuses for other reasons.
+    const valid = e.layer === 'ingest' ? true : e.status === 202;
+    entries.push({ file: `stats/${name}`, kind: 'schema', schema: 'stats', valid, typed: valid && e.layer !== 'ingest' });
+  }
+  entries.sort((a, b) => a.file.localeCompare(b.file));
+  return {
+    description: 'Every schema-bound JSON fixture with the schema it is checked against and its verdict. The TypeScript (ajv) and Rust (jsonschema) round trips must both reach these verdicts.',
+    fixtures: entries,
+  };
 }
 
 function main() {

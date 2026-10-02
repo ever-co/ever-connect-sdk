@@ -1,0 +1,1013 @@
+{
+  "description": "Every schema-bound JSON fixture with the schema it is checked against and its verdict. The TypeScript (ajv) and Rust (jsonschema) round trips must both reach these verdicts.",
+  "fixtures": [
+    {
+      "file": "consent/invalid/cloud-terms-with-person.json",
+      "kind": "schema",
+      "schema": "consent",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "consent/invalid/evidence-ip-address.json",
+      "kind": "schema",
+      "schema": "consent",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "consent/invalid/product-ui-discoverable.json",
+      "kind": "schema",
+      "schema": "consent",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "consent/invalid/product-ui-instance-url.json",
+      "kind": "schema",
+      "schema": "consent",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "consent/invalid/product-ui-without-evidence.json",
+      "kind": "schema",
+      "schema": "consent",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "consent/invalid/unknown-source.json",
+      "kind": "schema",
+      "schema": "consent",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "consent/valid/app-ever-co.json",
+      "kind": "schema",
+      "schema": "consent",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "consent/valid/cloud-terms.json",
+      "kind": "schema",
+      "schema": "consent",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "consent/valid/product-ui.json",
+      "kind": "schema",
+      "schema": "consent",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "consent/valid/revoked.json",
+      "kind": "schema",
+      "schema": "consent",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "entitlement/valid/instance.claims.json",
+      "kind": "schema",
+      "schema": "entitlement",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "entitlement/valid/link.claims.json",
+      "kind": "schema",
+      "schema": "entitlement",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "feed/ever.consent.consent.granted.json",
+      "kind": "feed",
+      "schema": "ever.consent.consent.granted",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "feed/ever.consent.consent.revoked.json",
+      "kind": "feed",
+      "schema": "ever.consent.consent.revoked",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "feed/ever.consent.integration.disabled.json",
+      "kind": "feed",
+      "schema": "ever.consent.integration.disabled",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "feed/ever.consent.integration.enabled.json",
+      "kind": "feed",
+      "schema": "ever.consent.integration.enabled",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "feed/ever.consent.integration.scope_bumped.json",
+      "kind": "feed",
+      "schema": "ever.consent.integration.scope_bumped",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "feed/ever.entitlements.entitlement.issued.json",
+      "kind": "feed",
+      "schema": "ever.entitlements.entitlement.issued",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "feed/ever.entitlements.entitlement.revoked.json",
+      "kind": "feed",
+      "schema": "ever.entitlements.entitlement.revoked",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "feed/ever.entitlements.usage.limit_reached.json",
+      "kind": "feed",
+      "schema": "ever.entitlements.usage.limit_reached",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "feed/ever.registry.instance.approved.json",
+      "kind": "feed",
+      "schema": "ever.registry.instance.approved",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "feed/ever.registry.instance.connected.json",
+      "kind": "feed",
+      "schema": "ever.registry.instance.connected",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "feed/ever.registry.instance.disconnected.json",
+      "kind": "feed",
+      "schema": "ever.registry.instance.disconnected",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "feed/ever.registry.instance.key_rotated.json",
+      "kind": "feed",
+      "schema": "ever.registry.instance.key_rotated",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "feed/ever.registry.instance.revoked.json",
+      "kind": "feed",
+      "schema": "ever.registry.instance.revoked",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "feed/ever.registry.instance.seen.json",
+      "kind": "feed",
+      "schema": "ever.registry.instance.seen",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "feed/ever.registry.managed_operation.requested.json",
+      "kind": "feed",
+      "schema": "ever.registry.managed_operation.requested",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "feed/ever.registry.managed_operation.state_changed.json",
+      "kind": "feed",
+      "schema": "ever.registry.managed_operation.state_changed",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "feed/ever.registry.membership.created.json",
+      "kind": "feed",
+      "schema": "ever.registry.membership.created",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "feed/ever.registry.membership.removed.json",
+      "kind": "feed",
+      "schema": "ever.registry.membership.removed",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "feed/ever.registry.membership.role_changed.json",
+      "kind": "feed",
+      "schema": "ever.registry.membership.role_changed",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "feed/ever.registry.person.deletion_requested.json",
+      "kind": "feed",
+      "schema": "ever.registry.person.deletion_requested",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "feed/ever.registry.person.export_requested.json",
+      "kind": "feed",
+      "schema": "ever.registry.person.export_requested",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "feed/ever.registry.tenant_link.created.json",
+      "kind": "feed",
+      "schema": "ever.registry.tenant_link.created",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "feed/ever.registry.tenant_link.orphaned.json",
+      "kind": "feed",
+      "schema": "ever.registry.tenant_link.orphaned",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "feed/ever.registry.tenant_link.resumed.json",
+      "kind": "feed",
+      "schema": "ever.registry.tenant_link.resumed",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "feed/ever.registry.tenant_link.suspended.json",
+      "kind": "feed",
+      "schema": "ever.registry.tenant_link.suspended",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "feed/ever.registry.tenant_link.unlinked.json",
+      "kind": "feed",
+      "schema": "ever.registry.tenant_link.unlinked",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "feed/managed-operation-requested.backup.invalid-missing-params.json",
+      "kind": "feed",
+      "schema": "ever.registry.managed_operation.requested",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "feed/managed-operation-requested.backup.invalid-unknown-param.json",
+      "kind": "feed",
+      "schema": "ever.registry.managed_operation.requested",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "feed/managed-operation-requested.backup.json",
+      "kind": "feed",
+      "schema": "ever.registry.managed_operation.requested",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "feed/managed-operation-requested.health-report.invalid-missing-params.json",
+      "kind": "feed",
+      "schema": "ever.registry.managed_operation.requested",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "feed/managed-operation-requested.health-report.invalid-unknown-param.json",
+      "kind": "feed",
+      "schema": "ever.registry.managed_operation.requested",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "feed/managed-operation-requested.health-report.json",
+      "kind": "feed",
+      "schema": "ever.registry.managed_operation.requested",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "feed/managed-operation-requested.restore-check.invalid-missing-params.json",
+      "kind": "feed",
+      "schema": "ever.registry.managed_operation.requested",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "feed/managed-operation-requested.restore-check.invalid-unknown-param.json",
+      "kind": "feed",
+      "schema": "ever.registry.managed_operation.requested",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "feed/managed-operation-requested.restore-check.json",
+      "kind": "feed",
+      "schema": "ever.registry.managed_operation.requested",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "feed/managed-operation-requested.update.invalid-missing-params.json",
+      "kind": "feed",
+      "schema": "ever.registry.managed_operation.requested",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "feed/managed-operation-requested.update.invalid-unknown-param.json",
+      "kind": "feed",
+      "schema": "ever.registry.managed_operation.requested",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "feed/managed-operation-requested.update.json",
+      "kind": "feed",
+      "schema": "ever.registry.managed_operation.requested",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "keys/manifest.keys-sha256-mismatch.json",
+      "kind": "schema",
+      "schema": "keyManifest",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "keys/manifest.unknown-root.json",
+      "kind": "schema",
+      "schema": "keyManifest",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "keys/manifest.valid.json",
+      "kind": "schema",
+      "schema": "keyManifest",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "requests/ack.invalid-bad-result.json",
+      "kind": "component",
+      "schema": "AckRequest",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/ack.invalid-extra-field.json",
+      "kind": "component",
+      "schema": "AckRequest",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/ack.json",
+      "kind": "component",
+      "schema": "AckRequest",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "requests/billing-link.invalid-extra-field.json",
+      "kind": "component",
+      "schema": "BillingLinkCreate",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/billing-link.json",
+      "kind": "component",
+      "schema": "BillingLinkCreate",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "requests/device-token.invalid-extra-field.json",
+      "kind": "component",
+      "schema": "DeviceTokenRequest",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/device-token.json",
+      "kind": "component",
+      "schema": "DeviceTokenRequest",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "requests/device.invalid-extra-field.json",
+      "kind": "component",
+      "schema": "DeviceRequest",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/device.json",
+      "kind": "component",
+      "schema": "DeviceRequest",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "requests/events-ack.invalid-extra-field.json",
+      "kind": "component",
+      "schema": "FeedAck",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/events-ack.json",
+      "kind": "component",
+      "schema": "FeedAck",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "requests/heartbeat.invalid-extra-field.json",
+      "kind": "component",
+      "schema": "HeartbeatBody",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/heartbeat.invalid-null-id.json",
+      "kind": "component",
+      "schema": "HeartbeatBody",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/heartbeat.json",
+      "kind": "component",
+      "schema": "HeartbeatBody",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "requests/identifiers.invalid-extra-field.json",
+      "kind": "component",
+      "schema": "IdentifierHashes",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/identifiers.json",
+      "kind": "component",
+      "schema": "IdentifierHashes",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "requests/identity-resolve.invalid-extra-field.json",
+      "kind": "component",
+      "schema": "IdentityResolveRequest",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/identity-resolve.json",
+      "kind": "component",
+      "schema": "IdentityResolveRequest",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "requests/install-status.invalid-extra-field.json",
+      "kind": "component",
+      "schema": "InstallStatus",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/install-status.json",
+      "kind": "component",
+      "schema": "InstallStatus",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "requests/integration-accept.invalid-extra-field.json",
+      "kind": "pending",
+      "schema": "instanceAcceptIntegration",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/integration-accept.json",
+      "kind": "pending",
+      "schema": "instanceAcceptIntegration",
+      "valid": true,
+      "typed": false
+    },
+    {
+      "file": "requests/integration-put.product-ui.invalid-extra-field.json",
+      "kind": "component",
+      "schema": "IntegrationPut",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/integration-put.product-ui.invalid-not-accepted.json",
+      "kind": "component",
+      "schema": "IntegrationPut",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/integration-put.product-ui.json",
+      "kind": "component",
+      "schema": "IntegrationPut",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "requests/intent-complete.invalid-extra-field.json",
+      "kind": "component",
+      "schema": "IntentComplete",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/intent-complete.invalid-null-id.json",
+      "kind": "component",
+      "schema": "IntentComplete",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/intent-complete.json",
+      "kind": "component",
+      "schema": "IntentComplete",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "requests/keys.invalid-extra-field.json",
+      "kind": "component",
+      "schema": "KeyRotate",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/keys.json",
+      "kind": "component",
+      "schema": "KeyRotate",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "requests/lookup.invalid-extra-field.json",
+      "kind": "component",
+      "schema": "LookupRequest",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/lookup.invalid-too-many.json",
+      "kind": "component",
+      "schema": "LookupRequest",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/lookup.json",
+      "kind": "component",
+      "schema": "LookupRequest",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "requests/managed-operation-result.invalid-bad-status.json",
+      "kind": "component",
+      "schema": "ManagedOperationResult",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/managed-operation-result.invalid-file-name.json",
+      "kind": "component",
+      "schema": "ManagedOperationResult",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/managed-operation-result.json",
+      "kind": "component",
+      "schema": "ManagedOperationResult",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "requests/mirror.invalid-extra-field.json",
+      "kind": "component",
+      "schema": "MirrorBatch",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/mirror.json",
+      "kind": "component",
+      "schema": "MirrorBatch",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "requests/oidc-client.invalid-extra-field.json",
+      "kind": "component",
+      "schema": "OidcClientRequest",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/oidc-client.json",
+      "kind": "component",
+      "schema": "OidcClientRequest",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "requests/org-profile.invalid-extra-field.json",
+      "kind": "component",
+      "schema": "OrgProfilePush",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/org-profile.json",
+      "kind": "component",
+      "schema": "OrgProfilePush",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "requests/person-link.invalid-extra-field.json",
+      "kind": "component",
+      "schema": "PersonLinkCreate",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/person-link.invalid-null-id.json",
+      "kind": "component",
+      "schema": "PersonLinkCreate",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/person-link.json",
+      "kind": "component",
+      "schema": "PersonLinkCreate",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "requests/provider-grant-status.invalid-extra-field.json",
+      "kind": "pending",
+      "schema": "instanceReportProviderGrantStatus",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/provider-grant-status.json",
+      "kind": "pending",
+      "schema": "instanceReportProviderGrantStatus",
+      "valid": true,
+      "typed": false
+    },
+    {
+      "file": "requests/public-url.invalid-extra-field.json",
+      "kind": "pending",
+      "schema": "instancePutPublicUrl",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/public-url.invalid-plain-http.json",
+      "kind": "pending",
+      "schema": "instancePutPublicUrl",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/public-url.json",
+      "kind": "pending",
+      "schema": "instancePutPublicUrl",
+      "valid": true,
+      "typed": false
+    },
+    {
+      "file": "requests/redeem.invalid-extra-field.json",
+      "kind": "component",
+      "schema": "RedeemRequest",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/redeem.invalid-null-id.json",
+      "kind": "component",
+      "schema": "RedeemRequest",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/redeem.json",
+      "kind": "component",
+      "schema": "RedeemRequest",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "requests/set-integration.invalid-enable-attempt.json",
+      "kind": "component",
+      "schema": "InstanceIntegrationPut",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/set-integration.invalid-extra-field.json",
+      "kind": "component",
+      "schema": "InstanceIntegrationPut",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/set-integration.json",
+      "kind": "component",
+      "schema": "InstanceIntegrationPut",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "requests/stats-link.invalid-extra-field.json",
+      "kind": "component",
+      "schema": "StatsLinkCreate",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/stats-link.invalid-missing-statement.json",
+      "kind": "component",
+      "schema": "StatsLinkCreate",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/stats-link.json",
+      "kind": "component",
+      "schema": "StatsLinkCreate",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "requests/tenant-link-rekey.invalid-extra-field.json",
+      "kind": "component",
+      "schema": "TenantLinkRekey",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/tenant-link-rekey.json",
+      "kind": "component",
+      "schema": "TenantLinkRekey",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "requests/tenant-link.invalid-extra-field.json",
+      "kind": "component",
+      "schema": "TenantLinkCreate",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/tenant-link.invalid-null-id.json",
+      "kind": "component",
+      "schema": "TenantLinkCreate",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/tenant-link.json",
+      "kind": "component",
+      "schema": "TenantLinkCreate",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "requests/token.invalid-extra-field.json",
+      "kind": "component",
+      "schema": "TokenRequest",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/token.json",
+      "kind": "component",
+      "schema": "TokenRequest",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "requests/usage-readings.invalid-extra-field.json",
+      "kind": "component",
+      "schema": "UsageReadings",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/usage-readings.json",
+      "kind": "component",
+      "schema": "UsageReadings",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "requests/usage.invalid-extra-field.json",
+      "kind": "component",
+      "schema": "UsageReport",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/usage.json",
+      "kind": "component",
+      "schema": "UsageReport",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "requests/webhook-patch.invalid-extra-field.json",
+      "kind": "component",
+      "schema": "WebhookPatch",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/webhook-patch.json",
+      "kind": "component",
+      "schema": "WebhookPatch",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "requests/webhook.invalid-extra-field.json",
+      "kind": "component",
+      "schema": "WebhookCreate",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "requests/webhook.json",
+      "kind": "component",
+      "schema": "WebhookCreate",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "stats/invalid/01-extra-field.json",
+      "kind": "schema",
+      "schema": "stats",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "stats/invalid/02-string-in-counts.json",
+      "kind": "schema",
+      "schema": "stats",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "stats/invalid/03-per-record-array.json",
+      "kind": "schema",
+      "schema": "stats",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "stats/invalid/04-email-in-country.json",
+      "kind": "schema",
+      "schema": "stats",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "stats/invalid/05-url-in-version.json",
+      "kind": "schema",
+      "schema": "stats",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "stats/invalid/06-decimal-amount.json",
+      "kind": "schema",
+      "schema": "stats",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "stats/invalid/07-oversize.json",
+      "kind": "schema",
+      "schema": "stats",
+      "valid": true,
+      "typed": false
+    },
+    {
+      "file": "stats/invalid/08-foreign-product-key.json",
+      "kind": "schema",
+      "schema": "stats",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "stats/invalid/09-version-suffix.json",
+      "kind": "schema",
+      "schema": "stats",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "stats/invalid/10-open-map-key.json",
+      "kind": "schema",
+      "schema": "stats",
+      "valid": false,
+      "typed": false
+    },
+    {
+      "file": "stats/invalid/11-integral-float.json",
+      "kind": "schema",
+      "schema": "stats",
+      "valid": true,
+      "typed": false
+    },
+    {
+      "file": "stats/invalid/12-duplicate-key.json",
+      "kind": "schema",
+      "schema": "stats",
+      "valid": true,
+      "typed": false
+    },
+    {
+      "file": "stats/valid/gauzy.json",
+      "kind": "schema",
+      "schema": "stats",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "stats/valid/rec.json",
+      "kind": "schema",
+      "schema": "stats",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "stats/valid/teams.json",
+      "kind": "schema",
+      "schema": "stats",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "stats/valid/traduora.json",
+      "kind": "schema",
+      "schema": "stats",
+      "valid": true,
+      "typed": true
+    },
+    {
+      "file": "stats/valid/works.json",
+      "kind": "schema",
+      "schema": "stats",
+      "valid": true,
+      "typed": true
+    }
+  ]
+}

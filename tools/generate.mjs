@@ -245,6 +245,59 @@ function rustTypes(ctx) {
   }
 }
 
+/** The name typify gives a schema: its `_` segments joined in UpperCamelCase. */
+const rustTypeName = (name) =>
+  name
+    .split('_')
+    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+    .join('');
+
+/** The typed round-trip dispatch the Rust fixture test uses: one arm per generated root type. */
+function rustTypedDispatch(ctx) {
+  const components = Object.keys(ctx.spec.components.schemas).sort();
+  const events = Object.entries(ctx.events).map(([type, { file }]) => {
+    const version = /\.v(\d+)\./.exec(file)[1];
+    return [type, `${type.replace(/^ever\./, '').replace(/[^a-z0-9]+/g, '_')}_v${version}`, `${typeName(type)}V${version}`];
+  });
+  return `${RS_HEADER}//! Typed round trip for the fixture tests: deserialize a document into the generated type its
+//! schema names and serialize it back.
+#![allow(dead_code)]
+
+use ever_connect_contracts::{openapi::components, schemas};
+use serde::{Serialize, de::DeserializeOwned};
+use serde_json::Value;
+
+fn rt<T: DeserializeOwned + Serialize>(value: &Value) -> Result<Value, String> {
+    let typed: T = serde_json::from_value(value.clone()).map_err(|e| e.to_string())?;
+    serde_json::to_value(typed).map_err(|e| e.to_string())
+}
+
+/// A contract component schema, by name.
+pub fn component(name: &str, value: &Value) -> Option<Result<Value, String>> {
+    Some(match name {
+${components.map((n) => `        ${JSON.stringify(n)} => rt::<components::${rustTypeName(n)}>(value),`).join('\n')}
+        _ => return None,
+    })
+}
+
+/// One of the JSON Schemas, by key.
+pub fn schema(key: &str, value: &Value) -> Option<Result<Value, String>> {
+    Some(match key {
+${SCHEMA_DOCS.map((d) => `        ${JSON.stringify(d.key)} => rt::<schemas::${d.module}::${d.type}>(value),`).join('\n')}
+        _ => return None,
+    })
+}
+
+/// The data of an instance-audience event, by type.
+pub fn event(event_type: &str, value: &Value) -> Option<Result<Value, String>> {
+    Some(match event_type {
+${events.map(([t, m, n]) => `        ${JSON.stringify(t)} => rt::<schemas::${m}::${n}>(value),`).join('\n')}
+        _ => return None,
+    })
+}
+`;
+}
+
 function rustfmt(source) {
   const bin = process.env.RUSTFMT ?? 'rustfmt';
   try {
@@ -570,6 +623,7 @@ export async function generateAll() {
   for (const { file } of Object.values(ctx.events)) copy(`contracts/schemas/events/${file}`, `schemas/events/${file}`);
   for (const key of ctx.constants.integration_keys) copy(`contracts/integrations/${key}.json`, `integrations/${key}.json`);
   files[`${RS}/constants.rs`] = rustConstants(ctx, dataFiles);
+  files['crates/ever-connect-contracts/tests/typed/mod.rs'] = rustTypedDispatch(ctx);
 
   // rustfmt (pinned by rust-toolchain.toml) gives the Rust output the repository's style.
   for (const path of Object.keys(files).filter((p) => p.endsWith('.rs'))) files[path] = rustfmt(files[path]);
