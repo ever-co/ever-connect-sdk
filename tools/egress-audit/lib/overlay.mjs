@@ -90,7 +90,7 @@ function dependsOn(svc) {
 
 /**
  * The overlay as YAML text.
- * opts: {project, subnet, dnsImage, product{services, networks}, processServices[], env{},
+ * opts: {project, subnet, dnsImage, driverImage?, product{services, networks}, processServices[], env{},
  *        mock{image, config}|null}
  */
 export function buildOverlay(opts) {
@@ -127,11 +127,16 @@ export function buildOverlay(opts) {
     product.depends_on = { ...dependsOn(original), [v.SNIFFER]: { condition: 'service_started' } };
     services[name] = product;
   }
+  if (opts.driverImage)
+    services['ever-audit-driver'] = fill(t.services['ever-audit-driver'], { ...values, DRIVER_IMAGE: opts.driverImage });
   if (opts.mock)
     services['mock-platform'] = fill(t.services['mock-platform'], {
       ...values,
       MOCK_IMAGE: opts.mock.image,
-      MOCK_CONFIG: JSON.stringify(opts.mock.config ?? {}),
+      // Compose interpolates `$` in values; the configuration passes through as written.
+      MOCK_CONFIG: JSON.stringify(opts.mock.config ?? {})
+        .split('$')
+        .join('$$'),
     });
   const networks = { default: fill(t.networks.default, values) };
   for (const n of opts.product.networks) if (n !== 'default') networks[n] = { internal: true };

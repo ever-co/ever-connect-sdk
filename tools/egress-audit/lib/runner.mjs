@@ -147,10 +147,24 @@ export async function runAudit({
     writeFileSync(join(out, 'dns', 'Dockerfile'), `FROM ${COREDNS_IMAGE}\nCOPY Corefile /Corefile\n`);
     docker(['build', '-q', '-t', dnsImage, join(out, 'dns')], { log });
 
+    // The driver: scenario.mjs and the product adapter, run with `docker compose run` like every
+    // other container of the project.
+    const driverDir = join(out, 'driver');
+    mkdirSync(driverDir, { recursive: true });
+    copyFileSync(join(HARNESS_DIR, 'scenario.mjs'), join(driverDir, 'scenario.mjs'));
+    if (config.adapter) copyFileSync(resolve(configDir, config.adapter), join(driverDir, 'adapter.mjs'));
+    writeFileSync(join(driverDir, 'package.json'), '{"type":"module","private":true}\n');
+    writeFileSync(
+      join(driverDir, 'Dockerfile'),
+      `FROM ${DRIVER_BASE_IMAGE}\nWORKDIR /driver\nCOPY . .\nENTRYPOINT ["node", "scenario.mjs"]\n`,
+    );
+    docker(['build', '-q', '-t', driverImage, driverDir], { log });
+
     const overlay = buildOverlay({
       project,
       subnet,
       dnsImage,
+      driverImage,
       product: model,
       processServices: config.process_services,
       env: productEnv,
@@ -205,16 +219,6 @@ export async function runAudit({
     full(['up', '-d', ...(config.build ? ['--build'] : []), ...(config.services ?? [])]);
 
     // 3. The scenario, from the driver container on the sealed network.
-    const driverDir = join(out, 'driver');
-    mkdirSync(driverDir, { recursive: true });
-    copyFileSync(join(HARNESS_DIR, 'scenario.mjs'), join(driverDir, 'scenario.mjs'));
-    if (config.adapter) copyFileSync(resolve(configDir, config.adapter), join(driverDir, 'adapter.mjs'));
-    writeFileSync(join(driverDir, 'package.json'), '{"type":"module","private":true}\n');
-    writeFileSync(
-      join(driverDir, 'Dockerfile'),
-      `FROM ${DRIVER_BASE_IMAGE}\nWORKDIR /driver\nCOPY . .\nENTRYPOINT ["node", "scenario.mjs"]\n`,
-    );
-    docker(['build', '-q', '-t', driverImage, driverDir], { log });
     const outbound = JSON.parse(readFileSync(join(MOCK_CONTRACTS, 'generated', 'outbound-calls.json'), 'utf8'));
     evidence.generated = generatedRows(outbound, config.product, {
       phase: config.phase ?? 2,
@@ -236,10 +240,9 @@ export async function runAudit({
       managed_request: mode.managed_request,
     };
     const driver = (step, extra = {}) => {
-      const r = docker(['run', '--rm', '--network', `${project}-audit`, '-e', 'EVER_AUDIT_PLAN', driverImage, step], {
-        env: { ...process.env, EVER_AUDIT_PLAN: JSON.stringify({ ...plan, ...extra }) },
+      const b64 = Buffer.from(JSON.stringify({ ...plan, ...extra })).toString('base64');
+      const r = full(['run', '--rm', '-T', '--no-deps', '-e', `EVER_AUDIT_PLAN_B64=${b64}`, 'ever-audit-driver', step], {
         allowFail: true,
-        log,
       });
       const res = parseResult(r.stdout);
       writeFileSync(join(out, `driver-${step}.log`), `${r.stdout}${r.stderr}`);

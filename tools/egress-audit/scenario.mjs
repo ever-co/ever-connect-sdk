@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { lookup } from 'node:dns/promises';
 // The audit driver. run.mjs builds it into a small image together with the product adapter and runs
 // it on the sealed audit network, so it reaches the product and the mock platform by service name
 // while its own traffic stays outside every sniffed namespace. One step per container run:
@@ -12,9 +13,31 @@
 //   probe      request every module route and answer the statuses
 //   record     answer the mock platform's call record
 //
-// The plan comes from EVER_AUDIT_PLAN (JSON); the result is one line `EVER_AUDIT_RESULT <json>`.
-const plan = JSON.parse(process.env.EVER_AUDIT_PLAN ?? '{}');
+// The plan comes from EVER_AUDIT_PLAN_B64 (base64 JSON) or EVER_AUDIT_PLAN (JSON); the result is
+// one line `EVER_AUDIT_RESULT <json>`.
+import { readFileSync, writeFileSync } from 'node:fs';
+import { connect } from 'node:net';
+import { networkInterfaces } from 'node:os';
+
+const plan = JSON.parse(
+  process.env.EVER_AUDIT_PLAN_B64
+    ? Buffer.from(process.env.EVER_AUDIT_PLAN_B64, 'base64').toString('utf8')
+    : (process.env.EVER_AUDIT_PLAN ?? '{}'),
+);
 const step = process.argv[2] ?? 'scenario';
+
+// The driver looks up compose names only. Search domains and a high ndots inherited from the host
+// (a Kubernetes runner) would try every search domain first, out of a sealed network that never
+// answers; keep the resolver's nameservers and look names up as written.
+try {
+  const resolv = readFileSync('/etc/resolv.conf', 'utf8');
+  if (/^\s*search\s/m.test(resolv) || /ndots:[1-9]/.test(resolv)) {
+    const servers = resolv.split('\n').filter((l) => /^\s*nameserver\s/.test(l));
+    writeFileSync('/etc/resolv.conf', `${servers.join('\n')}\noptions ndots:0\n`);
+  }
+} catch {
+  // a read-only resolver file stays as it is; the diagnostics of a failed step show it
+}
 const MOCK = 'http://mock-platform:8080';
 const log = (...a) => process.stderr.write(`${a.join(' ')}\n`);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -36,6 +59,43 @@ async function waitHealthy(url, seconds) {
   return { ok: false, reason: last };
 }
 
+const within = (promise, ms) =>
+  Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(Object.assign(new Error('timeout'), { code: 'TIMEOUT' })), ms)),
+  ]);
+
+/** Where an unreachable URL fails, from inside the driver: its resolver, the lookup, a TCP connect. */
+async function diagnose(url) {
+  const { hostname, port } = new URL(url);
+  const out = { host: hostname };
+  try {
+    out.resolv = readFileSync('/etc/resolv.conf', 'utf8').trim().split('\n');
+  } catch {
+    out.resolv = null;
+  }
+  out.addresses = Object.values(networkInterfaces())
+    .flat()
+    .filter((i) => i && !i.internal && i.family === 'IPv4')
+    .map((i) => i.cidr);
+  const t0 = Date.now();
+  try {
+    out.lookup = (await within(lookup(hostname, { all: true }), 6000)).map((a) => a.address);
+  } catch (error) {
+    out.lookup_error = error.code ?? error.message;
+  }
+  out.lookup_ms = Date.now() - t0;
+  if (out.lookup?.[0]) {
+    out.tcp = await new Promise((resolve) => {
+      const socket = connect({ host: out.lookup[0], port: Number(port || 80), timeout: 5000 });
+      socket.on('connect', () => resolve('connected', socket.destroy()));
+      socket.on('timeout', () => resolve('timeout', socket.destroy()));
+      socket.on('error', (error) => resolve(error.code ?? error.message));
+    });
+  }
+  return out;
+}
+
 async function requests() {
   const r = await fetch(`${MOCK}/__mock/requests`, { signal: AbortSignal.timeout(5000) });
   if (r.status !== 200) throw new Error(`the mock platform answered ${r.status} for its record`);
@@ -44,7 +104,10 @@ async function requests() {
 
 async function scenario() {
   const health = await waitHealthy(plan.health_url, plan.health_timeout_s ?? 120);
-  if (!health.ok) return result({ ok: false, fault: `the product never answered ${plan.health_url}: ${health.reason}` });
+  if (!health.ok) {
+    const diagnostics = await diagnose(plan.health_url);
+    return result({ ok: false, fault: `the product never answered ${plan.health_url}: ${health.reason} (${JSON.stringify(diagnostics)})` });
+  }
   let adapter = {};
   try {
     adapter = (await import('./adapter.mjs')).default ?? {};
@@ -139,7 +202,11 @@ async function record() {
   try {
     return result({ ok: true, entries: await requests() });
   } catch (error) {
-    return result({ ok: false, fault: `the mock platform record could not be read: ${error.cause?.code ?? error.message}` });
+    const diagnostics = await diagnose(MOCK);
+    return result({
+      ok: false,
+      fault: `the mock platform record could not be read: ${error.cause?.code ?? error.message} (${JSON.stringify(diagnostics)})`,
+    });
   }
 }
 

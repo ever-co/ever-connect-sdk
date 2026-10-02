@@ -10,6 +10,8 @@
 #   a sink (CoreDNS's container, which forwards nothing) so a connection attempt leaves a SYN to
 #   see instead of failing silently, and starts capturing before the product process starts. The
 #   product joins the same namespace (network_mode: service:<holder>).
+# - The driver (scenario.mjs and the product adapter) runs one step at a time with
+#   `docker compose run`, on the sealed network but outside every sniffed namespace.
 # - The mock platform runs only in positive modes.
 services:
   ever-audit-dns:
@@ -41,6 +43,15 @@ services:
   __SERVICE__:
     network_mode: service:__HOLDER__
     networks: !reset null
+  ever-audit-driver:
+    image: __DRIVER_IMAGE__
+    profiles: [ever-audit-driver]
+    # Compose names are looked up as they are written: search domains of the host (a Kubernetes
+    # runner adds several, with ndots:5) would send every lookup out first, and nothing on the
+    # sealed network answers those.
+    dns_opt: ["ndots:0"]
+    networks:
+      default: {}
   mock-platform:
     image: __MOCK_IMAGE__
     networks:

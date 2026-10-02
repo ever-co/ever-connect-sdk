@@ -44,7 +44,7 @@ export const DRAFTS = [
         `the \`code\` is stable. The codes the modules can receive on the calls above:\n${region('outbound-problems').join('\n')}\n\nThe modules log`,
       ],
       [
-        /Turn on the connection module, connect, and you will see rows 1–9 in the order [^\n]*$/m,
+        /Turn on the connection module(?:,| and) connect, and you will see rows [^\n]*$/m,
         'Turn on the connection module and connect, and you will see rows 1, 3, 4, 6, 7, 8 and 9: the key manifest, the redeem, the token, then the heartbeat, the event feed, the entitlement and the integration states. `ever-egress-audit` in this repository automates the recipe (see `tools/egress-audit/README.md`).',
       ],
     ],

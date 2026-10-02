@@ -7,6 +7,7 @@
 //!   record, key manifest) and of the data of every instance-audience event type.
 //! * [`constants`], [`integrations`], [`outbound_calls`] and the `schema_*` accessors: the
 //!   contract files themselves, parsed on first use.
+//! * [`step_up`]: the types and pure checks of the in-product consent dialog's fresh sign-in.
 //!
 //! Types are plain `serde` types: they carry no validation. Validate a document against its JSON
 //! Schema (for example with the `jsonschema` crate) before trusting it; the schemas are closed,
@@ -27,6 +28,8 @@ pub use generated::constants::{
 };
 pub use generated::openapi;
 pub use generated::schemas;
+
+pub mod step_up;
 
 use std::sync::OnceLock;
 
