@@ -2,6 +2,7 @@
   "name": "@ever-co/connect-contracts",
   "version": "1.0.0-rc.1",
   "description": "Ever Platform connection contracts: request and response types, JSON Schemas, integration definitions, wire constants and fixtures. No runtime dependencies.",
+  "license": "Apache-2.0",
   "private": true,
   "type": "module",
   "sideEffects": false,

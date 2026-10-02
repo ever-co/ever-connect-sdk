@@ -2,6 +2,7 @@
   "name": "ever-egress-audit",
   "version": "0.1.0",
   "description": "The egress audit of a product that hosts the Ever Platform modules: sealed compose networks, CoreDNS as the only resolver, a sniffer per product process, the mock platform's call record, and a self-test with a failing control.",
+  "license": "Apache-2.0",
   "private": true,
   "type": "module",
   "engines": {

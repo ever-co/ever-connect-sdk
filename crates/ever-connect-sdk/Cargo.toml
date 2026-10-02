@@ -4,6 +4,7 @@ description = "Ever Platform connection SDK for Rust. This skeleton carries the 
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
 publish.workspace = true
 repository.workspace = true
 keywords = ["ever-platform", "sdk"]

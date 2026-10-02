@@ -9,11 +9,14 @@ import { sha256 } from './common.mjs';
 
 export const CATALOG_PINS = {
   description:
-    'Phase 2 statuses the platform catalog export applies to the seed before publishing it: lookup, discoverability and profile import ship as coming soon.',
+    'What the platform catalog export applies to the seed before publishing it. `status`: the phase 2 statuses (lookup, discoverability and profile import ship as coming soon). `name`: the public name of a row whose seed still carries its working name; the catalog the platform publishes names the row the same way.',
   status: {
     counterparty_lookup: 'coming_soon',
     counterparty_discoverable: 'coming_soon',
     profile_import: 'coming_soon',
+  },
+  name: {
+    managed_operations: 'Maintenance operations',
   },
 };
 
@@ -69,6 +72,8 @@ const TRANSFORMS = {
     for (const row of doc.integrations ?? []) {
       const pinned = CATALOG_PINS.status[row.key];
       if (pinned) row.status = pinned;
+      const name = CATALOG_PINS.name[row.key];
+      if (name) row.name = name;
     }
     // A `hidden` row is a reserved key whose phase has not started. The platform's public catalog
     // view and its export list none, so neither does this copy: no row and none of its scope groups.

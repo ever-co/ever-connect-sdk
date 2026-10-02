@@ -60,7 +60,7 @@ A compact JWS with the header `{alg: EdDSA, kid, typ: ever-entitlement+jwt}`. Th
 | `ever.instance_id`, `ever.tenant_link_id`, `ever.tenant` | the installation and the link the document is for |
 | `ever.tier`, `ever.plan`, `ever.products` | the organization's tier and plan |
 | `ever.features`, `ever.limits`, `ever.meters` | the Ever Platform features granted, and their limits |
-| `ever.managed` | managed updates, backups and support level |
+| `ever.managed` | maintenance operations and support level |
 | `ever.grace_s`, `ever.refresh_after_s` | how long the document stays usable after `exp` (30 days), and when to refresh it (6 h) |
 
 `ever.handle` is the only human-readable field.
