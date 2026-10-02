@@ -1,0 +1,5 @@
+# Pinned so CI, editors and every laptop build with the same compiler. 1.98 is the MSRV.
+[toolchain]
+channel = "1.98"
+components = ["clippy", "rustfmt"]
+profile = "minimal"

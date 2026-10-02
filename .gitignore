@@ -1,0 +1,17 @@
+# Dependencies and build output
+node_modules/
+dist/
+target/
+coverage/
+*.tsbuildinfo
+.turbo/
+
+# Harness and mock run output
+artifacts/
+tools/egress-audit/selftest/.artifacts/
+*.pcap
+
+# Local settings and the optional local phrase list for tools/check-public-safe.mjs
+.env
+.env.*
+tools/banned-phrases.private.json

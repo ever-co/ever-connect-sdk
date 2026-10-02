@@ -1,0 +1,7 @@
+# Later lines win.
+*                 @evereq
+/contracts/       @evereq
+/tools/           @evereq
+/packages/        @evereq
+/crates/          @evereq
+/.github/         @evereq

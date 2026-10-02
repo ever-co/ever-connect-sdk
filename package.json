@@ -1,0 +1,12 @@
+{
+  "name": "ever-connect-sdk",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.34.5",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "public-safe": "node tools/check-public-safe.mjs --self-test && node tools/check-public-safe.mjs"
+  }
+}

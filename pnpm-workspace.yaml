@@ -1,0 +1,4 @@
+packages:
+  - "packages/ts/*"
+  - "tools/mock-platform"
+  - "tools/egress-audit"

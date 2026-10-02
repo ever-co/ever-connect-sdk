@@ -1,0 +1,39 @@
+name: CI
+
+# Runners: the organisation's runners for this repository's own branches and pull requests;
+# `ubuntu-latest` for pull requests from forks and whenever the runner variables are absent, so a
+# fork builds without any of our infrastructure.
+on:
+  push:
+    branches: [develop, stage, main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CI: "1"
+
+jobs:
+  public-safe:
+    name: public-safe
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || vars.RUNNER_LINUX_X64_4 || 'ubuntu-latest' }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Self-test (every rule is proven able to fail)
+        run: node tools/check-public-safe.mjs --self-test
+      - name: Files, branch name and commit messages (private phrase list from a secret; skipped without it)
+        env:
+          EVER_BANNED_PHRASES_JSON: ${{ secrets.EVER_BANNED_PHRASES_JSON }}
+          EVER_PUSH_BEFORE: ${{ github.event.before }}
+        run: node tools/check-public-safe.mjs

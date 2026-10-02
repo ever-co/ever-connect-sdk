@@ -1,0 +1,153 @@
+{
+  "description": "Rules of tools/check-public-safe.mjs. This file is excluded from the scan because it names the words it bans. A finding prints the file, the line and the rule id, never the matched text.",
+  "noun": {
+    "id": "N1",
+    "pattern": "\\bnetworks?\\b",
+    "flags": "i",
+    "allowed_paths": [
+      "tools/egress-audit/",
+      "tools/check-public-safe.mjs"
+    ],
+    "allowed_sections": [
+      {
+        "file": "docs/outbound-calls.md",
+        "heading": "How to verify yourself"
+      },
+      {
+        "file": "docs/stats-schema.md",
+        "heading": "Verify it yourself"
+      }
+    ],
+    "technical": [
+      "docker network",
+      "network_mode",
+      "network error",
+      "networking",
+      "network capture",
+      "internal network",
+      "network create",
+      "--network",
+      "^\\s*networks:",
+      "\\bnetworks:\\s*\\[",
+      "network namespace",
+      "NET_RAW",
+      "NET_ADMIN",
+      "bad-network-noun.md",
+      "ok-docker-network.md"
+    ]
+  },
+  "banned": [
+    {
+      "id": "W1",
+      "pattern": "take[- _]?rate",
+      "flags": "i"
+    },
+    {
+      "id": "W2",
+      "pattern": "\\bmoats?\\b",
+      "flags": "i"
+    },
+    {
+      "id": "W3",
+      "pattern": "\\bA?GPL\\b",
+      "flags": "i"
+    },
+    {
+      "id": "W4",
+      "pattern": "licen[cs]e[- ]change|\\bre-?licen[cs]|dual[- ]licen|commercial licen|source[- ]available|open[- ]core|\\bBSL\\b|\\bSSPL\\b|Business Source",
+      "flags": "i"
+    },
+    {
+      "id": "W5",
+      "pattern": "\\bApache\\b",
+      "flags": "",
+      "allow_lines": [
+        "^\\s*\"license\"\\s*:\\s*\"Apache-2\\.0\",?\\s*$",
+        "^\\s*license\\s*=\\s*\"Apache-2\\.0\"\\s*$"
+      ],
+      "allow_files": [
+        "LICENSE",
+        "NOTICE"
+      ]
+    },
+    {
+      "id": "W6",
+      "pattern": "program §|Foundation Program|FOUNDATION_PROGRAM|program document|_sections/|IMPLEMENTATION_PLAN|PHASE0_AUDIT|EVER_CONNECT §|REGISTRY §|IDENTITY §|BILLING §|FLOWS §|STACK §",
+      "flags": "i"
+    },
+    {
+      "id": "W7",
+      "pattern": "plan section|design [A-Z_]{4,}|\\bS[0-9] §|EVER_CONNECT_AND_STATS|REGISTRY_AND_CONTRACTS|IDENTITY_DESIGN|FLOWS_PROFILES_PORTAL|STACK_AND_CONVENTIONS|BILLING_AND_SUBSCRIPTIONS|PLATFORM_REPO_AND_STACK|BUSINESS_AI_AGENT",
+      "flags": ""
+    },
+    {
+      "id": "W8",
+      "pattern": "review round|design lane|\\bplan (§|row)",
+      "flags": "i"
+    },
+    {
+      "id": "W9",
+      "pattern": "\\b(internal|confidential)\\s+(document|documents|doc|docs|note|notes|planning|strategy|memo|handover)\\b|\\bnever publish\\b|<!--\\s*INTERNAL",
+      "flags": "i"
+    }
+  ],
+  "hosts": {
+    "id": "H1",
+    "pattern": "\\b(?:[a-z0-9-]+\\.)+ever\\.co\\b",
+    "flags": "i",
+    "allowed": [
+      "api.ever.co",
+      "app.ever.co",
+      "auth.ever.co",
+      "apps.ever.co"
+    ]
+  },
+  "paths": [
+    {
+      "id": "I1",
+      "pattern": "/internal/",
+      "flags": ""
+    },
+    {
+      "id": "I2",
+      "pattern": "/v1/staff/",
+      "flags": ""
+    }
+  ],
+  "markers": [
+    {
+      "id": "M1",
+      "pattern": "PUBLIC-SAFE DRAFT",
+      "flags": "i"
+    },
+    {
+      "id": "M2",
+      "pattern": "Editorial sources",
+      "flags": "i"
+    }
+  ],
+  "plan_id": {
+    "id": "PID",
+    "pattern": "\\b(P[0-9]-[0-9]{2}|WP-[0-9.]+|E[0-9]-[0-9]{2}|D-[0-9]{1,2}|RG-[A-Z0-9]+|R[TPLO]-[0-9]{1,2}|N-[0-9]{1,2})\\b",
+    "flags": ""
+  },
+  "skip_files": [
+    "tools/public-safe.words.json",
+    "pnpm-lock.yaml",
+    "Cargo.lock"
+  ],
+  "skip_dirs": [
+    "tools/fixtures/public-safe/"
+  ],
+  "binary_extensions": [
+    ".png",
+    ".ico",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".pcap",
+    ".woff2",
+    ".zip",
+    ".gz"
+  ]
+}
