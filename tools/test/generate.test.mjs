@@ -68,13 +68,23 @@ test('a row naming a missing operation, or an operation without a row, fails the
 test('a hidden integration never reaches the output', { timeout: 600000 }, () => {
   const dir = mkdtempSync(join(tmpdir(), 'ever-rows-'));
   try {
+    // A catalog with a planted hidden row, and a table whose row names it: both are refused.
+    const catalog = readJson(join(REPO, 'contracts/integrations/catalog.v1.json'));
+    assert.ok(
+      catalog.integrations.every((i) => i.status !== 'hidden'),
+      'the vendored catalog lists no hidden row',
+    );
+    catalog.integrations.push({ ...catalog.integrations[0], key: 'reserved_example', status: 'hidden' });
+    const catalogFile = join(dir, 'catalog.json');
+    writeFileSync(catalogFile, JSON.stringify(catalog));
     const rows = readJson(join(REPO, 'contracts/openapi/rows.json'));
-    rows.rows[11].integration = 'ever_agent';
+    rows.rows[11].integration = 'reserved_example';
     const file = join(dir, 'hidden.json');
     writeFileSync(file, JSON.stringify(rows));
-    const r = check({ EVER_SDK_ROWS_JSON: file });
+    const r = check({ EVER_SDK_ROWS_JSON: file, EVER_SDK_CATALOG_JSON: catalogFile });
     assert.notEqual(r.status, 0);
-    assert.match(r.stderr, /hidden integration ever_agent/);
+    assert.match(r.stderr, /the vendored catalog lists hidden integration reserved_example/);
+    assert.match(r.stderr, /hidden integration reserved_example is named by a row/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

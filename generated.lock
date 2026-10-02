@@ -73,7 +73,7 @@
     "tools/mock-platform/contracts/generated/row-coverage.json": "b1fe05ea8ad7f89132859610def5898a4fd2d73e8d5ef719794fcd72b4c4b4fa",
     "tools/mock-platform/contracts/integrations/app_sync.json": "15adac665537de05d1ff564d426dd135205956ca5ed7395409aff57bbe577bc3",
     "tools/mock-platform/contracts/integrations/billing_link.json": "87e11bc4616f418d67177e6ab290f05bf0395bc0b45f480b123144e67060c0e0",
-    "tools/mock-platform/contracts/integrations/catalog.v1.json": "de00a0cb3c19baf727acafd5bcc89b716a577b820b1cbc9c91c9d3f16a342771",
+    "tools/mock-platform/contracts/integrations/catalog.v1.json": "354339c12f0504ec34531f857b28d5df71bc98cf6fbaa435248f3942366c5f0d",
     "tools/mock-platform/contracts/integrations/counterparty_discoverable.json": "a4d632e7742145c3f6839b3f149a1d827a98cbbe2807192237cf2168fbc02331",
     "tools/mock-platform/contracts/integrations/counterparty_lookup.json": "44531dffca913de1f7b2b326300f5a4d713cfbace0d9c1d24fb10d2ffeb0d8f3",
     "tools/mock-platform/contracts/integrations/ever_id_login.json": "a70323f47a78227f92491780fd3f3defaa9ab1d64417a5dbdb55548e6eb365dc",

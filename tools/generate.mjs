@@ -54,7 +54,8 @@ function load() {
   const rowsDoc = readJson(process.env.EVER_SDK_ROWS_JSON ?? join(REPO, 'contracts/openapi/rows.json'));
   const pending = readJson(join(REPO, 'contracts/openapi/pending-upstream.json'));
   const constants = readJson(join(REPO, 'contracts/constants.json'));
-  const catalog = readJson(join(REPO, 'contracts/integrations/catalog.v1.json'));
+  // EVER_SDK_CATALOG_JSON points the generator at another catalog (the generator's own tests use it).
+  const catalog = readJson(process.env.EVER_SDK_CATALOG_JSON ?? join(REPO, 'contracts/integrations/catalog.v1.json'));
   const vendorDoc = readJson(join(REPO, 'contracts/VENDOR.json'));
   const integrations = {};
   for (const key of constants.integration_keys) integrations[key] = readJson(join(REPO, `contracts/integrations/${key}.json`));
@@ -113,9 +114,10 @@ function lint(ctx) {
       if (op.op['x-ever-row'] !== r.row)
         problems.push(`${op.op.operationId}: x-ever-row ${op.op['x-ever-row']} but rows.json says ${r.row}`);
   }
-  // Hidden catalog keys never reach the generated output.
+  // Hidden catalog keys never reach the generated output, and the vendored catalog lists none.
   const hidden = ctx.catalog.integrations.filter((i) => i.status === 'hidden').map((i) => i.key);
   for (const key of hidden) {
+    problems.push(`the vendored catalog lists hidden integration ${key}; public copies list no hidden row`);
     if (ctx.constants.integration_keys.includes(key)) problems.push(`hidden integration ${key} is listed in constants.integration_keys`);
     if (ctx.rowsDoc.rows.some((r) => r.integration === key)) problems.push(`hidden integration ${key} is named by a row`);
   }

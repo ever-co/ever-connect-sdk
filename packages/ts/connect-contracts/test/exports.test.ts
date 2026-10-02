@@ -40,9 +40,13 @@ describe('@ever-co/connect-contracts', () => {
 
   it('never exposes a hidden catalog key', async () => {
     const { INTEGRATIONS, INTEGRATION_KEYS, CONSTANTS } = await import('@ever-co/connect-contracts');
-    expect(Object.keys(INTEGRATIONS)).not.toContain('ever_agent');
-    expect(INTEGRATION_KEYS).not.toContain('ever_agent');
-    expect(CONSTANTS.integration_keys).not.toContain('ever_agent');
+    for (const key of [...Object.keys(INTEGRATIONS), ...INTEGRATION_KEYS, ...CONSTANTS.integration_keys]) {
+      expect(INTEGRATIONS[key]).toBeDefined();
+      expect(INTEGRATIONS[key].status).not.toBe('hidden');
+    }
+    const catalog = fileURLToPath(import.meta.resolve('@ever-co/connect-contracts/integrations/catalog.v1.json'));
+    const rows: { status: string }[] = JSON.parse(readFileSync(catalog, 'utf8')).integrations;
+    expect(rows.filter((row) => row.status === 'hidden')).toEqual([]);
   });
 
   it('validates the redeem fixture against the contract schema the package exports', async () => {

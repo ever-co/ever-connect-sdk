@@ -139,11 +139,12 @@ mod tests {
         assert_eq!(integrations().len(), INTEGRATION_KEYS.len());
         for key in INTEGRATION_KEYS {
             assert_eq!(integration(key).unwrap()["key"], *key);
+            assert_ne!(
+                integration(key).unwrap()["status"],
+                "hidden",
+                "a hidden key never ships"
+            );
         }
-        assert!(
-            integration("ever_agent").is_none(),
-            "a hidden key never ships"
-        );
         assert_eq!(outbound_calls()["rows"].as_array().unwrap().len(), 34);
         for text in [
             schema_stats_v1(),

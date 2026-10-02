@@ -57,6 +57,9 @@ const TRANSFORMS = {
       const pinned = CATALOG_PINS.status[row.key];
       if (pinned) row.status = pinned;
     }
+    // A `hidden` row is a reserved key whose phase has not started. The platform's public catalog
+    // view and its export list none, so neither does this copy: no row and none of its scope groups.
+    doc.integrations = (doc.integrations ?? []).filter((row) => row.status !== 'hidden');
     return `${JSON.stringify(doc, null, 2)}\n`;
   },
   'lookup-vectors': (text) => {
