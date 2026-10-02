@@ -167,7 +167,7 @@ async function managed() {
 }
 
 async function wait() {
-  await sleep((plan.wait_s ?? 20) * 1000);
+  await sleep((plan.wait_s ?? 120) * 1000);
   if (!plan.mock) return result({ ok: true });
   const required = plan.required_rows ?? [];
   const afterRequired = plan.after_required_rows ?? [];

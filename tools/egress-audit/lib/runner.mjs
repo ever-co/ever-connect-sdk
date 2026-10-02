@@ -16,6 +16,8 @@ const MOCK_CONTRACTS = join(MOCK_DIR, 'contracts');
 export const LOCAL_MOCK_IMAGE = 'ever-mock-platform:audit-local';
 const COREDNS_IMAGE = 'coredns/coredns:1.12.1';
 const DRIVER_BASE_IMAGE = 'node:24-alpine';
+/** Seconds the product is watched after the scenario when the config sets no wait_s. */
+export const DEFAULT_WAIT_S = 120;
 
 /** A refusal before anything runs (bad config, unknown mode): exit 2 with the message. */
 export class UsageError extends Error {}
@@ -33,6 +35,10 @@ export function loadConfig(path) {
     );
   if (!config.process_services.includes(config.api_service))
     throw new UsageError(`api_service ${config.api_service} must be one of process_services`);
+  // A product adds modes; it never redefines one of the harness's, so `off` means the same everywhere.
+  const builtIn = Object.keys(JSON.parse(readFileSync(join(HARNESS_DIR, 'modes.json'), 'utf8')).modes);
+  for (const name of Object.keys(config.modes ?? {}))
+    if (builtIn.includes(name)) throw new UsageError(`modes.${name} redefines a mode of the harness; give the product mode its own name`);
   return { config, configDir: dirname(file) };
 }
 
@@ -233,7 +239,7 @@ export async function runAudit({
       prepare: mode.prepare,
       trigger: mode.trigger,
       module_routes: config.module_routes ?? [],
-      wait_s: config.wait_s ?? 20,
+      wait_s: config.wait_s ?? DEFAULT_WAIT_S,
       mock: useMock,
       required_rows: rows(mode.required_rows),
       after_required_rows: mode.after_mark?.required_rows ?? [],
@@ -287,6 +293,11 @@ function collect({ full, evidence, config, sniffers, project, out, keep, log }) 
     writeFileSync(join(out, `product-${svc}.log`), evidence.logs[svc]);
   }
   if (evidence.mockRecord) writeJson(join(out, 'requests.json'), evidence.mockRecord);
+  // A sniffer that stopped during the run saw only part of it: the run proves nothing.
+  for (const [i, svc] of config.process_services.entries()) {
+    const state = full(['ps', '-a', '--format', '{{.State}}', sniffers[i]], { allowFail: true }).stdout.trim();
+    if (state !== 'running') evidence.faults.push(`the sniffer of ${svc} was not running at the end of the run (${state || 'gone'})`);
+  }
   const nets = docker(['network', 'ls', '-q', '--filter', `label=com.docker.compose.project=${project}`], { allowFail: true })
     .stdout.trim()
     .split('\n')
