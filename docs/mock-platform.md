@@ -129,4 +129,5 @@ The mock's own tests (`tools/mock-platform/test/`) are the reference for how to 
 - `in-product-consent.test.mjs`: the consent dialog after a fresh Ever ID sign-in;
 - `managed.test.mjs`: scenario `managed-backup`, a fixture executor on the SDK's managed-operation runner;
 - `issuance.test.mjs`: a deployment that issues no connect codes (`connect_issuance_off`), and the assertion rules;
-- `rows-core.test.mjs`: the core rows in depth, among them the connect-key rotation and its proofs, the token limit and the link-code windows.
+- `rows-core.test.mjs`: the core rows in depth, among them the connect-key rotation and its proofs, the token limit, the link-code windows, and the statistics report checks in the platform's order (media type, size, key, signature shape, key id, signature, strict JSON, schema, key pin, day window);
+- `stats-sender.test.ts`: the SDK's statistics signer and sender against the mock: the goldens are accepted and then superseded, a second key is told to reset the identity, and for every statistics fixture the SDK's own verdict equals the mock's answer.

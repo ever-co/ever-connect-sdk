@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import YAML from 'yaml';
-import { changelogChecksums, checkPins, checkScope } from '../check-schema-drift.mjs';
+import { checkPins, checkScope, pinLines } from '../check-schema-drift.mjs';
 import { REPO, readJson } from '../lib/common.mjs';
 import { applyTransform, CATALOG_PINS } from '../lib/vendor.mjs';
 import { checkRows } from '../sync-contract.mjs';
@@ -154,7 +154,8 @@ test('--strict=stats: the statistics schema, fixtures and calls are published an
   assert.match(checkScope('stats', vendorDoc, { present: [...fixtures, extra] })[0], /99-local/);
   assert.match(checkScope('nope', vendorDoc)[0], /no such scope/);
   const sha = entry(vendorDoc, 'contracts/schemas/ever.stats.v1.json').sha256;
-  assert.deepEqual(changelogChecksums(['## v1', `- SHA-256: \`${sha}\``, ''].join('\n')), [sha]);
+  const pins = pinLines(['# comment', `${sha}  contracts/stats/ever.stats.v1.schema.json`, ''].join('\n'));
+  assert.equal(pins.get('contracts/stats/ever.stats.v1.schema.json'), sha);
 });
 
 test('the catalog transform pins public names and statuses and drops hidden rows', () => {

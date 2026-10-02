@@ -51,7 +51,7 @@ export function checkPins(text, files) {
  * The contracts `--strict=<scope>` can hold to the strict rules on their own, while other sources
  * are still provisional: the vendored files of the scope, the folder it vendors whole (no file may
  * be added or left behind), the operations that must come from the pinned API description, and,
- * with a platform checkout, the changelog that lists every published checksum of the schema.
+ * with a platform checkout, the platform's own pin of the schema (contracts/SCHEMAS.sha256).
  */
 export const STRICT_SCOPES = {
   stats: {
@@ -59,7 +59,6 @@ export const STRICT_SCOPES = {
     folder: 'contracts/fixtures/stats',
     operations: ['ingestStatsReport', 'instanceLinkStats'],
     schema: 'contracts/schemas/ever.stats.v1.json',
-    changelog: 'contracts/stats/CHANGELOG.md',
   },
 };
 
@@ -78,9 +77,14 @@ function filesUnder(folder) {
   return out.sort();
 }
 
-/** The SHA-256 values a published changelog lists (a `SHA-256:` line with the hex in backticks). */
-export function changelogChecksums(text) {
-  return [...text.matchAll(/SHA-256:\s*`([0-9a-f]{64})`/g)].map((m) => m[1]);
+/** The `sha256  path` lines of a pin file, as a map from path to checksum. */
+export function pinLines(text) {
+  const out = new Map();
+  for (const line of text.split(/\r?\n/)) {
+    const m = line.match(/^([0-9a-f]{64}) [ *](\S+)$/);
+    if (m) out.set(m[2], m[1]);
+  }
+  return out;
 }
 
 /** The strict rules of one scope (STRICT_SCOPES): problems, as messages. */
@@ -103,12 +107,12 @@ export function checkScope(name, vendorDoc, { platform = null, present = null } 
   for (const id of scope.operations)
     if (vendorDoc.openapi.provisional_operations.includes(id))
       errors.push(`contract: ${id} still comes from the design, not the pinned spec`);
-  if (platform && scope.changelog) {
-    const changelog = join(platform, scope.changelog);
-    const schema = entries.find((e) => e.path === scope.schema);
-    if (!existsSync(changelog)) errors.push(`${scope.changelog}: missing in the platform checkout`);
-    else if (schema && !changelogChecksums(readFileSync(changelog, 'utf8')).includes(schema.sha256))
-      errors.push(`${scope.schema}: sha256 ${schema.sha256} is not a published version (${scope.changelog})`);
+  const schema = entries.find((e) => e.path === scope.schema);
+  if (platform && schema) {
+    const file = join(platform, 'contracts/SCHEMAS.sha256');
+    const pinned = existsSync(file) ? pinLines(readFileSync(file, 'utf8')).get(schema.source) : undefined;
+    if (pinned !== schema.sha256)
+      errors.push(`${scope.schema}: the platform pins ${schema.source} at ${pinned ?? 'nothing'}, vendored ${schema.sha256}`);
   }
   return errors;
 }

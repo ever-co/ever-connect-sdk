@@ -31,7 +31,7 @@ export const STATS_SIGNATURE_PREFIX = CONSTANTS.stats_signature_prefix;
 /** The path of the report call, under the Ever Platform API origin. */
 export const STATS_REPORTS_PATH = '/v1/stats/reports';
 
-/** The waits after a failed send (429, 5xx, network): +1 h, +4 h, +12 h, then the next day. */
+/** The waits after a failed send (429, 5xx, no answer): +1 h, +4 h, +12 h, then the next day. */
 export const STATS_RETRY_DELAYS_S = [3600, 14400, 43200, 86400] as const;
 
 const SCHEMA = SCHEMAS.stats as unknown as { readonly [key: string]: unknown };
@@ -200,7 +200,7 @@ export function walkStrings(value: unknown, path = ''): StatsString[] {
 export type StatsSendOutcome =
   /** Stored; `superseded` when it replaced a report of the same month sent the same UTC day. */
   | { readonly kind: 'accepted'; readonly status: 202; readonly superseded: boolean }
-  /** Try again in `retryAfterS` seconds (429, 5xx, network or timeout). */
+  /** Try again in `retryAfterS` seconds (429, 5xx, a failed connection or a timeout). */
   | { readonly kind: 'retry'; readonly status: number | null; readonly code: string | null; readonly retryAfterS: number }
   /** `409 key_mismatch`: the id is pinned to another key; reset the statistics identity (new id, new key). */
   | { readonly kind: 'reset_identity'; readonly status: 409; readonly code: 'key_mismatch' }
@@ -263,7 +263,7 @@ export function statsReportsUrl(baseUrl: string): string {
 
 /**
  * Posts a signed report: exactly its bytes, its headers, no credential, no cookie, no redirect.
- * Never throws for an answer or a network failure; it answers what to do next.
+ * Never throws for an answer or a failed connection; it answers what to do next.
  */
 export async function sendStatsReport(signed: SignedStatsReport, options: SendStatsReportOptions): Promise<StatsSendOutcome> {
   if (signed.body.length > MAX_STATS_REPORT_BYTES) throw new TypeError('a signed report is at most 16384 bytes');

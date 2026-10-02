@@ -40,3 +40,10 @@ prettyplease = "0.2"
 
 # the managed-operation runner and the tests
 jsonschema = { version = "0.58", default-features = false }
+
+# the statistics signer
+base64 = "0.22"
+ed25519-dalek = { version = "2", default-features = false, features = ["std", "zeroize"] }
+getrandom = "0.3"
+regex = { version = "1", default-features = false, features = ["std", "unicode-perl"] }
+sha2 = "0.10"

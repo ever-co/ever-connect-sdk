@@ -107,7 +107,7 @@ Names, e-mail addresses, phone numbers, postal addresses, tax or registration nu
 
 - Once per day at a fixed time derived from `instance_id` (± 10 min), starting 24 h after first boot (10 min after boot if a send is overdue).
 - On days 1–3 of a month, one `final: true` re-send for the previous month.
-- If the platform is unreachable or answers 5xx, the module retries after 1 h, 4 h, 12 h, then the next day. Nothing is queued beyond the last 12 reports kept locally for the *Last payload* view.
+- If the platform is unreachable, answers 5xx or `429`, the module retries after 1 h, 4 h, 12 h, then the next day (or later, when `Retry-After` says so). A report the platform refuses (`400`, `413`, `415`, `422`) is not sent again until the module is upgraded; `409 key_mismatch` means another key holds the `instance_id`, and only *Reset instance identity* (a new id and key) resumes reporting. Nothing is queued beyond the last 12 reports kept locally for the *Last payload* view.
 - Multi-replica deployments elect one sender through a database lease; there is never more than one report per day per installation.
 
 The request: `POST <EVER_STATS_API_URL>/v1/stats/reports`, no credentials, headers `Ever-Stats-Key: <base64url public key>` and `Ever-Stats-Signature: ed25519=<base64url signature over the exact request body>`, both required; `Ever-Stats-Key-Id` is optional. The signature uses the statistics key, an Ed25519 key pair your installation generates on first boot for statistics only; the platform remembers the public key on first sight so that nobody else can submit reports under your `instance_id`. It is separate from the key of an Ever Platform connection: the connection key only authenticates the connection's calls and rotates on its own, and rotating it changes nothing here. The statistics key proves continuity, not identity: the platform learns nothing about who you are from it.
@@ -168,7 +168,38 @@ If the organization that owns the installation's connection to Ever Platform ena
 | Endpoint | `POST {EVER_STATS_API_URL}/v1/stats/reports` (default base `https://api.ever.co`) |
 | Schema | `ever.stats.v1` — JSON Schema 2020-12, closed, ≤ 16 KiB, integers only |
 | Signature | Ed25519 over the exact request body bytes; headers `Ever-Stats-Key: <base64url public key>` and `Ever-Stats-Signature: ed25519=<base64url signature over the exact request body>`, both required, including for Ever Teams web; `Ever-Stats-Key-Id` optional |
-| Platform answers | `202 {accepted, superseded?}`; `422 schema_violation` with `errors[].path`; `409 key_mismatch`; `429 rate_limited` |
+| Platform answers | `202 {accepted, superseded?}`; `400 validation_failed` (the key header) or `400 signature_invalid` (the signature, or a key id that names another key); `409 key_mismatch`; `413 validation_failed` (`too_large`); `415 unsupported_media_type`; `422 schema_violation` with `errors[]` (`path`, and `code` one of `unknown_field`, `type`, `pattern`, `range`, `required`, `duplicate_key`, `schema_unknown`); `429 rate_limited` with `Retry-After` |
 | Env | `EVER_STATS_ENABLED`, `EVER_STATS_API_URL`, `EVER_STATS_COUNTRY`, `EVER_STATS_SERVES` (Gauzy), `EVER_STATS_SEND_INTERVAL_S` (tests), `EVER_INSTALL_SOURCE`, `EVER_INSTANCE_ID` and `EVER_STATS_PRIVATE_KEY` (stateless frontends: set both to keep one series across restarts, or neither for a new random identity per process) |
 | Routes (Gauzy; Works, Rec and Traduora expose the same functions under their own API; Teams web has only `status` and `last`) | `GET /api/ever-stats/status`, `GET /api/ever-stats/last`, `POST /api/ever-stats/preview`, `PUT /api/ever-stats/enabled`, `POST /api/ever-stats/send-now` (at most once per 10 min), `POST /api/ever-stats/reset-identity` |
 | Retention on the platform | reports are stored per instance and month; the source IP is never stored and never used to derive a country; the rate limit keeps a keyed hash of the address in memory only, under a key that rotates hourly |
+
+---
+
+## 7. Building and signing a report with the SDK
+
+Both SDKs run the platform's checks before anything is sent, so a report the SDK lets through is one the platform accepts, and a refusal names the same field with the same code: the 16 384-byte limit, a strict JSON reader (integers only, no key twice), the published schema (one closed key set per product) and the calendar date of `sent_at`. Every statistics fixture under `contracts/fixtures/stats/` (vendored byte for byte from Ever Platform, with the expected answer of each in `expected.json`) gets the same answer from the platform, the mock, the TypeScript SDK and the Rust SDK.
+
+TypeScript (`@ever-co/connect-sdk`):
+
+```ts
+import { generateStatsKey, sendStatsReport, signStatsReport, statsSignerFromSeed } from '@ever-co/connect-sdk';
+
+const { seed } = generateStatsKey();             // once, on first boot; store the seed as a secret
+const signer = statsSignerFromSeed(seed);
+const signed = signStatsReport(report, signer);  // throws StatsValidationError: no bytes leave
+const outcome = await sendStatsReport(signed, { baseUrl: process.env.EVER_STATS_API_URL ?? 'https://api.ever.co' });
+// outcome.kind: 'accepted' | 'retry' (retryAfterS) | 'reset_identity' | 'dropped'
+```
+
+Rust (`ever-connect-sdk`, feature `stats`, no HTTP client of its own):
+
+```rust
+use ever_connect_sdk::stats::{classify_answer, reports_url, sign_report, StatsKey};
+
+let key = StatsKey::from_seed(&stored_seed);
+let signed = sign_report(&report, &key, false)?;   // StatsRefusal: no bytes leave
+// POST signed.body with signed.headers to reports_url(base_url)? with your HTTP client, then:
+let outcome = classify_answer(status, &answer_body, retry_after.as_deref(), attempt);
+```
+
+A refusal's message names fields and codes only; a key the schema does not know is shown as `*` (the exact path, which is the key itself, stays in its `errors`). `walkStrings` / `walk_strings` list every string of a report, keys included, for the test that no seeded name or e-mail address reaches the payload.

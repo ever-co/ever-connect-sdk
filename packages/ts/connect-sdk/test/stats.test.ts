@@ -265,7 +265,7 @@ describe('sending', () => {
     ).toEqual(['content-type', 'ever-stats-key', 'ever-stats-key-id', 'ever-stats-signature', 'user-agent']);
   });
 
-  it('turns a network failure into a retry and never throws', async () => {
+  it('turns a failed connection into a retry and never throws', async () => {
     const failing = (async () => {
       throw new TypeError('fetch failed');
     }) as unknown as typeof fetch;
