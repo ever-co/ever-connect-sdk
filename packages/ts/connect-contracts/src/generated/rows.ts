@@ -126,7 +126,7 @@ export const ROWS: readonly OutboundCallRow[] = [
     ],
     "trigger": "while connected: before the token expires, and after a 401",
     "payload": "grant_type, client_assertion_type, client_assertion (issuer and subject are the Ever Platform instance id returned at connect, never the statistics instance id)",
-    "cadence": "every 50 min while connected; on a 401",
+    "cadence": "every 50 min while connected (a token is kept for its hour; at most 60 an hour); on a 401",
     "disable": "disconnect",
     "products": [
       "gauzy",
@@ -524,7 +524,7 @@ export const ROWS: readonly OutboundCallRow[] = [
       }
     ],
     "trigger": "the operator disconnects; the connect key is rotated",
-    "payload": "none (disconnect); public_jwk of the new connect key (rotation; the statistics key is never rotated by this call)",
+    "payload": "none (disconnect); public_jwk of the new connect key with two rotation proofs, one signed with the current connect key and one with the new key (rotation; the statistics key is never rotated by this call)",
     "cadence": "on action",
     "disable": "none needed: operator action only",
     "products": [
@@ -1212,6 +1212,11 @@ export const ROW_COVERAGE: readonly RowCoverage[] = [
         "status": 422,
         "code": "validation_failed",
         "documented": true
+      },
+      {
+        "status": 429,
+        "code": "rate_limited",
+        "documented": true
       }
     ]
   },
@@ -1707,6 +1712,11 @@ export const ROW_COVERAGE: readonly RowCoverage[] = [
         "documented": true
       },
       {
+        "status": 401,
+        "code": "invalid_client",
+        "documented": true
+      },
+      {
         "status": 403,
         "code": "instance_pending_approval",
         "documented": true
@@ -1714,6 +1724,11 @@ export const ROW_COVERAGE: readonly RowCoverage[] = [
       {
         "status": 422,
         "code": "public_jwk_invalid",
+        "documented": true
+      },
+      {
+        "status": 422,
+        "code": "validation_failed",
         "documented": true
       }
     ]

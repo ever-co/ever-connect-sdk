@@ -405,9 +405,14 @@ export interface paths {
         /**
          * Rotates the instance's connect key: the new key signs assertions from now on, the replaced key
          *     keeps minting tokens for 7 days (`previous_valid_until`), and tokens already minted stay valid
-         *     until they expire. Only one replaced key is kept: rotating again inside the overlap drops the
-         *     older key at once, with every token minted with it (the way to cut a compromised key now). The
-         *     new key must be an Ed25519 public JWK no installation holds; the platform assigns its `kid`.
+         *     until they expire. The body proves the rotation twice: `current_key_proof` is signed with the
+         *     current connect key (the key it replaced is not accepted, even during the overlap) and
+         *     `new_key_proof` with the new key; both carry the claims of a client assertion with
+         *     `aud = <api origin>/v1/instances/me/keys` and `cnf.jkt` = the RFC 7638 thumbprint of the new
+         *     key, and each `jti` is used once. Only one replaced key is kept: rotating again inside the
+         *     overlap (proved with the then current key) drops the older key at once, with every token minted
+         *     with it (the way to cut a compromised key now). The new key must be an Ed25519 public JWK no
+         *     installation holds or held; the platform assigns its `kid`.
          */
         readonly post: operations["instanceRotateKey"];
         readonly delete?: never;
@@ -734,8 +739,9 @@ export interface paths {
          *     neither the current one nor the replaced one inside its 7-day overlap, a bad signature, a
          *     replayed `jti`, `exp` more than 300 s after `iat`, a clock skew over 300 s, an algorithm other
          *     than `EdDSA`) answers `401 invalid_client`; a disconnected or revoked installation answers
-         *     `401 credential_revoked` (it runs its local disconnect steps). The token is opaque, lives one
-         *     hour, and is kept in memory only.
+         *     `401 credential_revoked` (it runs its local disconnect steps). An installation that already
+         *     received 60 tokens in the last hour answers `429 rate_limited` with `Retry-After`. The token is
+         *     opaque, lives one hour, and is kept in memory only.
          */
         readonly post: operations["instanceToken"];
         readonly delete?: never;
@@ -1906,9 +1912,22 @@ export interface components {
              */
             readonly manifest: string;
         };
-        /** @description A new connect key. */
+        /**
+         * @description A new connect key and the two proofs that authorize the rotation. Each proof is a compact JWS
+         *     with the claims of a client assertion (`iss = sub = <instance id>`, a random `jti` of 16-128
+         *     characters used once, `iat`, `exp` at most 300 s after `iat`) whose `aud` is
+         *     `<api origin>/v1/instances/me/keys` and whose `cnf.jkt` is the RFC 7638 thumbprint of
+         *     `public_jwk`. An instance token alone never rotates a key.
+         */
         readonly KeyRotate: {
-            /** @description The new Ed25519 public JWK (no installation may hold it yet). */
+            /**
+             * @description The proof signed with the installation's current connect key (the key it replaced is not
+             *     accepted, even during the overlap).
+             */
+            readonly current_key_proof: string;
+            /** @description The proof signed with the new key (the installation holds the key it installs). */
+            readonly new_key_proof: string;
+            /** @description The new Ed25519 public JWK (no installation may hold it yet, or have held it). */
             readonly public_jwk: Record<string, never>;
         };
         /** @description A rotated key. */
@@ -4161,7 +4180,7 @@ export interface operations {
                     readonly "application/json": components["schemas"]["KeyRotated"];
                 };
             };
-            /** @description No valid instance token, or the credential is revoked */
+            /** @description No valid instance token, or the credential is revoked; or `invalid_client`: the proofs were not accepted (not signed with the current key and the new key, not bound to the new key, replayed, or the current key changed meanwhile) */
             readonly 401: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -4179,7 +4198,7 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description `public_jwk_invalid`: not an Ed25519 public key, the current key, or a key an installation holds */
+            /** @description `public_jwk_invalid`: not an Ed25519 public key, the current key, or a key an installation holds or held; or the body does not validate (both proofs are required) */
             readonly 422: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -4776,7 +4795,7 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description `rate_limited`: too many wrong codes from this caller (`Retry-After`) */
+            /** @description `rate_limited`: too many wrong link codes from this installation, or from its address across installations (`Retry-After`) */
             readonly 429: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -5277,6 +5296,15 @@ export interface operations {
             };
             /** @description The body does not validate (a `grant_type` or `client_assertion_type` other than the two above) */
             readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `rate_limited`: this installation received its tokens of the window (`Retry-After`) */
+            readonly 429: {
                 headers: {
                     readonly [name: string]: unknown;
                 };

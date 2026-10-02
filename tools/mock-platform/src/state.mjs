@@ -58,6 +58,8 @@ export const DEFAULT_CONFIG = {
   people: [{ issuer: 'https://auth.ever.co', subject: '275396402232829475', person_id: '01JMQCKPERS0N00000000000P1', org_role: 'owner' }],
   limits: {
     wrong_codes_per_hour: 10,
+    wrong_link_codes_per_address_hour: 100,
+    tokens_per_hour: 60,
     wrong_attempts_per_code: 5,
     heartbeat_min_interval_s: 60,
     entitlement_reads_per_hour: 6,
@@ -101,6 +103,7 @@ export class MockState {
     this.wrongCodes = new Map();
     this.devices = new Map();
     this.statsPins = new Map();
+    this.heldKeys = new Set();
     this.statsReports = [];
     this.intents = new Map();
     this.installs = new Map();
@@ -153,9 +156,11 @@ export class MockState {
     return this.instances.get(id ?? this.lastInstanceId) ?? null;
   }
 
-  newToken(instanceId) {
+  /** A new one-hour instance token; `kid` is the connect key that minted it. */
+  newToken(instanceId, { kid = null } = {}) {
     const token = `evit_${b64url(randomBytes(32))}`;
-    this.tokens.set(token, { instance_id: instanceId, expires_at: this.now() + 3600, revoked: false });
+    const now = this.now();
+    this.tokens.set(token, { instance_id: instanceId, kid, issued_at: now, expires_at: now + 3600, revoked: false });
     return token;
   }
 

@@ -28,6 +28,10 @@ pub const SCHEMAS_JSON: &[(&str, &str)] = &[
         "ever.key-manifest.v1.json",
         include_str!("data/schemas/ever.key-manifest.v1.json"),
     ),
+    (
+        "ever.usage.v1.json",
+        include_str!("data/schemas/ever.usage.v1.json"),
+    ),
 ];
 
 /// The event schemas (envelope, common definitions, one per instance-audience type), by file name.

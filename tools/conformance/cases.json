@@ -111,6 +111,39 @@
       "expect": { "status": 422, "code": "validation_failed" }
     },
     {
+      "id": "rotate-without-token",
+      "row": 16,
+      "module": "connect",
+      "request": {
+        "method": "POST",
+        "path": "/v1/instances/me/keys",
+        "idempotent": true,
+        "body": {
+          "public_jwk": { "kty": "OKP", "crv": "Ed25519", "x": "$conformance_key_x" },
+          "current_key_proof": "not.a.jws",
+          "new_key_proof": "not.a.jws"
+        }
+      },
+      "expect": { "status": 401, "code": "unauthorized" }
+    },
+    {
+      "id": "rotate-unknown-token",
+      "row": 16,
+      "module": "connect",
+      "request": {
+        "method": "POST",
+        "path": "/v1/instances/me/keys",
+        "idempotent": true,
+        "bearer": "$unknown_instance_token",
+        "body": {
+          "public_jwk": { "kty": "OKP", "crv": "Ed25519", "x": "$conformance_key_x" },
+          "current_key_proof": "not.a.jws",
+          "new_key_proof": "not.a.jws"
+        }
+      },
+      "expect": { "status": 401, "code": "unauthorized" }
+    },
+    {
       "id": "stats-accepted",
       "row": 17,
       "module": "stats",

@@ -109,7 +109,7 @@ export function validateComponent(name, data) {
   return result(v, data);
 }
 
-/** Validates against one of the JSON Schemas: stats, entitlement, consent, keyManifest. */
+/** Validates against one of the JSON Schemas: stats, entitlement, consent, keyManifest, usage. */
 export function validateSchema(key, data) {
   const s = init();
   const schema = s.c.schemas[key];

@@ -20,7 +20,7 @@ place, in TypeScript and Rust:
 | Path | Content |
 |---|---|
 | `contracts/openapi/` | the instance-facing subset of the Ever Platform API (`ever-platform.v1.yaml`), the outbound-call rows (`rows.json`), the subset selection and the operations pending upstream |
-| `contracts/schemas/` | JSON Schemas: statistics report, entitlement document, consent record, key manifest, and the event feed envelope and event types |
+| `contracts/schemas/` | JSON Schemas: statistics report, entitlement document, consent record, key manifest, usage report (the counts a product reports for plans priced by usage, only while `usage_reporting` is enabled), and the event feed envelope and event types |
 | `contracts/integrations/` | one definition per integration (`<key>.json`), split from the vendored catalog, and the scope-version lock |
 | `contracts/fixtures/` | requests, feed events, key manifests, entitlements, consent records and screens, connect vectors, statistics reports and lookup vectors, each with its expected outcome |
 | `contracts/constants.json`, `contracts/VERSION` | wire constants and the contracts version |

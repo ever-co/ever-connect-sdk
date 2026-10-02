@@ -1,0 +1,12 @@
+{
+  "schema": "ever.usage.v1",
+  "instance_id": "f236c455-120b-4c91-b2d0-cfe8f3bcb9d6",
+  "measured_at": "2026-11-02T10:00:00Z",
+  "units": [
+    {
+      "unit": "employee",
+      "quantity": 42,
+      "method": "active_at_measurement"
+    }
+  ]
+}

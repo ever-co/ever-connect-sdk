@@ -2632,11 +2632,20 @@ pub mod components {
         root_kid}` where `keys_sha256` is the SHA-256 of the RFC 8785 canonical `keys` array.*/
         pub manifest: ::std::string::String,
     }
-    ///A new connect key.
+    /**A new connect key and the two proofs that authorize the rotation. Each proof is a compact JWS
+    with the claims of a client assertion (`iss = sub = <instance id>`, a random `jti` of 16-128
+    characters used once, `iat`, `exp` at most 300 s after `iat`) whose `aud` is
+    `<api origin>/v1/instances/me/keys` and whose `cnf.jkt` is the RFC 7638 thumbprint of
+    `public_jwk`. An instance token alone never rotates a key.*/
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct KeyRotate {
-        ///The new Ed25519 public JWK (no installation may hold it yet).
+        /**The proof signed with the installation's current connect key (the key it replaced is not
+        accepted, even during the overlap).*/
+        pub current_key_proof: ::std::string::String,
+        ///The proof signed with the new key (the installation holds the key it installs).
+        pub new_key_proof: ::std::string::String,
+        ///The new Ed25519 public JWK (no installation may hold it yet, or have held it).
         pub public_jwk: ::serde_json::Map<::std::string::String, ::serde_json::Value>,
     }
     ///A rotated key.

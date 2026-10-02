@@ -103,7 +103,7 @@
       ],
       "trigger": "while connected: before the token expires, and after a 401",
       "payload": "grant_type, client_assertion_type, client_assertion (issuer and subject are the Ever Platform instance id returned at connect, never the statistics instance id)",
-      "cadence": "every 50 min while connected; on a 401",
+      "cadence": "every 50 min while connected (a token is kept for its hour; at most 60 an hour); on a 401",
       "disable": "disconnect",
       "products": [
         "gauzy",
@@ -501,7 +501,7 @@
         }
       ],
       "trigger": "the operator disconnects; the connect key is rotated",
-      "payload": "none (disconnect); public_jwk of the new connect key (rotation; the statistics key is never rotated by this call)",
+      "payload": "none (disconnect); public_jwk of the new connect key with two rotation proofs, one signed with the current connect key and one with the new key (rotation; the statistics key is never rotated by this call)",
       "cadence": "on action",
       "disable": "none needed: operator action only",
       "products": [

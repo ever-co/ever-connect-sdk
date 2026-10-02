@@ -1,11 +1,13 @@
 // Rows 6-10 and 16: heartbeat and status, the event feed, entitlement documents, integration
 // states and consent links, the local disable, disconnect and connect-key rotation.
+
+import { verifyRotation } from '../assertion.mjs';
 import { contract } from '../contract.mjs';
-import { instanceKid, publicKeyFromX } from '../crypto.mjs';
+import { instanceKid, publicKeyFromX, thumbprint } from '../crypto.mjs';
 import { signEntitlement } from '../keys.mjs';
 import { activeLinks, brief, instanceView, integrationEventData, isInstanceWide, tenantLinkView } from '../model.mjs';
 import { fail } from '../problem.mjs';
-import { activeEntitlementKey, instanceEventData } from './connect.mjs';
+import { activeEntitlementKey, instanceEventData, KEY_OVERLAP_S } from './connect.mjs';
 
 const FEATURES = [
   'handle',
@@ -241,25 +243,48 @@ export const instanceHandlers = {
     };
   },
 
-  instanceRotateKey({ state, instance, body }) {
+  // The platform's rotation: an instance token alone never rotates a key. Order: the new key's
+  // shape (422), the two proofs (401 invalid_client: signed with the current key and with the new
+  // key, for the rotation endpoint, binding the new key, each jti once), then the key itself (422
+  // for the current key or any key an installation holds or held).
+  instanceRotateKey({ state, instance, body, issuer }) {
     const jwk = body.public_jwk;
+    if (jwk?.kty !== 'OKP' || jwk.crv !== 'Ed25519' || 'd' in jwk) fail(422, 'public_jwk_invalid', 'not an Ed25519 public key');
     try {
       publicKeyFromX(jwk.x);
     } catch {
       fail(422, 'public_jwk_invalid', 'not an Ed25519 public key');
     }
-    const taken = [...state.instances.values()].some((i) => i.current_key.x === jwk.x || i.previous_key?.x === jwk.x);
-    if (taken) fail(422, 'public_jwk_invalid', 'the key belongs to an installation already');
+    const now = state.now();
+    const proofs = verifyRotation(body.current_key_proof, body.new_key_proof, {
+      now,
+      audience: `${issuer}/v1/instances/me/keys`,
+      instanceId: instance.id,
+      currentKey: instance.current_key,
+      newKey: { x: jwk.x, kid: instanceKid(jwk.x) },
+      thumbprint: thumbprint(jwk.x),
+    });
+    if (!proofs.ok) fail(401, 'invalid_client', `the rotation's proofs were not accepted (${proofs.reason})`);
+    // Each proof is single use, recorded one after the other: a captured rotation is never replayed.
+    for (const [i, jti] of proofs.jtis.entries()) {
+      if (state.jti.has(jti)) fail(401, 'invalid_client', "the rotation's proofs were not accepted (replay)");
+      state.jti.set(jti, proofs.exp[i]);
+    }
+    if (jwk.x === instance.current_key.x || state.heldKeys.has(jwk.x))
+      fail(422, 'public_jwk_invalid', 'the current key, or a key an installation holds or held');
+    // One replaced key is kept: rotating again inside the overlap drops the older key at once, and
+    // every token it minted stops (keyAccepted); a token of the replaced key stops when its overlap ends.
     instance.previous_key = instance.current_key;
     instance.current_key = { x: jwk.x, kid: instanceKid(jwk.x) };
-    instance.rotated_at = state.now();
+    instance.rotated_at = now;
+    state.heldKeys.add(jwk.x);
     state.emit(instance, 'ever.registry.instance.key_rotated', instanceEventData(instance));
     return {
       status: 200,
       body: {
         kid: instance.current_key.kid,
         previous_kid: instance.previous_key.kid,
-        previous_valid_until: state.iso(instance.rotated_at + 604800),
+        previous_valid_until: state.iso(now + KEY_OVERLAP_S),
       },
     };
   },

@@ -7,6 +7,21 @@ import { manifestEntry, signManifest, testKey } from '../keys.mjs';
 import { createInstance, createLink, linkedTenantView } from '../model.mjs';
 import { fail } from '../problem.mjs';
 
+/** How long a replaced connect key keeps minting tokens, in seconds (7 days). */
+export const KEY_OVERLAP_S = 604800;
+
+/**
+ * Whether a token minted with `kid` still authenticates: the current connect key, or the key a
+ * rotation replaced while its overlap runs. A token of a key a second rotation dropped, or whose
+ * overlap ended, answers 401 unauthorized: the installation mints a new one.
+ */
+export function keyAccepted(instance, kid, now) {
+  return (
+    instance.current_key.kid === kid ||
+    (instance.previous_key?.kid === kid && instance.rotated_at !== null && now < instance.rotated_at + KEY_OVERLAP_S)
+  );
+}
+
 export const LEGAL = {
   terms_url: 'https://ever.co/legal/terms',
   terms_version: '2026-10',
@@ -43,19 +58,27 @@ const validJwk = (jwk) => {
   }
 };
 
-// The caller's wrong-code window, shared by connect and link codes: a caller past the limit gets
-// 429 before its code is looked at; every wrong code counts.
-const windowKey = (ctx) => `wrong-codes|${ctx.req.socket.remoteAddress}`;
+// Wrong-code windows: a caller past its limit gets 429 before its code is looked at, and every
+// wrong code counts. Redeem counts per client address; link codes count per installation, with a
+// looser per-address backstop across every installation behind one address.
+export const windows = {
+  redeem: (state, ctx) => [{ key: `wrong-codes|${ctx.req.socket.remoteAddress}`, limit: state.config.limits.wrong_codes_per_hour }],
+  link: (state, ctx) => [
+    { key: `wrong-links|${ctx.instance.id}`, limit: state.config.limits.wrong_codes_per_hour },
+    { key: `wrong-links-address|${ctx.req.socket.remoteAddress}`, limit: state.config.limits.wrong_link_codes_per_address_hour },
+  ],
+};
 
-export function windowOpen(state, ctx) {
-  const w = state.windows.get(windowKey(ctx));
-  const limit = state.config.limits.wrong_codes_per_hour;
-  if (w && state.now() < w.start + 3600 && w.count >= limit)
-    fail(429, 'rate_limited', undefined, { retry_after_s: w.start + 3600 - state.now() });
+export function windowOpen(state, ctx, kind = 'redeem') {
+  for (const { key, limit } of windows[kind](state, ctx)) {
+    const w = state.windows.get(key);
+    if (w && state.now() < w.start + 3600 && w.count >= limit)
+      fail(429, 'rate_limited', undefined, { retry_after_s: w.start + 3600 - state.now() });
+  }
 }
 
-export function countWrong(state, ctx) {
-  state.hit(windowKey(ctx), state.config.limits.wrong_codes_per_hour, 3600);
+export function countWrong(state, ctx, kind = 'redeem') {
+  for (const { key, limit } of windows[kind](state, ctx)) state.hit(key, limit, 3600);
 }
 
 /** Connect and link codes are issued unless the deployment switched issuance off (404). */
@@ -159,6 +182,8 @@ export const connectHandlers = {
       if (holder && (holder.current_key.x !== body.public_jwk.x || holder.org.id !== entry.org.id || holder.product !== body.product))
         fail(422, 'public_jwk_invalid', 'the key belongs to another installation');
       if (holder?.status === 'active' || holder?.status === 'pending_approval') fail(409, 'already_connected');
+      // A key some installation held before (replaced and dropped) is never accepted again.
+      if (!holder && state.heldKeys.has(body.public_jwk.x)) fail(422, 'public_jwk_invalid', 'a key an installation held');
       entry.used = true;
       let instance = holder;
       if (instance) {
@@ -200,9 +225,19 @@ export const connectHandlers = {
     if (!r.ok) fail(401, 'invalid_client', `the client assertion was not accepted (${r.reason})`);
     state.jti.set(r.jti, r.exp);
     if (!instance || instance.status === 'disconnected' || instance.status === 'revoked') fail(401, 'credential_revoked');
+    // At most tokens_per_hour tokens in the last hour per installation (a sliding window over the
+    // tokens it received; Retry-After is when the oldest leaves it): products keep a token for its hour.
+    const now = state.now();
+    const recent = [...state.tokens.values()].filter((t) => t.instance_id === instance.id && t.issued_at > now - 3600);
+    if (recent.length >= state.config.limits.tokens_per_hour) {
+      const oldest = Math.min(...recent.map((t) => t.issued_at));
+      fail(429, 'rate_limited', 'this installation minted too many tokens in this window: keep a token for its hour', {
+        retry_after_s: Math.max(1, oldest + 3600 - now),
+      });
+    }
     return {
       status: 200,
-      body: { access_token: state.newToken(instance.id), token_type: 'Bearer', expires_in: 3600 },
+      body: { access_token: state.newToken(instance.id, { kid: r.kid }), token_type: 'Bearer', expires_in: 3600 },
       headers: { 'cache-control': 'no-store' },
     };
   },
@@ -270,7 +305,7 @@ export const connectHandlers = {
     return {
       status: 200,
       body: {
-        access_token: state.newToken(instance.id),
+        access_token: state.newToken(instance.id, { kid: instance.current_key.kid }),
         token_type: 'Bearer',
         expires_in: 3600,
         instance_id: instance.id,

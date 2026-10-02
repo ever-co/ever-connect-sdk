@@ -1,0 +1,44 @@
+{
+  "description": "Verdict of each usage report against ever.usage.v1.json; invalid reports fail at the given path.",
+  "fixtures": {
+    "valid/employees.json": {
+      "valid": true
+    },
+    "valid/tenant-peak.json": {
+      "valid": true
+    },
+    "valid/no-units.json": {
+      "valid": true
+    },
+    "invalid/unknown-unit.json": {
+      "valid": false,
+      "path": "/units/0/unit",
+      "reason": "a unit outside the list"
+    },
+    "invalid/negative-quantity.json": {
+      "valid": false,
+      "path": "/units/0/quantity",
+      "reason": "a count is never negative"
+    },
+    "invalid/fractional-quantity.json": {
+      "valid": false,
+      "path": "/units/0/quantity",
+      "reason": "a count is a whole number"
+    },
+    "invalid/person-name.json": {
+      "valid": false,
+      "path": "/units/0/name",
+      "reason": "counts only: never a name"
+    },
+    "invalid/extra-field.json": {
+      "valid": false,
+      "path": "/email",
+      "reason": "closed at every level"
+    },
+    "invalid/uuid-instance.json": {
+      "valid": false,
+      "path": "/instance_id",
+      "reason": "the installation id is a ULID"
+    }
+  }
+}

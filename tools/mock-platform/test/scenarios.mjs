@@ -210,12 +210,10 @@ export const OK = {
   },
   instanceDisconnect: async (env) =>
     env.call('POST', '/v1/instances/me/disconnect', { token: (await connected(env)).token, headers: idem('d') }),
-  instanceRotateKey: async (env) =>
-    env.call('POST', '/v1/instances/me/keys', {
-      token: (await connected(env)).token,
-      body: { public_jwk: jwk(testKey('connectNext')) },
-      headers: idem('k'),
-    }),
+  instanceRotateKey: async (env) => {
+    const c = await connected(env);
+    return env.call('POST', '/v1/instances/me/keys', { token: c.token, body: env.rotation(c.instanceId), headers: idem('k') });
+  },
   ingestStatsReport: (env) => env.call('POST', '/v1/stats/reports', report()),
   instancePutPublicUrl: async (env) => {
     const c = await connected(env, { enable: ['instance_url'] });
@@ -560,6 +558,20 @@ export const ERRORS = {
       },
     });
   },
+  '4:429:rate_limited': async (env) => {
+    // The redeem's token is the first of the hour; the 61st answers 429 with Retry-After.
+    const c = await env.connect();
+    let r;
+    for (let i = 0; i < 60; i += 1)
+      r = await env.call('POST', '/v1/instances/token', {
+        body: {
+          grant_type: 'client_credentials',
+          client_assertion_type: 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
+          client_assertion: env.assertion({ instanceId: c.instanceId }),
+        },
+      });
+    return r;
+  },
   '4:422:validation_failed': (env) =>
     env.call('POST', '/v1/instances/token', {
       body: {
@@ -757,11 +769,29 @@ export const ERRORS = {
       token: (await connected(env, { code: 'EVC-TEST-0000-0003' })).token,
       headers: idem('dp'),
     }),
-  '16:422:public_jwk_invalid': async (env) =>
+  '16:401:invalid_client': async (env) => {
+    // An instance token alone never rotates a key: the current key's proof signed with the new key.
+    const c = await connected(env);
+    return env.call('POST', '/v1/instances/me/keys', {
+      token: c.token,
+      body: env.rotation(c.instanceId, { signers: [testKey('connectNext'), testKey('connectNext')] }),
+      headers: idem('ki'),
+    });
+  },
+  '16:422:public_jwk_invalid': async (env) => {
+    // Two valid proofs for the current key itself: a rotation needs a key no installation holds.
+    const c = await connected(env);
+    return env.call('POST', '/v1/instances/me/keys', {
+      token: c.token,
+      body: env.rotation(c.instanceId, { next: testKey('connect') }),
+      headers: idem('kj'),
+    });
+  },
+  '16:422:validation_failed': async (env) =>
     env.call('POST', '/v1/instances/me/keys', {
       token: (await connected(env)).token,
-      body: { public_jwk: { kty: 'OKP', crv: 'Ed25519', x: 'short' } },
-      headers: idem('kj'),
+      body: { public_jwk: jwk(testKey('connectNext')) },
+      headers: idem('kv'),
     }),
   '17:400:validation_failed': (env) =>
     env.call('POST', '/v1/stats/reports', { raw: GOLDEN, headers: { 'ever-stats-key': testKey('stats').x } }),

@@ -78,6 +78,15 @@ export const adminRoutes = {
     return { status: 201, body: { code: body.code.toUpperCase() } };
   },
 
+  // What an organization admin's revocation does on the platform (link codes: revokeLinkCode):
+  // the code's redemption answers 422 code_invalid, like an unknown code.
+  'POST /__mock/codes/revoke': ({ state, body }) => {
+    const entry = state.codes.get(String(body?.code ?? '').toUpperCase());
+    if (!entry) fail(404, 'not_found', 'no such code');
+    entry.revoked = true;
+    return { body: { code: entry.code, revoked: true } };
+  },
+
   'POST /__mock/approve': ({ state, body }) => {
     if (body?.user_code || body?.device_code) {
       const device = [...state.devices.entries()].find(([dc, d]) => dc === body.device_code || d.user_code === body.user_code)?.[1];

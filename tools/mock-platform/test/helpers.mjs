@@ -1,7 +1,7 @@
 // Test helpers: a mock on a free port, plain fetch calls, and an installation connected with the
 // TEST connect key.
 import { createHash } from 'node:crypto';
-import { signClientAssertion, testKey } from '../src/keys.mjs';
+import { signClientAssertion, signRotationProof, testKey } from '../src/keys.mjs';
 import { createMockPlatform } from '../src/server.mjs';
 import { validateResponse } from '../src/validate.mjs';
 
@@ -52,6 +52,22 @@ export async function startMock(config = {}) {
         ttl,
         jti: jti ?? `test-jti-${String(jtiCounter).padStart(12, '0')}`,
       });
+    },
+    /**
+     * The body of a key rotation: the new key and its two proofs, signed with the current key and
+     * with the new key (`signers` overrides who signs them, `bind` the key the proofs bind).
+     */
+    rotation(instanceId, { current = testKey('connect'), next = testKey('connectNext'), signers, bind, jtis = [], iat, claims } = {}) {
+      jtiCounter += 1;
+      const at = iat ?? mock.state.now();
+      const n = String(jtiCounter).padStart(12, '0');
+      const [bySigner, nextSigner] = signers ?? [current, next];
+      const proof = (key, jti) => signRotationProof({ key, instanceId, origin: ISSUER, newX: (bind ?? next).x, iat: at, jti, claims });
+      return {
+        public_jwk: { kty: 'OKP', crv: 'Ed25519', x: next.x },
+        current_key_proof: proof(bySigner, jtis[0] ?? `rotation-current-${n}`),
+        new_key_proof: proof(nextSigner, jtis[1] ?? `rotation-new-${n}`),
+      };
     },
     async token(instanceId, key = testKey('connect')) {
       const r = await api.call('POST', '/v1/instances/token', {

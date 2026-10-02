@@ -612,6 +612,164 @@ export interface KeyManifestV1Key {
   not_after?: string | null;
 }
 
+/**
+ * The counts an Ever product installation reports to Ever Platform for apps whose pricing depends on a unit such as employees or seats. Counts and timestamps only: never names, e-mails, addresses, identifiers of people or companies, document contents or per-record amounts. Answered only while the installation's usage_reporting integration is enabled. Closed at every level.
+ */
+export interface UsageReportV1 {
+  schema: 'ever.usage.v1';
+  /**
+   * The installation's Ever Platform id.
+   */
+  instance_id: string;
+  /**
+   * For a multi-tenant product, the product tenant the counts belong to.
+   */
+  product_tenant_id?: string;
+  /**
+   * When the counts were taken (RFC 3339, UTC).
+   */
+  measured_at: string;
+  /**
+   * One count per unit asked for; a unit the product does not know is omitted, never guessed.
+   *
+   * @maxItems 16
+   */
+  units:
+    | []
+    | [UsageReportV1UnitCount]
+    | [UsageReportV1UnitCount, UsageReportV1UnitCount]
+    | [UsageReportV1UnitCount, UsageReportV1UnitCount, UsageReportV1UnitCount]
+    | [UsageReportV1UnitCount, UsageReportV1UnitCount, UsageReportV1UnitCount, UsageReportV1UnitCount]
+    | [UsageReportV1UnitCount, UsageReportV1UnitCount, UsageReportV1UnitCount, UsageReportV1UnitCount, UsageReportV1UnitCount]
+    | [UsageReportV1UnitCount, UsageReportV1UnitCount, UsageReportV1UnitCount, UsageReportV1UnitCount, UsageReportV1UnitCount, UsageReportV1UnitCount]
+    | [UsageReportV1UnitCount, UsageReportV1UnitCount, UsageReportV1UnitCount, UsageReportV1UnitCount, UsageReportV1UnitCount, UsageReportV1UnitCount, UsageReportV1UnitCount]
+    | [UsageReportV1UnitCount, UsageReportV1UnitCount, UsageReportV1UnitCount, UsageReportV1UnitCount, UsageReportV1UnitCount, UsageReportV1UnitCount, UsageReportV1UnitCount, UsageReportV1UnitCount]
+    | [
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+      ]
+    | [
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+      ]
+    | [
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+      ]
+    | [
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+      ]
+    | [
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+      ]
+    | [
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+      ]
+    | [
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+      ]
+    | [
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+        UsageReportV1UnitCount,
+      ];
+}
+export interface UsageReportV1UnitCount {
+  unit: 'employee' | 'user' | 'seat' | 'project' | 'transaction';
+  quantity: number;
+  /**
+   * How it was counted: currently active records at measured_at, or the peak within the billing period.
+   */
+  method: 'active_at_measurement' | 'peak_in_period';
+}
+
 export type EverConsentConsentGrantedV1CommonUlid = string;
 export type EverConsentConsentGrantedV1CommonIntegrationKey = string;
 /**
@@ -3348,6 +3506,85 @@ export const SCHEMAS = {
           "root_kid": {
             "type": "string",
             "pattern": "^[A-Za-z0-9._-]{1,64}$"
+          }
+        }
+      }
+    }
+  } as JsonSchemaDocument,
+  usage: {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://api.ever.co/v1/usage/schema/ever.usage.v1",
+    "title": "ever.usage.v1 usage report",
+    "description": "The counts an Ever product installation reports to Ever Platform for apps whose pricing depends on a unit such as employees or seats. Counts and timestamps only: never names, e-mails, addresses, identifiers of people or companies, document contents or per-record amounts. Answered only while the installation's usage_reporting integration is enabled. Closed at every level.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "schema",
+      "instance_id",
+      "measured_at",
+      "units"
+    ],
+    "properties": {
+      "schema": {
+        "const": "ever.usage.v1"
+      },
+      "instance_id": {
+        "description": "The installation's Ever Platform id.",
+        "type": "string",
+        "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+        "maxLength": 26
+      },
+      "product_tenant_id": {
+        "description": "For a multi-tenant product, the product tenant the counts belong to.",
+        "type": "string",
+        "pattern": "^[A-Za-z0-9._:*-]{1,64}$",
+        "maxLength": 64
+      },
+      "measured_at": {
+        "description": "When the counts were taken (RFC 3339, UTC).",
+        "type": "string",
+        "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]{1,9})?Z$",
+        "maxLength": 35
+      },
+      "units": {
+        "description": "One count per unit asked for; a unit the product does not know is omitted, never guessed.",
+        "type": "array",
+        "maxItems": 16,
+        "items": {
+          "$ref": "#/$defs/unit_count"
+        }
+      }
+    },
+    "$defs": {
+      "unit_count": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "unit",
+          "quantity",
+          "method"
+        ],
+        "properties": {
+          "unit": {
+            "enum": [
+              "employee",
+              "user",
+              "seat",
+              "project",
+              "transaction"
+            ]
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000000000000
+          },
+          "method": {
+            "description": "How it was counted: currently active records at measured_at, or the peak within the billing period.",
+            "enum": [
+              "active_at_measurement",
+              "peak_in_period"
+            ]
           }
         }
       }

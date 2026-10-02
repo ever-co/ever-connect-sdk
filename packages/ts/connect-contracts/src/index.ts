@@ -21,6 +21,7 @@ export type {
   JsonSchemaDocument,
   KeyManifestV1,
   StatsReportV1,
+  UsageReportV1,
 } from './generated/schemas';
 export { EVENT_SCHEMAS, SCHEMAS } from './generated/schemas';
 export type { FieldError, Problem, ProblemCode } from './problem';

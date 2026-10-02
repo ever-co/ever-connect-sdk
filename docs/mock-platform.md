@@ -66,7 +66,7 @@ Every key is optional; `tools/mock-platform/mock.config.example.json` shows the 
 | `integrations` | `{cloud_defaults: false, enabled: []}` | integrations consented at connect |
 | `lookup` | one salt version, one opted-in VAT number | lookup salts, opt-ins and claimed hashes |
 | `people` | one Ever ID person, owner of the organization | people the person tokens are issued for |
-| `limits` | the platform's rate limits | wrong codes per hour, heartbeat interval, entitlement reads per hour, statistics reports per day, lookup and discovery rates, device starts, webhook endpoints |
+| `limits` | the platform's rate limits | wrong codes per hour (connect codes per client address, link codes per installation, with `wrong_link_codes_per_address_hour` as the per-address backstop), tokens per hour per installation (`tokens_per_hour`), heartbeat interval, entitlement reads per hour, statistics reports per day, lookup and discovery rates, device starts, webhook endpoints |
 | `faults` | none | `keys_unavailable`, `webhooks_module_disabled`, `revoke_credential_at_call`, `connect_issuance_off` (a deployment that issues no connect or link codes: a well-formed redeem or link-code redemption answers 404, a malformed body still 422) |
 
 ---
@@ -98,6 +98,7 @@ Every key is optional; `tools/mock-platform/mock.config.example.json` shows the 
 | `POST /__mock/clock` | `{set}` or `{advance}` (seconds) | moves the clock; expires managed operations past their window |
 | `POST /__mock/keys/rotate` | | rotates the entitlement key (the old one stays `previous`) |
 | `POST /__mock/codes` | `{code, kind?, product?, org?, expires_in_s?, pending_approval?}` | adds a code |
+| `POST /__mock/codes/revoke` | `{code}` | revokes a code, as an organization admin does in app.ever.co: its redemption answers `422 code_invalid` |
 | `POST /__mock/approve` | `{instance_id}` or `{user_code \| device_code, org?}` | approves a pending installation or a device-first connect |
 | `POST /__mock/emit` | `{type, data, subject?}` | puts an event of the instance audience on the feed (validated against its schema) |
 | `POST /__mock/entitlement/reissue` | `{link?}` | issues a new entitlement document (higher `seq`) and notifies the feed |
@@ -115,6 +116,8 @@ Every key is optional; `tools/mock-platform/mock.config.example.json` shows the 
 | `POST /__mock/faults` | `{keys_unavailable?, webhooks_module_disabled?, revoke_credential_at_call?, connect_issuance_off?}` | switches faults on and off |
 | `POST /__mock/person-request` | `{kind: deletion \| export, …}` | a deletion or export request for a person on the feed |
 
+The connect key rotates as on the platform. `POST /v1/instances/me/keys` takes the new public key and two proofs: `current_key_proof`, signed with the current connect key, and `new_key_proof`, signed with the new key. Both carry the claims of a client assertion with `aud` = `<issuer>/v1/instances/me/keys` and `cnf.jkt` = the RFC 7638 thumbprint of the new key, each with its own `jti`. Any proof that fails answers `401 invalid_client`; the current key, or a key an installation holds or held, answers `422 public_jwk_invalid`. `signRotationProof` (from `ever-mock-platform/keys`) builds a proof with the TEST keys. Tokens minted with the replaced key work until its 7-day overlap ends; rotating again inside the overlap stops them at once (`401 unauthorized`: mint a new token). The token endpoint mints at most 60 tokens an hour per installation, then answers `429 rate_limited` with `Retry-After`: keep a token for its hour.
+
 ---
 
 ## 5. Scenarios the SDK tests run
@@ -125,4 +128,5 @@ The mock's own tests (`tools/mock-platform/test/`) are the reference for how to 
 - `sample-flow.test.ts`: connect, link, entitlement, feed and statistics in the order a product runs them;
 - `in-product-consent.test.mjs`: the consent dialog after a fresh Ever ID sign-in;
 - `managed.test.mjs`: scenario `managed-backup`, a fixture executor on the SDK's managed-operation runner;
-- `issuance.test.mjs`: a deployment that issues no connect codes (`connect_issuance_off`), and the assertion rules.
+- `issuance.test.mjs`: a deployment that issues no connect codes (`connect_issuance_off`), and the assertion rules;
+- `rows-core.test.mjs`: the core rows in depth, among them the connect-key rotation and its proofs, the token limit and the link-code windows.

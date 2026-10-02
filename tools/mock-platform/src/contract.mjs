@@ -45,6 +45,7 @@ export function contract() {
       entitlement: json(join('schemas', 'ever.entitlement.v1.json')),
       consent: json(join('schemas', 'ever.consent.v1.json')),
       keyManifest: json(join('schemas', 'ever.key-manifest.v1.json')),
+      usage: json(join('schemas', 'ever.usage.v1.json')),
     },
     eventSchemas,
     lookupVectors: json(join('fixtures', 'lookup', 'test-vectors.json')),

@@ -187,7 +187,7 @@ describe('row 4: instance token', () => {
     const { instanceId, token } = await env.connect();
     const rotated = await env.call('POST', '/v1/instances/me/keys', {
       token,
-      body: { public_jwk: { kty: 'OKP', crv: 'Ed25519', x: testKey('connectNext').x } },
+      body: env.rotation(instanceId),
       headers: { 'idempotency-key': 'rot' },
     });
     expectOk(expect, rotated, 200, 'instanceRotateKey');
@@ -196,6 +196,145 @@ describe('row 4: instance token', () => {
     await env.admin('clock', { advance: 8 * 86400 });
     await expect(env.token(instanceId, testKey('connect'))).rejects.toThrow(/401/);
     expect(await env.token(instanceId, testKey('connectNext'))).toMatch(/^evit_/);
+  });
+});
+
+describe('row 4: token limit', () => {
+  it('mints at most 60 tokens an hour per installation, then 429 with Retry-After; the next hour mints again', async () => {
+    env = await startMock();
+    const { instanceId } = await env.connect();
+    for (let i = 1; i < 60; i += 1) await env.token(instanceId);
+    const limited = await env.call('POST', '/v1/instances/token', {
+      body: {
+        grant_type: 'client_credentials',
+        client_assertion_type: 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
+        client_assertion: env.assertion({ instanceId }),
+      },
+    });
+    expectProblem(expect, limited, 429, 'rate_limited');
+    expect(limited.headers.get('retry-after')).toBe('3600');
+    // Another installation behind the same address has its own count.
+    await env.admin('codes', { code: 'EVC-TEST-0000-0009' });
+    const other = await env.connect({ code: 'EVC-TEST-0000-0009', key: testKey('stranger'), tenant: { product_tenant_id: 'tenant-9' } });
+    expect(other.token).toMatch(/^evit_/);
+    await env.admin('clock', { advance: 3600 });
+    expect(await env.token(instanceId)).toMatch(/^evit_/);
+  });
+});
+
+describe('row 5: link codes', () => {
+  it('wrong link codes count per installation: a neighbour behind the same address still links, up to the per-address backstop', async () => {
+    env = await startMock({ limits: { wrong_link_codes_per_address_hour: 12 } });
+    let n = 0;
+    const link = (token, code, tenant) => {
+      n += 1;
+      return env.call('POST', '/v1/instances/me/tenant-links', {
+        token,
+        body: { link_code: code, product: 'gauzy', product_tenant_id: tenant },
+        headers: { 'idempotency-key': `link-${n}` },
+      });
+    };
+    const a = await env.connect();
+    for (let i = 0; i < 10; i += 1)
+      expectProblem(expect, await link(a.token, `EVL-AAAA-BBBB-${String(i).padStart(4, '0')}`, 'tenant-a'), 422, 'code_invalid');
+    const full = await link(a.token, 'EVL-TEST-0000-0002', 'tenant-a');
+    expectProblem(expect, full, 429, 'rate_limited');
+    expect(Number(full.headers.get('retry-after'))).toBeGreaterThan(0);
+    // B, behind the same address: its redeem and its valid link code go through.
+    await env.admin('codes', { code: 'EVC-TEST-0000-0009' });
+    const b = await env.connect({ code: 'EVC-TEST-0000-0009', key: testKey('stranger'), tenant: { product_tenant_id: 'tenant-9' } });
+    expectOk(expect, await link(b.token, 'EVL-TEST-0000-0002', 'tenant-b'), 201, 'instanceCreateTenantLink');
+    // The per-address backstop (100 an hour; 12 in this test) counts every installation's wrong codes.
+    expectProblem(expect, await link(b.token, 'EVL-AAAA-BBBB-0100', 'tenant-c'), 422, 'code_invalid');
+    expectProblem(expect, await link(b.token, 'EVL-AAAA-BBBB-0101', 'tenant-c'), 422, 'code_invalid');
+    expectProblem(expect, await link(b.token, 'EVL-AAAA-BBBB-0102', 'tenant-c'), 429, 'rate_limited');
+  });
+
+  it('a link code the organization revoked answers code_invalid, like an unknown one', async () => {
+    env = await startMock();
+    const { token } = await env.connect();
+    await env.admin('codes/revoke', { code: 'EVL-TEST-0000-0002' });
+    const r = await env.call('POST', '/v1/instances/me/tenant-links', {
+      token,
+      body: { link_code: 'EVL-TEST-0000-0002', product: 'gauzy', product_tenant_id: 'tenant-r' },
+      headers: { 'idempotency-key': 'revoked' },
+    });
+    expectProblem(expect, r, 422, 'code_invalid');
+  });
+});
+
+describe('row 16: connect-key rotation', () => {
+  let n = 0;
+  const rotate = (token, body) => {
+    n += 1;
+    return env.call('POST', '/v1/instances/me/keys', { token, body, headers: { 'idempotency-key': `rotate-${n}` } });
+  };
+  const me = (token) => env.call('GET', '/v1/instances/me', { token });
+
+  it('takes two proofs; the order is the key shape, the proofs, a replay, then the key itself', async () => {
+    env = await startMock();
+    const { instanceId, token } = await env.connect();
+    const short = { ...env.rotation(instanceId), public_jwk: { kty: 'OKP', crv: 'Ed25519', x: 'short' } };
+    expectProblem(expect, await rotate(token, short), 422, 'public_jwk_invalid');
+    const alone = { public_jwk: { kty: 'OKP', crv: 'Ed25519', x: testKey('connectNext').x } };
+    expectProblem(expect, await rotate(token, alone), 422, 'validation_failed');
+    for (const options of [
+      { signers: [testKey('connectNext'), testKey('connectNext')] },
+      { signers: [testKey('connect'), testKey('connect')] },
+      { signers: [testKey('stranger'), testKey('connectNext')] },
+      { bind: testKey('stranger') },
+      { claims: { aud: `${ISSUER}/v1/instances/token` } },
+      { jtis: ['rotation-same-jti-0001', 'rotation-same-jti-0001'] },
+    ])
+      expectProblem(expect, await rotate(token, env.rotation(instanceId, options)), 401, 'invalid_client');
+    // Valid proofs for the current key: the proofs pass and are spent, the key is refused...
+    const same = env.rotation(instanceId, { next: testKey('connect') });
+    expectProblem(expect, await rotate(token, same), 422, 'public_jwk_invalid');
+    // ...and the same proofs again are a replay, refused before the key is looked at.
+    expectProblem(expect, await rotate(token, same), 401, 'invalid_client');
+    // A key another installation holds is refused.
+    await env.admin('codes', { code: 'EVC-TEST-0000-0009' });
+    await env.connect({ code: 'EVC-TEST-0000-0009', key: testKey('stranger'), tenant: { product_tenant_id: 'tenant-9' } });
+    expectProblem(expect, await rotate(token, env.rotation(instanceId, { next: testKey('stranger') })), 422, 'public_jwk_invalid');
+    // Nothing above moved the key; a proper rotation works.
+    const ok = await rotate(token, env.rotation(instanceId));
+    expectOk(expect, ok, 200, 'instanceRotateKey');
+    expect(ok.body.kid).toBe(instanceKid(testKey('connectNext').x));
+    expect(ok.body.previous_kid).toBe(instanceKid(testKey('connect').x));
+    expect(Date.parse(ok.body.previous_valid_until) / 1000).toBe(env.now() + 7 * 86400);
+    // Back to the key it replaced: a key the installation held.
+    const back = env.rotation(instanceId, { current: testKey('connectNext'), next: testKey('connect') });
+    expectProblem(expect, await rotate(token, back), 422, 'public_jwk_invalid');
+  });
+
+  it('a token of the replaced key works inside the overlap and stops when the overlap ends', async () => {
+    env = await startMock();
+    const { instanceId, token } = await env.connect();
+    expectOk(expect, await rotate(token, env.rotation(instanceId)), 200, 'instanceRotateKey');
+    expectOk(expect, await me(token), 200, 'getInstanceSelf');
+    await env.admin('clock', { advance: 7 * 86400 - 600 });
+    // The replaced key still mints near the end of the overlap; its token says an hour but stops with the overlap.
+    const late = await env.token(instanceId, testKey('connect'));
+    expectOk(expect, await me(late), 200, 'getInstanceSelf');
+    await env.admin('clock', { advance: 600 });
+    expectProblem(expect, await me(late), 401, 'unauthorized');
+    await expect(env.token(instanceId, testKey('connect'))).rejects.toThrow(/401/);
+    expectOk(expect, await me(await env.token(instanceId, testKey('connectNext'))), 200, 'getInstanceSelf');
+  });
+
+  it('a second rotation inside the overlap drops the older key and every token it minted at once', async () => {
+    env = await startMock();
+    const { instanceId, token } = await env.connect();
+    expectOk(expect, await rotate(token, env.rotation(instanceId)), 200, 'instanceRotateKey');
+    const byFirst = await env.token(instanceId, testKey('connect'));
+    const bySecond = await env.token(instanceId, testKey('connectNext'));
+    const again = env.rotation(instanceId, { current: testKey('connectNext'), next: testKey('stranger') });
+    expectOk(expect, await rotate(bySecond, again), 200, 'instanceRotateKey');
+    expectProblem(expect, await me(token), 401, 'unauthorized');
+    expectProblem(expect, await me(byFirst), 401, 'unauthorized');
+    await expect(env.token(instanceId, testKey('connect'))).rejects.toThrow(/401/);
+    expectOk(expect, await me(bySecond), 200, 'getInstanceSelf');
+    expectOk(expect, await me(await env.token(instanceId, testKey('stranger'))), 200, 'getInstanceSelf');
   });
 });
 
@@ -411,14 +550,15 @@ describe('row 17: statistics reports', () => {
 
   it('a connect-key rotation leaves the statistics pin alone', async () => {
     env = await startMock();
-    const { token } = await env.connect();
+    const { instanceId, token } = await env.connect();
     const bytes = statsFixture('valid/gauzy.json');
     expect((await env.call('POST', '/v1/stats/reports', signedReport(bytes))).status).toBe(202);
-    await env.call('POST', '/v1/instances/me/keys', {
+    const rotated = await env.call('POST', '/v1/instances/me/keys', {
       token,
-      body: { public_jwk: { kty: 'OKP', crv: 'Ed25519', x: testKey('connectNext').x } },
+      body: env.rotation(instanceId),
       headers: { 'idempotency-key': 'rot' },
     });
+    expect(rotated.status).toBe(200);
     expect((await env.call('POST', '/v1/stats/reports', signedReport(bytes))).status).toBe(202);
   });
 });

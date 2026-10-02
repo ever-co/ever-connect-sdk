@@ -2,7 +2,7 @@
 // seed (sha256 of a fixed label), so signed fixtures regenerate byte for byte and no private key
 // file exists anywhere. These keys sign nothing anyone trusts: their ids start with `test-`, and a
 // release refuses any `test-` root.
-import { b64url, canonicalJson, instanceKid, keyPairFromSeed, sha256, sha256Hex, signJws } from './crypto.mjs';
+import { b64url, canonicalJson, instanceKid, keyPairFromSeed, sha256, sha256Hex, signJws, thumbprint } from './crypto.mjs';
 
 export const MANIFEST_TYP = 'ever-key-manifest+jwt';
 export const ENTITLEMENT_TYP = 'ever-entitlement+jwt';
@@ -115,4 +115,26 @@ export function signClientAssertion({ key = testKey('connect'), instanceId, audi
     exp: iat + ttl,
   };
   return signJws(key.privateKey, { kid: key.kid, typ: 'JWT', ...header }, claims);
+}
+
+/**
+ * A rotation proof: a client assertion for `<origin>/v1/instances/me/keys` that binds the new
+ * key by its thumbprint (`cnf.jkt`). A rotation carries two, one signed with the current connect
+ * key and one with the new key, each with its own `jti`.
+ */
+export function signRotationProof({ key, instanceId, origin, newX, iat, ttl = 300, jti, claims = {} }) {
+  return signJws(
+    key.privateKey,
+    { kid: key.kid, typ: 'JWT' },
+    {
+      iss: instanceId,
+      sub: instanceId,
+      aud: `${origin}/v1/instances/me/keys`,
+      jti: jti ?? b64url(sha256(`rotation:${instanceId}:${key.x}:${newX}:${iat}`).subarray(0, 16)),
+      iat,
+      exp: iat + ttl,
+      cnf: { jkt: thumbprint(newX) },
+      ...claims,
+    },
+  );
 }

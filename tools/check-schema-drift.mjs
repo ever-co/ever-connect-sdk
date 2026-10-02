@@ -22,6 +22,26 @@ export const AUTHORED_UPSTREAM = {
   'contracts/fixtures/stats/': 'contracts/fixtures/stats',
 };
 
+/**
+ * The schemas the platform pins for this repository (`contracts/SCHEMAS.sha256`, `sha256  path`
+ * lines): each one is vendored byte for byte, at the pinned checksum.
+ */
+export function checkPins(text, files) {
+  const errors = [];
+  for (const line of text.split(/\r?\n/)) {
+    const m = line.match(/^([0-9a-f]{64}) [ *](\S+)$/);
+    if (!m) continue;
+    const [, sha, source] = m;
+    const entry = files.find((f) => f.source === source);
+    if (!entry) errors.push(`${source}: pinned by the platform (contracts/SCHEMAS.sha256) but not vendored: run tools/sync-contract.mjs`);
+    else if (entry.transform !== null || entry.sha256 !== sha)
+      errors.push(
+        `${entry.path}: vendored ${entry.sha256}${entry.transform ? ` (transform ${entry.transform})` : ''}, the platform pins ${source} at ${sha}`,
+      );
+  }
+  return errors;
+}
+
 export function checkDrift({ platform, strict }) {
   const vendorDoc = readJson(join(REPO, 'contracts/VENDOR.json'));
   const errors = [];
@@ -64,6 +84,8 @@ export function checkDrift({ platform, strict }) {
       errors.push(
         `${vendorDoc.openapi.pinned.source}: platform ${pinnedSha}, synced ${vendorDoc.openapi.pinned.sha256}: run tools/sync-contract.mjs`,
       );
+    const pins = join(platform, 'contracts/SCHEMAS.sha256');
+    if (existsSync(pins)) errors.push(...checkPins(readFileSync(pins, 'utf8'), vendorDoc.files));
     const catalog = join(platform, vendorDoc.events.source);
     const catalogSha = sha256(readFileSync(catalog));
     if (catalogSha !== vendorDoc.events.sha256)
