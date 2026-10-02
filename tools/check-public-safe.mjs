@@ -6,8 +6,10 @@
  * Two sets of rules:
  *   - the generic rules in tools/public-safe.words.json (a product noun outside the technical
  *     allow-list of the egress harness and of commit messages, banned words, hosts, internal
- *     paths, design-document references, draft markers, numbered section signs and work-item and
- *     task identifiers);
+ *     paths, design-document references, draft and marker comments, section signs and work-item
+ *     and task identifiers), and the terms that file must not spell out, listed there as salted
+ *     sha256 hashes: each word, each run of two words and each snake_case token of a line is
+ *     hashed and compared;
  *   - a phrase list kept outside the repository, read from the environment variable
  *     EVER_BANNED_PHRASES_JSON (a CI secret) or from the git-ignored local file
  *     tools/banned-phrases.private.json. Without one, those rules are skipped with a note, so
@@ -25,6 +27,7 @@
  * range on a push (EVER_PUSH_BEFORE..HEAD) and origin/develop..HEAD locally when it exists.
  */
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -44,6 +47,45 @@ const HOST_OK = new Set(WORDS.hosts.allowed.map((h) => h.toLowerCase()));
 const PLAN_ID = re(WORDS.plan_id);
 // Long base64url runs (signatures, keys, hashes) are not prose: the identifier rule ignores them.
 const BLOB = /[A-Za-z0-9_-]{40,}/g;
+
+const SALT = WORDS.hashed?.salt ?? '';
+const HASH_CACHE = new Map();
+/** sha256(salt + term), as the hashed rules list it. */
+export function hashTerm(term, salt = SALT) {
+  const key = `${salt}${term}`;
+  let digest = HASH_CACHE.get(key);
+  if (digest === undefined) {
+    digest = createHash('sha256').update(key).digest('hex');
+    HASH_CACHE.set(key, digest);
+  }
+  return digest;
+}
+
+/** What a hashed rule compares: each word and each run of two words, and each snake_case token. */
+export function hashCandidates(line) {
+  const lower = line.toLowerCase();
+  const out = new Set(lower.match(/[a-z0-9_]+/g) ?? []);
+  const words = lower.split(/[^a-z0-9]+/).filter(Boolean);
+  words.forEach((word, i) => {
+    out.add(word);
+    if (i + 1 < words.length) out.add(`${word} ${words[i + 1]}`);
+  });
+  return out;
+}
+
+/** A hashed rule from its id and the hashes it lists (or, for the self-test, from plain terms). */
+export function hashedRule(id, { sha256 = [], terms = [] } = {}, salt = SALT) {
+  return { id, salt, hashes: new Set([...sha256, ...terms.map((t) => hashTerm(t, salt))]) };
+}
+
+const HASHED = (WORDS.hashed?.rules ?? []).map((r) => hashedRule(r.id, { sha256: r.sha256 }));
+
+/** The ids of the hashed rules a line trips. */
+function hashedFindings(line, rules = HASHED) {
+  if (rules.length === 0) return [];
+  const candidates = [...hashCandidates(line)];
+  return rules.filter((rule) => candidates.some((c) => rule.hashes.has(hashTerm(c, rule.salt)))).map((rule) => rule.id);
+}
 
 /** Compiles a private phrase list (an array, or {phrases, patterns}) into numbered rules. */
 export function compilePhraseList(doc) {
@@ -90,7 +132,7 @@ function nounAllowed(file, line, heading) {
 }
 
 /** Findings in one text, as `<where>:<line>: <rule id>` strings (the text itself is never printed). */
-export function findings(text, where, phraseRules = [], { file = where } = {}) {
+export function findings(text, where, phraseRules = [], { file = where, hashed = HASHED } = {}) {
   const out = [];
   const lines = text.split(/\r?\n/);
   const headings = file.endsWith('.md') ? headingsByLine(lines) : lines.map(() => '');
@@ -104,6 +146,7 @@ export function findings(text, where, phraseRules = [], { file = where } = {}) {
       if (rule.allow_lines?.some((p) => new RegExp(p).test(line))) continue;
       out.push(`${at}: ${rule.id}`);
     }
+    for (const id of hashedFindings(line, hashed)) if (!out.includes(`${at}: ${id}`)) out.push(`${at}: ${id}`);
     for (const m of line.matchAll(new RegExp(HOST.source, `${HOST.flags}g`))) {
       if (!HOST_OK.has(m[0].toLowerCase())) {
         out.push(`${at}: ${WORDS.hosts.id}`);
@@ -244,6 +287,23 @@ function selfTest() {
   // A signature blob never trips the identifier rule; a real identifier in prose does.
   const blob = `${'x'.repeat(30)}-${['D', '12'].join('-')}-${'y'.repeat(30)}`;
   if (findings(blob, 'blob', [], { file: 'contracts/x.json' }).length > 0) problems.push('a base64url blob was flagged');
+  // A hashed term is caught as words, as a two-word run across separators and case, and as a
+  // snake_case token; a near miss passes, and no finding prints the text.
+  const plantedHash = [hashedRule('HX', { terms: ['planted term', 'planted_token'] })];
+  const hashedCase = (text) => findings(text, 'hashed', [], { file: 'docs/x.md', hashed: plantedHash });
+  for (const text of ['A Planted  Term here.', 'the planted-term field', 'PLANTED_TERM', 'see planted_token.'])
+    if (!hashedCase(text).some((f) => f.endsWith(': HX'))) problems.push(`a hashed term was missed in "${text}"`);
+  for (const text of ['a planted terminal', 'planted_tokens', 'planted, then a term'])
+    if (hashedCase(text).some((f) => f.endsWith(': HX'))) problems.push(`a near miss tripped a hashed rule: "${text}"`);
+  if (hashedCase('A Planted Term').some((f) => /planted|term/i.test(f))) problems.push('a hashed finding printed the matched text');
+  // The listed hashes are well formed, and the hashed rules are in force.
+  const malformed = (WORDS.hashed?.rules ?? []).filter((r) => !r.sha256.every((h) => /^[0-9a-f]{64}$/.test(h)));
+  if (!SALT || HASHED.length === 0 || malformed.length > 0) problems.push('the hashed rules are missing or malformed');
+  // A marker comment and any section sign fail.
+  const marker = `${['<', '!--'].join('')} MARKER: a classification -->`;
+  if (!findings(marker, 'marker', [], { file: 'docs/x.md' }).some((f) => f.endsWith(': W9'))) problems.push('a marker comment passed');
+  const sign = `The rules are under the heading ${String.fromCharCode(0xa7)} Limits.`;
+  if (!findings(sign, 'sign', [], { file: 'docs/x.md' }).some((f) => f.endsWith(': S1'))) problems.push('a section sign passed');
   if (problems.length > 0) {
     process.stderr.write(`check-public-safe self-test FAILED:\n  ${problems.join('\n  ')}\n`);
     process.exit(1);
