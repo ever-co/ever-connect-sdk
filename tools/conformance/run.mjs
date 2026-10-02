@@ -13,9 +13,15 @@
  * redeem is 404; the mock is switched the same way). --modules runs only the cases of those
  * modules, for a platform that does not serve the others yet.
  *
+ * Statistics: besides the cases of cases.json, every fixture of contracts/fixtures/stats is a case
+ * (sent byte for byte, its expected status, problem code, errors[0].path and errors[0].code from
+ * expected.json). Each run reports under a fresh statistics id, pinned by its first accepted report
+ * to a key derived from a public seed, so a run never meets the day window of an earlier one.
+ * `target_only` cases (the published schema, byte for byte) are not asked of the mock.
+ *
  * Exit 0 with zero differences, 1 with differences, 2 when the target cannot be reached.
  */
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -33,13 +39,35 @@ const conformanceKey = (label) => {
   return { ...pair, kid: label };
 };
 const UNKNOWN_INSTANCE = '01JNCQNF0RMANCE0000000000Z';
-const STATS_INSTANCE = (() => {
-  const h = Buffer.from(sha256('ever-connect-sdk/conformance/stats-instance')).toString('hex');
-  return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-8${h.slice(17, 20)}-${h.slice(20, 32)}`;
-})();
+// A fresh statistics id per run (a UUID v4).
+const STATS_INSTANCE = randomUUID();
+
+/** One case per statistics fixture, with the answer expected.json gives it. */
+export function statsFixtureCases() {
+  const { fixtures } = JSON.parse(readFileSync(join(FIXTURES, 'stats', 'expected.json'), 'utf8'));
+  return Object.entries(fixtures).map(([file, e]) => ({
+    id: `stats-fixture:${file.replace(/\.json$/, '')}`,
+    row: 17,
+    module: 'stats',
+    stats: { fixture: `stats/${file}`, raw: true },
+    expect: e.status === 202 ? { status: 202, required: ['accepted'] } : { status: e.status, code: e.code, path: e.path, error: e.error },
+  }));
+}
 
 export function loadCases(file = join(here, 'cases.json')) {
-  return JSON.parse(readFileSync(file, 'utf8')).cases;
+  return [...JSON.parse(readFileSync(file, 'utf8')).cases, ...statsFixtureCases()];
+}
+
+/** A fixture's bytes with its statistics id replaced by the run's (textually: nothing else moves). */
+function withRunId(bytes) {
+  const text = bytes.toString('utf8');
+  let id = null;
+  try {
+    id = JSON.parse(text).instance_id ?? null;
+  } catch {
+    id = null;
+  }
+  return typeof id === 'string' && id.length === 36 ? Buffer.from(text.replace(id, STATS_INSTANCE)) : bytes;
 }
 
 function substitute(value, vars) {
@@ -66,14 +94,21 @@ export function buildRequest(c, base) {
   };
   const headers = { 'user-agent': USER_AGENT };
   if (c.stats) {
-    const report = JSON.parse(readFileSync(join(FIXTURES, c.stats.fixture), 'utf8'));
-    if ('instance_id' in report) report.instance_id = STATS_INSTANCE;
-    const body = Buffer.from(JSON.stringify(report));
-    const key = conformanceKey(c.stats.mutate === 'other-key' ? 'stats-other' : 'stats');
-    headers['content-type'] = 'application/json';
-    if (c.stats.mutate !== 'no-key') headers['ever-stats-key'] = key.x;
-    const signed = c.stats.mutate === 'signature' ? Buffer.from(`${body.toString('utf8')} `) : body;
-    headers['ever-stats-signature'] = `ed25519=${signBytes(key.privateKey, signed)}`;
+    const file = readFileSync(join(FIXTURES, c.stats.fixture));
+    let body;
+    if (c.stats.raw) body = withRunId(file);
+    else {
+      const report = JSON.parse(file.toString('utf8'));
+      if ('instance_id' in report) report.instance_id = STATS_INSTANCE;
+      body = Buffer.from(JSON.stringify(report));
+    }
+    const mutate = c.stats.mutate ?? null;
+    const key = conformanceKey(mutate === 'other-key' ? 'stats-other' : 'stats');
+    headers['content-type'] = mutate === 'media-type' ? 'text/plain' : 'application/json';
+    if (mutate !== 'no-key') headers['ever-stats-key'] = key.x;
+    const signed = mutate === 'signature' ? Buffer.from(`${body.toString('utf8')} `) : body;
+    if (mutate !== 'no-signature') headers['ever-stats-signature'] = `ed25519=${signBytes(key.privateKey, signed)}`;
+    if (mutate === 'key-id') headers['ever-stats-key-id'] = 'AAAAAAAAAAA';
     return { method: 'POST', path: '/v1/stats/reports', headers, body };
   }
   const r = c.request;
@@ -89,17 +124,22 @@ export function buildRequest(c, base) {
 
 async function send(base, req) {
   const res = await fetch(`${base}${req.path}`, { method: req.method, headers: req.headers, body: req.body, redirect: 'manual' });
-  const text = await res.text();
+  const bytes = Buffer.from(await res.arrayBuffer());
+  const text = bytes.toString('utf8');
   let body = null;
   try {
     body = text ? JSON.parse(text) : null;
   } catch {
     body = null;
   }
+  const first = Array.isArray(body?.errors) ? body.errors[0] : undefined;
   return {
     status: res.status,
     code: res.headers.get('content-type')?.startsWith('application/problem+json') ? (body?.code ?? null) : null,
     body,
+    error: first ? `${first.path} ${first.code}` : null,
+    sha256: createHash('sha256').update(bytes).digest('hex'),
+    etag: res.headers.get('etag'),
   };
 }
 
@@ -113,9 +153,21 @@ export function compare(c, answer, reference = null, profile = {}) {
   if (answer.status !== expect.status) diffs.push(`status ${answer.status}, expected ${expect.status}`);
   if (expect.code && answer.code !== expect.code) diffs.push(`code ${answer.code}, expected ${expect.code}`);
   for (const f of expect.required ?? []) if (!answer.body || !(f in answer.body)) diffs.push(`no ${f} in the answer`);
+  const first = answer.body?.errors?.[0];
+  if (expect.path !== undefined && first?.path !== expect.path) diffs.push(`errors[0].path ${first?.path}, expected ${expect.path}`);
+  if (expect.error !== undefined && first?.code !== expect.error) diffs.push(`errors[0].code ${first?.code}, expected ${expect.error}`);
+  if (expect.sha256_of !== undefined) {
+    const vendored = createHash('sha256')
+      .update(readFileSync(join(FIXTURES, '..', expect.sha256_of)))
+      .digest('hex');
+    if (answer.sha256 !== vendored) diffs.push(`body sha256 ${answer.sha256}, vendored ${expect.sha256_of} ${vendored}`);
+    if (expect.etag && answer.etag?.replace(/^W\//, '').replace(/"/g, '') !== vendored)
+      diffs.push(`ETag ${answer.etag}, expected "${vendored}"`);
+  }
   if (reference) {
     if (answer.status !== reference.status) diffs.push(`status ${answer.status}, the other side ${reference.status}`);
     if (answer.code !== reference.code) diffs.push(`code ${answer.code}, the other side ${reference.code}`);
+    if ((answer.error ?? null) !== (reference.error ?? null)) diffs.push(`errors[0] ${answer.error}, the other side ${reference.error}`);
   }
   return diffs;
 }
@@ -142,9 +194,9 @@ export async function run({ target, againstMock = false, cases = loadCases(), pr
   const mock = againstMock ? await startMock(profile) : null;
   const results = [];
   try {
-    for (const c of cases.filter((x) => !modules || modules.includes(x.module))) {
+    for (const c of cases.filter((x) => (!modules || modules.includes(x.module)) && !(x.target_only && own))) {
       const answer = await send(base, buildRequest(c, base));
-      const reference = mock ? await send(mock.url, buildRequest(c, mock.url)) : null;
+      const reference = mock && !c.target_only ? await send(mock.url, buildRequest(c, mock.url)) : null;
       const diffs = compare(c, answer, reference, profile);
       if (reference) diffs.push(...compare(c, reference, null, profile).map((d) => `mock: ${d}`));
       results.push({
@@ -194,7 +246,7 @@ async function main(argv) {
   else
     for (const r of results)
       process.stdout.write(
-        `${r.diffs.length === 0 ? 'ok  ' : 'DIFF'} row ${String(r.row).padEnd(3)} ${r.id.padEnd(28)} ${r.target}${r.mock ? ` | mock ${r.mock}` : ''}${r.diffs.length ? `\n       ${r.diffs.join('\n       ')}` : ''}\n`,
+        `${r.diffs.length === 0 ? 'ok  ' : 'DIFF'} row ${String(r.row ?? '-').padEnd(3)} ${r.id.padEnd(44)} ${r.target}${r.mock ? ` | mock ${r.mock}` : ''}${r.diffs.length ? `\n       ${r.diffs.join('\n       ')}` : ''}\n`,
       );
   const differing = results.filter((r) => r.diffs.length > 0).length;
   process.stdout.write(`conformance: ${results.length} cases, ${differing} with differences\n`);

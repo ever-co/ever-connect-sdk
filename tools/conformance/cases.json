@@ -1,5 +1,5 @@
 {
-  "description": "Non-destructive conformance cases: each one is sent to a running Ever Platform API (the target) and, with --against-mock, to the mock platform, and the status, the problem code and the required response fields are compared. Nothing here connects an installation or changes an organization; the statistics cases use a conformance-only instance id and a key derived from a public seed. `module` groups the cases by the platform module that serves them; `expect_issuance_off` is the answer of a deployment that issues no connect codes.",
+  "description": "Non-destructive conformance cases: each one is sent to a running Ever Platform API (the target) and, with --against-mock, to the mock platform, and the status, the problem code and the required response fields are compared. Nothing here connects an installation or changes an organization; the statistics cases report under a fresh statistics id per run, signed with a key derived from a public seed, and every statistics fixture is a case of its own (see run.mjs). `target_only` cases are not asked of the mock. `module` groups the cases by the platform module that serves them; `expect_issuance_off` is the answer of a deployment that issues no connect codes.",
   "cases": [
     {
       "id": "key-manifest",
@@ -155,21 +155,42 @@
       "row": 17,
       "module": "stats",
       "stats": { "fixture": "stats/valid/gauzy.json", "mutate": "signature" },
-      "expect": { "status": 400, "code": "signature_invalid" }
+      "expect": { "status": 400, "code": "signature_invalid", "path": "#Ever-Stats-Signature", "error": "invalid" }
     },
     {
       "id": "stats-missing-key",
       "row": 17,
       "module": "stats",
       "stats": { "fixture": "stats/valid/gauzy.json", "mutate": "no-key" },
-      "expect": { "status": 400, "code": "validation_failed" }
+      "expect": { "status": 400, "code": "validation_failed", "path": "#Ever-Stats-Key", "error": "invalid" }
+    },
+    {
+      "id": "stats-missing-signature",
+      "row": 17,
+      "module": "stats",
+      "stats": { "fixture": "stats/valid/gauzy.json", "mutate": "no-signature" },
+      "expect": { "status": 400, "code": "signature_invalid", "path": "#Ever-Stats-Signature", "error": "invalid" }
+    },
+    {
+      "id": "stats-key-id-mismatch",
+      "row": 17,
+      "module": "stats",
+      "stats": { "fixture": "stats/valid/gauzy.json", "mutate": "key-id" },
+      "expect": { "status": 400, "code": "signature_invalid", "path": "#Ever-Stats-Key-Id", "error": "invalid" }
+    },
+    {
+      "id": "stats-media-type",
+      "row": 17,
+      "module": "stats",
+      "stats": { "fixture": "stats/valid/gauzy.json", "mutate": "media-type" },
+      "expect": { "status": 415, "code": "unsupported_media_type" }
     },
     {
       "id": "stats-schema-violation",
       "row": 17,
       "module": "stats",
       "stats": { "fixture": "stats/invalid/01-extra-field.json" },
-      "expect": { "status": 422, "code": "schema_violation" }
+      "expect": { "status": 422, "code": "schema_violation", "path": "/tenant_name", "error": "unknown_field" }
     },
     {
       "id": "stats-key-mismatch",
@@ -177,6 +198,14 @@
       "module": "stats",
       "stats": { "fixture": "stats/valid/gauzy.json", "mutate": "other-key" },
       "expect": { "status": 409, "code": "key_mismatch" }
+    },
+    {
+      "id": "stats-schema",
+      "row": null,
+      "module": "stats",
+      "target_only": true,
+      "request": { "method": "GET", "path": "/v1/stats/schema" },
+      "expect": { "status": 200, "sha256_of": "schemas/ever.stats.v1.json", "etag": true }
     }
   ]
 }
