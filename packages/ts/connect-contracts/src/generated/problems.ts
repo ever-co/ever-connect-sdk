@@ -33,6 +33,7 @@ export const PROBLEM_CODES = [
   "product_mismatch",
   "product_not_supported",
   "key_mismatch",
+  "signature_invalid",
   "unlinked_org",
   "schema_violation",
   "mirror_owned_field",
@@ -77,13 +78,10 @@ export const PROBLEM_CODES = [
   "database_unreachable",
   "topic_private",
   "keys_unavailable",
-  "internal_error",
-  "signature_invalid"
+  "internal_error"
 ] as const;
 
 export type ProblemCode = (typeof PROBLEM_CODES)[number];
 
 /** Codes the mock platform answers before the platform contract lists them. */
-export const PENDING_PROBLEM_CODES = [
-  "signature_invalid"
-] as const;
+export const PENDING_PROBLEM_CODES = [] as const;

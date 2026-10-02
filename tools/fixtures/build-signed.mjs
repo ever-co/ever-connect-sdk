@@ -11,8 +11,10 @@
  *   entitlement/ valid instance and link documents and the invalid set, each with its expected code
  *   consent/     valid and invalid consent records; consent-screen/ the seven blocks per key
  *   usage/       valid and invalid usage reports (ever.usage.v1: counts and timestamps only)
- *   (connect/vectors/ is vendored byte for byte from the platform by tools/sync-contract.mjs)
- *   stats/       the provisional statistics fixtures and expected.json
+ *   index.json   every schema-bound fixture with its schema and verdict, the vendored statistics
+ *                fixtures included
+ *   (connect/vectors/ and stats/ are vendored byte for byte from the platform by
+ *   tools/sync-contract.mjs)
  *
  * Every signature comes from a TEST key derived from a public seed (no private key file exists),
  * and Ed25519 is deterministic, so a rebuild is byte-identical.
@@ -39,7 +41,6 @@ import {
 import { validateComponent, validateEnvelope, validateEventData, validatePending, validateSchema } from '../mock-platform/src/validate.mjs';
 import { example } from './example.mjs';
 import { hex64, iso, NOW, ulid, uuid } from './ids.mjs';
-import { statsFixtures } from './stats.mjs';
 
 // The entitlement schema accepts only https issuers, so the offline fixtures use an https issuer
 // (the running mock answers with its own configured issuer).
@@ -865,7 +866,6 @@ export function buildAll() {
     ...consentRecords(),
     ...consentScreens(constants, integrations),
     ...usageReports(),
-    ...Object.fromEntries(Object.entries(statsFixtures()).map(([p, t]) => [`stats/${p}`, t])),
   };
   files['index.json'] = json(fixtureIndex(files));
   return Object.fromEntries(Object.entries(files).map(([p, t]) => [`${FIXTURES}/${p}`, t]));
@@ -879,7 +879,7 @@ export function buildAll() {
  */
 function fixtureIndex(files) {
   const entries = [];
-  const read = (p) => JSON.parse(files[p]);
+  const read = (p) => JSON.parse(files[p] ?? readFileSync(join(REPO, FIXTURES, p), 'utf8'));
   for (const [name, e] of Object.entries(read('requests/expected.json').fixtures)) {
     const pending = e.schema.startsWith('pending:');
     entries.push({
@@ -916,8 +916,8 @@ function fixtureIndex(files) {
 function main() {
   const check = process.argv.includes('--check');
   const files = buildAll();
-  // connect/vectors/ is vendored from the platform (tools/sync-contract.mjs), not built here.
-  const managed = ['requests', 'feed', 'keys', 'entitlement', 'consent', 'consent-screen', 'stats', 'usage'];
+  // connect/vectors/ and stats/ are vendored from the platform (tools/sync-contract.mjs), not built here.
+  const managed = ['requests', 'feed', 'keys', 'entitlement', 'consent', 'consent-screen', 'usage'];
   const current = {};
   for (const dir of managed)
     for (const p of walk(join(REPO, FIXTURES, dir))) {

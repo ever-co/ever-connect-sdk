@@ -17,6 +17,14 @@ export const statsLinkHandlers = {
     const pin = state.statsPins.get(body.stats_instance_id);
     if (!pin || pin.x !== body.stats_public_jwk.x)
       fail(409, 'key_mismatch', 'the statement is not signed by the statistics key pinned for this id');
+    // One live installation holds a statistics id; a disconnected or revoked holder lets it go.
+    for (const other of state.instances.values())
+      if (other !== instance && other.stats_instance_id === body.stats_instance_id) {
+        if (other.status === 'active' || other.status === 'pending_approval')
+          fail(409, 'already_linked', 'another connected installation holds this statistics id');
+        other.stats_linked = false;
+        other.stats_instance_id = null;
+      }
     instance.stats_linked = true;
     instance.stats_instance_id = body.stats_instance_id;
     return { status: 200, body: {} };

@@ -215,7 +215,8 @@
         [403, "integration_disabled"],
         [403, "integration_revoked"],
         [409, "key_mismatch"],
-        [422, "validation_failed", "spec-gap"]
+        [409, "already_linked"],
+        [422, "validation_failed"]
       ]
     },
     {
@@ -336,9 +337,10 @@
       "phase": 2,
       "errors": [
         [400, "validation_failed"],
-        [400, "signature_invalid", "spec-gap"],
+        [400, "signature_invalid"],
         [409, "key_mismatch"],
         [413, "validation_failed"],
+        [415, "unsupported_media_type"],
         [422, "schema_violation"],
         [429, "rate_limited"]
       ]

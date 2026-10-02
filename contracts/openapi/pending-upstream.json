@@ -71,23 +71,6 @@
       "responses": { "200": "recorded", "403": "integration_disabled, integration_revoked", "409": "illegal_transition" }
     }
   ],
-  "problem_codes": [
-    { "code": "signature_invalid", "status": 400, "row": 17, "why": "a statistics report whose Ever-Stats-Signature does not verify over the received bytes; the platform's ErrorCode enum does not list it yet" }
-  ],
-  "schema_overrides": {
-    "StatsLinkCreate": {
-      "why": "two keys per installation: the link statement is signed with the separate statistics key and sent under the connect-key token, so the body carries the statistics public key and the statement; the design schema still has the one-key shape",
-      "schema": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["stats_instance_id", "stats_public_jwk", "statement_sig"],
-        "description": "The two-key link statement. `statement_sig` is a compact JWS (header `{alg: EdDSA, typ: ever-stats-link+jwt}`) signed with the statistics key whose payload is `{stats_instance_id, stats_public_jwk, iat}`; the body repeats `stats_instance_id` and `stats_public_jwk`, which must equal the payload, and `iat` must be within 10 minutes of the server clock. The statistics key must be the one pinned for `stats_instance_id` by the first accepted report.",
-        "properties": {
-          "stats_instance_id": { "$ref": "#/components/schemas/Uuid" },
-          "stats_public_jwk": { "$ref": "#/components/schemas/Jwk" },
-          "statement_sig": { "type": "string", "maxLength": 2048, "pattern": "^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$" }
-        }
-      }
-    }
-  }
+  "problem_codes": [],
+  "schema_overrides": {}
 }

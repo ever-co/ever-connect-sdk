@@ -2589,16 +2589,13 @@
     },
     "/v1/instances/me/stats-link": {
       "post": {
+        "summary": "Links the installation's anonymous statistics id to it (integration `stats_link`, enabled by\nthe organization that connected it after the operator's local accept; never on an installation\nEver operates). The statement is signed with the statistics key and the call authenticated with\nthe connect key, so only an installation holding both keys links them. Only the id is stored.",
         "tags": [
           "registry"
         ],
-        "summary": "Link the anonymous stats identity to this instance",
-        "description": "Succeeds only when the key pinned by the stats endpoint equals the instance key (`409 key_mismatch` otherwise). This consented call is the only way the platform learns the link. The `stats_link` integration can be enabled only by the organization that owns the connection and takes effect after the server operator accepted it locally, also on a multi-tenant server; it is never offered on an Ever-operated instance.",
-        "x-ever-phase": 2,
-        "x-ever-auth": "instance",
+        "x-ever-idempotent": true,
         "x-ever-integration": "stats_link",
         "x-ever-rate-limit": "instance",
-        "x-ever-idempotent": true,
         "operationId": "instanceLinkStats",
         "security": [
           {
@@ -2607,101 +2604,67 @@
         ],
         "parameters": [
           {
-            "name": "Idempotency-Key",
+            "description": "Client-generated key, unique per principal, at most 128 characters; remembered 24 h.\nThe same key with the same request replays the first answer (`Idempotency-Replayed:\ntrue`); with a different request it answers `422 idempotency_mismatch`.",
             "in": "header",
+            "name": "Idempotency-Key",
             "required": true,
-            "description": "Client-generated key, unique per principal, <= 128 characters. See the `Idempotency` schema.",
             "schema": {
-              "type": "string",
+              "maxLength": 128,
               "minLength": 1,
-              "maxLength": 128
+              "type": "string"
             }
           }
         ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/StatsLinkCreate"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
-            "description": "Linked.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Empty"
+                  "$ref": "#/components/schemas/StatsLinked"
                 }
               }
-            }
+            },
+            "description": "Linked (the statistics id is never returned)"
           },
           "403": {
-            "description": "Principal lacks the role, scope, integration or entitlement, or the operation needs a fresh sign-in (`forbidden_role`, `forbidden_scope`, `integration_disabled`, `integration_revoked`, `instance_pending_approval`, `entitlement_required`, `tier_required`, `sso_required`, `reauth_required`, `session_required`: an Ever ID token issued to a product, installation or App client used anywhere except the two `everIdTokenRead` reads and the in-product consent write; `step_up_required`: that consent write without a sign-in in the last 300 s; `not_connection_owner`: an installation-wide integration changed by an organization that does not own the installation).",
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
-            }
+            },
+            "description": "`integration_disabled`: `stats_link` is not enabled for this installation, or Ever operates it"
           },
           "409": {
-            "description": "State conflict (`handle_taken`, `already_exists`, `key_mismatch`, `idempotency_in_progress`, `illegal_transition`, `billing_active`, `job_in_progress` when another job for the same subject is running).",
-            "headers": {
-              "Retry-After": {
-                "description": "Seconds to wait before retrying.",
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            },
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
-            }
+            },
+            "description": "`key_mismatch`: the statement is not signed by the key pinned for the statistics id; `already_linked`: another live installation holds it"
           },
-          "default": {
-            "description": "Any other error, as a problem document.",
-            "headers": {
-              "x-request-id": {
-                "description": "The request id (generated or echoed). Quote it in support requests.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "RateLimit-Limit": {
-                "description": "IETF RateLimit header; requests allowed in the current window for this principal class.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Remaining": {
-                "description": "IETF RateLimit header; requests remaining in the current window.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Reset": {
-                "description": "IETF RateLimit header; seconds until the window resets.",
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            },
+          "422": {
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
-            }
+            },
+            "description": "`validation_failed`: the body, or a statement that is malformed, does not verify, does not repeat the request or is older than ten minutes"
           }
         },
         "x-ever-row": 11
@@ -4530,210 +4493,142 @@
     },
     "/v1/stats/reports": {
       "post": {
+        "summary": "Submits the anonymous usage report of an installation (`ever.stats.v1`, the schema served at\n`GET /v1/stats/schema`). Credential-free by design: it works with the Ever Platform\nconnection disabled and an installation that never connected. The raw body, at most 16 384\nbytes, is signed with the installation's statistics key (trust on first use: the first\naccepted report pins the key to `instance_id`). Anything outside the closed schema answers\n`422 schema_violation` with `errors[].path` and is dropped; only a counter of the refused field\nis kept. The source address is never stored, not even hashed. A repeated `(instance_id,\nperiod)` on the same UTC day replaces the earlier report. At most 24 reports per day per\n`instance_id`, and 120 requests per minute per source address.",
         "tags": [
           "stats"
         ],
-        "summary": "Submit an anonymous usage report",
-        "description": "Credential-free by design: it must work with the Ever Platform\nconnection fully disabled and the instance never connected. The body is\nvalidated against the closed `ever.stats.v1` schema; anything outside\nthe allow-list answers `422 schema_violation` with `errors[].path`, the\npayload is dropped and only `(field_path, count)` rejection counters are\nkept. The source IP is never stored.\n\nSignature (trust on first use, an owner decision): `Ever-Stats-Key`\ncarries the instance's full Ed25519 public key (base64url, 32 bytes) on\nevery report, `Ever-Stats-Signature` carries `ed25519=` plus the\nbase64url signature over the raw body bytes, and the optional\n`Ever-Stats-Key-Id` repeats the key id (`base64url(sha256(pub)[0:8])`);\nwhen present it must equal the id computed from `Ever-Stats-Key`\n(`400 validation_failed` otherwise). The first accepted report pins the\nkey to `instance_id`, so a never-connected instance can be pinned from\nits first report; a different key for the same `instance_id` answers\n`409 key_mismatch`. Header names carry no `X-` prefix (RFC 6648) and\nequal the constants of the SDK's `SignedStatsReport` (conformance test in\nCI).\n\nIdempotency is by natural key, not by header: a repeated\n`(instance_id, period)` on the same UTC day answers\n`202 {accepted: true, superseded: true}` and the latest report wins.\nBody limit 16 KiB. Rate limits: 24 reports per day per `instance_id`,\n120 per minute per source address.\n",
-        "x-ever-phase": 2,
-        "x-ever-auth": "public (signed body)",
-        "x-ever-rate-limit": "stats-ingest",
         "x-ever-idempotent": false,
-        "x-ever-max-body-bytes": 16384,
+        "x-ever-rate-limit": "stats-ingest",
         "operationId": "ingestStatsReport",
-        "security": [],
+        "security": [
+          {}
+        ],
         "parameters": [
           {
+            "description": "The installation's Ed25519 statistics key: base64url without padding of the 32 public-key\nbytes. Pinned to `instance_id` on the first accepted report.",
+            "in": "header",
             "name": "Ever-Stats-Key",
-            "in": "header",
             "required": true,
-            "description": "base64url-encoded (unpadded) 32-byte Ed25519 public key of the instance; pinned on first sight.",
             "schema": {
-              "type": "string",
-              "pattern": "^[A-Za-z0-9_-]{43}$"
+              "pattern": "^[A-Za-z0-9_-]{43}$",
+              "type": "string"
             }
           },
           {
+            "description": "`ed25519=` followed by the base64url (no padding) signature over the exact request body.",
+            "in": "header",
             "name": "Ever-Stats-Signature",
-            "in": "header",
             "required": true,
-            "description": "`ed25519=` followed by the base64url-encoded (unpadded) 64-byte Ed25519 signature over the raw request body.",
             "schema": {
-              "type": "string",
-              "pattern": "^ed25519=[A-Za-z0-9_-]{86}$"
+              "pattern": "^ed25519=[A-Za-z0-9_-]{86}$",
+              "type": "string"
             }
           },
           {
-            "name": "Ever-Stats-Key-Id",
+            "description": "Optional key id: base64url of the first 8 bytes of SHA-256 over the public key; must\nmatch `Ever-Stats-Key` when sent.",
             "in": "header",
+            "name": "Ever-Stats-Key-Id",
             "required": false,
-            "description": "Optional key id `base64url(sha256(public_key)[0:8])` (11 chars); must match `Ever-Stats-Key` when sent.",
             "schema": {
-              "type": "string",
-              "pattern": "^[A-Za-z0-9_-]{11}$"
+              "pattern": "^[A-Za-z0-9_-]{11}$",
+              "type": [
+                "string",
+                "null"
+              ]
             }
           }
         ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/StatsReport"
+                "type": "object"
               }
             }
-          }
+          },
+          "description": "An `ever.stats.v1` report (closed JSON Schema, `GET /v1/stats/schema`): integers only, every string bound by a constant, an enumeration or a pattern, at most 16 384 bytes.",
+          "required": true
         },
         "responses": {
           "202": {
-            "description": "Accepted (or superseded an earlier report for the same period today).",
-            "headers": {
-              "RateLimit-Limit": {
-                "description": "IETF RateLimit header; requests allowed in the current window for this principal class.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Remaining": {
-                "description": "IETF RateLimit header; requests remaining in the current window.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Reset": {
-                "description": "IETF RateLimit header; seconds until the window resets.",
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            },
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/StatsAccepted"
                 }
               }
-            }
+            },
+            "description": "Accepted, or accepted replacing a report of the same `instance_id` and `period` received the same UTC day (`superseded`)"
           },
           "400": {
-            "description": "Malformed request or ambiguous credentials (`ambiguous_credentials`: two authentication schemes on one request).",
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
-            }
+            },
+            "description": "`validation_failed`: `Ever-Stats-Key` is missing or not an Ed25519 public key; `signature_invalid`: the signature is missing, malformed or does not verify over the body, or `Ever-Stats-Key-Id` names another key"
           },
           "409": {
-            "description": "State conflict (`handle_taken`, `already_exists`, `key_mismatch`, `idempotency_in_progress`, `illegal_transition`, `billing_active`, `job_in_progress` when another job for the same subject is running).",
-            "headers": {
-              "Retry-After": {
-                "description": "Seconds to wait before retrying.",
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            },
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
-            }
+            },
+            "description": "`key_mismatch`: the `instance_id` is pinned to another key"
           },
           "413": {
-            "description": "Body larger than 16 KiB (`validation_failed`).",
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
-            }
+            },
+            "description": "`validation_failed`: the body is larger than 16 384 bytes (`errors[0].code` is `too_large`)"
+          },
+          "415": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`unsupported_media_type`: the body is not `application/json`"
           },
           "422": {
-            "description": "Validation failed; unknown fields are rejected on writes (`validation_failed`, `schema_violation`, `code_invalid`, `idempotency_mismatch`, `mirror_owned_field`, `limit_exceeded`).",
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
-            }
+            },
+            "description": "`schema_violation`: the report is not valid JSON or breaks the schema (`errors[].path`, `errors[].code` one of `unknown_field`, `type`, `pattern`, `range`, `required`, `duplicate_key`, `schema_unknown`); the report is dropped"
           },
           "429": {
-            "description": "Rate limit exceeded for this principal class (`rate_limited`).",
-            "headers": {
-              "Retry-After": {
-                "description": "Seconds to wait before retrying.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Limit": {
-                "description": "IETF RateLimit header; requests allowed in the current window for this principal class.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Remaining": {
-                "description": "IETF RateLimit header; requests remaining in the current window.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Reset": {
-                "description": "IETF RateLimit header; seconds until the window resets.",
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            },
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
-            }
+            },
+            "description": "`rate_limited`: the `instance_id` sent its reports for the UTC day, or the source address too many requests (`Retry-After`)"
           },
-          "default": {
-            "description": "Any other error, as a problem document.",
-            "headers": {
-              "x-request-id": {
-                "description": "The request id (generated or echoed). Quote it in support requests.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "RateLimit-Limit": {
-                "description": "IETF RateLimit header; requests allowed in the current window for this principal class.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Remaining": {
-                "description": "IETF RateLimit header; requests remaining in the current window.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Reset": {
-                "description": "IETF RateLimit header; seconds until the window resets.",
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            },
+          "503": {
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
-            }
+            },
+            "description": "The report store is unreachable; retry later"
           }
         },
         "x-ever-row": 17
@@ -6115,6 +6010,7 @@
           "product_mismatch",
           "product_not_supported",
           "key_mismatch",
+          "signature_invalid",
           "unlinked_org",
           "schema_violation",
           "mirror_owned_field",
@@ -8837,1283 +8733,80 @@
         }
       },
       "StatsAccepted": {
-        "type": "object",
+        "description": "The answer to an accepted report.",
+        "properties": {
+          "accepted": {
+            "description": "Always `true`.",
+            "type": "boolean"
+          },
+          "superseded": {
+            "description": "`true` when an earlier report of the same `instance_id` and `period` arrived the same UTC\nday and was replaced (absent otherwise).",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        },
         "required": [
           "accepted"
         ],
-        "properties": {
-          "accepted": {
-            "type": "boolean",
-            "const": true
-          },
-          "superseded": {
-            "type": "boolean",
-            "description": "`true` when an earlier report for the same `(instance_id, period)` was received the same day and replaced."
-          },
-          "report_id": {
-            "type": "string"
-          }
-        }
+        "type": "object"
       },
       "StatsLinkCreate": {
-        "type": "object",
         "additionalProperties": false,
+        "description": "`POST /v1/instances/me/stats-link`: the installation links its anonymous statistics id to\nitself. The statement is signed with the statistics key; the call is authenticated with the\nconnect key, so only an installation holding both can link them.",
+        "properties": {
+          "statement_sig": {
+            "description": "A compact JWS (`alg: EdDSA`, `typ: ever-stats-link+jwt`) signed with the statistics key\nover `{stats_instance_id, stats_public_jwk, iat}`, at most ten minutes old.",
+            "type": "string"
+          },
+          "stats_instance_id": {
+            "description": "The anonymous statistics id (UUID v4) the installation reports under.",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "stats_public_jwk": {
+            "$ref": "#/components/schemas/StatsPublicJwk",
+            "description": "The statistics key (the one its reports are signed with)."
+          }
+        },
         "required": [
           "stats_instance_id",
           "stats_public_jwk",
           "statement_sig"
         ],
-        "description": "The two-key link statement. `statement_sig` is a compact JWS (header `{alg: EdDSA, typ: ever-stats-link+jwt}`) signed with the statistics key whose payload is `{stats_instance_id, stats_public_jwk, iat}`; the body repeats `stats_instance_id` and `stats_public_jwk`, which must equal the payload, and `iat` must be within 10 minutes of the server clock. The statistics key must be the one pinned for `stats_instance_id` by the first accepted report.",
-        "properties": {
-          "stats_instance_id": {
-            "$ref": "#/components/schemas/Uuid"
-          },
-          "stats_public_jwk": {
-            "$ref": "#/components/schemas/Jwk"
-          },
-          "statement_sig": {
-            "type": "string",
-            "maxLength": 2048,
-            "pattern": "^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$"
-          }
-        }
+        "type": "object"
       },
-      "StatsReport": {
-        "title": "Ever Platform anonymous instance statistics v1",
-        "description": "One report per instance per calendar month (UTC). Every object is closed; every string is constrained by const, enum or pattern; every map key comes from a closed enum (an unknown value counts under other, never as its own key); amounts are integers in minor units (period totals). counts and aggregates may be empty objects: a frontend-only instance sends them empty. No name, e-mail, address, identifier of a person or counterparty, URL, hostname or free text can appear anywhere in a valid document.",
-        "type": "object",
+      "StatsLinked": {
+        "description": "The answer to a link: nothing beyond the status (the statistics id is never returned).",
+        "type": "object"
+      },
+      "StatsPublicJwk": {
         "additionalProperties": false,
+        "description": "The statistics key of a link request, as a JWK (`kty: OKP`, `crv: Ed25519`).",
+        "properties": {
+          "crv": {
+            "description": "`Ed25519`.",
+            "example": "Ed25519",
+            "type": "string"
+          },
+          "kty": {
+            "description": "`OKP`.",
+            "example": "OKP",
+            "type": "string"
+          },
+          "x": {
+            "description": "base64url (no padding) of the 32 public-key bytes.",
+            "pattern": "^[A-Za-z0-9_-]{43}$",
+            "type": "string"
+          }
+        },
         "required": [
-          "schema",
-          "report_id",
-          "instance_id",
-          "sent_at",
-          "module_version",
-          "product",
-          "instance_kind",
-          "serves",
-          "version",
-          "channel",
-          "install_source",
-          "country",
-          "period",
-          "final",
-          "counts",
-          "features",
-          "aggregates"
+          "kty",
+          "crv",
+          "x"
         ],
-        "properties": {
-          "schema": {
-            "const": "ever.stats.v1"
-          },
-          "report_id": {
-            "type": "string",
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-            "maxLength": 36,
-            "description": "UUID v4 minted per report by the sender; the ingest dedupes on (instance_id, period, received day), not on report_id."
-          },
-          "instance_id": {
-            "type": "string",
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-            "maxLength": 36,
-            "description": "Opaque UUID v4 generated by the product on first boot (ever_instance.instance_id). It is the stats_instance_id on the platform; the Registry never learns it unless the operator enables the consented stats_link integration."
-          },
-          "sent_at": {
-            "type": "string",
-            "pattern": "^20[0-9]{2}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$",
-            "maxLength": 10,
-            "description": "UTC date (YYYY-MM-DD) the report was built. No time of day, so a report cannot be joined to a request log line."
-          },
-          "module_version": {
-            "type": "string",
-            "pattern": "^[0-9]{1,4}\\.[0-9]{1,4}\\.[0-9]{1,4}$",
-            "maxLength": 14,
-            "description": "Version of the ever-stats module / ever-connect-sdk that built the report (major.minor.patch, no suffix)."
-          },
-          "product": {
-            "enum": [
-              "gauzy",
-              "teams",
-              "works",
-              "rec",
-              "traduora"
-            ]
-          },
-          "instance_kind": {
-            "enum": [
-              "backend",
-              "frontend"
-            ]
-          },
-          "serves": {
-            "type": "array",
-            "uniqueItems": true,
-            "minItems": 1,
-            "maxItems": 5,
-            "items": {
-              "enum": [
-                "gauzy",
-                "teams",
-                "works",
-                "rec",
-                "traduora"
-              ]
-            },
-            "description": "Products this instance serves; a Gauzy API that also serves Ever Teams reports once with [\"gauzy\",\"teams\"] (EVER_STATS_SERVES)."
-          },
-          "version": {
-            "type": "string",
-            "pattern": "^[0-9]{1,4}\\.[0-9]{1,4}\\.[0-9]{1,4}$",
-            "maxLength": 14,
-            "description": "Product release version, major.minor.patch with no suffix: a fork's build string could name a company. The builder maps any pre-release or build suffix to channel."
-          },
-          "channel": {
-            "enum": [
-              "stable",
-              "rc",
-              "beta",
-              "dev",
-              "custom"
-            ],
-            "description": "Release channel derived by the builder from the version suffix; an unrecognised suffix maps to custom."
-          },
-          "install_source": {
-            "type": "string",
-            "pattern": "^(cloud|self-hosted|ever\\.sh|works_app|desktop|partner:[a-z0-9-]{2,32})$",
-            "maxLength": 40,
-            "description": "Declared by EVER_INSTALL_SOURCE only; never inferred."
-          },
-          "country": {
-            "type": "string",
-            "pattern": "^([A-Z]{2}|ZZ)$",
-            "maxLength": 2,
-            "description": "ISO 3166-1 alpha-2 declared by the operator (EVER_STATS_COUNTRY) or ZZ when undeclared."
-          },
-          "period": {
-            "type": "string",
-            "pattern": "^20[0-9]{2}-(0[1-9]|1[0-2])$",
-            "maxLength": 7,
-            "description": "Calendar month (UTC) the counters and aggregates describe."
-          },
-          "final": {
-            "type": "boolean",
-            "description": "true = closed month (re-sent on days 1-3 of the following month); false = running total for the current month, superseded by later reports."
-          },
-          "counts": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "tenants": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "organizations": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "users": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "users_active_30d": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "employees": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "employees_active": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "teams": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "projects": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "tasks": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "contacts": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "integrations_in_use": {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "import_export": {
-                    "$ref": "#/components/schemas/StatsV1_count"
-                  },
-                  "upwork": {
-                    "$ref": "#/components/schemas/StatsV1_count"
-                  },
-                  "hubstaff": {
-                    "$ref": "#/components/schemas/StatsV1_count"
-                  },
-                  "gauzy_ai": {
-                    "$ref": "#/components/schemas/StatsV1_count"
-                  },
-                  "github": {
-                    "$ref": "#/components/schemas/StatsV1_count"
-                  },
-                  "jira": {
-                    "$ref": "#/components/schemas/StatsV1_count"
-                  },
-                  "makecom": {
-                    "$ref": "#/components/schemas/StatsV1_count"
-                  },
-                  "zapier": {
-                    "$ref": "#/components/schemas/StatsV1_count"
-                  },
-                  "activepieces": {
-                    "$ref": "#/components/schemas/StatsV1_count"
-                  },
-                  "sim": {
-                    "$ref": "#/components/schemas/StatsV1_count"
-                  },
-                  "plane": {
-                    "$ref": "#/components/schemas/StatsV1_count"
-                  },
-                  "ever_async": {
-                    "$ref": "#/components/schemas/StatsV1_count"
-                  },
-                  "ever_connect": {
-                    "$ref": "#/components/schemas/StatsV1_count"
-                  },
-                  "other": {
-                    "$ref": "#/components/schemas/StatsV1_count"
-                  }
-                }
-              },
-              "works": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "agents": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "missions": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "fleet_nodes": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "plugins_enabled": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "works_by_kind": {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "website": {
-                    "$ref": "#/components/schemas/StatsV1_count"
-                  },
-                  "landing_page": {
-                    "$ref": "#/components/schemas/StatsV1_count"
-                  },
-                  "blog": {
-                    "$ref": "#/components/schemas/StatsV1_count"
-                  },
-                  "directory": {
-                    "$ref": "#/components/schemas/StatsV1_count"
-                  },
-                  "awesome_repo": {
-                    "$ref": "#/components/schemas/StatsV1_count"
-                  },
-                  "repo": {
-                    "$ref": "#/components/schemas/StatsV1_count"
-                  },
-                  "company": {
-                    "$ref": "#/components/schemas/StatsV1_count"
-                  },
-                  "campaign": {
-                    "$ref": "#/components/schemas/StatsV1_count"
-                  },
-                  "default": {
-                    "$ref": "#/components/schemas/StatsV1_count"
-                  },
-                  "app": {
-                    "$ref": "#/components/schemas/StatsV1_count"
-                  },
-                  "other": {
-                    "$ref": "#/components/schemas/StatsV1_count"
-                  }
-                }
-              },
-              "workspaces": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "terms": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "translations": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "locales": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "project_clients": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              }
-            }
-          },
-          "features": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "dashboard": {
-                "type": "boolean"
-              },
-              "time_tracking": {
-                "type": "boolean"
-              },
-              "estimate": {
-                "type": "boolean"
-              },
-              "estimate_received": {
-                "type": "boolean"
-              },
-              "invoice": {
-                "type": "boolean"
-              },
-              "invoice_recurring": {
-                "type": "boolean"
-              },
-              "invoice_received": {
-                "type": "boolean"
-              },
-              "income": {
-                "type": "boolean"
-              },
-              "expense": {
-                "type": "boolean"
-              },
-              "payment": {
-                "type": "boolean"
-              },
-              "proposal": {
-                "type": "boolean"
-              },
-              "proposal_template": {
-                "type": "boolean"
-              },
-              "pipeline": {
-                "type": "boolean"
-              },
-              "pipeline_deal": {
-                "type": "boolean"
-              },
-              "dashboard_task": {
-                "type": "boolean"
-              },
-              "team_task": {
-                "type": "boolean"
-              },
-              "my_task": {
-                "type": "boolean"
-              },
-              "job": {
-                "type": "boolean"
-              },
-              "employees": {
-                "type": "boolean"
-              },
-              "employee_time_activity": {
-                "type": "boolean"
-              },
-              "employee_timesheets": {
-                "type": "boolean"
-              },
-              "employee_appointment": {
-                "type": "boolean"
-              },
-              "employee_approval": {
-                "type": "boolean"
-              },
-              "employee_approval_policy": {
-                "type": "boolean"
-              },
-              "employee_level": {
-                "type": "boolean"
-              },
-              "employee_position": {
-                "type": "boolean"
-              },
-              "employee_timeoff": {
-                "type": "boolean"
-              },
-              "employee_recurring_expense": {
-                "type": "boolean"
-              },
-              "employee_candidate": {
-                "type": "boolean"
-              },
-              "manage_interview": {
-                "type": "boolean"
-              },
-              "manage_invite": {
-                "type": "boolean"
-              },
-              "organization": {
-                "type": "boolean"
-              },
-              "organization_equipment": {
-                "type": "boolean"
-              },
-              "organization_inventory": {
-                "type": "boolean"
-              },
-              "organization_tag": {
-                "type": "boolean"
-              },
-              "organization_vendor": {
-                "type": "boolean"
-              },
-              "organization_project": {
-                "type": "boolean"
-              },
-              "organization_department": {
-                "type": "boolean"
-              },
-              "organization_team": {
-                "type": "boolean"
-              },
-              "organization_document": {
-                "type": "boolean"
-              },
-              "documents": {
-                "type": "boolean"
-              },
-              "organization_employment_type": {
-                "type": "boolean"
-              },
-              "organization_recurring_expense": {
-                "type": "boolean"
-              },
-              "organization_help_center": {
-                "type": "boolean"
-              },
-              "contact": {
-                "type": "boolean"
-              },
-              "goal": {
-                "type": "boolean"
-              },
-              "goal_report": {
-                "type": "boolean"
-              },
-              "goal_setting": {
-                "type": "boolean"
-              },
-              "report": {
-                "type": "boolean"
-              },
-              "user": {
-                "type": "boolean"
-              },
-              "organizations": {
-                "type": "boolean"
-              },
-              "app_integration": {
-                "type": "boolean"
-              },
-              "setting": {
-                "type": "boolean"
-              },
-              "email_history": {
-                "type": "boolean"
-              },
-              "email_template": {
-                "type": "boolean"
-              },
-              "import_export": {
-                "type": "boolean"
-              },
-              "file_storage": {
-                "type": "boolean"
-              },
-              "payment_gateway": {
-                "type": "boolean"
-              },
-              "sms_gateway": {
-                "type": "boolean"
-              },
-              "smtp": {
-                "type": "boolean"
-              },
-              "roles_permission": {
-                "type": "boolean"
-              },
-              "email_verification": {
-                "type": "boolean"
-              },
-              "open_stats": {
-                "type": "boolean"
-              },
-              "app_works_enabled": {
-                "type": "boolean"
-              },
-              "app_launcher_enabled": {
-                "type": "boolean"
-              },
-              "dynamic_plugins": {
-                "type": "boolean"
-              },
-              "deploy_ever_works_enabled": {
-                "type": "boolean"
-              },
-              "subscriptions_enabled": {
-                "type": "boolean"
-              },
-              "mcp_enabled": {
-                "type": "boolean"
-              },
-              "gauzy_mirror": {
-                "type": "boolean"
-              },
-              "google_login": {
-                "type": "boolean"
-              },
-              "signups_enabled": {
-                "type": "boolean"
-              }
-            }
-          },
-          "aggregates": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "invoiced_minor": {
-                "$ref": "#/components/schemas/StatsV1_currency_map"
-              },
-              "invoices": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "payments_minor": {
-                "$ref": "#/components/schemas/StatsV1_currency_map_signed"
-              },
-              "payments": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "hours_tracked_min": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "deployments": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "deployments_by_provider": {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "ever_works": {
-                    "$ref": "#/components/schemas/StatsV1_count"
-                  },
-                  "vercel": {
-                    "$ref": "#/components/schemas/StatsV1_count"
-                  },
-                  "k8s": {
-                    "$ref": "#/components/schemas/StatsV1_count"
-                  },
-                  "your_cluster": {
-                    "$ref": "#/components/schemas/StatsV1_count"
-                  },
-                  "ever_works_apps": {
-                    "$ref": "#/components/schemas/StatsV1_count"
-                  },
-                  "other": {
-                    "$ref": "#/components/schemas/StatsV1_count"
-                  }
-                }
-              },
-              "runs": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "credits_consumed": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "screenshots": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "videos": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "storage_mb": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "translations_changed": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              }
-            }
-          }
-        },
-        "oneOf": [
-          {
-            "properties": {
-              "product": {
-                "const": "gauzy"
-              },
-              "counts": {
-                "$ref": "#/components/schemas/StatsV1_gauzy_counts"
-              },
-              "features": {
-                "$ref": "#/components/schemas/StatsV1_gauzy_features"
-              },
-              "aggregates": {
-                "$ref": "#/components/schemas/StatsV1_gauzy_aggregates"
-              }
-            },
-            "required": [
-              "product"
-            ]
-          },
-          {
-            "properties": {
-              "product": {
-                "const": "teams"
-              },
-              "counts": {
-                "$ref": "#/components/schemas/StatsV1_teams_counts"
-              },
-              "features": {
-                "$ref": "#/components/schemas/StatsV1_teams_features"
-              },
-              "aggregates": {
-                "$ref": "#/components/schemas/StatsV1_teams_aggregates"
-              }
-            },
-            "required": [
-              "product"
-            ]
-          },
-          {
-            "properties": {
-              "product": {
-                "const": "works"
-              },
-              "counts": {
-                "$ref": "#/components/schemas/StatsV1_works_counts"
-              },
-              "features": {
-                "$ref": "#/components/schemas/StatsV1_works_features"
-              },
-              "aggregates": {
-                "$ref": "#/components/schemas/StatsV1_works_aggregates"
-              }
-            },
-            "required": [
-              "product"
-            ]
-          },
-          {
-            "properties": {
-              "product": {
-                "const": "rec"
-              },
-              "counts": {
-                "$ref": "#/components/schemas/StatsV1_rec_counts"
-              },
-              "features": {
-                "$ref": "#/components/schemas/StatsV1_rec_features"
-              },
-              "aggregates": {
-                "$ref": "#/components/schemas/StatsV1_rec_aggregates"
-              }
-            },
-            "required": [
-              "product"
-            ]
-          },
-          {
-            "properties": {
-              "product": {
-                "const": "traduora"
-              },
-              "counts": {
-                "$ref": "#/components/schemas/StatsV1_traduora_counts"
-              },
-              "features": {
-                "$ref": "#/components/schemas/StatsV1_traduora_features"
-              },
-              "aggregates": {
-                "$ref": "#/components/schemas/StatsV1_traduora_aggregates"
-              }
-            },
-            "required": [
-              "product"
-            ]
-          }
-        ]
-      },
-      "StatsV1_amount_minor": {
-        "type": "integer",
-        "minimum": 0,
-        "maximum": 9007199254740991,
-        "description": "Integer minor units (cents) of the currency named by the key; a period total, never a per-record value."
-      },
-      "StatsV1_amount_minor_signed": {
-        "type": "integer",
-        "minimum": -9007199254740991,
-        "maximum": 9007199254740991,
-        "description": "Integer minor units; may be negative for refund-heavy periods."
-      },
-      "StatsV1_count": {
-        "type": "integer",
-        "minimum": 0,
-        "maximum": 1000000000
-      },
-      "StatsV1_currency_map": {
-        "type": "object",
-        "propertyNames": {
-          "pattern": "^[A-Z]{3}$",
-          "maxLength": 3
-        },
-        "maxProperties": 20,
-        "additionalProperties": {
-          "$ref": "#/components/schemas/StatsV1_amount_minor"
-        }
-      },
-      "StatsV1_currency_map_signed": {
-        "type": "object",
-        "propertyNames": {
-          "pattern": "^[A-Z]{3}$",
-          "maxLength": 3
-        },
-        "maxProperties": 20,
-        "additionalProperties": {
-          "$ref": "#/components/schemas/StatsV1_amount_minor_signed"
-        }
-      },
-      "StatsV1_gauzy_aggregates": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "invoiced_minor": {
-            "$ref": "#/components/schemas/StatsV1_currency_map"
-          },
-          "invoices": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          },
-          "payments_minor": {
-            "$ref": "#/components/schemas/StatsV1_currency_map_signed"
-          },
-          "payments": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          },
-          "hours_tracked_min": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          }
-        }
-      },
-      "StatsV1_gauzy_counts": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "tenants": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          },
-          "organizations": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          },
-          "users": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          },
-          "users_active_30d": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          },
-          "employees": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          },
-          "employees_active": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          },
-          "teams": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          },
-          "projects": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          },
-          "tasks": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          },
-          "contacts": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          },
-          "integrations_in_use": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "import_export": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "upwork": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "hubstaff": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "gauzy_ai": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "github": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "jira": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "makecom": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "zapier": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "activepieces": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "sim": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "plane": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "ever_async": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "ever_connect": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "other": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              }
-            }
-          }
-        }
-      },
-      "StatsV1_gauzy_features": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "dashboard": {
-            "type": "boolean"
-          },
-          "time_tracking": {
-            "type": "boolean"
-          },
-          "estimate": {
-            "type": "boolean"
-          },
-          "estimate_received": {
-            "type": "boolean"
-          },
-          "invoice": {
-            "type": "boolean"
-          },
-          "invoice_recurring": {
-            "type": "boolean"
-          },
-          "invoice_received": {
-            "type": "boolean"
-          },
-          "income": {
-            "type": "boolean"
-          },
-          "expense": {
-            "type": "boolean"
-          },
-          "payment": {
-            "type": "boolean"
-          },
-          "proposal": {
-            "type": "boolean"
-          },
-          "proposal_template": {
-            "type": "boolean"
-          },
-          "pipeline": {
-            "type": "boolean"
-          },
-          "pipeline_deal": {
-            "type": "boolean"
-          },
-          "dashboard_task": {
-            "type": "boolean"
-          },
-          "team_task": {
-            "type": "boolean"
-          },
-          "my_task": {
-            "type": "boolean"
-          },
-          "job": {
-            "type": "boolean"
-          },
-          "employees": {
-            "type": "boolean"
-          },
-          "employee_time_activity": {
-            "type": "boolean"
-          },
-          "employee_timesheets": {
-            "type": "boolean"
-          },
-          "employee_appointment": {
-            "type": "boolean"
-          },
-          "employee_approval": {
-            "type": "boolean"
-          },
-          "employee_approval_policy": {
-            "type": "boolean"
-          },
-          "employee_level": {
-            "type": "boolean"
-          },
-          "employee_position": {
-            "type": "boolean"
-          },
-          "employee_timeoff": {
-            "type": "boolean"
-          },
-          "employee_recurring_expense": {
-            "type": "boolean"
-          },
-          "employee_candidate": {
-            "type": "boolean"
-          },
-          "manage_interview": {
-            "type": "boolean"
-          },
-          "manage_invite": {
-            "type": "boolean"
-          },
-          "organization": {
-            "type": "boolean"
-          },
-          "organization_equipment": {
-            "type": "boolean"
-          },
-          "organization_inventory": {
-            "type": "boolean"
-          },
-          "organization_tag": {
-            "type": "boolean"
-          },
-          "organization_vendor": {
-            "type": "boolean"
-          },
-          "organization_project": {
-            "type": "boolean"
-          },
-          "organization_department": {
-            "type": "boolean"
-          },
-          "organization_team": {
-            "type": "boolean"
-          },
-          "organization_document": {
-            "type": "boolean"
-          },
-          "documents": {
-            "type": "boolean"
-          },
-          "organization_employment_type": {
-            "type": "boolean"
-          },
-          "organization_recurring_expense": {
-            "type": "boolean"
-          },
-          "organization_help_center": {
-            "type": "boolean"
-          },
-          "contact": {
-            "type": "boolean"
-          },
-          "goal": {
-            "type": "boolean"
-          },
-          "goal_report": {
-            "type": "boolean"
-          },
-          "goal_setting": {
-            "type": "boolean"
-          },
-          "report": {
-            "type": "boolean"
-          },
-          "user": {
-            "type": "boolean"
-          },
-          "organizations": {
-            "type": "boolean"
-          },
-          "app_integration": {
-            "type": "boolean"
-          },
-          "setting": {
-            "type": "boolean"
-          },
-          "email_history": {
-            "type": "boolean"
-          },
-          "email_template": {
-            "type": "boolean"
-          },
-          "import_export": {
-            "type": "boolean"
-          },
-          "file_storage": {
-            "type": "boolean"
-          },
-          "payment_gateway": {
-            "type": "boolean"
-          },
-          "sms_gateway": {
-            "type": "boolean"
-          },
-          "smtp": {
-            "type": "boolean"
-          },
-          "roles_permission": {
-            "type": "boolean"
-          },
-          "email_verification": {
-            "type": "boolean"
-          },
-          "open_stats": {
-            "type": "boolean"
-          }
-        }
-      },
-      "StatsV1_rec_aggregates": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "screenshots": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          },
-          "videos": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          },
-          "storage_mb": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          }
-        }
-      },
-      "StatsV1_rec_counts": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "users": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          },
-          "workspaces": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          },
-          "teams": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          }
-        }
-      },
-      "StatsV1_rec_features": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "gauzy_mirror": {
-            "type": "boolean"
-          },
-          "google_login": {
-            "type": "boolean"
-          }
-        }
-      },
-      "StatsV1_teams_aggregates": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {}
-      },
-      "StatsV1_teams_counts": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {}
-      },
-      "StatsV1_teams_features": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {}
-      },
-      "StatsV1_traduora_aggregates": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "translations_changed": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          }
-        }
-      },
-      "StatsV1_traduora_counts": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "users": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          },
-          "projects": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          },
-          "terms": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          },
-          "translations": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          },
-          "locales": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          },
-          "project_clients": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          }
-        }
-      },
-      "StatsV1_traduora_features": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "google_login": {
-            "type": "boolean"
-          },
-          "signups_enabled": {
-            "type": "boolean"
-          }
-        }
-      },
-      "StatsV1_works_aggregates": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "deployments": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          },
-          "deployments_by_provider": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "ever_works": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "vercel": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "k8s": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "your_cluster": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "ever_works_apps": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "other": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              }
-            }
-          },
-          "runs": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          },
-          "credits_consumed": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          }
-        }
-      },
-      "StatsV1_works_counts": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "users": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          },
-          "tenants": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          },
-          "organizations": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          },
-          "works": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          },
-          "agents": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          },
-          "missions": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          },
-          "teams": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          },
-          "fleet_nodes": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          },
-          "plugins_enabled": {
-            "$ref": "#/components/schemas/StatsV1_count"
-          },
-          "works_by_kind": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "website": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "landing_page": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "blog": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "directory": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "awesome_repo": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "repo": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "company": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "campaign": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "default": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "app": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              },
-              "other": {
-                "$ref": "#/components/schemas/StatsV1_count"
-              }
-            }
-          }
-        }
-      },
-      "StatsV1_works_features": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "app_works_enabled": {
-            "type": "boolean"
-          },
-          "app_launcher_enabled": {
-            "type": "boolean"
-          },
-          "dynamic_plugins": {
-            "type": "boolean"
-          },
-          "deploy_ever_works_enabled": {
-            "type": "boolean"
-          },
-          "subscriptions_enabled": {
-            "type": "boolean"
-          },
-          "mcp_enabled": {
-            "type": "boolean"
-          }
-        }
+        "type": "object"
       },
       "StepUp": {
         "description": "How to reach a withheld organization.",
@@ -10508,11 +9201,6 @@
             }
           }
         }
-      },
-      "Uuid": {
-        "type": "string",
-        "format": "uuid",
-        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{3,4}-[0-9a-f]{4}-[0-9a-f]{12}$"
       },
       "Vendor": {
         "type": "object",
