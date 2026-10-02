@@ -119,6 +119,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "ever-connect-sdk"
+version = "0.1.0"
+dependencies = [
+ "ever-connect-contracts",
+ "jsonschema",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "fancy-regex"
 version = "0.19.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"

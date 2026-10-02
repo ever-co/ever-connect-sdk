@@ -47,6 +47,15 @@ importers:
 
   packages/ts/connect-contracts: {}
 
+  packages/ts/connect-sdk:
+    dependencies:
+      '@ever-co/connect-contracts':
+        specifier: workspace:*
+        version: link:../connect-contracts
+      ajv:
+        specifier: 8.20.0
+        version: 8.20.0
+
   tools/mock-platform:
     dependencies:
       ajv:

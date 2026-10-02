@@ -69,7 +69,10 @@ fn load() -> Schemas {
     let mut events = BTreeMap::new();
     let mut envelope = String::new();
     let dir = repo().join("contracts/schemas/events");
-    let mut files: Vec<_> = std::fs::read_dir(&dir).unwrap().map(|e| e.unwrap().path()).collect();
+    let mut files: Vec<_> = std::fs::read_dir(&dir)
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .collect();
     files.sort();
     for path in files {
         let schema: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
@@ -82,17 +85,33 @@ fn load() -> Schemas {
         }
         resources.push((id, Draft::Draft202012.create_resource(schema)));
     }
-    let registry = Registry::new().extend(resources).unwrap().prepare().unwrap();
+    let registry = Registry::new()
+        .extend(resources)
+        .unwrap()
+        .prepare()
+        .unwrap();
     let mut pending = BTreeMap::new();
-    for op in read("contracts/openapi/pending-upstream.json")["operations"].as_array().unwrap() {
+    for op in read("contracts/openapi/pending-upstream.json")["operations"]
+        .as_array()
+        .unwrap()
+    {
         if !op["request"].is_null() {
-            pending.insert(op["operation_id"].as_str().unwrap().to_owned(), op["request"].clone());
+            pending.insert(
+                op["operation_id"].as_str().unwrap().to_owned(),
+                op["request"].clone(),
+            );
         }
     }
-    Schemas { registry, pending, docs, events, envelope }
+    Schemas {
+        registry,
+        pending,
+        docs,
+        events,
+        envelope,
+    }
 }
 
-fn validator<'a>(schemas: &'a Schemas, schema: &Value) -> Validator {
+fn validator(schemas: &Schemas, schema: &Value) -> Validator {
     jsonschema::options()
         .with_draft(Draft::Draft202012)
         .should_validate_formats(true)
@@ -119,20 +138,34 @@ fn fixtures_roundtrip() {
         let typed_expected = entry["typed"].as_bool().unwrap();
         let doc = read(format!("contracts/fixtures/{file}"));
         let valid = match kind {
-            "component" => by_ref(&schemas, &format!("{CONTRACT}#/components/schemas/{schema}")).is_valid(&doc),
+            "component" => by_ref(
+                &schemas,
+                &format!("{CONTRACT}#/components/schemas/{schema}"),
+            )
+            .is_valid(&doc),
             "pending" => validator(&schemas, &schemas.pending[schema]).is_valid(&doc),
             "schema" => by_ref(&schemas, &schemas.docs[schema]).is_valid(&doc),
             "feed" => {
-                let page = by_ref(&schemas, &format!("{CONTRACT}#/components/schemas/FeedResponse")).is_valid(&doc);
+                let page = by_ref(
+                    &schemas,
+                    &format!("{CONTRACT}#/components/schemas/FeedResponse"),
+                )
+                .is_valid(&doc);
                 let envelope = by_ref(&schemas, &schemas.envelope);
                 let data = by_ref(&schemas, &schemas.events[schema]);
-                page && doc["events"].as_array().unwrap().iter().all(|e| envelope.is_valid(e) && data.is_valid(&e["data"]))
+                page && doc["events"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .all(|e| envelope.is_valid(e) && data.is_valid(&e["data"]))
             }
             other => panic!("{file}: unknown kind {other}"),
         };
         verdicts.insert(file.to_owned(), valid);
         if valid != expected {
-            problems.push(format!("{file}: jsonschema says valid={valid}, the index says {expected}"));
+            problems.push(format!(
+                "{file}: jsonschema says valid={valid}, the index says {expected}"
+            ));
         }
         if typed_expected {
             let results: Vec<(Value, Option<Result<Value, String>>)> = match kind {
@@ -150,7 +183,9 @@ fn fixtures_roundtrip() {
             for (original, result) in results {
                 match result {
                     None => problems.push(format!("{file}: no generated type for {kind} {schema}")),
-                    Some(Err(e)) => problems.push(format!("{file}: does not deserialize into the generated type: {e}")),
+                    Some(Err(e)) => problems.push(format!(
+                        "{file}: does not deserialize into the generated type: {e}"
+                    )),
                     Some(Ok(back)) => {
                         if strip_nulls(&back) != strip_nulls(&original) {
                             problems.push(format!("{file}: the typed round trip changed the document:\n  in:  {original}\n  out: {back}"));
@@ -162,6 +197,15 @@ fn fixtures_roundtrip() {
     }
     let out_dir = repo().join("target").join("fixture-verdicts");
     std::fs::create_dir_all(&out_dir).unwrap();
-    std::fs::write(out_dir.join("rust.json"), serde_json::to_string_pretty(&verdicts).unwrap()).unwrap();
-    assert!(problems.is_empty(), "{} problem(s):\n{}", problems.len(), problems.join("\n"));
+    std::fs::write(
+        out_dir.join("rust.json"),
+        serde_json::to_string_pretty(&verdicts).unwrap(),
+    )
+    .unwrap();
+    assert!(
+        problems.is_empty(),
+        "{} problem(s):\n{}",
+        problems.len(),
+        problems.join("\n")
+    );
 }
