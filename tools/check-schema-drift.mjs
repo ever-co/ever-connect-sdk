@@ -101,7 +101,8 @@ export function checkScope(name, vendorDoc, { platform = null, present = null } 
   for (const { path } of vendorDoc.authored ?? [])
     if (scope.files(path) || path === `${scope.folder}/`) errors.push(`${path}: still authored here`);
   for (const id of scope.operations)
-    if (vendorDoc.openapi.provisional_operations.includes(id)) errors.push(`contract: ${id} still comes from the design, not the pinned spec`);
+    if (vendorDoc.openapi.provisional_operations.includes(id))
+      errors.push(`contract: ${id} still comes from the design, not the pinned spec`);
   if (platform && scope.changelog) {
     const changelog = join(platform, scope.changelog);
     const schema = entries.find((e) => e.path === scope.schema);
@@ -194,7 +195,9 @@ function main() {
     process.stderr.write(`check-schema-drift: ${errors.length} problem(s):\n  ${errors.join('\n  ')}\n`);
     process.exit(1);
   }
-  process.stdout.write(`check-schema-drift: ok${scope ? ` (strict: ${scope})` : strict ? ' (strict)' : ''}${platform ? '' : ' (local only)'}\n`);
+  process.stdout.write(
+    `check-schema-drift: ok${scope ? ` (strict: ${scope})` : strict ? ' (strict)' : ''}${platform ? '' : ' (local only)'}\n`,
+  );
 }
 
 if (process.argv[1]?.endsWith('check-schema-drift.mjs')) main();
