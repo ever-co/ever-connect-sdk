@@ -152,13 +152,11 @@ impl From<AssertionError> for Error {
     }
 }
 
-/// Replaces every secret in `text` (the known ones, any instance token and any compact JWS) with
-/// `[redacted]`.
-pub(crate) fn redact(text: &str, secrets: &[String]) -> String {
-    let mut out = text.to_owned();
-    for s in secrets.iter().filter(|s| s.len() >= 8) {
-        out = out.replace(s.as_str(), "[redacted]");
-    }
+/// Replaces every instance token (`evit_…`) and every compact JWS (an assertion, a document) in
+/// `text` with `[redacted]`. The client keeps no copy of a secret to look for: both are recognised
+/// by their shape.
+pub(crate) fn redact(text: &str) -> String {
+    let out = text.to_owned();
     let mut result = String::with_capacity(out.len());
     let mut rest = out.as_str();
     while !rest.is_empty() {
@@ -204,10 +202,8 @@ mod tests {
 
     #[test]
     fn tokens_and_documents_are_redacted() {
-        let out = redact(
-            "bad evit_abc-123 and eyJhbGciOiJFZERTQSJ9.eyJpc3MiOiJ4In0.sig and secret-value-1 eyJnot",
-            &["secret-value-1".to_owned()],
-        );
-        assert_eq!(out, "bad [redacted] and [redacted] and [redacted] eyJnot");
+        let out =
+            redact("bad evit_abc-123 and eyJhbGciOiJFZERTQSJ9.eyJpc3MiOiJ4In0.sig and eyJnot");
+        assert_eq!(out, "bad [redacted] and [redacted] and eyJnot");
     }
 }

@@ -84,5 +84,8 @@ fn the_rules_and_what_cannot_be_checked() {
         Err(LookupInputError::Empty)
     );
     assert_eq!(LookupInputError::Empty.code(), "cannot_be_checked");
-    assert!(lookup_hash(LookupKind::Vat, "BG1", 1, "short").is_err());
+    // A salt that is not 32 bytes is refused (here: the test salt cut short).
+    let v = vectors();
+    let short = &v["salt"].as_str().unwrap()[..10];
+    assert!(lookup_hash(LookupKind::Vat, "BG1", 1, short).is_err());
 }

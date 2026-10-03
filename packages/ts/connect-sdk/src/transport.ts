@@ -117,15 +117,17 @@ function retryAfter(headers: Headers, body: Record<string, unknown> | null): num
   return typeof s === 'number' && Number.isInteger(s) && s >= 0 ? s : undefined;
 }
 
-/** Replaces every secret in `text` (a token, an assertion) with `[redacted]`. */
-export function redact(text: string, secrets: readonly string[]): string {
-  let out = text;
-  for (const s of secrets) if (s.length >= 8) out = out.split(s).join('[redacted]');
-  return out.replace(/evit_[A-Za-z0-9_-]+/g, '[redacted]').replace(/eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*/g, '[redacted]');
+/**
+ * Replaces every instance token (`evit_…`) and every compact JWS (an assertion, a document) in
+ * `text` with `[redacted]`. The client keeps no copy of a secret to look for: both are recognised
+ * by their shape.
+ */
+export function redact(text: string): string {
+  return text.replace(/evit_[A-Za-z0-9_-]+/g, '[redacted]').replace(/eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*/g, '[redacted]');
 }
 
 /** The problem of a non-2xx answer (`unknown` when the body is not a problem document). */
-export function problemFrom(res: WireResponse, secrets: readonly string[] = []): ProblemError {
+export function problemFrom(res: WireResponse): ProblemError {
   let doc: Record<string, unknown> | null = null;
   try {
     const parsed: unknown = JSON.parse(new TextDecoder().decode(res.body));
@@ -134,7 +136,7 @@ export function problemFrom(res: WireResponse, secrets: readonly string[] = []):
     doc = null;
   }
   const code = typeof doc?.code === 'string' && /^[a-z0-9_]{1,64}$/.test(doc.code) ? doc.code : 'unknown';
-  const detail = typeof doc?.detail === 'string' ? redact(doc.detail, secrets) : undefined;
+  const detail = typeof doc?.detail === 'string' ? redact(doc.detail) : undefined;
   const instance = typeof doc?.instance === 'string' ? doc.instance : (res.headers.get('x-request-id') ?? null);
   const errors = Array.isArray(doc?.errors)
     ? (doc.errors as unknown[])
@@ -142,7 +144,7 @@ export function problemFrom(res: WireResponse, secrets: readonly string[] = []):
         .map((e) => ({
           path: typeof e.path === 'string' ? e.path : '',
           code: typeof e.code === 'string' ? e.code : 'unknown',
-          message: typeof e.message === 'string' ? redact(e.message, secrets) : '',
+          message: typeof e.message === 'string' ? redact(e.message) : '',
         }))
         .filter((e) => !/client_assertion|client_secret/.test(e.path))
     : undefined;

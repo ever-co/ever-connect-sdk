@@ -20,7 +20,7 @@ mod token;
 
 use std::fmt;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex, OnceLock, PoisonError};
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 use serde_json::{Value, json};
@@ -169,7 +169,6 @@ pub struct EverPlatformClient {
     user_agent: String,
     options: ClientOptions,
     tokens: InstanceTokens,
-    secrets: Mutex<Vec<String>>,
 }
 
 impl fmt::Debug for EverPlatformClient {
@@ -299,7 +298,6 @@ impl EverPlatformClient {
             user_agent,
             options,
             tokens: InstanceTokens::default(),
-            secrets: Mutex::new(Vec::new()),
         })
     }
 
@@ -325,14 +323,6 @@ impl EverPlatformClient {
             .as_ref()
             .and_then(|f| f())
             .filter(|s| !s.is_empty())
-    }
-
-    fn remember(&self, secret: String) {
-        let mut secrets = self.secrets.lock().unwrap_or_else(PoisonError::into_inner);
-        secrets.push(secret);
-        if secrets.len() > 8 {
-            secrets.remove(0);
-        }
     }
 
     fn prepare(&self, id: &str, input: &CallInput<'_>) -> Result<Prepared, Error> {
@@ -471,11 +461,6 @@ impl EverPlatformClient {
     }
 
     fn problem(&self, res: &WireResponse) -> ProblemError {
-        let secrets = self
-            .secrets
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .clone();
         let doc: Option<serde_json::Map<String, Value>> =
             serde_json::from_slice::<Value>(&res.body)
                 .ok()
@@ -525,7 +510,6 @@ impl EverPlatformClient {
                             .to_owned(),
                         message: error::redact(
                             e.get("message").and_then(Value::as_str).unwrap_or(""),
-                            &secrets,
                         ),
                     })
                     .filter(|e| {
@@ -537,7 +521,7 @@ impl EverPlatformClient {
         ProblemError {
             status: res.status,
             code,
-            detail: text("detail").map(|d| error::redact(d, &secrets)),
+            detail: text("detail").map(error::redact),
             instance: text("instance")
                 .map(str::to_owned)
                 .or_else(|| header("x-request-id").map(str::to_owned)),
@@ -608,7 +592,6 @@ impl EverPlatformClient {
             now: Some(self.now()),
             jti: None,
         })?;
-        self.remember(assertion.clone());
         let body = json!({
             "grant_type": "client_credentials",
             "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
@@ -631,7 +614,6 @@ impl EverPlatformClient {
                 Error::Transport("the token endpoint answered no instance token".into())
             })?
             .to_owned();
-        self.remember(token.clone());
         let expires_in = answer
             .get("expires_in")
             .and_then(Value::as_i64)

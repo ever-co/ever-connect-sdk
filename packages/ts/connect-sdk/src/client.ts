@@ -134,12 +134,6 @@ export function createEverPlatformClient(o: EverPlatformClientOptions) {
     throw new TypeError('userAgentProduct names a product and its version');
   const userAgent = `ever-connect-sdk/${SDK_VERSION} (${product.product}/${product.version})`;
   const registryId = () => (o.registryInstanceId ? o.registryInstanceId() : null);
-  const secrets: string[] = [];
-  const remember = (s: string) => {
-    secrets.push(s);
-    if (secrets.length > 8) secrets.shift();
-  };
-
   const tokens = new InstanceTokens({
     now,
     onToken: o.onToken,
@@ -151,11 +145,9 @@ export function createEverPlatformClient(o: EverPlatformClientOptions) {
         audience: `${issuer}${CONSTANTS.assertion_audience_path}`,
         now: now(),
       });
-      remember(assertion);
       const answer = (await call('instanceToken', {
         body: { grant_type: 'client_credentials', client_assertion_type: CONSTANTS.client_assertion_type, client_assertion: assertion },
       })) as { access_token: string; expires_in: number };
-      if (typeof answer?.access_token === 'string') remember(answer.access_token);
       return answer;
     },
   });
@@ -222,7 +214,7 @@ export function createEverPlatformClient(o: EverPlatformClientOptions) {
 
   async function answer(op: OperationSpec, res: WireResponse): Promise<unknown> {
     if (res.status === 304 && op.conditional) return { notModified: true } satisfies NotModified;
-    if (!op.success.includes(res.status) || res.status === 304) throw problemFrom(res, secrets);
+    if (!op.success.includes(res.status) || res.status === 304) throw problemFrom(res);
     if (res.body.length === 0) return undefined;
     try {
       return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(res.body));
@@ -250,7 +242,7 @@ export function createEverPlatformClient(o: EverPlatformClientOptions) {
         signal: input.signal,
       });
       if (res.status === 401 && p.op.auth === 'instance') {
-        const problem = problemFrom(res, secrets);
+        const problem = problemFrom(res);
         tokens.invalidate();
         if (problem.code === 'credential_revoked' || attempt > 0) throw problem;
         continue;

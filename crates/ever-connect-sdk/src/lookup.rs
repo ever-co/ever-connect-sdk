@@ -252,7 +252,12 @@ impl std::error::Error for LookupVectorError {}
 /// # Errors
 /// [`LookupVectorError`] at the first vector that differs.
 pub fn check_test_vectors(vectors: &Value) -> Result<(), LookupVectorError> {
-    let salt = vectors.get("salt").and_then(Value::as_str).unwrap_or("");
+    let Some(salt) = vectors.get("salt").and_then(Value::as_str) else {
+        return Err(LookupVectorError {
+            index: 0,
+            field: "hash",
+        });
+    };
     let salt_version = vectors
         .get("salt_version")
         .and_then(Value::as_u64)
