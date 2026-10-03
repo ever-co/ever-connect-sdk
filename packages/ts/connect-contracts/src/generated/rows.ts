@@ -1128,7 +1128,13 @@ export const ROW_COVERAGE: readonly RowCoverage[] = [
         ]
       }
     ],
-    "errors": []
+    "errors": [
+      {
+        "status": 503,
+        "code": "unavailable",
+        "documented": true
+      }
+    ]
   },
   {
     "row": 3,
@@ -1430,7 +1436,17 @@ export const ROW_COVERAGE: readonly RowCoverage[] = [
     "errors": [
       {
         "status": 422,
+        "code": "integration_not_available",
+        "documented": true
+      },
+      {
+        "status": 422,
         "code": "validation_failed",
+        "documented": true
+      },
+      {
+        "status": 503,
+        "code": "unavailable",
         "documented": true
       }
     ]
@@ -2379,12 +2395,7 @@ export const ROW_COVERAGE: readonly RowCoverage[] = [
     "errors": [
       {
         "status": 403,
-        "code": "step_up_required",
-        "documented": true
-      },
-      {
-        "status": 403,
-        "code": "session_required",
+        "code": "denied_by_policy",
         "documented": true
       },
       {
@@ -2398,8 +2409,28 @@ export const ROW_COVERAGE: readonly RowCoverage[] = [
         "documented": true
       },
       {
+        "status": 403,
+        "code": "session_required",
+        "documented": true
+      },
+      {
+        "status": 403,
+        "code": "step_up_required",
+        "documented": true
+      },
+      {
         "status": 404,
         "code": "not_found",
+        "documented": true
+      },
+      {
+        "status": 422,
+        "code": "integration_not_available",
+        "documented": true
+      },
+      {
+        "status": 422,
+        "code": "scope_version_outdated",
         "documented": true
       },
       {
@@ -2408,8 +2439,8 @@ export const ROW_COVERAGE: readonly RowCoverage[] = [
         "documented": true
       },
       {
-        "status": 422,
-        "code": "scope_version_outdated",
+        "status": 503,
+        "code": "unavailable",
         "documented": true
       }
     ]

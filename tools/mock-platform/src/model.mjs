@@ -2,6 +2,9 @@
 import { contract } from './contract.mjs';
 import { instanceKid } from './crypto.mjs';
 
+// The platform acts installation-wide for instance_url, stats_link, ever_id_login and webhooks.
+// managed_operations stays installation-wide here until its platform module is built (the
+// platform's consent module lists it per link today).
 export const INSTANCE_WIDE_KEYS = ['instance_url', 'stats_link', 'ever_id_login', 'webhooks', 'managed_operations'];
 
 /** Whether integration states of `key` live on the instance (true) or on each tenant link. */
@@ -171,17 +174,42 @@ export function activeLinks(instance) {
   return Object.values(instance.links).filter((l) => l.state !== 'unlinked');
 }
 
-export function brief(s) {
-  const out = { enabled: s.state === 'enabled', state: s.state === 'pending_operator' ? 'available' : s.state };
-  if (s.consent_id) out.consent_id = s.consent_id;
-  out.scope_version = s.scope_version;
-  return out;
+/** Whether the installation's local deny list (heartbeat `integrations_denied`, or a policy switch-off) names `key`. */
+export function denies(instance, key) {
+  const list = instance.denied ?? [];
+  return list.includes('*') || list.includes(key);
+}
+
+/**
+ * The state label the platform answers: denied_by_policy while the installation denies the key,
+ * the stored state once anything was written, coming_soon for an untouched integration that is not
+ * available yet, else available. (The platform never enables a coming-soon integration; the mock
+ * still lets /__mock/consent enable one, so products can test what comes next.)
+ */
+export function stateLabel(instance, key, s) {
+  if (instance && denies(instance, key)) return 'denied_by_policy';
+  if (s && s.state !== 'available') return s.state;
+  if (contract().integrations[key]?.status === 'coming_soon') return 'coming_soon';
+  return 'available';
+}
+
+/** The platform's IntegrationStateBrief of one state. */
+export function brief(s, instance = null, key = null) {
+  const state = key ? stateLabel(instance, key, s) : s.state;
+  return {
+    enabled: state === 'enabled' && s.enabled !== false,
+    state,
+    consent_id: s.consent_id ?? null,
+    scope_version: s.scope_version ?? null,
+    config: s.config ?? {},
+  };
 }
 
 /** The platform's IntegrationState view of one state. */
 export function stateView(state, instance, key, s) {
   return {
-    ...brief(s),
+    ...brief(s, instance, key),
+    operator_accept: s.operator_accept ?? null,
     instance_id: instance.id,
     tenant_link_id: s.tenant_link_id ?? null,
     integration_key: key,
@@ -190,7 +218,6 @@ export function stateView(state, instance, key, s) {
     granted_by_person_id: s.granted_by_person_id ?? null,
     granted_at: s.granted_at ? state.iso(s.granted_at) : null,
     revoked_at: s.revoked_at ? state.iso(s.revoked_at) : null,
-    changed_by: { kind: 'instance', id: instance.id },
     updated_at: state.iso(),
   };
 }
@@ -200,6 +227,7 @@ export function integrationEventData(instance, key, s, reason) {
   const data = { org_id: instance.org.id, instance_id: instance.id, integration_key: key, enabled: s.state === 'enabled', reason };
   if (s.tenant_link_id) data.tenant_link_id = s.tenant_link_id;
   if (s.consent_id) data.consent_id = s.consent_id;
+  if (s.operator_accept) data.operator_accept = s.operator_accept;
   return data;
 }
 

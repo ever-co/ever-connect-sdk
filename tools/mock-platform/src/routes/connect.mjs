@@ -6,6 +6,7 @@ import { b64url, decodeJws, instanceKid, publicKeyFromX, verifyBytes } from '../
 import { manifestEntry, signManifest, testKey } from '../keys.mjs';
 import { createInstance, createLink, linkedTenantView } from '../model.mjs';
 import { fail } from '../problem.mjs';
+import { returnOrigin } from './integrations.mjs';
 
 /** How long a replaced connect key keeps minting tokens, in seconds (7 days). */
 export const KEY_OVERLAP_S = 604800;
@@ -111,7 +112,21 @@ function checkRedeemBody(body) {
   const serves = body.serves_products ?? [];
   if (serves.some((p) => !PRODUCTS.has(p))) field('/serves_products', 'invalid', 'not a product code');
   if (serves.length > 5) field('/serves_products', 'out_of_range', 'at most five products');
+  // The origins its consent links may return to, normalised (only they are kept, not addresses).
+  let origins = null;
+  if (Array.isArray(body.return_origins)) {
+    if (body.return_origins.length > 4) field('/return_origins', 'out_of_range', 'at most four return origins');
+    origins = body.return_origins.map((raw, at) => {
+      try {
+        return returnOrigin(raw);
+      } catch (error) {
+        return field(`/return_origins/${at}`, 'invalid', error.message);
+      }
+    });
+    origins = [...new Set(origins)];
+  }
   if (!validJwk(body.public_jwk) || 'd' in body.public_jwk) fail(422, 'public_jwk_invalid');
+  return origins;
 }
 
 function endpoints(issuer) {
@@ -151,7 +166,8 @@ export const connectHandlers = {
     };
   },
 
-  getConnectLegal() {
+  getConnectLegal({ state }) {
+    if (state.faults.legal_unavailable) fail(503, 'unavailable', 'this deployment publishes no terms');
     return { status: 200, body: { ...LEGAL } };
   },
 
@@ -164,7 +180,7 @@ export const connectHandlers = {
       const { state, body, validation, issuer } = ctx;
       if (!validation.ok) fail(422, 'validation_failed', undefined, { errors: validation.errors });
       issuance(state);
-      checkRedeemBody(body);
+      const origins = checkRedeemBody(body);
       windowOpen(state, ctx);
       const code = String(body.code).trim().toUpperCase();
       const entry = CODE_SHAPE.test(code) ? state.codes.get(code) : null;
@@ -189,8 +205,11 @@ export const connectHandlers = {
       if (instance) {
         instance.status = entry.pending_approval ? 'pending_approval' : 'active';
         state.lastInstanceId = instance.id;
+        // A reconnect that declares return origins replaces them.
+        if (origins !== null) instance.return_origins = origins;
       } else {
         instance = createInstance(state, { ...body, org: entry.org, status: entry.pending_approval ? 'pending_approval' : 'active' });
+        instance.return_origins = origins ?? [];
       }
       let link;
       if (body.tenant?.product_tenant_id && instance.status === 'active') {

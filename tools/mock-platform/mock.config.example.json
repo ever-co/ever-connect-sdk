@@ -13,9 +13,17 @@
     "managed": { "updates": false, "backups": false, "support_level": "community" }
   },
   "integrations": { "cloud_defaults": false, "enabled": [] },
+  "consent": { "web_url": "https://app.ever.co", "allow_local_return": true },
   "lookup": {
     "salt_versions": [{ "version": 1, "salt": "use a 32-byte base64url salt", "active_from": "2026-11-01T00:00:00Z", "retire_after": null }],
     "optins": [{ "kind": "vat", "normalized": "BG123456789", "handle": "acme", "features": ["pay"] }]
   },
-  "faults": { "keys_unavailable": false, "webhooks_module_disabled": false, "revoke_credential_at_call": null }
+  "faults": {
+    "keys_unavailable": false,
+    "webhooks_module_disabled": false,
+    "revoke_credential_at_call": null,
+    "connect_issuance_off": false,
+    "legal_unavailable": false,
+    "consent_links_unavailable": false
+  }
 }

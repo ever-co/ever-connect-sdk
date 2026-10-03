@@ -2,7 +2,9 @@
 // installation's statistics key, carried in the signature headers, and pinned on first sight.
 // The checks run in the platform's order, with its answers: the media type (415), the size
 // (413), the key, the signature's shape, the key id and the signature itself (400), the strict JSON
-// reader and the schema (422), the key pin (409) and the day window (429).
+// reader and the schema (422), the key pin (409; a first sight draws from the new-id budgets, 429),
+// the same report again the same day (202, nothing changes), the day window and the two months a
+// day an id may store (429).
 
 import { contract } from '../contract.mjs';
 import { fromB64url, instanceKid, isEd25519Point, publicKeyFromX, verifyBytes } from '../crypto.mjs';
@@ -55,7 +57,7 @@ function verifySignature(headers, raw) {
 const secondsToNextDay = (now) => 86400 - (now % 86400);
 
 export const statsHandlers = {
-  ingestStatsReport({ state, headers, raw, tooLarge }) {
+  ingestStatsReport({ state, req, headers, raw, tooLarge }) {
     const type = String(headers['content-type'] ?? '')
       .split(';')[0]
       .trim()
@@ -71,21 +73,41 @@ export const statsHandlers = {
     if (!checked.ok) fail(checked.status, checked.code, undefined, { errors: checked.errors });
     const report = checked.report;
 
+    const limits = state.config.limits;
+    const now = state.now();
+    const day = state.iso().slice(0, 10);
     const pin = state.statsPins.get(report.instance_id);
     if (pin && pin.x !== key)
       fail(409, 'key_mismatch', 'this statistics id is pinned to another key; reset the instance identity to report under a new id');
-    const day = state.iso().slice(0, 10);
-    const count = state.statsReports.filter((r) => r.instance_id === report.instance_id && r.day === day).length;
-    if (count >= state.config.limits.stats_reports_per_day)
-      fail(429, 'rate_limited', 'this statistics id sent its reports for today', { retry_after_s: secondsToNextDay(state.now()) });
-    if (!pin) state.statsPins.set(report.instance_id, { x: key, pinned_at: state.now() });
-    const superseded = state.statsReports.some((r) => r.instance_id === report.instance_id && r.period === report.period && r.day === day);
+    if (!pin) {
+      // A new statistics id: the source address's hourly budget, then the day's ceiling.
+      const hourKey = `address|${Math.floor(now / 3600)}|${req.socket.remoteAddress ?? 'unknown'}`;
+      const dayKey = `day|${day}`;
+      if ((state.statsNewIds.get(hourKey) ?? 0) >= limits.stats_new_ids_per_address_hour)
+        fail(429, 'rate_limited', 'this source address registered its new statistics ids for this hour', {
+          retry_after_s: 3600 - (now % 3600),
+        });
+      if ((state.statsNewIds.get(dayKey) ?? 0) >= limits.stats_new_ids_per_day)
+        fail(429, 'rate_limited', 'Ever Platform takes no more new statistics ids today', { retry_after_s: secondsToNextDay(now) });
+      state.statsNewIds.set(hourKey, (state.statsNewIds.get(hourKey) ?? 0) + 1);
+      state.statsNewIds.set(dayKey, (state.statsNewIds.get(dayKey) ?? 0) + 1);
+      state.statsPins.set(report.instance_id, { x: key, pinned_at: now });
+    }
+    const today = state.statsReports.filter((r) => r.instance_id === report.instance_id && r.day === day);
+    // The same report again today (a retry after a lost answer, or a replay): accepted, nothing written, no slot taken.
+    if (pin && today.some((r) => r.report_id === report.report_id)) return { status: 202, body: { accepted: true } };
+    if (today.length >= limits.stats_reports_per_day)
+      fail(429, 'rate_limited', 'this statistics id sent its reports for today', { retry_after_s: secondsToNextDay(now) });
+    if (new Set(today.filter((r) => r.period !== report.period).map((r) => r.period)).size >= limits.stats_periods_per_day)
+      fail(429, 'rate_limited', 'this statistics id stored reports for two months today', { retry_after_s: secondsToNextDay(now) });
+    const superseded = today.some((r) => r.period === report.period);
     state.statsReports.push({
       instance_id: report.instance_id,
+      report_id: report.report_id,
       period: report.period,
       day,
       product: report.product,
-      accepted_at: state.now(),
+      accepted_at: now,
     });
     return { status: 202, body: superseded ? { accepted: true, superseded: true } : { accepted: true } };
   },

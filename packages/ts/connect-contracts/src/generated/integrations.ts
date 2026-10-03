@@ -51,7 +51,6 @@ export interface IntegrationDefinition {
   readonly name: string;
   readonly description: string;
   readonly category: string;
-  readonly owner_module: string;
   readonly direction: 'outbound' | 'inbound' | 'both';
   readonly defaults: { readonly cloud: boolean; readonly self_hosted: boolean };
   readonly availability: {
@@ -60,7 +59,6 @@ export interface IntegrationDefinition {
   };
   readonly requires_feature: string | null;
   readonly products: readonly string[];
-  readonly phase: number;
   readonly status: 'active' | 'coming_soon';
   readonly scope_version: number;
   readonly revoke_effect: string;

@@ -13,6 +13,8 @@ export const statsLinkHandlers = {
     const p = decoded.payload;
     if (p.stats_instance_id !== body.stats_instance_id || p.stats_public_jwk?.x !== body.stats_public_jwk.x)
       invalid('the statement does not match the body');
+    // The statement names the installation that sends it: one another installation obtained links nothing.
+    if (p.sub !== instance.id) invalid("the statement's sub is not this instance's id");
     if (!Number.isInteger(p.iat) || Math.abs(state.now() - p.iat) > 600) invalid('the statement is older than 10 minutes');
     const pin = state.statsPins.get(body.stats_instance_id);
     if (!pin || pin.x !== body.stats_public_jwk.x)

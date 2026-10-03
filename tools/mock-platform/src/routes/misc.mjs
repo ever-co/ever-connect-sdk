@@ -3,7 +3,6 @@
 // install status, the webhook endpoint, the operator's accept and provider access grants.
 import { randomBytes } from 'node:crypto';
 import { b64url } from '../crypto.mjs';
-import { integrationEventData } from '../model.mjs';
 import { fail } from '../problem.mjs';
 
 const INSTALL_TRANSITIONS = {
@@ -242,28 +241,6 @@ export const miscHandlers = {
       return { status: 202, body: delivery(state, e, { event_type: d.event_type }) };
     }
     fail(404, 'not_found', 'no such delivery of this installation');
-  },
-
-  instanceAcceptIntegration({ state, instance, params, body }) {
-    const s = instance.integrations[params.key];
-    if (!s) fail(404, 'not_found', 'no installation-wide integration with this key');
-    if (s.state !== 'pending_operator' || s.consent_id !== body.consent_id)
-      fail(409, 'illegal_transition', 'nothing waits for the operator');
-    if (body.accepted) {
-      Object.assign(s, { state: 'enabled', enabled: true, operator_accept: 'accepted' });
-      state.emit(instance, 'ever.consent.integration.enabled', integrationEventData(instance, params.key, s, 'consent'));
-    } else {
-      Object.assign(s, { state: 'revoked', enabled: false, operator_accept: 'declined' });
-    }
-    return {
-      status: 200,
-      body: {
-        enabled: s.enabled,
-        state: s.state === 'pending_operator' ? 'available' : s.state,
-        consent_id: s.consent_id,
-        scope_version: s.scope_version,
-      },
-    };
   },
 
   instanceGetProviderGrant({ state, instance, params }) {

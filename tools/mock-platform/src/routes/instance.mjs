@@ -2,12 +2,12 @@
 // states and consent links, the local disable, disconnect and connect-key rotation.
 
 import { verifyRotation } from '../assertion.mjs';
-import { contract } from '../contract.mjs';
 import { instanceKid, publicKeyFromX, thumbprint } from '../crypto.mjs';
 import { signEntitlement } from '../keys.mjs';
-import { activeLinks, brief, instanceView, integrationEventData, isInstanceWide, tenantLinkView } from '../model.mjs';
+import { activeLinks, instanceView, tenantLinkView } from '../model.mjs';
 import { fail } from '../problem.mjs';
 import { activeEntitlementKey, instanceEventData, KEY_OVERLAP_S } from './connect.mjs';
+import { checkedDenyList, reportDenyList } from './integrations.mjs';
 
 const FEATURES = [
   'handle',
@@ -120,10 +120,13 @@ export const instanceHandlers = {
       const wait = instance.last_heartbeat + state.config.limits.heartbeat_min_interval_s - now;
       fail(429, 'rate_limited', 'more than one heartbeat a minute', { retry_after_s: wait });
     }
+    // The operator's local deny list: the whole list each time (a key it no longer names is lifted).
+    const denied = checkedDenyList(body.integrations_denied);
     instance.last_heartbeat = now;
     instance.last_seen_at = now;
     instance.version = body.version;
     if (Array.isArray(body.serves_products)) instance.serves_products = body.serves_products;
+    if (denied !== null) reportDenyList(state, instance, denied);
     if (!instance.seen_once) {
       instance.seen_once = true;
       state.emit(instance, 'ever.registry.instance.seen', instanceEventData(instance));
@@ -186,56 +189,14 @@ export const instanceHandlers = {
     return entitlementAnswer(ctx, link);
   },
 
-  instanceGetIntegrations({ instance }) {
-    const out = { instance: {}, links: {}, catalog_version: String(contract().catalog.version) };
-    for (const [slot, s] of Object.entries(instance.integrations)) {
-      const [key, linkId] = slot.split('@');
-      if (!linkId) out.instance[key] = brief(s);
-      else if (instance.links[linkId]?.state !== 'unlinked') {
-        out.links[linkId] ??= {};
-        out.links[linkId][key] = brief(s);
-      }
-    }
-    return { status: 200, body: out };
-  },
-
-  instanceGetConsentUrl({ state, instance, query, issuer }) {
-    const errors = [];
-    const key = query.get('integration');
-    const link = query.get('link');
-    const ret = query.get('return');
-    if (!key || !contract().constants.integration_keys.includes(key))
-      errors.push({ path: '?integration', code: key ? 'invalid' : 'required', message: 'an integration key' });
-    if (!ret) errors.push({ path: '?return', code: 'required', message: 'required' });
-    else if (!/^https?:\/\/[^\s]+$/.test(ret)) errors.push({ path: '?return', code: 'invalid', message: 'an absolute URL' });
-    if (key && !isInstanceWide(key) && link && !instance.links[link])
-      errors.push({ path: '?link', code: 'invalid', message: 'not a link of this installation' });
-    if (errors.length > 0) fail(422, 'validation_failed', undefined, { errors });
-    const params = new URLSearchParams({ integration: key, ...(link ? { link } : {}), return: ret, instance: instance.id });
-    return { status: 200, body: { url: `${issuer}/connect/consent?${params}`, expires_at: state.iso(state.now() + 900) } };
-  },
-
-  instanceDisableIntegration({ state, instance, params, body }) {
-    const key = params.key;
-    if (!contract().constants.integration_keys.includes(key)) fail(404, 'not_found', 'unknown integration');
-    const slot = isInstanceWide(key)
-      ? key
-      : body.tenant_link_id
-        ? `${key}@${body.tenant_link_id}`
-        : Object.keys(instance.integrations).find((s) => s.startsWith(`${key}@`));
-    const s = slot ? instance.integrations[slot] : null;
-    if (!s) fail(404, 'not_found', 'no state for this integration');
-    const wasEnabled = s.state === 'enabled';
-    Object.assign(s, { state: 'disabled', enabled: false });
-    if (wasEnabled) state.emit(instance, 'ever.consent.integration.disabled', integrationEventData(instance, key, s, body.reason));
-    return { status: 200, body: brief(s) };
-  },
-
   instanceDisconnect({ state, instance }) {
     instance.status = 'disconnected';
     instance.disconnected_at = state.now();
     state.revokeTokens(instance.id);
     for (const l of activeLinks(instance)) l.state = 'suspended';
+    // The statistics link ends with the connection.
+    instance.stats_linked = false;
+    instance.stats_instance_id = null;
     state.emit(instance, 'ever.registry.instance.disconnected', instanceEventData(instance));
     return {
       status: 200,

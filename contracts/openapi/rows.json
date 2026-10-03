@@ -38,7 +38,9 @@
       "disable": "do not connect",
       "products": "all",
       "phase": 2,
-      "errors": []
+      "errors": [
+        [503, "unavailable"]
+      ]
     },
     {
       "row": 3,
@@ -178,7 +180,11 @@
       "disable": "disconnect",
       "products": "all",
       "phase": 2,
-      "errors": [[422, "validation_failed"]]
+      "errors": [
+        [422, "integration_not_available"],
+        [422, "validation_failed"],
+        [503, "unavailable"]
+      ]
     },
     {
       "row": 10,
@@ -650,13 +656,16 @@
       "products": "all",
       "phase": 2,
       "errors": [
-        [403, "step_up_required"],
-        [403, "session_required"],
+        [403, "denied_by_policy"],
         [403, "forbidden_role"],
         [403, "not_connection_owner"],
+        [403, "session_required"],
+        [403, "step_up_required"],
         [404, "not_found"],
+        [422, "integration_not_available"],
+        [422, "scope_version_outdated"],
         [422, "validation_failed"],
-        [422, "scope_version_outdated"]
+        [503, "unavailable"]
       ]
     },
     {
