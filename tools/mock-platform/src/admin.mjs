@@ -335,8 +335,9 @@ export const adminRoutes = {
     const job = state.ulid('job');
     const person = state.config.people[0];
     const data = { person_id: person.person_id, job_id: job, respond_by: state.iso(state.now() + 30 * 86400) };
+    // The platform's spelling: sha256 of `<issuer>#<subject>` (the SDK's subjectHash).
     if (type.endsWith('deletion_requested'))
-      data.subject_hash = createHash('sha256').update(`${person.issuer}\n${person.subject}`).digest('hex');
+      data.subject_hash = createHash('sha256').update(`${person.issuer}#${person.subject}`).digest('hex');
     instance.jobs[job] = { type, result: null };
     const event = state.emit(instance, type, data, { subject: { kind: 'person', id: person.person_id } });
     return { status: 201, body: { job_id: job, event_id: event.id } };

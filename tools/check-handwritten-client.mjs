@@ -97,7 +97,8 @@ function tree() {
 function main() {
   const args = process.argv.slice(2);
   const allow = readJson(join(REPO, ALLOW_FILE)).exemptions;
-  for (const a of allow) if (typeof a.reason !== 'string' || a.reason.length < 20) throw new Error(`${a.path}: an exemption needs its reason`);
+  for (const a of allow)
+    if (typeof a.reason !== 'string' || a.reason.length < 20) throw new Error(`${a.path}: an exemption needs its reason`);
   if (args.includes('--self-test')) {
     const bad = scan([BAD_FIXTURE], allow);
     if (bad.length === 0) {

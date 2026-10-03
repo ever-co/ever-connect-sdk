@@ -26,10 +26,10 @@ place, in TypeScript and Rust:
 | `contracts/constants.json`, `contracts/VERSION` | wire constants and the contracts version |
 | `contracts/generated/` | the bundled contract, the outbound-call table and the row coverage, generated |
 | `packages/ts/connect-contracts` | `@ever-co/connect-contracts`: generated TypeScript types, schemas, integration definitions, constants and fixtures; no runtime dependencies |
-| `packages/ts/connect-sdk` | `@ever-co/connect-sdk`: the managed-operation executor interface and runner, and the statistics checks, signer and sender (the client and verifiers follow) |
+| `packages/ts/connect-sdk` | `@ever-co/connect-sdk`: the client (every call over the generated operation table, behind the egress guard), the key manifest and entitlement verifier, the client assertion, lookup normalisation and hashing, usage readings, the statistics signer and sender, and the managed-operation runner |
 | `packages/ts/connect-tools` | `@ever-co/connect-tools`: the dev-only `ever-mock-platform` and `ever-egress-audit` commands |
 | `crates/ever-connect-contracts` | the same contracts for Rust: generated types, embedded schemas, definitions and constants |
-| `crates/ever-connect-sdk` | the managed-operation executor trait and runner for Rust, and (feature `stats`) the statistics checks and signer |
+| `crates/ever-connect-sdk` | the same for Rust, by feature: `client` (default), `entitlement`, `stats`, `lookup`, `usage`; without `client` it pulls no HTTP client |
 | `tools/mock-platform` | the mock platform and its image |
 | `tools/egress-audit` | the egress audit and its self-test |
 | `tools/` | the generators and checks (`generate.mjs`, `sync-contract.mjs`, `split-integrations.mjs`, `fixtures/build-signed.mjs`, `check-schema-drift.mjs`, `check-public-safe.mjs`, `copy-draft.mjs`) and `conformance/run.mjs`, which replays non-destructive cases against a running Ever Platform API and the mock |
