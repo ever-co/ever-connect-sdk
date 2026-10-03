@@ -139,6 +139,9 @@ pub(crate) struct WireResponse {
     pub(crate) body: Vec<u8>,
 }
 
+/// The HTTP client type.
+pub(crate) type Http = reqwest::Client;
+
 /// The HTTP client: no redirect is followed, no cookie is kept.
 pub(crate) fn http_client(user_agent: &str) -> Result<reqwest::Client, Error> {
     reqwest::Client::builder()

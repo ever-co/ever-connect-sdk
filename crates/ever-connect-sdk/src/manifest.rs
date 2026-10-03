@@ -386,7 +386,7 @@ mod tests {
     #[test]
     fn origins_and_times() {
         assert_eq!(
-            origin_of("https://API.ever.co/v1/x").as_deref(),
+            origin_of("https://API.ever.co/a/b").as_deref(),
             Some("https://api.ever.co")
         );
         assert_eq!(

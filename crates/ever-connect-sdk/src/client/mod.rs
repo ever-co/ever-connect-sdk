@@ -165,7 +165,7 @@ pub struct EverPlatformClient {
     base: Base,
     issuer: String,
     roots: Vec<RootKey>,
-    http: reqwest::Client,
+    http: guard::Http,
     user_agent: String,
     options: ClientOptions,
     tokens: InstanceTokens,
@@ -595,7 +595,11 @@ impl EverPlatformClient {
             "authenticated calls need the connect key (signer)",
         ))?;
         let registry = self.registry_id();
-        let audience = format!("{}/v1/instances/token", self.issuer);
+        let token_path = OPERATIONS
+            .iter()
+            .find(|o| o.id == "instanceToken")
+            .map_or("", |o| o.path);
+        let audience = format!("{}{token_path}", self.issuer);
         let assertion = sign_client_assertion(&ClientAssertionOptions {
             signer: signer.as_ref(),
             registry_instance_id: registry.as_deref(),

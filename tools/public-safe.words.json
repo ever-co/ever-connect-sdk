@@ -62,7 +62,8 @@
       "flags": "",
       "allow_lines": [
         "^\\s*\"license\"\\s*:\\s*\"Apache-2\\.0\",?\\s*$",
-        "^\\s*license\\s*=\\s*\"Apache-2\\.0\"\\s*$"
+        "^\\s*license\\s*=\\s*\"Apache-2\\.0\"\\s*$",
+        "^\\s*\"Apache-2\\.0( WITH LLVM-exception)?\",?\\s*$"
       ],
       "allow_files": [
         "LICENSE",

@@ -1,6 +1,6 @@
 # cargo-deny policy of this repository: licences, bans, sources and advisories of every crate the
-# workspace builds (`cargo deny check` in the CI rust job). The crates of this repository are
-# Apache-2.0 and pass the same policy as their dependencies.
+# workspace builds (`cargo deny check` in the CI rust job). The crates of this repository carry
+# the same licence as the rest of the repository and pass the same policy as their dependencies.
 
 [graph]
 all-features = true
