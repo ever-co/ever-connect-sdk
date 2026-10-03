@@ -352,3 +352,44 @@ describe('the client object', () => {
     expect(inspect(c)).not.toContain(TOKEN);
   });
 });
+
+describe('entitlement reads (rate class instance-entitlement: a bucket of 6 per path, one back every 10 minutes)', () => {
+  it('a read the bucket would refuse is held back without a request; each link path has its own bucket', async () => {
+    let clock = 1793613600;
+    const f = platform(() => json(200, { document: 'x.y.z', seq: 3, expires_at: '2026-11-08T10:00:00Z' }));
+    const c = client(f, { now: () => clock });
+    for (let i = 0; i < 6; i += 1) await c.instances.entitlement();
+    const reads = () => f.calls.filter((x) => x.url.endsWith('/v1/instances/me/entitlement')).length;
+    expect(reads()).toBe(6);
+    await expect(c.instances.entitlement()).rejects.toMatchObject({ name: 'RateLimitedError', code: 'rate_limited', retryAfterS: 600 });
+    expect(reads()).toBe(6);
+    await c.instances.linkEntitlement(LINK);
+    clock += 599;
+    await expect(c.instances.entitlement()).rejects.toMatchObject({ retryAfterS: 1 });
+    clock += 1;
+    await c.instances.entitlement();
+    expect(reads()).toBe(7);
+    await expect(c.instances.entitlement()).rejects.toMatchObject({ retryAfterS: 600 });
+  });
+  it('a 429 holds the path back for its Retry-After', async () => {
+    let clock = 1793613600;
+    let limited = true;
+    const f = platform(() =>
+      limited
+        ? json(429, { code: 'rate_limited' }, { 'retry-after': '120' })
+        : json(200, { document: 'x.y.z', seq: 3, expires_at: '2026-11-08T10:00:00Z' }),
+    );
+    const c = client(f, { now: () => clock });
+    await expect(c.instances.entitlement()).rejects.toMatchObject({ name: 'ProblemError', status: 429 });
+    limited = false;
+    await expect(c.instances.entitlement()).rejects.toMatchObject({ name: 'RateLimitedError', retryAfterS: 120 });
+    clock += 120;
+    await expect(c.instances.entitlement()).resolves.toMatchObject({ seq: 3 });
+  });
+  it('other operations are not counted', async () => {
+    const f = platform();
+    const c = client(f);
+    for (let i = 0; i < 8; i += 1) await c.instances.integrations();
+    expect(f.calls.filter((x) => x.url.endsWith('/v1/instances/me/integrations'))).toHaveLength(8);
+  });
+});

@@ -1,27 +1,32 @@
 /**
  * The entitlement document verifier (`ever.entitlement.v1`), the one implementation every product
- * uses. The checks run in this order and fail closed at the first one that does not pass:
+ * uses. The checks run in the order of the contract (the entitlement document format, section 3.1)
+ * with its codes, the same as the platform's reference verifier, and fail closed at the first one
+ * that does not pass:
  *
- *   0. the key set was verified for the expected issuer (a key set of one issuer
- *      never vouches for a document of another)                                   issuer_mismatch
  *   1. a compact JWS (the decoding rule of `decodeJws`: 64 KiB, canonical parts,
- *      safe integers only, well-formed strings, 127 levels)                       malformed
+ *      well-formed strings, numbers that fit a double, 127 levels)                malformed
  *   2. header `typ` is `ever-entitlement+jwt`                                     bad_typ
  *   3. header `alg` is `EdDSA` and there is no `crit` (before any key lookup)     bad_alg
- *   4. header `kid` is in the root-verified key set, purpose `entitlement`,
+ *   4. the key set's manifest is not past its `exp` (keys of an expired
+ *      manifest verify no new document: refresh the key set)                      manifest_expired
+ *   5. header `kid` is in the root-verified key set, purpose `entitlement`,
  *      state `active` or `previous`, inside its validity window                   unknown_kid
- *   5. the Ed25519 signature over `header.payload` (strict: no small-order point)  bad_signature
- *   6. `ever.schema` is `ever.entitlement.v1`                                     schema_violation
- *   7. `iss` is the origin of the expected issuer                                 issuer_mismatch
- *   8. `aud` is `ever-connect`                                                    audience_mismatch
- *   9. the closed schema of the whole payload                                     schema_violation
- *  10. `ever.instance_id` is this installation's Registry id                      instance_mismatch
- *  11. `sub` is the expected subject (`instance:<id>` or `link:<id>`); a link
- *      document names its own link (`ever.tenant_link_id`), an instance document
- *      carries no link member                                                     subject_mismatch
- *  12. `iat <= now + 300`                                                         iat_in_future
- *  13. `nbf <= now + 300`                                                         nbf_in_future
- *  14. against the cached document: a lower `seq`, or the same `seq` without a
+ *   6. the Ed25519 signature over `header.payload` (strict: no small-order point)  bad_signature
+ *   7. `ever.schema` is `ever.entitlement.v1`                                     schema_violation
+ *   8. `iss` is the origin of the expected issuer, and so is the issuer of the key
+ *      set's manifest (a key set never verifies another issuer's document)        issuer_mismatch
+ *   9. `aud` is `ever-connect`                                                    audience_mismatch
+ *  10. the closed schema of the whole payload (with its I-JSON `maximum`s and the
+ *      members each kind of subject carries), and `iat`, `nbf`, `exp`,
+ *      `ever.seq` and `ever.grace_s` written as I-JSON integers (no fraction, no
+ *      exponent, not `-0`)                                                         schema_violation
+ *  11. `ever.instance_id` is this installation's Registry id                      instance_mismatch
+ *  12. `sub` is the expected subject (`instance:<id>` or `link:<id>`); a link
+ *      document names its own link (`ever.tenant_link_id`)                        subject_mismatch
+ *  13. `iat <= now + 300`                                                         iat_in_future
+ *  14. `nbf <= now + 300`                                                         nbf_in_future
+ *  15. against the cached document: a lower `seq`, or the same `seq` without a
  *      later `iat`                                                                entitlement_stale
  *
  * `exp` is never a failure: it feeds {@link entitlementStatus} only. No error carries the token or
@@ -29,11 +34,11 @@
  */
 import { CONSTANTS, type EntitlementV1, SCHEMAS } from '@ever-co/connect-contracts';
 import { EntitlementError } from './errors';
-import { decodeJws, verifyEd25519 } from './jws';
+import { decodeJws, firstNonInteger, verifyEd25519 } from './jws';
 import { KeySet } from './keyset';
 import { originOf } from './local';
 import { CLOCK_SKEW_S } from './manifest';
-import { isObject, schemaViolations } from './schema';
+import { byteOrder, isObject, schemaViolations } from './schema';
 
 /** The last verified document of a subject, as the product stores it. */
 export interface CachedEntitlement {
@@ -71,6 +76,9 @@ export interface VerifiedEntitlement {
   readonly status: EntitlementStatus;
 }
 
+/** The integer claims a verifier reads, which must be written as I-JSON integers. */
+const INTEGER_CLAIMS = ['/exp', '/ever/grace_s', '/ever/seq', '/iat', '/nbf'] as const;
+
 /** `valid` before `exp`; `stale` within `grace_s` after it; `paused` past the grace or without a document. */
 export type EntitlementStatus = 'valid' | 'stale' | 'paused';
 
@@ -82,7 +90,9 @@ const fail = (code: EntitlementError['code'], refreshSuggested = false, path?: s
 /**
  * Verifies an entitlement document. Answers the claims, or throws {@link EntitlementError}: keep the
  * previous document then. On `unknown_kid` with `refreshSuggested`, refresh the key set once (see
- * {@link KeySet.unknownKidRefreshAllowed}) and verify again; a second `unknown_kid` is final.
+ * {@link KeySet.unknownKidRefreshAllowed}) and verify again; a second `unknown_kid` is final. On
+ * `manifest_expired`, refresh the key set and verify again. The client's
+ * `verifyEntitlementRefreshing` does both.
  */
 export function verifyEntitlement(jws: string, o: VerifyEntitlementOptions): VerifiedEntitlement {
   const now = Math.floor(o.now ?? Date.now() / 1000);
@@ -90,8 +100,6 @@ export function verifyEntitlement(jws: string, o: VerifyEntitlementOptions): Ver
   if (!KeySet.isKeySet(keySet)) throw new TypeError('verifyEntitlement needs a KeySet (KeySet.verify or KeySet.restore)');
   const issuer = originOf(o.expectedIssuer);
 
-  // 0. The key set is the expected issuer's.
-  if (issuer === null || keySet.issuer !== issuer) return fail('issuer_mismatch');
   // 1. A compact JWS.
   const decoded = decodeJws(jws);
   if (!decoded) return fail('malformed');
@@ -99,30 +107,36 @@ export function verifyEntitlement(jws: string, o: VerifyEntitlementOptions): Ver
   // 2-3. Type, then algorithm, before any key is looked up.
   if (header.typ !== CONSTANTS.entitlement_typ) return fail('bad_typ');
   if (header.alg !== 'EdDSA' || 'crit' in header) return fail('bad_alg');
-  // 4. A trusted entitlement key.
+  // 4. Keys of an expired manifest verify no new document.
+  if (now >= keySet.manifest.expiresAt) return fail('manifest_expired');
+  // 5. A trusted entitlement key.
   const kid = typeof header.kid === 'string' ? header.kid : null;
   const key = kid === null ? null : keySet.find(kid, 'entitlement', now);
   if (!key) return fail('unknown_kid', kid !== null && !keySet.has(kid));
-  // 5. Its signature.
+  // 6. Its signature.
   if (!verifyEd25519(key.x, decoded.signingInput, decoded.signature)) return fail('bad_signature');
-  // 6-8. Schema id, issuer, audience.
+  // 7-9. Schema id, issuer, audience.
   const ever = isObject(payload.ever) ? payload.ever : null;
   if (ever?.schema !== 'ever.entitlement.v1') return fail('schema_violation', false, '/ever/schema');
-  if (payload.iss !== issuer) return fail('issuer_mismatch');
+  // The document's issuer is the expected one and the one whose manifest vouched for the key.
+  if (issuer === null || payload.iss !== issuer || keySet.issuer !== issuer) return fail('issuer_mismatch');
   if (payload.aud !== CONSTANTS.entitlement_aud) return fail('audience_mismatch');
-  // 9. The closed schema.
-  const violations = schemaViolations(ENTITLEMENT_SCHEMA, payload);
-  if (violations.length > 0) return fail('schema_violation', false, violations[0]?.path);
+  // 10. The closed schema, and the integer claims written as I-JSON integers.
+  const violations = schemaViolations(ENTITLEMENT_SCHEMA, payload).map((v) => v.path);
+  const written = firstNonInteger(decoded.payloadNumbers, INTEGER_CLAIMS);
+  if (written !== null) violations.push(written);
+  if (violations.length > 0) return fail('schema_violation', false, violations.sort(byteOrder)[0]);
   const claims = payload as unknown as EntitlementV1;
-  // 10-11. This installation, this subject.
+  // 11-12. This installation, this subject; a link document names its own link (the schema
+  // already holds an instance document to no link member).
   if (claims.ever.instance_id !== o.expectedInstanceId) return fail('instance_mismatch');
   if (claims.sub !== o.expectedSubject) return fail('subject_mismatch');
   const linked = claims.ever.tenant_link_id !== undefined || claims.ever.tenant !== undefined;
   if (claims.sub.startsWith('link:') ? claims.ever.tenant_link_id !== claims.sub.slice(5) : linked) return fail('subject_mismatch');
-  // 12-13. Not from the future.
+  // 13-14. Not from the future.
   if (claims.iat > now + CLOCK_SKEW_S) return fail('iat_in_future');
   if (claims.nbf > now + CLOCK_SKEW_S) return fail('nbf_in_future');
-  // 14. Never older than the cached document.
+  // 15. Never older than the cached document.
   const cached = o.cached;
   if (cached && (claims.ever.seq < cached.seq || (claims.ever.seq === cached.seq && claims.iat <= cached.iat)))
     return fail('entitlement_stale');

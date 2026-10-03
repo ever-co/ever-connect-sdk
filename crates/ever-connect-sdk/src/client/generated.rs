@@ -55,6 +55,8 @@ pub struct Operation {
     pub row: u16,
     /// The integration that gates it.
     pub integration: Option<&'static str>,
+    /// The platform's rate-limit class (`x-ever-rate-limit`), when the contract names one.
+    pub rate_limit: Option<&'static str>,
     /// `pinned`, `provisional` or `pending_upstream`.
     pub status: &'static str,
 }
@@ -76,6 +78,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 1,
         integration: None,
+        rate_limit: None,
         status: "pinned",
     },
     Operation {
@@ -93,6 +96,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 29,
         integration: None,
+        rate_limit: Some("connect"),
         status: "provisional",
     },
     Operation {
@@ -110,6 +114,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 2,
         integration: None,
+        rate_limit: Some("public-read"),
         status: "pinned",
     },
     Operation {
@@ -127,6 +132,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[201],
         row: 3,
         integration: None,
+        rate_limit: None,
         status: "pinned",
     },
     Operation {
@@ -144,6 +150,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 29,
         integration: None,
+        rate_limit: Some("connect"),
         status: "provisional",
     },
     Operation {
@@ -161,6 +168,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[202],
         row: 30,
         integration: Some("webhooks"),
+        rate_limit: Some("person"),
         status: "pinned",
     },
     Operation {
@@ -178,6 +186,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 22,
         integration: Some("ever_id_login"),
+        rate_limit: Some("instance"),
         status: "provisional",
     },
     Operation {
@@ -195,6 +204,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 28,
         integration: Some("marketplace_installs"),
+        rate_limit: Some("instance"),
         status: "provisional",
     },
     Operation {
@@ -212,6 +222,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 6,
         integration: None,
+        rate_limit: None,
         status: "pinned",
     },
     Operation {
@@ -229,6 +240,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[204],
         row: 20,
         integration: None,
+        rate_limit: Some("instance"),
         status: "provisional",
     },
     Operation {
@@ -246,6 +258,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[201],
         row: 25,
         integration: Some("billing_link"),
+        rate_limit: Some("instance"),
         status: "provisional",
     },
     Operation {
@@ -263,6 +276,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 9,
         integration: None,
+        rate_limit: Some("instance"),
         status: "pinned",
     },
     Operation {
@@ -280,6 +294,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 16,
         integration: None,
+        rate_limit: None,
         status: "pinned",
     },
     Operation {
@@ -297,7 +312,8 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200, 304],
         row: 8,
         integration: None,
-        status: "provisional",
+        rate_limit: Some("instance-entitlement"),
+        status: "pinned",
     },
     Operation {
         id: "instancePollEvents",
@@ -314,6 +330,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 7,
         integration: None,
+        rate_limit: Some("instance"),
         status: "pinned",
     },
     Operation {
@@ -331,6 +348,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 7,
         integration: None,
+        rate_limit: Some("instance"),
         status: "pinned",
     },
     Operation {
@@ -348,6 +366,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 6,
         integration: None,
+        rate_limit: Some("instance-heartbeat"),
         status: "pinned",
     },
     Operation {
@@ -365,6 +384,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 9,
         integration: None,
+        rate_limit: Some("instance"),
         status: "pinned",
     },
     Operation {
@@ -382,6 +402,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 10,
         integration: None,
+        rate_limit: Some("instance"),
         status: "pinned",
     },
     Operation {
@@ -399,6 +420,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 31,
         integration: None,
+        rate_limit: Some("instance"),
         status: "pinned",
     },
     Operation {
@@ -416,6 +438,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 16,
         integration: None,
+        rate_limit: Some("instance"),
         status: "pinned",
     },
     Operation {
@@ -433,6 +456,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 34,
         integration: Some("managed_operations"),
+        rate_limit: Some("instance"),
         status: "provisional",
     },
     Operation {
@@ -450,6 +474,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 15,
         integration: Some("app_sync"),
+        rate_limit: Some("instance"),
         status: "provisional",
     },
     Operation {
@@ -467,6 +492,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 15,
         integration: Some("app_sync"),
+        rate_limit: Some("instance"),
         status: "provisional",
     },
     Operation {
@@ -484,6 +510,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 14,
         integration: Some("ever_id_login"),
+        rate_limit: Some("instance"),
         status: "provisional",
     },
     Operation {
@@ -501,6 +528,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[202],
         row: 14,
         integration: Some("ever_id_login"),
+        rate_limit: Some("instance"),
         status: "provisional",
     },
     Operation {
@@ -518,6 +546,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 21,
         integration: Some("profile_import"),
+        rate_limit: Some("instance"),
         status: "provisional",
     },
     Operation {
@@ -535,6 +564,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[201],
         row: 19,
         integration: Some("ever_id_login"),
+        rate_limit: Some("instance"),
         status: "provisional",
     },
     Operation {
@@ -552,6 +582,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[204],
         row: 19,
         integration: Some("ever_id_login"),
+        rate_limit: Some("instance"),
         status: "provisional",
     },
     Operation {
@@ -569,6 +600,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 11,
         integration: Some("stats_link"),
+        rate_limit: Some("instance"),
         status: "pinned",
     },
     Operation {
@@ -586,6 +618,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[201],
         row: 5,
         integration: None,
+        rate_limit: Some("instance"),
         status: "pinned",
     },
     Operation {
@@ -603,6 +636,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[204],
         row: 5,
         integration: None,
+        rate_limit: None,
         status: "pinned",
     },
     Operation {
@@ -620,6 +654,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 5,
         integration: None,
+        rate_limit: Some("instance"),
         status: "provisional",
     },
     Operation {
@@ -637,7 +672,8 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200, 304],
         row: 8,
         integration: None,
-        status: "provisional",
+        rate_limit: Some("instance-entitlement"),
+        status: "pinned",
     },
     Operation {
         id: "instancePutLinkIdentifiers",
@@ -654,6 +690,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 12,
         integration: Some("counterparty_discoverable"),
+        rate_limit: Some("instance"),
         status: "provisional",
     },
     Operation {
@@ -671,6 +708,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[204],
         row: 12,
         integration: Some("counterparty_discoverable"),
+        rate_limit: Some("instance"),
         status: "provisional",
     },
     Operation {
@@ -688,6 +726,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[202],
         row: 27,
         integration: Some("usage_reporting"),
+        rate_limit: Some("instance"),
         status: "provisional",
     },
     Operation {
@@ -705,6 +744,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[202],
         row: 27,
         integration: Some("usage_reporting"),
+        rate_limit: Some("instance"),
         status: "provisional",
     },
     Operation {
@@ -722,6 +762,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[201],
         row: 30,
         integration: Some("webhooks"),
+        rate_limit: Some("instance"),
         status: "pinned",
     },
     Operation {
@@ -739,6 +780,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 4,
         integration: None,
+        rate_limit: None,
         status: "pinned",
     },
     Operation {
@@ -756,6 +798,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 13,
         integration: Some("counterparty_lookup"),
+        rate_limit: Some("lookup"),
         status: "provisional",
     },
     Operation {
@@ -773,6 +816,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 13,
         integration: None,
+        rate_limit: Some("public-read"),
         status: "provisional",
     },
     Operation {
@@ -790,6 +834,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 13,
         integration: None,
+        rate_limit: Some("public-read"),
         status: "provisional",
     },
     Operation {
@@ -807,6 +852,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 23,
         integration: None,
+        rate_limit: None,
         status: "pinned",
     },
     Operation {
@@ -824,6 +870,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 23,
         integration: None,
+        rate_limit: None,
         status: "pinned",
     },
     Operation {
@@ -841,6 +888,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 33,
         integration: None,
+        rate_limit: Some("person"),
         status: "pinned",
     },
     Operation {
@@ -858,6 +906,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 26,
         integration: None,
+        rate_limit: Some("instance"),
         status: "provisional",
     },
     Operation {
@@ -875,6 +924,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 24,
         integration: None,
+        rate_limit: Some("public-availability"),
         status: "provisional",
     },
     Operation {
@@ -892,6 +942,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[202],
         row: 17,
         integration: None,
+        rate_limit: Some("stats-ingest"),
         status: "pinned",
     },
     Operation {
@@ -909,6 +960,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[204],
         row: 30,
         integration: None,
+        rate_limit: Some("person"),
         status: "pinned",
     },
     Operation {
@@ -926,6 +978,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 30,
         integration: Some("webhooks"),
+        rate_limit: Some("person"),
         status: "pinned",
     },
     Operation {
@@ -943,6 +996,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 30,
         integration: None,
+        rate_limit: Some("person"),
         status: "pinned",
     },
     Operation {
@@ -960,6 +1014,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 30,
         integration: Some("webhooks"),
+        rate_limit: Some("person"),
         status: "pinned",
     },
     Operation {
@@ -979,6 +1034,7 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[202],
         row: 30,
         integration: Some("webhooks"),
+        rate_limit: Some("person"),
         status: "pinned",
     },
 ];

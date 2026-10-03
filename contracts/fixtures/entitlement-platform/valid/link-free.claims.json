@@ -1,0 +1,67 @@
+{
+  "aud": "ever-connect",
+  "ever": {
+    "features": {
+      "app_sync": true,
+      "discoverability": true,
+      "ever_id_login": true,
+      "handle": true,
+      "instances.multi": false,
+      "listings": false,
+      "lookup": false,
+      "marketplace.buy": true,
+      "profile.badges": false,
+      "profile.public": false,
+      "provider_access": false,
+      "usage_reporting": false
+    },
+    "grace_s": 2592000,
+    "handle": "tinyshop",
+    "instance_id": "01JC97K315N7Q9S1V3W5Y7A9C1",
+    "limits": {
+      "api.rpm": 60,
+      "instances.connected": 1,
+      "listings.published": 0,
+      "lookup.hashes_per_day": 0,
+      "lookup.queries_per_min": 0,
+      "members": 25,
+      "webhooks.endpoints": 2
+    },
+    "managed": {
+      "backups": false,
+      "support_level": "community",
+      "updates": false
+    },
+    "meters": {
+      "instances.connected": {
+        "period": null,
+        "used": 1
+      }
+    },
+    "org_id": "01JC98Z7Y6X5W4V3V2T1S0R9Q8",
+    "plan": {
+      "code": "community",
+      "source": "community"
+    },
+    "products": [
+      "works"
+    ],
+    "refresh_after_s": 21600,
+    "schema": "ever.entitlement.v1",
+    "seq": 1,
+    "tenant": {
+      "product": "works",
+      "product_org_id": "o_4d9a7b",
+      "product_tenant_id": "t_8f2c1e"
+    },
+    "tenant_id": "01JC98Y6X5W4V3V2T1S0R9Q8P7",
+    "tenant_link_id": "01JC9A1B2C3D4E5F6G7H8J9K01",
+    "tier": "free"
+  },
+  "exp": 1794214800,
+  "iat": 1793610000,
+  "iss": "https://mock-platform.test",
+  "jti": "01JC9B3D5F7H9K1M3P5R7T9V1X",
+  "nbf": 1793609940,
+  "sub": "link:01JC9A1B2C3D4E5F6G7H8J9K01"
+}

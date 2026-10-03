@@ -1,0 +1,7 @@
+[
+  {
+    "issuer": "https://mock-platform.test",
+    "kid": "root-test-1",
+    "x": "41EP5uzg5g4l4q4N7xj5HZInFD5DhfLBzl8plIFsOU4"
+  }
+]

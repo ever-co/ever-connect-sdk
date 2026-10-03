@@ -25,6 +25,7 @@ import {
   type VerifiedKeyManifest,
   type VerifyKeyManifestOptions,
   verifyKeyManifest,
+  verifyStoredKeyManifest,
 } from './manifest';
 import { parseUtcTime } from './time';
 
@@ -81,10 +82,12 @@ export class KeySet {
   /**
    * Rebuilds a stored key set for one issuer, verifying the stored manifest again (offline: only
    * the pinned root of that issuer is needed). A stored fetch time in the future counts as now.
+   * A manifest past its `exp` is restored too (reading it back is not a new verification): its
+   * keys verify no new document (`manifest_expired`) and `needsRefresh` is true.
    */
   static restore(stored: StoredKeySet, options: VerifyKeyManifestOptions): KeySet {
     const now = Math.floor(options?.now ?? nowS());
-    const manifest = verifyKeyManifest(stored?.document, { ...options, now });
+    const manifest = verifyStoredKeyManifest(stored?.document, { ...options, now });
     const fetchedAt = typeof stored.fetchedAt === 'number' && Number.isFinite(stored.fetchedAt) ? stored.fetchedAt : 0;
     return new KeySet(BUILD, manifest, Math.min(Math.max(0, Math.floor(fetchedAt)), now));
   }

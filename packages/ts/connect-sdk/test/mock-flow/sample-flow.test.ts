@@ -204,3 +204,39 @@ describe('verifyEntitlementRefreshing against the mock', () => {
     expect(keySet.has('test-entitlement-2')).toBe(true);
   });
 });
+
+describe('verifyEntitlementRefreshing when the manifest expired', () => {
+  it('fetches the current manifest and verifies again: keys of an expired manifest verify no new document', async () => {
+    const mock = createMockPlatform({ config: { issuer: ISSUER } });
+    const { url } = await mock.listen(0, '127.0.0.1');
+    close = () => mock.close();
+    const now = () => mock.state.now() as number;
+    const admin = (path: string, body: unknown) =>
+      fetch(`${url}/__mock/${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    const pair = generateInstanceKeyPair();
+    let registryId: string | null = null;
+    const c = createEverPlatformClient({
+      baseUrl: url,
+      issuer: ISSUER,
+      env: { EVER_PLATFORM_ROOT_KEYS_FILE: ROOTS_FILE },
+      userAgentProduct: { product: 'gauzy', version: '96.2.1' },
+      signer: makeNodeSigner(pair.privateKeyPkcs8Der),
+      registryInstanceId: () => registryId,
+      now,
+    });
+    const before = (await c.keys.refresh()).keySet;
+    const redeemed = await c.connect.redeem(
+      { code: 'EVC-TEST-0000-0001', product: 'gauzy', version: '96.2.1', install_source: 'self-hosted', public_jwk: pair.publicJwk },
+      idem('redeem', 'manifest-expired'),
+    );
+    registryId = redeemed.instance_id;
+    const answer = await c.instances.entitlement();
+    if ('notModified' in answer) throw new Error('no document');
+    await admin('clock', { advance: before.manifest.expiresAt - now() });
+    expect(() => c.verifyEntitlement(answer.document, { keySet: before })).toThrow(expect.objectContaining({ code: 'manifest_expired' }));
+    const { verified, keySet } = await c.verifyEntitlementRefreshing(answer.document, { keySet: before });
+    expect(keySet).not.toBe(before);
+    expect(keySet.manifest.expiresAt).toBeGreaterThan(now());
+    expect(verified.status).toBe('stale');
+  });
+});

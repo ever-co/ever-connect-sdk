@@ -1,11 +1,12 @@
 //! Compact JWS (RFC 7515) with EdDSA over Ed25519 (RFC 8037) only.
 //!
-//! A JWS is decoded by one rule in both SDKs: at most 64 KiB; three canonical base64url parts;
-//! header and payload are JSON objects in valid UTF-8 (a leading byte-order mark is not
-//! whitespace); every number is an integer token (no fraction, no exponent, no negative zero)
-//! within plus or minus 2^53 - 1; no string or member name holds a lone surrogate; at most 127
-//! nested arrays and objects (serde_json's own limit). Anything else is `malformed`. Signatures
-//! are verified strictly: a small-order public key or `R` never verifies.
+//! A JWS is decoded by one rule in both SDKs and on the platform: at most 64 KiB; three canonical
+//! base64url parts; header and payload are JSON objects in valid UTF-8 (a leading byte-order mark
+//! is not whitespace); no string or member name holds a lone surrogate; every number fits a double;
+//! at most 127 nested arrays and objects (serde_json's own limits). Anything else is `malformed`.
+//! How a number is written is checked where the value is read: the verifiers require the integer
+//! claims they read to be I-JSON integers ([`first_non_integer`]). Signatures are verified
+//! strictly: a small-order public key or `R` never verifies.
 
 use ed25519_dalek::{Signature, VerifyingKey};
 use serde_json::{Map, Value};
@@ -25,31 +26,29 @@ pub(crate) struct DecodedJws {
     pub(crate) signature: Vec<u8>,
 }
 
-/// Whether every number of `value` is a safe integer (serde_json keeps a fraction, an exponent and
-/// negative zero as floating point, and reads an integer past 64 bits as one).
-pub(crate) fn safe_integers(value: &Value) -> bool {
-    match value {
-        Value::Number(n) => {
-            if let Some(u) = n.as_u64() {
-                u <= MAX_SAFE_INTEGER
-            } else if let Some(i) = n.as_i64() {
-                i.unsigned_abs() <= MAX_SAFE_INTEGER
-            } else {
-                false
-            }
-        }
-        Value::Array(items) => items.iter().all(safe_integers),
-        Value::Object(map) => map.values().all(safe_integers),
-        _ => true,
-    }
+/// Whether a number is an I-JSON integer as written: no fraction, no exponent, not `-0`, within
+/// plus or minus 2^53 - 1 (serde_json reads a fraction, an exponent, negative zero and an integer
+/// past 64 bits as floating point).
+pub(crate) fn ijson_integer(n: &serde_json::Number) -> bool {
+    n.as_i64()
+        .is_some_and(|i| i.unsigned_abs() <= MAX_SAFE_INTEGER)
+}
+
+/// The first of `pointers` (in the order given) whose value is a number that is not an I-JSON
+/// integer as written; a pointer without a number is not checked here (the schema is).
+pub(crate) fn first_non_integer<'a>(value: &Value, pointers: &[&'a str]) -> Option<&'a str> {
+    pointers
+        .iter()
+        .copied()
+        .find(|p| matches!(value.pointer(p), Some(Value::Number(n)) if !ijson_integer(n)))
 }
 
 fn object(part: &str) -> Option<Map<String, Value>> {
     let bytes = from_b64url(part)?;
-    // serde_json refuses invalid UTF-8, a byte-order mark, lone surrogate escapes and more than
-    // 127 levels, as the TypeScript decoder does.
+    // serde_json refuses invalid UTF-8, a byte-order mark, lone surrogate escapes, a number past a
+    // double and more than 127 levels, as the TypeScript decoder does.
     match serde_json::from_slice::<Value>(&bytes).ok()? {
-        Value::Object(map) if map.values().all(safe_integers) => Some(map),
+        Value::Object(map) => Some(map),
         _ => None,
     }
 }

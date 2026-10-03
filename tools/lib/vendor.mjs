@@ -143,6 +143,34 @@ export function statsFixtureEntries(platform) {
 }
 
 /**
+ * Where the platform publishes its signed entitlement fixtures (documents, the key manifest and
+ * roots that vouch for them, the verification context and the expected outcomes), and where this
+ * repository keeps them: beside the SDK's own entitlement fixtures, which tools/fixtures/build-signed.mjs
+ * writes to contracts/fixtures/entitlement/.
+ */
+export const ENTITLEMENT_FIXTURES = { source: 'contracts/fixtures/entitlement', path: 'contracts/fixtures/entitlement-platform' };
+
+/** The platform's entitlement fixtures (every file, subfolders included), byte-identical, once it publishes them (else none). */
+export function entitlementFixtureEntries(platform) {
+  const root = join(platform, ENTITLEMENT_FIXTURES.source);
+  if (!existsSync(join(root, 'expected.json'))) return [];
+  const files = [];
+  const visit = (dir, prefix) => {
+    for (const name of readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+      if (name.isDirectory()) visit(join(dir, name.name), `${prefix}${name.name}/`);
+      else if (name.name.endsWith('.json') || name.name.endsWith('.jws')) files.push(`${prefix}${name.name}`);
+    }
+  };
+  visit(root, '');
+  return files.map((f) => ({
+    path: `${ENTITLEMENT_FIXTURES.path}/${f}`,
+    source: `${ENTITLEMENT_FIXTURES.source}/${f}`,
+    transform: null,
+    upstream: null,
+  }));
+}
+
+/**
  * Produces every vendored file from the checkout. Answers {files: {path: text}, entries: [...]}
  * where each entry records its source, transform, provisional flag and hashes.
  */
@@ -150,7 +178,13 @@ export function vendor(platform) {
   const events = eventEntries(platform);
   const files = {};
   const entries = [];
-  for (const entry of [...STATIC, ...events.entries, ...connectVectorEntries(platform), ...statsFixtureEntries(platform)]) {
+  for (const entry of [
+    ...STATIC,
+    ...events.entries,
+    ...connectVectorEntries(platform),
+    ...statsFixtureEntries(platform),
+    ...entitlementFixtureEntries(platform),
+  ]) {
     const upstreamPath = entry.upstream ? join(platform, entry.upstream) : null;
     const fromUpstream = upstreamPath !== null && existsSync(upstreamPath);
     const source = fromUpstream ? entry.upstream : entry.source;

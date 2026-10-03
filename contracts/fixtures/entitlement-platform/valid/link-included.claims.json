@@ -1,0 +1,72 @@
+{
+  "aud": "ever-connect",
+  "ever": {
+    "features": {
+      "app_sync": false,
+      "discoverability": true,
+      "ever_id_login": true,
+      "handle": true,
+      "instances.multi": true,
+      "listings": true,
+      "lookup": true,
+      "marketplace.buy": true,
+      "profile.badges": true,
+      "profile.public": true,
+      "provider_access": false,
+      "usage_reporting": false
+    },
+    "grace_s": 2592000,
+    "handle": "acme",
+    "instance_id": "01JB0000EVERC10VDGAVZY0001",
+    "limits": {
+      "api.rpm": 600,
+      "instances.connected": 3,
+      "listings.published": 5,
+      "lookup.hashes_per_day": 6000,
+      "lookup.queries_per_min": 60,
+      "members": 100,
+      "webhooks.endpoints": 10
+    },
+    "managed": {
+      "backups": true,
+      "support_level": "standard",
+      "updates": true
+    },
+    "meters": {
+      "listings.published": {
+        "period": null,
+        "used": 0
+      },
+      "lookup.queries": {
+        "period": "2026-10",
+        "used": 12
+      }
+    },
+    "org_id": "01JBZ8K2M4N6P8R0T2V4X6Z8B0",
+    "plan": {
+      "code": "ever_gauzy_cloud_small_business_monthly",
+      "source": "cloud_plan"
+    },
+    "products": [
+      "gauzy",
+      "teams"
+    ],
+    "refresh_after_s": 21600,
+    "schema": "ever.entitlement.v1",
+    "seq": 4,
+    "tenant": {
+      "product": "gauzy",
+      "product_org_id": "0a9b8c7d-6e5f-4a3b-9c2d-1e0f9a8b7c6d",
+      "product_tenant_id": "6f1d3c2e-9a8b-4c7d-8e6f-5a4b3c2d1e0f"
+    },
+    "tenant_id": "01JBZ8H1J315N7Q9S1V3W5Y7A9",
+    "tenant_link_id": "01JC7Q0V3A8M2K9R4T6Y8B1D3F",
+    "tier": "included"
+  },
+  "exp": 1794214800,
+  "iat": 1793610000,
+  "iss": "https://mock-platform.test",
+  "jti": "01JC7Q1X5N7P9R2T4V6X8Z0B2D",
+  "nbf": 1793609940,
+  "sub": "link:01JC7Q0V3A8M2K9R4T6Y8B1D3F"
+}

@@ -25,7 +25,7 @@ use serde_json::{Value, json};
 
 use crate::manifest::{
     CLOCK_SKEW_S, KeyManifestError, ManifestKey, VerifiedKeyManifest, VerifyKeyManifestOptions,
-    now_s, origin_of, verify_key_manifest,
+    now_s, origin_of, verify_key_manifest, verify_stored_key_manifest,
 };
 
 /// Seconds after which the manifest is fetched again.
@@ -83,7 +83,9 @@ impl KeySet {
 
     /// Rebuilds a stored key set (`{document, fetchedAt}`) for one issuer, verifying the manifest
     /// again (offline: only the pinned root of that issuer is needed). A stored fetch time in the
-    /// future counts as now.
+    /// future counts as now. A manifest past its `exp` is restored too (reading it back is not a new
+    /// verification): its keys verify no new document (`manifest_expired`) and [`Self::needs_refresh`]
+    /// is true.
     ///
     /// # Errors
     /// [`KeyManifestError`]; `SchemaViolation` when the stored value has no document.
@@ -101,7 +103,7 @@ impl KeySet {
             .ok_or(KeyManifestError::SchemaViolation)?;
         let fetched_at = stored.get("fetchedAt").and_then(Value::as_i64).unwrap_or(0);
         Ok(Self::from_manifest(
-            verify_key_manifest(document, &options)?,
+            verify_stored_key_manifest(document, &options)?,
             fetched_at.clamp(0, now.max(0)),
         ))
     }

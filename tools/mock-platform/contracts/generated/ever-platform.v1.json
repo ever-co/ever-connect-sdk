@@ -1119,13 +1119,10 @@
     },
     "/v1/instances/me/entitlement": {
       "get": {
+        "summary": "The calling installation's signed entitlement document. The first call issues it; later calls\nanswer the current one, or a new one with a higher `seq` once what it holds changed. Send\n`If-None-Match: \"<seq>\"` to get `304` while the cached document is current. At most six calls\nan hour: refresh every `ever.refresh_after_s` and when the event feed announces a new document.",
         "tags": [
           "entitlements"
         ],
-        "summary": "Current instance-wide entitlement document",
-        "description": "At most 6 per hour. `If-None-Match: \"<seq>\"` answers `304`. Refresh every `refresh_after_s` and on `entitlement.issued`.",
-        "x-ever-phase": 2,
-        "x-ever-auth": "instance",
         "x-ever-rate-limit": "instance-entitlement",
         "operationId": "instanceGetEntitlement",
         "security": [
@@ -1133,110 +1130,59 @@
             "instanceToken": []
           }
         ],
-        "parameters": [
-          {
-            "name": "If-None-Match",
-            "in": "header",
-            "required": false,
-            "description": "Conditional read; a matching strong `ETag` answers `304 Not Modified` with an empty body.",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
         "responses": {
           "200": {
-            "description": "OK",
-            "headers": {
-              "ETag": {
-                "description": "Strong entity tag. For versioned aggregates it is `\"<version>\"`; for other GET bodies <= 256 KB it is a body hash.",
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EntitlementDocument"
+                  "$ref": "#/components/schemas/InstanceEntitlement"
                 }
               }
-            }
+            },
+            "description": "The document (`ETag: \"<seq>\"`, `Cache-Control: private, no-store`)"
           },
           "304": {
-            "description": "Not modified; the cached representation is current. Empty body."
+            "description": "The cached document is current"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid instance token"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`instance_pending_approval`"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`module_disabled`: entitlements are off on this deployment"
           },
           "429": {
-            "description": "Rate limit exceeded for this principal class (`rate_limited`).",
-            "headers": {
-              "Retry-After": {
-                "description": "Seconds to wait before retrying.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Limit": {
-                "description": "IETF RateLimit header; requests allowed in the current window for this principal class.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Remaining": {
-                "description": "IETF RateLimit header; requests remaining in the current window.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Reset": {
-                "description": "IETF RateLimit header; seconds until the window resets.",
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            },
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
-            }
-          },
-          "default": {
-            "description": "Any other error, as a problem document.",
-            "headers": {
-              "x-request-id": {
-                "description": "The request id (generated or echoed). Quote it in support requests.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "RateLimit-Limit": {
-                "description": "IETF RateLimit header; requests allowed in the current window for this principal class.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Remaining": {
-                "description": "IETF RateLimit header; requests remaining in the current window.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Reset": {
-                "description": "IETF RateLimit header; seconds until the window resets.",
-                "schema": {
-                  "type": "integer"
-                }
-              }
             },
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
+            "description": "`rate_limited`"
           }
         },
         "x-ever-row": 8
@@ -2899,12 +2845,10 @@
     },
     "/v1/instances/me/tenant-links/{link}/entitlement": {
       "get": {
+        "summary": "The signed entitlement document of one of the calling installation's tenant links: one\norganization on a multi-tenant installation, with nothing of any other. A link of another\ninstallation answers `404`.",
         "tags": [
           "entitlements"
         ],
-        "summary": "Entitlement document for one tenant link",
-        "x-ever-phase": 2,
-        "x-ever-auth": "instance",
         "x-ever-rate-limit": "instance-entitlement",
         "operationId": "instanceGetLinkEntitlement",
         "security": [
@@ -2914,19 +2858,10 @@
         ],
         "parameters": [
           {
-            "name": "link",
+            "description": "The tenant link id.",
             "in": "path",
+            "name": "link",
             "required": true,
-            "description": "Tenant link id (ULID).",
-            "schema": {
-              "$ref": "#/components/schemas/Ulid"
-            }
-          },
-          {
-            "name": "If-None-Match",
-            "in": "header",
-            "required": false,
-            "description": "Conditional read; a matching strong `ETag` answers `304 Not Modified` with an empty body.",
             "schema": {
               "type": "string"
             }
@@ -2934,71 +2869,57 @@
         ],
         "responses": {
           "200": {
-            "description": "OK",
-            "headers": {
-              "ETag": {
-                "description": "Strong entity tag. For versioned aggregates it is `\"<version>\"`; for other GET bodies <= 256 KB it is a body hash.",
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EntitlementDocument"
-                }
-              }
-            }
-          },
-          "304": {
-            "description": "Not modified; the cached representation is current. Empty body."
-          },
-          "404": {
-            "description": "Not found, or the module that serves this route is disabled on this deployment (`not_found`, `module_disabled`).",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "Any other error, as a problem document.",
-            "headers": {
-              "x-request-id": {
-                "description": "The request id (generated or echoed). Quote it in support requests.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "RateLimit-Limit": {
-                "description": "IETF RateLimit header; requests allowed in the current window for this principal class.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Remaining": {
-                "description": "IETF RateLimit header; requests remaining in the current window.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Reset": {
-                "description": "IETF RateLimit header; seconds until the window resets.",
-                "schema": {
-                  "type": "integer"
+                  "$ref": "#/components/schemas/InstanceEntitlement"
                 }
               }
             },
+            "description": "The document (`ETag: \"<seq>\"`)"
+          },
+          "304": {
+            "description": "The cached document is current"
+          },
+          "401": {
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
-            }
+            },
+            "description": "No valid instance token"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`instance_pending_approval`"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such link of this installation, or `module_disabled`"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`rate_limited`"
           }
         },
         "x-ever-row": 8
@@ -5643,213 +5564,6 @@
         ],
         "type": "object"
       },
-      "Entitlement": {
-        "type": "object",
-        "description": "Decoded `ever.entitlement.v1` claims (the `ever` object of the JWS) plus\nenvelope metadata. A lower `seq` never replaces a higher one. `handle` is\nthe only human-readable field.\n",
-        "required": [
-          "id",
-          "subject",
-          "seq",
-          "tier",
-          "products",
-          "features",
-          "limits",
-          "issued_at",
-          "expires_at",
-          "kid"
-        ],
-        "properties": {
-          "id": {
-            "$ref": "#/components/schemas/Ulid"
-          },
-          "subject": {
-            "type": "object",
-            "required": [
-              "kind",
-              "id"
-            ],
-            "properties": {
-              "kind": {
-                "type": "string",
-                "enum": [
-                  "org",
-                  "instance",
-                  "link"
-                ]
-              },
-              "id": {
-                "$ref": "#/components/schemas/Ulid"
-              }
-            }
-          },
-          "seq": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "org_id": {
-            "$ref": "#/components/schemas/Ulid"
-          },
-          "handle": {
-            "$ref": "#/components/schemas/Handle"
-          },
-          "tenant_id": {
-            "$ref": "#/components/schemas/Ulid"
-          },
-          "instance_id": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "tenant_link_id": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "tier": {
-            "$ref": "#/components/schemas/Tier"
-          },
-          "plan": {
-            "type": "object",
-            "properties": {
-              "code": {
-                "type": "string",
-                "description": "Catalog lookup key of the tier-defining fact, `community`, or the plan code of a staff grant."
-              },
-              "source": {
-                "$ref": "#/components/schemas/PlanSource"
-              },
-              "ref": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              }
-            }
-          },
-          "products": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ProductCode"
-            }
-          },
-          "features": {
-            "type": "object",
-            "propertyNames": {
-              "$ref": "#/components/schemas/FeatureKey"
-            },
-            "additionalProperties": {
-              "type": "boolean"
-            }
-          },
-          "limits": {
-            "$ref": "#/components/schemas/Limits"
-          },
-          "meters": {
-            "$ref": "#/components/schemas/Meters"
-          },
-          "managed": {
-            "type": "object",
-            "properties": {
-              "updates": {
-                "type": "boolean"
-              },
-              "backups": {
-                "type": "boolean"
-              },
-              "support_level": {
-                "type": "string",
-                "enum": [
-                  "community",
-                  "standard",
-                  "priority"
-                ]
-              }
-            }
-          },
-          "licence_ids": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/LicenceId"
-            }
-          },
-          "issued_at": {
-            "$ref": "#/components/schemas/Timestamp"
-          },
-          "not_before": {
-            "$ref": "#/components/schemas/Timestamp"
-          },
-          "expires_at": {
-            "$ref": "#/components/schemas/Timestamp"
-          },
-          "grace_s": {
-            "type": "integer",
-            "description": "Offline grace after `expires_at` during which platform features keep working (default 2 592 000 = 30 d)."
-          },
-          "refresh_after_s": {
-            "type": "integer",
-            "description": "Refresh cadence (default 21 600 = 6 h)."
-          },
-          "kid": {
-            "type": "string"
-          },
-          "reason": {
-            "type": "string",
-            "enum": [
-              "subscription_changed",
-              "scheduled_refresh",
-              "instance_connected",
-              "instance_disconnected",
-              "link_created",
-              "link_unlinked",
-              "staff_override",
-              "licence_attached",
-              "key_retired",
-              "revoked"
-            ]
-          },
-          "revoked_at": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "date-time"
-          }
-        }
-      },
-      "EntitlementDocument": {
-        "type": "object",
-        "description": "The signed document as fetched by an instance. `ETag` equals `\"<seq>\"`.",
-        "required": [
-          "document",
-          "seq",
-          "expires_at",
-          "refresh_after_s"
-        ],
-        "properties": {
-          "document": {
-            "type": "string",
-            "description": "Compact JWS, header `{\"alg\":\"EdDSA\",\"kid\":\"...\",\"typ\":\"ever-entitlement+jwt\"}`. Store the bytes as received."
-          },
-          "seq": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "issued_at": {
-            "$ref": "#/components/schemas/Timestamp"
-          },
-          "expires_at": {
-            "$ref": "#/components/schemas/Timestamp"
-          },
-          "refresh_after_s": {
-            "type": "integer"
-          },
-          "claims": {
-            "$ref": "#/components/schemas/Entitlement"
-          }
-        }
-      },
       "EnvelopeActor": {
         "description": "`{kind, id}` of who caused an event (never an e-mail or a name).",
         "properties": {
@@ -6038,24 +5752,6 @@
           "data"
         ],
         "type": "object"
-      },
-      "FeatureKey": {
-        "type": "string",
-        "description": "The closed feature key set of the `ever.entitlement.v1` document\n(see the entitlement document format); the same keys are used by the plan\ncatalog and by `Integration.requires_feature`. Adding a key is additive;\nclients ignore unknown keys. Managed add-ons are the `managed` object, not\nfeatures.\n",
-        "enum": [
-          "handle",
-          "discoverability",
-          "lookup",
-          "profile.public",
-          "profile.badges",
-          "listings",
-          "marketplace.buy",
-          "instances.multi",
-          "ever_id_login",
-          "app_sync",
-          "usage_reporting",
-          "provider_access"
-        ]
       },
       "FeedAck": {
         "additionalProperties": false,
@@ -6648,6 +6344,32 @@
         ],
         "type": "object"
       },
+      "InstanceEntitlement": {
+        "description": "A signed entitlement document as an installation receives it.",
+        "properties": {
+          "document": {
+            "description": "The compact JWS (`ever.entitlement.v1`, `typ` `ever-entitlement+jwt`); verify it with the\nkey set at `/.well-known/ever-keys.json` and store the bytes as received.",
+            "type": "string"
+          },
+          "expires_at": {
+            "description": "When the document expires; the offline grace (`ever.grace_s`) follows.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "seq": {
+            "description": "The document's `seq` (also the `ETag`).",
+            "format": "int64",
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "document",
+          "seq",
+          "expires_at"
+        ],
+        "type": "object"
+      },
       "InstanceIntegrationPut": {
         "additionalProperties": false,
         "description": "An installation switches one integration off (it may never switch one on).",
@@ -7169,50 +6891,6 @@
         ],
         "type": "object"
       },
-      "LicenceId": {
-        "type": "string",
-        "description": "Customer-facing certificate id exactly as printed on an existing ever.co certificate. It is a claim token, never a key.",
-        "pattern": "^EVER-(WORKS|GAUZY|TEAMS|REC|DEMAND|TRADUORA|PLATFORM)-(ST|SB|EN)-[0-9A-F]{8}$",
-        "examples": [
-          "EVER-GAUZY-SB-1A2B3C4D"
-        ]
-      },
-      "LimitKey": {
-        "type": "string",
-        "description": "The closed limit key set of the `ever.entitlement.v1` document; `-1` means unlimited.",
-        "enum": [
-          "instances.connected",
-          "listings.published",
-          "api.rpm",
-          "members",
-          "webhooks.endpoints",
-          "lookup.hashes_per_day",
-          "lookup.queries_per_min"
-        ]
-      },
-      "Limits": {
-        "type": "object",
-        "description": "Numeric limits keyed by `LimitKey` (`-1` = unlimited). Values come from the plan catalog and may change without an API version bump.",
-        "propertyNames": {
-          "$ref": "#/components/schemas/LimitKey"
-        },
-        "additionalProperties": {
-          "type": "integer",
-          "format": "int64",
-          "minimum": -1
-        },
-        "examples": [
-          {
-            "instances.connected": 3,
-            "listings.published": 5,
-            "api.rpm": 600,
-            "members": 100,
-            "webhooks.endpoints": 10,
-            "lookup.hashes_per_day": 6000,
-            "lookup.queries_per_min": 60
-          }
-        ]
-      },
       "LinkedTenant": {
         "description": "A tenant link as the instance sees it (never who linked it).",
         "properties": {
@@ -7604,36 +7282,6 @@
           "employees.reported",
           "stats.reports"
         ]
-      },
-      "Meters": {
-        "type": "object",
-        "description": "Usage per meter key.",
-        "additionalProperties": {
-          "type": "object",
-          "required": [
-            "used"
-          ],
-          "properties": {
-            "used": {
-              "type": "integer",
-              "format": "int64"
-            },
-            "limit": {
-              "type": [
-                "integer",
-                "null"
-              ],
-              "format": "int64"
-            },
-            "period": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "description": "`YYYY-MM`, `YYYY-MM-DD`, or null for gauges."
-            }
-          }
-        }
       },
       "MirrorAppData": {
         "type": "object",
@@ -8290,18 +7938,6 @@
           }
         }
       },
-      "PlanSource": {
-        "type": "string",
-        "description": "Evidence of the tier-defining grant; the same vocabulary as `plan.source` in the `ever.entitlement.v1` document and the `subscription.changed` event.",
-        "enum": [
-          "community",
-          "stripe_subscription",
-          "licence_certificate",
-          "works_licence_purchase",
-          "cloud_plan",
-          "staff"
-        ]
-      },
       "PricingModel": {
         "type": "string",
         "description": "Pricing is delegated to the app; `external` means the vendor bills on its own site.",
@@ -8951,16 +8587,6 @@
             }
           }
         }
-      },
-      "Tier": {
-        "type": "string",
-        "description": "`included` is derived from an active link on an Ever-operated instance and is never sold.",
-        "enum": [
-          "free",
-          "paid",
-          "bundle",
-          "included"
-        ]
       },
       "Timestamp": {
         "type": "string",

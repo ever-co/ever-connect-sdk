@@ -214,6 +214,31 @@ export function structuredCases({ issuer, ids, entitlementClaims, manifestKeys, 
   num('exp-2-53-minus-1', `"exp":${inst.exp}`, '"exp":9007199254740991');
   num('limit-unlimited', '"api.rpm":600', '"api.rpm":-1');
   add('number', 'expired-without-grace', doc({ ...inst, exp: NOW - 1, ever: { ...inst.ever, grace_s: 0 } }));
+  // How a number is written matters only for the integer claims a verifier reads (iat, nbf, exp,
+  // ever.seq, ever.grace_s); the schema's maximum bounds every integer.
+  num('limit-integral-fraction', '"api.rpm":600', '"api.rpm":600.0');
+  num('limit-2-53', '"api.rpm":600', '"api.rpm":9007199254740992');
+  num('grace-exponent', '"grace_s":2592000', '"grace_s":2.592e6');
+  num('nbf-negative-zero', `"nbf":${inst.nbf}`, '"nbf":-0');
+  num('exp-integral-fraction', `"exp":${inst.exp}`, `"exp":${inst.exp}.0`);
+
+  // ---- the manifest's expiry: keys of an expired manifest verify no new document
+  const manifestExp = NOW + 2592000;
+  add('expiry', 'one-second-before-manifest-exp', good, { now: manifestExp - 1 });
+  add('expiry', 'at-manifest-exp', good, { now: manifestExp });
+  add('expiry', 'past-manifest-exp-unknown-kid', doc(inst, { kid: 'attacker-1' }, atk), { now: manifestExp + 1 });
+  add('expiry', 'past-manifest-exp-bad-typ', doc(inst, { typ: 'JWT' }), { now: manifestExp + 1 });
+
+  // ---- the members each kind of subject carries
+  const { instance_id: _i, ...orgEver } = inst.ever;
+  add('subject', 'org-document', doc({ ...inst, sub: `org:${inst.ever.org_id}`, ever: orgEver }));
+  add('subject', 'org-document-with-instance', doc({ ...inst, sub: `org:${inst.ever.org_id}` }));
+  add('subject', 'instance-without-instance-id', doc({ ...inst, ever: orgEver }));
+  const { tenant: _t, ...linkNoTenant } = link.ever;
+  add('subject', 'link-without-tenant', doc({ ...link, ever: linkNoTenant }), { expected_subject: linkSub });
+  add('subject', 'link-names-another-link', doc({ ...link, ever: { ...link.ever, tenant_link_id: ids.otherLink } }), {
+    expected_subject: linkSub,
+  });
 
   // ---- rollback against the cached document
   add('rollback', 'equal-seq-equal-iat', good, { cached: { seq: 3, iat: inst.iat } });

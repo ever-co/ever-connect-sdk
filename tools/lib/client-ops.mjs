@@ -53,11 +53,14 @@ export function clientOperations(spec, calls) {
         auth: authOf(op),
         idempotencyKey: headerRule(params, 'Idempotency-Key'),
         linkHeader: headerRule(params, 'Ever-Link-Id'),
-        conditional: headerRule(params, 'If-None-Match') !== 'none',
+        // A conditional read takes `If-None-Match` or answers `304` (the pinned contract documents
+        // the 304 without naming the request header).
+        conditional: headerRule(params, 'If-None-Match') !== 'none' || Object.hasOwn(op.responses ?? {}, '304'),
         body: json ? { schema: json.schema, required: op.requestBody.required === true } : null,
         success,
         row: op['x-ever-row'],
         integration: op['x-ever-integration'] ?? null,
+        rateLimit: op['x-ever-rate-limit'] ?? null,
         status: statusById[op.operationId] ?? 'pending_upstream',
       });
     }
@@ -113,6 +116,8 @@ export interface OperationSpec {
   readonly success: readonly number[];
   readonly row: number;
   readonly integration: string | null;
+  /** The platform's rate-limit class (\`x-ever-rate-limit\`), when the contract names one. */
+  readonly rateLimit: string | null;
   readonly status: 'pinned' | 'provisional' | 'pending_upstream';
 }
 
@@ -150,6 +155,7 @@ export function operationsRs(ops, header) {
         success: &[${o.success.join(', ')}],
         row: ${o.row},
         integration: ${o.integration ? `Some(${rsStr(o.integration)})` : 'None'},
+        rate_limit: ${o.rateLimit ? `Some(${rsStr(o.rateLimit)})` : 'None'},
         status: ${rsStr(o.status)},
     },`,
     )
@@ -210,6 +216,8 @@ pub struct Operation {
     pub row: u16,
     /// The integration that gates it.
     pub integration: Option<&'static str>,
+    /// The platform's rate-limit class (\`x-ever-rate-limit\`), when the contract names one.
+    pub rate_limit: Option<&'static str>,
     /// \`pinned\`, \`provisional\` or \`pending_upstream\`.
     pub status: &'static str,
 }

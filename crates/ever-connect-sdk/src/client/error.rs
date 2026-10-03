@@ -83,6 +83,13 @@ pub enum Error {
         /// The limit, in bytes.
         limit_bytes: usize,
     },
+    /// A call the client held back because the platform would refuse it for its rate class (the
+    /// entitlement reads: `entitlement.max_reads_per_hour` per path, or a 429's `Retry-After`):
+    /// nothing was sent.
+    RateLimited {
+        /// Seconds to wait before the call can go out.
+        retry_after_s: u64,
+    },
     /// The client options are not usable.
     InvalidOptions(&'static str),
 }
@@ -101,6 +108,7 @@ impl Error {
             Self::Assertion(e) => e.code(),
             Self::Transport(_) => "transport",
             Self::ResponseTooLarge { .. } => "response_too_large",
+            Self::RateLimited { .. } => "rate_limited",
             Self::InvalidOptions(_) => "invalid_options",
         }
     }
@@ -133,6 +141,10 @@ impl fmt::Display for Error {
             Self::ResponseTooLarge { limit_bytes } => {
                 write!(f, "answer larger than {limit_bytes} bytes")
             }
+            Self::RateLimited { retry_after_s } => write!(
+                f,
+                "held back before sending: rate_limited (retry after {retry_after_s} s)"
+            ),
             Self::InvalidOptions(m) => write!(f, "invalid client options: {m}"),
         }
     }

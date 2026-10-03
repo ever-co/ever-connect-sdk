@@ -1876,7 +1876,7 @@ pub mod stats_v1 {
 
 /// Types of `contracts/schemas/ever.entitlement.v1.json`.
 pub mod entitlement_v1 {
-    ///The only wire format of the entitlement document. Served verbatim at GET /v1/entitlements/schema; vendored in the SDK as contracts/schemas/ever.entitlement.v1.json with a sha256 drift test; every signed document is validated against it by the issuer's tests. Closed at every level; handle is the only human-readable field.
+    ///The only wire format of the entitlement document. Served verbatim at GET /v1/entitlements/schema; vendored in the SDK as contracts/schemas/ever.entitlement.v1.json with a sha256 drift test; every signed document is validated against it by the issuer's tests. Closed at every level; handle is the only human-readable field. Integers are I-JSON integers (at most 2^53 - 1). The members of ever follow the subject: an org document names no installation or link, an instance document names its installation and no link, a link document names its installation, its tenant_link_id and its tenant (a verifier also checks that sub is link:<tenant_link_id>).
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct EntitlementV1 {

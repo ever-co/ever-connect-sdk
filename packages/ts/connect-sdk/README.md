@@ -69,8 +69,8 @@ store.registryInstanceId = redeemed.instance_id;
 const stored = store.keySet ? KeySet.restore(store.keySet, { issuer: client.issuer }) : undefined;
 let { keySet } = await client.keys.refresh(stored); // a refused manifest keeps the previous set
 
-// The entitlement document: on an unknown key id the set is refreshed once (at most every
-// 10 minutes) and the document verified again.
+// The entitlement document: when the manifest expired, or on an unknown key id (at most every
+// 10 minutes), the set is refreshed and the document verified again.
 const answer = await client.instances.entitlement(store.entitlement?.seq);
 if (!('notModified' in answer)) {
   const result = await client.verifyEntitlementRefreshing(answer.document, { keySet, cached: store.entitlement });
@@ -90,6 +90,9 @@ Behaviour, for every call:
 - the first call that needs the instance token signs a client assertion; before the first redeem
   it throws `NotConnectedError` without sending anything; a 401 gets a new token and one retry;
   `401 credential_revoked` is answered at once;
+- the entitlement reads keep the platform's account (a bucket of 6 per path, one back every
+  10 minutes; a 429's `Retry-After`): a read the platform would refuse is held back without being
+  sent (`RateLimitedError` with `retryAfterS`);
 - a non-2xx answer is a `ProblemError` (`status`, `code`, `detail`, `instance`, `errors`,
   `retryAfterS`); a 304 is `{ notModified: true }`; deadlines are 6 s for reads, 10 s for writes
   and `waitS + 5` s for the event long poll (`TimeoutError`);

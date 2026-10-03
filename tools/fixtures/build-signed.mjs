@@ -763,11 +763,18 @@ function entitlements() {
   const corpus = mutationCorpus(bases);
   const subjects = [`instance:${IDS.instance}`, `link:${IDS.link}`];
   const letters = Object.fromEntries(Object.entries(CODE_LETTERS).map(([code, letter]) => [code, letter]));
+  const corpusManifest = referenceManifest(
+    signManifest({ issuer: ISSUER, iat: NOW, keys: manifestKeys() }),
+    [testRootEntry(ISSUER)],
+    ISSUER,
+    NOW,
+  );
   const answers = corpus
     .map(({ base, jws }) => {
       const r = referenceVerify(jws, {
         keys: manifestKeys(),
         keysIssuer: ISSUER,
+        manifestExpiresAt: corpusManifest.expiresAt,
         issuer: ISSUER,
         instanceId: IDS.instance,
         subject: subjects[base],
@@ -828,6 +835,7 @@ function entitlements() {
       const r = referenceVerify(c.jws, {
         keys: m.keys,
         keysIssuer: m.issuer,
+        manifestExpiresAt: m.expiresAt,
         issuer: o.expected_issuer,
         instanceId: o.expected_instance_id,
         subject: o.expected_subject,
@@ -846,7 +854,7 @@ function entitlements() {
   });
   files['entitlement/expected.json'] = json({
     description:
-      'Verification outcome of each document in the order of the entitlement verification rules (typ, alg, kid in the root-verified manifest with purpose entitlement, signature, schema and claims, instance and subject, iat/nbf, seq), with the inputs of context.json; a valid document also names its status at the context time (valid; stale inside the grace after exp; paused past it). A verifier that checks the closed schema first may answer a code from also_acceptable.',
+      'Verification outcome of each document in the order of the entitlement verification rules (typ, alg, the manifest not past its exp, kid in the root-verified manifest with purpose entitlement, signature, schema and claims, instance and subject, iat/nbf, seq), with the inputs of context.json; a valid document also names its status at the context time (valid; stale inside the grace after exp; paused past it). A verifier that checks the closed schema first may answer a code from also_acceptable.',
     fixtures: expected,
   });
   files['entitlement/context.json'] = json({

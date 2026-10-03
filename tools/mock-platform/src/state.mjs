@@ -130,6 +130,7 @@ export class MockState {
     this.keyGeneration = 1;
     this.keysRotatedAt = null;
     this.windows = new Map();
+    this.arrivals = new Map();
     this.idempotency = new Map();
     this.authCalls = 0;
     this.lastInstanceId = null;
@@ -195,6 +196,21 @@ export class MockState {
     }
     w.count += 1;
     return w.count > limit ? w.start + windowS - now : 0;
+  }
+
+  /**
+   * A request of a class the platform limits as a bucket of `limit` refilled one every
+   * `windowS / limit` seconds (the generic cell rate algorithm): answers the seconds to wait, or 0
+   * and counts it.
+   */
+  bucket(key, limit, windowS) {
+    const now = this.now();
+    const interval = windowS / limit;
+    const tolerance = interval * (limit - 1);
+    const arrival = Math.max(this.arrivals.get(key) ?? now, now);
+    if (arrival - now > tolerance) return Math.ceil(arrival - now - tolerance);
+    this.arrivals.set(key, arrival + interval);
+    return 0;
   }
 
   /** Appends an event to an installation's feed and wakes any long-poll waiting on it. */

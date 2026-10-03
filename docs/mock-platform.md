@@ -104,7 +104,7 @@ Every key is optional; `tools/mock-platform/mock.config.example.json` shows the 
 | `GET /__mock/state` | | installations, links, integration states, feeds, statistics reports, managed operations |
 | `POST /__mock/reset` | | empties the state and the record |
 | `POST /__mock/clock` | `{set}` or `{advance}` (seconds) | moves the clock; expires managed operations past their window |
-| `POST /__mock/keys/rotate` | | rotates the entitlement key (the old one stays `previous`) |
+| `POST /__mock/keys/rotate` | | rotates the entitlement key (the old one stays `previous`) and re-signs the key manifest; as on the platform, the manifest is also re-signed every 7 days of mock time (it lives 30 days) |
 | `POST /__mock/codes` | `{code, kind?, product?, org?, expires_in_s?, pending_approval?}` | adds a code |
 | `POST /__mock/codes/revoke` | `{code}` | revokes a code, as an organization admin does in app.ever.co: its redemption answers `422 code_invalid` |
 | `POST /__mock/approve` | `{instance_id}` or `{user_code \| device_code, org?}` | approves a pending installation or a device-first connect |

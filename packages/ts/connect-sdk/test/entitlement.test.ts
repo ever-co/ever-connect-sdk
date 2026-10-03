@@ -80,6 +80,21 @@ describe('the steps', () => {
   const sign = (header: Record<string, unknown>, payload: Record<string, unknown> = claims, label = 'test-entitlement/1') =>
     signRaw(label, { alg: 'EdDSA', kid: 'test-entitlement-1', typ: 'ever-entitlement+jwt', ...header }, payload);
   const opts = options('valid/instance.jws');
+  // A document over exact payload text (to write numbers as JSON allows).
+  const signText = (text: string) =>
+    signRaw(
+      'test-entitlement/1',
+      { alg: 'EdDSA', kid: 'test-entitlement-1', typ: 'ever-entitlement+jwt' },
+      text as unknown as Record<string, unknown>,
+    );
+  const errorOf = (fn: () => unknown): EntitlementError => {
+    try {
+      fn();
+    } catch (error) {
+      if (error instanceof EntitlementError) return error;
+    }
+    throw new Error('no EntitlementError');
+  };
 
   it('an unknown kid suggests one key-set refresh; a known kid of another purpose does not', () => {
     const unknown = (() => {
@@ -147,13 +162,93 @@ describe('the steps', () => {
     const fake = Object.create(KeySet.prototype);
     expect(() => verifyEntitlement(instance, { ...opts, keySet: fake })).toThrow(TypeError);
   });
-  it('a key set verifies documents of its own issuer only (checked first)', () => {
+  it('a key set verifies documents of its own issuer only (at the issuer check, in the contract order)', () => {
     expect(codeOf(() => verifyEntitlement(instance, { ...opts, expectedIssuer: 'https://api.ever.co' }))).toBe('issuer_mismatch');
-    expect(codeOf(() => verifyEntitlement('not a document', { ...opts, expectedIssuer: 'https://api.ever.co' }))).toBe('issuer_mismatch');
+    // A document of the other issuer signed with a key of this set: refused at the issuer check.
+    const prod = sign({}, { ...claims, iss: 'https://api.ever.co' });
+    expect(codeOf(() => verifyEntitlement(prod, { ...opts, expectedIssuer: 'https://api.ever.co' }))).toBe('issuer_mismatch');
+    // The earlier checks come first.
+    expect(codeOf(() => verifyEntitlement('not a document', { ...opts, expectedIssuer: 'https://api.ever.co' }))).toBe('malformed');
   });
-  it('a link document names its own link; an instance document carries no link member', () => {
+  it('a stored key set whose manifest expired is restored, and verifies no new document', () => {
+    const exp = keySet.manifest.expiresAt;
+    const restored = KeySet.restore(keySet.toJSON(), { issuer: keysCtx.issuer, unsafeRootKeys: roots, now: exp + 86400 });
+    expect(restored.needsRefresh(exp + 86400)).toBe(true);
+    expect(codeOf(() => verifyEntitlement(instance, { ...opts, keySet: restored, now: exp + 86400 }))).toBe('manifest_expired');
+    expect(() => KeySet.verify(fixture('keys/manifest.valid.json'), { issuer: keysCtx.issuer, unsafeRootKeys: roots, now: exp })).toThrow(
+      expect.objectContaining({ code: 'manifest_expired' }),
+    );
+  });
+  it('an instance document carries no link member (the schema); a link document names its own link', () => {
     const linked = sign({}, { ...claims, ever: { ...claims.ever, tenant_link_id: '01JHGF4PAY0P5JJ7J2A56VSRZM' } });
-    expect(codeOf(() => verifyEntitlement(linked, opts))).toBe('subject_mismatch');
+    expect(codeOf(() => verifyEntitlement(linked, opts))).toBe('schema_violation');
+    const link = fixture('entitlement/valid/link.claims.json');
+    const elsewhere = sign({}, { ...link, ever: { ...link.ever, tenant_link_id: '01JHGF4PAY0P5JJ7J2A56VSRZN' } });
+    expect(codeOf(() => verifyEntitlement(elsewhere, { ...options('valid/link.jws') }))).toBe('subject_mismatch');
+  });
+  it('keys of an expired manifest verify no new document (after alg, before the key lookup)', () => {
+    const exp = opts.keySet.manifest.expiresAt;
+    expect(verifyEntitlement(instance, { ...opts, now: exp - 1 }).status).toBe('stale');
+    expect(codeOf(() => verifyEntitlement(instance, { ...opts, now: exp }))).toBe('manifest_expired');
+    const unknown = sign({ kid: 'test-entitlement-9' }, claims);
+    expect(codeOf(() => verifyEntitlement(unknown, { ...opts, now: exp }))).toBe('manifest_expired');
+    expect(codeOf(() => verifyEntitlement(sign({ typ: 'JWT' }, claims), { ...opts, now: exp }))).toBe('bad_typ');
+  });
+  it('the integer claims are I-JSON integers as written; other numbers only meet the schema', () => {
+    const text = (patch: (s: string) => string) => signText(patch(JSON.stringify(claims)));
+    expect(
+      codeOf(() =>
+        verifyEntitlement(
+          text((s) => s.replace('"seq":3', '"seq":3.0')),
+          opts,
+        ),
+      ),
+    ).toBe('schema_violation');
+    expect(
+      errorOf(() =>
+        verifyEntitlement(
+          text((s) => s.replace('"seq":3', '"seq":3.0')),
+          opts,
+        ),
+      ).path,
+    ).toBe('/ever/seq');
+    expect(
+      codeOf(() =>
+        verifyEntitlement(
+          text((s) => s.replace(/"iat":(\d+)/, '"iat":$1e0')),
+          opts,
+        ),
+      ),
+    ).toBe('schema_violation');
+    expect(
+      codeOf(() =>
+        verifyEntitlement(
+          text((s) => s.replace('"seq":3', '"seq":9007199254740992')),
+          opts,
+        ),
+      ),
+    ).toBe('schema_violation');
+    expect(
+      codeOf(() =>
+        verifyEntitlement(
+          text((s) => s.replace('"seq":3', '"seq":1e400')),
+          opts,
+        ),
+      ),
+    ).toBe('malformed');
+    // A member given twice: the last one counts, as JSON.parse reads it.
+    expect(
+      verifyEntitlement(
+        text((s) => s.replace('"seq":3', '"seq":3.0,"seq":3')),
+        opts,
+      ).seq,
+    ).toBe(3);
+    expect(
+      verifyEntitlement(
+        text((s) => s.replace('"api.rpm":600', '"api.rpm":600.0')),
+        opts,
+      ).seq,
+    ).toBe(3);
   });
   it('a JWS over 64 KiB is malformed', () => {
     expect(codeOf(() => verifyEntitlement(`${instance}${'A'.repeat(65536)}`, opts))).toBe('malformed');

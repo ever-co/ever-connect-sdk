@@ -10,10 +10,11 @@
  *   4. header `alg` is `EdDSA` and there is no `crit`                                   bad_alg
  *   5. header `kid` is a root pinned for the expected issuer                            unknown_root
  *   6. the root's Ed25519 signature over `header.payload` (strict)                      bad_signature
- *   7. the payload is `{iss, iat, exp, keys_sha256, root_kid}` with `root_kid` = header `kid`  malformed
+ *   7. the payload is `{iss, iat, exp, keys_sha256, root_kid}` (`iat` and `exp` I-JSON integers)
+ *      with `root_kid` = header `kid`                                                     malformed
  *   8. payload `iss` is the expected issuer (an origin)                                 issuer_mismatch
  *   9. `iat <= now + 300`                                                               manifest_not_yet_valid
- *  10. `now < exp`                                                                      manifest_expired
+ *  10. `now < exp` (not for a stored manifest read back by `KeySet.restore`)              manifest_expired
  *  11. `keys_sha256` is the hex SHA-256 of the RFC 8785 canonical JSON of `keys`        keys_sha256_mismatch
  *
  * The issuer is always given: a manifest is verified for one issuer and the keys it vouches for
@@ -23,7 +24,7 @@ import { CONSTANTS, SCHEMAS } from '@ever-co/connect-contracts';
 import { isCurvePoint, isSmallOrder } from './ed25519';
 import { fromB64url, sha256Hex } from './encoding';
 import { KeyManifestError } from './errors';
-import { canonicalJson, decodeJws, verifyEd25519 } from './jws';
+import { canonicalJson, decodeJws, firstNonInteger, verifyEd25519 } from './jws';
 import { originOf } from './local';
 import { schemaViolations } from './schema';
 import { parseUtcTime } from './time';
@@ -131,6 +132,19 @@ function keysWellFormed(keys: readonly ManifestKey[]): boolean {
  * {@link KeyManifestError} with the code of the first failed check.
  */
 export function verifyKeyManifest(body: unknown, options: VerifyKeyManifestOptions): VerifiedKeyManifest {
+  return verify(body, options, false);
+}
+
+/**
+ * The same checks for a manifest read back from storage, except its `exp`: reading a stored key
+ * set back (a restart) is not a new verification, and the keys of an expired manifest verify no
+ * new document (`manifest_expired` from the entitlement verifier). Used by `KeySet.restore` only.
+ */
+export function verifyStoredKeyManifest(body: unknown, options: VerifyKeyManifestOptions): VerifiedKeyManifest {
+  return verify(body, options, true);
+}
+
+function verify(body: unknown, options: VerifyKeyManifestOptions, stored: boolean): VerifiedKeyManifest {
   if (!options || typeof options.issuer !== 'string') throw new TypeError('verifyKeyManifest needs the issuer (the API origin)');
   const roots = options.unsafeRootKeys ?? pinnedRootKeys();
   const now = Math.floor(options.now ?? Date.now() / 1000);
@@ -162,15 +176,19 @@ export function verifyKeyManifest(body: unknown, options: VerifyKeyManifestOptio
   if (!root) throw new KeyManifestError('unknown_root');
   // 6. The root's signature.
   if (!verifyEd25519(root.x, jws.signingInput, jws.signature)) throw new KeyManifestError('bad_signature');
-  // 7. The payload shape; the payload names the root that signed it.
-  if (schemaViolations(MANIFEST_SCHEMA, payload, PAYLOAD_SCHEMA).length > 0 || payload.root_kid !== header.kid)
+  // 7. The payload shape (`iat` and `exp` written as I-JSON integers); the payload names the root that signed it.
+  if (
+    schemaViolations(MANIFEST_SCHEMA, payload, PAYLOAD_SCHEMA).length > 0 ||
+    firstNonInteger(jws.payloadNumbers, ['/iat', '/exp']) !== null ||
+    payload.root_kid !== header.kid
+  )
     throw new KeyManifestError('malformed');
   const p = payload as { iss: string; iat: number; exp: number; keys_sha256: string; root_kid: string };
   // 8. The issuer.
   if (p.iss !== expected) throw new KeyManifestError('issuer_mismatch');
   // 9-10. The validity window.
   if (p.iat > now + CLOCK_SKEW_S) throw new KeyManifestError('manifest_not_yet_valid');
-  if (now >= p.exp) throw new KeyManifestError('manifest_expired');
+  if (!stored && now >= p.exp) throw new KeyManifestError('manifest_expired');
   // 11. The served keys are the keys the root signed.
   if (keysSha256(doc.keys) !== p.keys_sha256) throw new KeyManifestError('keys_sha256_mismatch');
 

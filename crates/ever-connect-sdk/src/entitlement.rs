@@ -1,26 +1,30 @@
 //! The entitlement document verifier (`ever.entitlement.v1`), the one implementation every product
-//! uses. The checks run in this order and fail closed at the first one that does not pass:
+//! uses. The checks run in the order of the contract (the entitlement document format, section
+//! 3.1) with its codes, the same as the platform's reference verifier, and fail closed at the first
+//! one that does not pass:
 //!
-//! 0. the key set was verified for the expected issuer (a key set of one issuer never vouches for
-//!    a document of another): `issuer_mismatch`
-//! 1. a compact JWS (the decoding rule of the JWS module: 64 KiB, canonical parts, safe integers
-//!    only, well-formed strings, 127 levels): `malformed`
+//! 1. a compact JWS (the decoding rule of the JWS module: 64 KiB, canonical parts, well-formed
+//!    strings, numbers that fit a double, 127 levels): `malformed`
 //! 2. header `typ` is `ever-entitlement+jwt`: `bad_typ`
 //! 3. header `alg` is `EdDSA` and there is no `crit` (before any key lookup): `bad_alg`
-//! 4. header `kid` is in the root-verified key set, purpose `entitlement`, state `active` or
+//! 4. the key set's manifest is not past its `exp` (keys of an expired manifest verify no new
+//!    document: refresh the key set): `manifest_expired`
+//! 5. header `kid` is in the root-verified key set, purpose `entitlement`, state `active` or
 //!    `previous`, inside its validity window: `unknown_kid`
-//! 5. the Ed25519 signature over `header.payload` (strict: no small-order point): `bad_signature`
-//! 6. `ever.schema` is `ever.entitlement.v1`: `schema_violation`
-//! 7. `iss` is the origin of the expected issuer: `issuer_mismatch`
-//! 8. `aud` is `ever-connect`: `audience_mismatch`
-//! 9. the closed schema of the whole payload: `schema_violation`
-//! 10. `ever.instance_id` is this installation's Registry id: `instance_mismatch`
-//! 11. `sub` is the expected subject (`instance:<id>` or `link:<id>`); a link document names
-//!     its own link (`ever.tenant_link_id`), an instance document carries no link member:
-//!     `subject_mismatch`
-//! 12. `iat <= now + 300`: `iat_in_future`
-//! 13. `nbf <= now + 300`: `nbf_in_future`
-//! 14. against the cached document: a lower `seq`, or the same `seq` without a later `iat`:
+//! 6. the Ed25519 signature over `header.payload` (strict: no small-order point): `bad_signature`
+//! 7. `ever.schema` is `ever.entitlement.v1`: `schema_violation`
+//! 8. `iss` is the origin of the expected issuer, and so is the issuer of the key set's manifest
+//!    (a key set never verifies another issuer's document): `issuer_mismatch`
+//! 9. `aud` is `ever-connect`: `audience_mismatch`
+//! 10. the closed schema of the whole payload (with its I-JSON `maximum`s and the members each
+//!     kind of subject carries), and `iat`, `nbf`, `exp`, `ever.seq` and `ever.grace_s` written
+//!     as I-JSON integers (no fraction, no exponent, not `-0`): `schema_violation`
+//! 11. `ever.instance_id` is this installation's Registry id: `instance_mismatch`
+//! 12. `sub` is the expected subject (`instance:<id>` or `link:<id>`); a link document names
+//!     its own link (`ever.tenant_link_id`): `subject_mismatch`
+//! 13. `iat <= now + 300`: `iat_in_future`
+//! 14. `nbf <= now + 300`: `nbf_in_future`
+//! 15. against the cached document: a lower `seq`, or the same `seq` without a later `iat`:
 //!     `entitlement_stale`
 //!
 //! `exp` is never a failure: it feeds [`entitlement_status`] only. No error carries the token or a
@@ -31,7 +35,7 @@ use std::sync::OnceLock;
 
 use serde_json::Value;
 
-use crate::jws::{decode, str_of, verify_ed25519};
+use crate::jws::{decode, first_non_integer, str_of, verify_ed25519};
 use crate::keyset::KeySet;
 use crate::manifest::{CLOCK_SKEW_S, now_s, origin_of};
 use crate::schema::violations;
@@ -46,6 +50,8 @@ pub enum EntitlementErrorCode {
     BadTyp,
     /// Not EdDSA, or a `crit` header.
     BadAlg,
+    /// The key set's manifest is past its `exp`: it vouches for no new document (refresh it).
+    ManifestExpired,
     /// No trusted entitlement key of that id.
     UnknownKid,
     /// The signature does not verify.
@@ -76,6 +82,7 @@ impl EntitlementErrorCode {
             Self::Malformed => "malformed",
             Self::BadTyp => "bad_typ",
             Self::BadAlg => "bad_alg",
+            Self::ManifestExpired => "manifest_expired",
             Self::UnknownKid => "unknown_kid",
             Self::BadSignature => "bad_signature",
             Self::SchemaViolation => "schema_violation",
@@ -176,6 +183,9 @@ pub struct VerifiedEntitlement {
     pub status: EntitlementStatus,
 }
 
+/// The integer claims a verifier reads, which must be written as I-JSON integers.
+const INTEGER_CLAIMS: &[&str] = &["/exp", "/ever/grace_s", "/ever/seq", "/iat", "/nbf"];
+
 fn entitlement_schema() -> &'static Value {
     static SCHEMA: OnceLock<Value> = OnceLock::new();
     SCHEMA.get_or_init(|| {
@@ -204,10 +214,6 @@ pub fn verify_entitlement(
     let now = o.now.unwrap_or_else(now_s);
     let issuer = origin_of(o.expected_issuer);
 
-    // 0. The key set is the expected issuer's.
-    if issuer.as_deref() != Some(o.key_set.issuer()) {
-        return Err(fail(C::IssuerMismatch));
-    }
     // 1. A compact JWS.
     let decoded = decode(jws).ok_or(fail(C::Malformed))?;
     // 2-3. Type, then algorithm, before any key is looked up.
@@ -217,7 +223,11 @@ pub fn verify_entitlement(
     if str_of(&decoded.header, "alg") != Some("EdDSA") || decoded.header.contains_key("crit") {
         return Err(fail(C::BadAlg));
     }
-    // 4. A trusted entitlement key.
+    // 4. Keys of an expired manifest verify no new document.
+    if now >= o.key_set.manifest().expires_at() {
+        return Err(fail(C::ManifestExpired));
+    }
+    // 5. A trusted entitlement key.
     let kid = str_of(&decoded.header, "kid");
     let Some(key) = kid.and_then(|kid| o.key_set.find(kid, "entitlement", now)) else {
         return Err(EntitlementError {
@@ -226,7 +236,7 @@ pub fn verify_entitlement(
             path: None,
         });
     };
-    // 5. Its signature.
+    // 6. Its signature.
     if !verify_ed25519(
         key.x(),
         decoded.signing_input.as_bytes(),
@@ -234,7 +244,7 @@ pub fn verify_entitlement(
     ) {
         return Err(fail(C::BadSignature));
     }
-    // 6-8. Schema id, issuer, audience.
+    // 7-9. Schema id, issuer, audience.
     let payload = Value::Object(decoded.payload);
     if payload.pointer("/ever/schema").and_then(Value::as_str) != Some("ever.entitlement.v1")
         || !payload.get("ever").is_some_and(Value::is_object)
@@ -244,21 +254,36 @@ pub fn verify_entitlement(
             ..fail(C::SchemaViolation)
         });
     }
-    if payload.get("iss").and_then(Value::as_str) != issuer.as_deref() {
+    // The document's issuer is the expected one and the one whose manifest vouched for the key.
+    if issuer.is_none()
+        || issuer.as_deref() != Some(o.key_set.issuer())
+        || payload.get("iss").and_then(Value::as_str) != issuer.as_deref()
+    {
         return Err(fail(C::IssuerMismatch));
     }
     if payload.get("aud").and_then(Value::as_str) != Some("ever-connect") {
         return Err(fail(C::AudienceMismatch));
     }
-    // 9. The closed schema.
+    // 10. The closed schema, and the integer claims written as I-JSON integers.
     let schema = entitlement_schema();
-    if let Some(first) = violations(schema, &payload, schema).into_iter().next() {
+    let mut paths: Vec<String> = violations(schema, &payload, schema)
+        .into_iter()
+        .map(|v| v.path)
+        .collect();
+    if let Some(written) = first_non_integer(&payload, INTEGER_CLAIMS) {
+        paths.push(written.to_owned());
+    }
+    if let Some(first) = paths
+        .into_iter()
+        .min_by(|a, b| a.as_bytes().cmp(b.as_bytes()))
+    {
         return Err(EntitlementError {
-            path: Some(first.path),
+            path: Some(first),
             ..fail(C::SchemaViolation)
         });
     }
-    // 10-11. This installation, this subject.
+    // 11-12. This installation, this subject; a link document names its own link (the schema
+    // already holds an instance document to no link member).
     if payload.pointer("/ever/instance_id").and_then(Value::as_str) != Some(o.expected_instance_id)
     {
         return Err(fail(C::InstanceMismatch));
@@ -278,8 +303,8 @@ pub fn verify_entitlement(
     if !consistent {
         return Err(fail(C::SubjectMismatch));
     }
-    // 12-13. Not from the future. The decoder admits safe integers only and the schema made these
-    // integers, so a value that is not one is a schema violation, never a sentinel.
+    // 13-14. Not from the future. Step 10 made these I-JSON integers, so a value that is not one
+    // is a schema violation, never a sentinel.
     let int = |pointer: &str| {
         payload
             .pointer(pointer)
@@ -296,7 +321,7 @@ pub fn verify_entitlement(
     if nbf > now.saturating_add(CLOCK_SKEW_S) {
         return Err(fail(C::NbfInFuture));
     }
-    // 14. Never older than the cached document.
+    // 15. Never older than the cached document.
     if let Some(cached) = o.cached
         && (seq < cached.seq || (seq == cached.seq && iat <= cached.iat))
     {

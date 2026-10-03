@@ -19,7 +19,9 @@ const read = (p) => JSON.parse(readFileSync(join(REPO, p), 'utf8'));
 const CONTRACT = 'https://ever-connect-sdk.invalid/contract.json';
 
 function validators() {
-  const strict = new Ajv2020({ strict: true, strictTypes: false, allErrors: true, allowUnionTypes: true });
+  // strictRequired is off: the entitlement schema's if/then on `sub` requires members of `ever` that
+  // the outer schema declares (valid JSON Schema, which this ajv lint does not follow).
+  const strict = new Ajv2020({ strict: true, strictTypes: false, strictRequired: false, allErrors: true, allowUnionTypes: true });
   const loose = new Ajv2020({ strict: false, allErrors: true, allowUnionTypes: true });
   for (const ajv of [strict, loose]) addFormats(ajv);
   const docs = {};
