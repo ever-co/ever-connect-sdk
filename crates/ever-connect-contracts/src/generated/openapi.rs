@@ -89,84 +89,6 @@ pub mod components {
             value.parse()
         }
     }
-    ///Who did something. Identifiers only, never an e-mail or name.
-    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
-    #[serde(deny_unknown_fields)]
-    pub struct Actor {
-        pub id: ::std::string::String,
-        pub kind: ActorKind,
-    }
-    ///`ActorKind`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum ActorKind {
-        #[serde(rename = "person")]
-        Person,
-        #[serde(rename = "instance")]
-        Instance,
-        #[serde(rename = "api_key")]
-        ApiKey,
-        #[serde(rename = "staff")]
-        Staff,
-        #[serde(rename = "service")]
-        Service,
-        #[serde(rename = "system")]
-        System,
-        #[serde(rename = "visitor")]
-        Visitor,
-    }
-    impl ::std::fmt::Display for ActorKind {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Person => f.write_str("person"),
-                Self::Instance => f.write_str("instance"),
-                Self::ApiKey => f.write_str("api_key"),
-                Self::Staff => f.write_str("staff"),
-                Self::Service => f.write_str("service"),
-                Self::System => f.write_str("system"),
-                Self::Visitor => f.write_str("visitor"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for ActorKind {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "person" => Ok(Self::Person),
-                "instance" => Ok(Self::Instance),
-                "api_key" => Ok(Self::ApiKey),
-                "staff" => Ok(Self::Staff),
-                "service" => Ok(Self::Service),
-                "system" => Ok(Self::System),
-                "visitor" => Ok(Self::Visitor),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for ActorKind {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for ActorKind {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
     ///`BillingLink`
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct BillingLink {
@@ -279,11 +201,35 @@ pub mod components {
             value.parse()
         }
     }
-    ///`ConsentUrl`
+    ///The consent part of `IntegrationPut`.
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct ConsentInput {
+        ///The explicit confirmation (`true`).
+        pub accepted: bool,
+        /**Options chosen on the consent screen. No integration takes any: only an empty object (or
+        none) is accepted, anything else answers `422`. A consent record is immutable, so nothing
+        free-form ever enters it.*/
+        #[serde(default, skip_serializing_if = "::serde_json::Map::is_empty")]
+        pub config: ::serde_json::Map<::std::string::String, ::serde_json::Value>,
+        ///The data-processing agreement version shown (must be the current one).
+        pub dpa_version: ::std::string::String,
+        ///The scope version shown on the consent screen (must be the current one).
+        pub scope_version: i64,
+        ///The consent screen's version.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub screen_version: ::std::option::Option<::std::string::String>,
+        ///The consent screen's language.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub ui_locale: ::std::option::Option<::std::string::String>,
+    }
+    ///The consent deep link a product opens.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ConsentUrl {
-        pub expires_at: Timestamp,
-        ///Deep link into app.ever.co (`/connect/consent?...`) that the product UI opens; the person must be an owner or admin of the linked organization.
+        ///When it stops being accepted.
+        pub expires_at: ::std::string::String,
+        /**The link into app.ever.co (`/connect/consent?...`); the person must be an owner or admin
+        of the linked organization.*/
         pub url: ::std::string::String,
     }
     ///The authoritative view of who the caller is and what they may act on.
@@ -1041,6 +987,10 @@ pub mod components {
         IntegrationDisabled,
         #[serde(rename = "integration_revoked")]
         IntegrationRevoked,
+        #[serde(rename = "denied_by_policy")]
+        DeniedByPolicy,
+        #[serde(rename = "integration_not_available")]
+        IntegrationNotAvailable,
         #[serde(rename = "entitlement_required")]
         EntitlementRequired,
         #[serde(rename = "tier_required")]
@@ -1187,6 +1137,8 @@ pub mod components {
                 Self::NotConnectionOwner => f.write_str("not_connection_owner"),
                 Self::IntegrationDisabled => f.write_str("integration_disabled"),
                 Self::IntegrationRevoked => f.write_str("integration_revoked"),
+                Self::DeniedByPolicy => f.write_str("denied_by_policy"),
+                Self::IntegrationNotAvailable => f.write_str("integration_not_available"),
                 Self::EntitlementRequired => f.write_str("entitlement_required"),
                 Self::TierRequired => f.write_str("tier_required"),
                 Self::LimitExceeded => f.write_str("limit_exceeded"),
@@ -1271,6 +1223,8 @@ pub mod components {
                 "not_connection_owner" => Ok(Self::NotConnectionOwner),
                 "integration_disabled" => Ok(Self::IntegrationDisabled),
                 "integration_revoked" => Ok(Self::IntegrationRevoked),
+                "denied_by_policy" => Ok(Self::DeniedByPolicy),
+                "integration_not_available" => Ok(Self::IntegrationNotAvailable),
                 "entitlement_required" => Ok(Self::EntitlementRequired),
                 "tier_required" => Ok(Self::TierRequired),
                 "limit_exceeded" => Ok(Self::LimitExceeded),
@@ -1590,6 +1544,12 @@ pub mod components {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct HeartbeatBody {
+        /**The integrations its operator denies for every organization
+        (`EVER_CONNECT_INTEGRATIONS_DENY`; `*` denies every one). Sent, it replaces the stored list:
+        a denied integration reads `denied_by_policy` and switches off; one no longer listed may be
+        enabled again by an organization. Absent, the stored list is kept.*/
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub integrations_denied: ::std::option::Option<::std::vec::Vec<::std::string::String>>,
         ///The version of its Ever Connect module.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub module_version: ::std::option::Option<::std::string::String>,
@@ -2032,77 +1992,28 @@ pub mod components {
         ///The row version (`If-Match`).
         pub version_row: i64,
     }
-    ///Instance-side change. An instance may only disable (local operator action or instance policy); enabling always happens as a person, in app.ever.co or in the product's own consent dialog after a fresh Ever ID sign-in (both through `putIntegrationState`).
+    ///An installation switches one integration off (it may never switch one on).
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct InstanceIntegrationPut {
+        ///`false`.
         pub enabled: bool,
-        pub reason: InstanceIntegrationPutReason,
+        ///`instance` (the operator switched it off) or `policy` (the operator's deny list).
+        pub reason: ::std::string::String,
+        ///The tenant link, for a per-link integration.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub tenant_link_id: ::std::option::Option<Ulid>,
+        pub tenant_link_id: ::std::option::Option<::std::string::String>,
     }
-    ///`InstanceIntegrationPutReason`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum InstanceIntegrationPutReason {
-        #[serde(rename = "instance")]
-        Instance,
-        #[serde(rename = "policy")]
-        Policy,
-    }
-    impl ::std::fmt::Display for InstanceIntegrationPutReason {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Instance => f.write_str("instance"),
-                Self::Policy => f.write_str("policy"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for InstanceIntegrationPutReason {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "instance" => Ok(Self::Instance),
-                "policy" => Ok(Self::Policy),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for InstanceIntegrationPutReason {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for InstanceIntegrationPutReason {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    ///Effective state map for the calling instance; instances cache it and re-read on `consent.changed`.
+    /**The effective states of the calling installation: its installation-wide integrations, and
+    per tenant link its per-link ones.*/
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct InstanceIntegrations {
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub catalog_version: ::std::option::Option<::std::string::String>,
-        pub instance: ::std::collections::HashMap<::std::string::String, IntegrationStateBrief>,
-        ///Keyed by tenant link id.
-        pub links: ::std::collections::HashMap<
-            ::std::string::String,
-            ::std::collections::HashMap<::std::string::String, IntegrationStateBrief>,
-        >,
+        ///The catalog version the states refer to.
+        pub catalog_version: ::std::string::String,
+        ///Installation-wide integrations, by key.
+        pub instance: ::serde_json::Map<::std::string::String, ::serde_json::Value>,
+        ///Per tenant link id, its per-link integrations by key.
+        pub links: ::serde_json::Map<::std::string::String, ::serde_json::Value>,
     }
     ///The connect key an instance holds (its id and rotation; never the key itself).
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, Default)]
@@ -2122,337 +2033,90 @@ pub mod components {
         ///Its tenant links that are not unlinked.
         pub tenant_links: ::std::vec::Vec<TenantLink>,
     }
-    /**Enable (with an explicit consent) or disable one integration on one
-    instance, optionally for one tenant link. Enabling writes the consent
-    record, the state and the audit row in one transaction. Disabling keeps
-    the consent until it is revoked.
-    */
+    ///The operator's local accept or decline of an installation-wide integration waiting for it.
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct IntegrationAccept {
+        ///Accept (`true`) or decline (`false`).
+        pub accepted: bool,
+        ///The consent the state waits for.
+        pub consent_id: ::std::string::String,
+    }
+    ///Enable (with an explicit consent) or disable one integration on one installation.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct IntegrationPut {
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub consent: ::std::option::Option<IntegrationPutConsent>,
+        pub consent: ::std::option::Option<ConsentInput>,
+        ///On or off.
         pub enabled: bool,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub tenant_link_id: ::std::option::Option<Ulid>,
-    }
-    ///Required when `enabled: true`.
-    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
-    #[serde(deny_unknown_fields)]
-    pub struct IntegrationPutConsent {
-        pub accepted: bool,
-        #[serde(default, skip_serializing_if = "::serde_json::Map::is_empty")]
-        pub config: ::serde_json::Map<::std::string::String, ::serde_json::Value>,
-        pub dpa_version: ::std::string::String,
-        pub scope_version: i64,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub screen_version: ::std::option::Option<::std::string::String>,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub ui_locale: ::std::option::Option<::std::string::String>,
-    }
-    ///`IntegrationScope`
-    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
-    pub struct IntegrationScope {
-        pub direction: IntegrationScopeDirection,
-        pub field_path: ::std::string::String,
-        ///Whether the value leaves the instance as a salted hash rather than clear text.
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub hashed: ::std::option::Option<bool>,
-        pub purpose: ::std::string::String,
-        pub required: bool,
-        pub retention: ::std::string::String,
-    }
-    ///`IntegrationScopeDirection`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum IntegrationScopeDirection {
-        #[serde(rename = "to_ever")]
-        ToEver,
-        #[serde(rename = "from_ever")]
-        FromEver,
-    }
-    impl ::std::fmt::Display for IntegrationScopeDirection {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::ToEver => f.write_str("to_ever"),
-                Self::FromEver => f.write_str("from_ever"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for IntegrationScopeDirection {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "to_ever" => Ok(Self::ToEver),
-                "from_ever" => Ok(Self::FromEver),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for IntegrationScopeDirection {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for IntegrationScopeDirection {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    ///`IntegrationState`
-    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
-    pub struct IntegrationState {
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub changed_by: ::std::option::Option<Actor>,
-        ///Non-secret options chosen at consent time (for example which meters to report).
-        #[serde(default, skip_serializing_if = "::serde_json::Map::is_empty")]
-        pub config: ::serde_json::Map<::std::string::String, ::serde_json::Value>,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub consent_id: ::std::option::Option<::std::string::String>,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub consent_source: ::std::option::Option<IntegrationStateConsentSource>,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub dpa_version: ::std::option::Option<::std::string::String>,
-        pub enabled: bool,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub granted_at: ::std::option::Option<::std::string::String>,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub granted_by_person_id: ::std::option::Option<::std::string::String>,
-        pub instance_id: Ulid,
-        pub integration_key: ::std::string::String,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub revoked_at: ::std::option::Option<::std::string::String>,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub scope: ::std::option::Option<IntegrationStateScope>,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub scope_version: ::std::option::Option<i64>,
-        pub state: IntegrationStateState,
+        ///The tenant link, for a per-link integration (absent for an installation-wide one).
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub tenant_link_id: ::std::option::Option<::std::string::String>,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub updated_at: ::std::option::Option<Timestamp>,
     }
-    ///`IntegrationStateBrief`
+    /**The effective state of one integration on one installation (and tenant link), with its
+    consent's provenance.*/
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
-    pub struct IntegrationStateBrief {
-        ///Non-secret options chosen at consent time (for example which meters to report).
-        #[serde(default, skip_serializing_if = "::serde_json::Map::is_empty")]
+    pub struct IntegrationState {
+        ///Non-secret options chosen at consent time.
         pub config: ::serde_json::Map<::std::string::String, ::serde_json::Value>,
+        ///The consent in force, when there is one.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub consent_id: ::std::option::Option<::std::string::String>,
+        ///`app_ever_co`, `cloud_terms` or `product_ui`.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub consent_source: ::std::option::Option<::std::string::String>,
+        ///The data-processing agreement version it was consented to.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub dpa_version: ::std::option::Option<::std::string::String>,
+        ///Whether data may move.
         pub enabled: bool,
+        ///When it was granted.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub granted_at: ::std::option::Option<::std::string::String>,
+        /**Who granted it: your own id when it was you, else `null` (another member, a deleted
+        person, or the cloud terms).*/
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub granted_by_person_id: ::std::option::Option<::std::string::String>,
+        ///The installation.
+        pub instance_id: ::std::string::String,
+        ///The integration key.
+        pub integration_key: ::std::string::String,
+        /**`pending`, `accepted` or `declined` for an installation-wide integration of an
+        installation a customer or a partner operates; `null` elsewhere.*/
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub operator_accept: ::std::option::Option<::std::string::String>,
+        ///When it was revoked.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub revoked_at: ::std::option::Option<::std::string::String>,
+        ///The scope version it was consented to.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub scope_version: ::std::option::Option<i64>,
-        pub state: IntegrationStateBriefState,
+        ///As in `IntegrationStateBrief`.
+        pub state: ::std::string::String,
+        ///The tenant link (`null` for an installation-wide integration).
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub tenant_link_id: ::std::option::Option<::std::string::String>,
+        ///When the state last changed (`null` when there is no state yet).
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub updated_at: ::std::option::Option<::std::string::String>,
     }
-    ///`IntegrationStateBriefState`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum IntegrationStateBriefState {
-        #[serde(rename = "available")]
-        Available,
-        #[serde(rename = "enabled")]
-        Enabled,
-        #[serde(rename = "disabled")]
-        Disabled,
-        #[serde(rename = "revoked")]
-        Revoked,
-        #[serde(rename = "denied_by_policy")]
-        DeniedByPolicy,
-        #[serde(rename = "hidden")]
-        Hidden,
-    }
-    impl ::std::fmt::Display for IntegrationStateBriefState {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Available => f.write_str("available"),
-                Self::Enabled => f.write_str("enabled"),
-                Self::Disabled => f.write_str("disabled"),
-                Self::Revoked => f.write_str("revoked"),
-                Self::DeniedByPolicy => f.write_str("denied_by_policy"),
-                Self::Hidden => f.write_str("hidden"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for IntegrationStateBriefState {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "available" => Ok(Self::Available),
-                "enabled" => Ok(Self::Enabled),
-                "disabled" => Ok(Self::Disabled),
-                "revoked" => Ok(Self::Revoked),
-                "denied_by_policy" => Ok(Self::DeniedByPolicy),
-                "hidden" => Ok(Self::Hidden),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for IntegrationStateBriefState {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for IntegrationStateBriefState {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    ///`IntegrationStateConsentSource`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum IntegrationStateConsentSource {
-        #[serde(rename = "app_ever_co")]
-        AppEverCo,
-        #[serde(rename = "cloud_terms")]
-        CloudTerms,
-        #[serde(rename = "product_ui")]
-        ProductUi,
-    }
-    impl ::std::fmt::Display for IntegrationStateConsentSource {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::AppEverCo => f.write_str("app_ever_co"),
-                Self::CloudTerms => f.write_str("cloud_terms"),
-                Self::ProductUi => f.write_str("product_ui"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for IntegrationStateConsentSource {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "app_ever_co" => Ok(Self::AppEverCo),
-                "cloud_terms" => Ok(Self::CloudTerms),
-                "product_ui" => Ok(Self::ProductUi),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for IntegrationStateConsentSource {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for IntegrationStateConsentSource {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    ///`IntegrationStateScope`
-    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, Default)]
-    pub struct IntegrationStateScope {
-        #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
-        pub fields: ::std::vec::Vec<IntegrationScope>,
-    }
-    ///`IntegrationStateState`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum IntegrationStateState {
-        #[serde(rename = "available")]
-        Available,
-        #[serde(rename = "enabled")]
-        Enabled,
-        #[serde(rename = "disabled")]
-        Disabled,
-        #[serde(rename = "revoked")]
-        Revoked,
-        #[serde(rename = "denied_by_policy")]
-        DeniedByPolicy,
-        #[serde(rename = "hidden")]
-        Hidden,
-    }
-    impl ::std::fmt::Display for IntegrationStateState {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Available => f.write_str("available"),
-                Self::Enabled => f.write_str("enabled"),
-                Self::Disabled => f.write_str("disabled"),
-                Self::Revoked => f.write_str("revoked"),
-                Self::DeniedByPolicy => f.write_str("denied_by_policy"),
-                Self::Hidden => f.write_str("hidden"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for IntegrationStateState {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "available" => Ok(Self::Available),
-                "enabled" => Ok(Self::Enabled),
-                "disabled" => Ok(Self::Disabled),
-                "revoked" => Ok(Self::Revoked),
-                "denied_by_policy" => Ok(Self::DeniedByPolicy),
-                "hidden" => Ok(Self::Hidden),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for IntegrationStateState {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for IntegrationStateState {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
+    ///The effective state of one integration, briefly.
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct IntegrationStateBrief {
+        ///Non-secret options chosen at consent time.
+        pub config: ::serde_json::Map<::std::string::String, ::serde_json::Value>,
+        ///The consent in force, when there is one.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub consent_id: ::std::option::Option<::std::string::String>,
+        ///Whether data may move.
+        pub enabled: bool,
+        ///The scope version it was consented to.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub scope_version: ::std::option::Option<i64>,
+        /**`available` (off, can be enabled), `enabled`, `disabled`, `revoked`, `denied_by_policy`,
+        `pending_operator` (waiting for the installation operator's local accept) or `coming_soon`.*/
+        pub state: ::std::string::String,
     }
     ///Callback from the product after a consented hand-off completed its part of the provisioning intent. Idempotent by `jti`.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
@@ -2662,18 +2326,19 @@ pub mod components {
         ///Until when the replaced key still mints tokens.
         pub previous_valid_until: ::std::string::String,
     }
-    ///Terms, the data-processing agreement and the sub-processor list linked from every consent screen and cached by instances. One agreement covers every integration; a new `dpa_version` asks for consent again on every integration.
+    /**The legal texts every consent screen links: one data-processing agreement covers every
+    integration, and one public list names every sub-processor.*/
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct Legal {
-        ///The data-processing agreement of Ever Platform.
+        ///The data-processing agreement.
         pub dpa_url: ::std::string::String,
-        ///Version of that agreement; equals `Integration.dpa_version` and is recorded in every consent.
+        ///Its version, equal to every integration's `dpa_version`.
         pub dpa_version: ::std::string::String,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub privacy_url: ::std::option::Option<::std::string::String>,
         ///The public list of sub-processors.
         pub subprocessors_url: ::std::string::String,
+        ///The terms.
         pub terms_url: ::std::string::String,
+        ///Their version.
         pub terms_version: ::std::string::String,
     }
     ///Customer-facing certificate id exactly as printed on an existing ever.co certificate. It is a claim token, never a key.
@@ -4536,7 +4201,9 @@ pub mod components {
     key, which becomes its credential. The connect key never signs anonymous statistics (those
     have a key of their own). The body carries no address or any other field outside this
     schema: an instance's public address is set by the organization in app.ever.co, or later by
-    the instance through a consented integration.*/
+    the instance through a consented integration. The optional `return_origins` are not stored:
+    the platform keeps a digest of each, to refuse a consent link that would return anywhere
+    else.*/
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct RedeemRequest {
@@ -4551,6 +4218,13 @@ pub mod components {
         pub product: ::std::string::String,
         ///Its connect key: an Ed25519 public JWK (`kty: OKP`, `crv: Ed25519`, `x`).
         pub public_jwk: ::serde_json::Map<::std::string::String, ::serde_json::Value>,
+        /**The origins (`https://host[:port]`; plain `http` only on `localhost`, `127.0.0.1` or
+        `[::1]`) the installation's consent links may return to, at most four. Only a digest of
+        each is kept, never the address; a consent link naming another host is refused. Absent or
+        empty: the installation's consent links carry no return address. A reconnect replaces
+        them when it names any.*/
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub return_origins: ::std::option::Option<::std::vec::Vec<::std::string::String>>,
         ///The products it serves besides its own (a Gauzy API serving Teams).
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub serves_products: ::std::option::Option<::std::vec::Vec<::std::string::String>>,
@@ -4681,13 +4355,14 @@ pub mod components {
         pub superseded: ::std::option::Option<bool>,
     }
     /**`POST /v1/instances/me/stats-link`: the installation links its anonymous statistics id to
-    itself. The statement is signed with the statistics key; the call is authenticated with the
-    connect key, so only an installation holding both can link them.*/
+    itself. The statement is signed with the statistics key and names this instance; the call is
+    authenticated with the connect key, so only an installation holding both can link them.*/
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct StatsLinkCreate {
         /**A compact JWS (`alg: EdDSA`, `typ: ever-stats-link+jwt`) signed with the statistics key
-        over `{stats_instance_id, stats_public_jwk, iat}`, at most ten minutes old.*/
+        over `{stats_instance_id, stats_public_jwk, sub, iat}`, where `sub` is this instance's id
+        (the subject of its instance token), at most ten minutes old.*/
         pub statement_sig: ::std::string::String,
         ///The anonymous statistics id (UUID v4) the installation reports under.
         pub stats_instance_id: ::std::string::String,

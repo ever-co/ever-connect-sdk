@@ -3,7 +3,6 @@
   "name": "Install apps from apps.ever.co",
   "description": "Lets you install an app you picked on apps.ever.co into this installation. The installation picks up the request and runs its normal plugin installer, then reports whether the install worked.",
   "category": "marketplace",
-  "owner_module": "listings",
   "direction": "both",
   "defaults": {
     "cloud": true,
@@ -18,7 +17,6 @@
     "gauzy",
     "works"
   ],
-  "phase": 4,
   "status": "coming_soon",
   "scope_version": 1,
   "revoke_effect": "Install requests are no longer delivered. Installed apps stay installed.",

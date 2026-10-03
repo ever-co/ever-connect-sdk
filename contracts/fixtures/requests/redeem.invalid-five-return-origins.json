@@ -14,7 +14,10 @@
     "product_org_id": "org-1"
   },
   "return_origins": [
-    "https://gauzy.example.com"
-  ],
-  "public_url": "https://gauzy.example.com"
+    "https://a.example.com",
+    "https://b.example.com",
+    "https://c.example.com",
+    "https://d.example.com",
+    "https://e.example.com"
+  ]
 }

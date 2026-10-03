@@ -514,17 +514,17 @@
     },
     {
       "file": "requests/integration-accept.invalid-extra-field.json",
-      "kind": "pending",
-      "schema": "instanceAcceptIntegration",
+      "kind": "component",
+      "schema": "IntegrationAccept",
       "valid": false,
       "typed": false
     },
     {
       "file": "requests/integration-accept.json",
-      "kind": "pending",
-      "schema": "instanceAcceptIntegration",
+      "kind": "component",
+      "schema": "IntegrationAccept",
       "valid": true,
-      "typed": false
+      "typed": true
     },
     {
       "file": "requests/integration-put.product-ui.invalid-extra-field.json",
@@ -534,7 +534,7 @@
       "typed": false
     },
     {
-      "file": "requests/integration-put.product-ui.invalid-not-accepted.json",
+      "file": "requests/integration-put.product-ui.invalid-missing-scope-version.json",
       "kind": "component",
       "schema": "IntegrationPut",
       "valid": false,
@@ -737,6 +737,13 @@
       "typed": false
     },
     {
+      "file": "requests/redeem.invalid-five-return-origins.json",
+      "kind": "component",
+      "schema": "RedeemRequest",
+      "valid": false,
+      "typed": false
+    },
+    {
       "file": "requests/redeem.invalid-missing-key.json",
       "kind": "component",
       "schema": "RedeemRequest",
@@ -758,14 +765,14 @@
       "typed": true
     },
     {
-      "file": "requests/set-integration.invalid-enable-attempt.json",
+      "file": "requests/set-integration.invalid-extra-field.json",
       "kind": "component",
       "schema": "InstanceIntegrationPut",
       "valid": false,
       "typed": false
     },
     {
-      "file": "requests/set-integration.invalid-extra-field.json",
+      "file": "requests/set-integration.invalid-missing-reason.json",
       "kind": "component",
       "schema": "InstanceIntegrationPut",
       "valid": false,

@@ -43,7 +43,11 @@ export interface paths {
             readonly path?: never;
             readonly cookie?: never;
         };
-        /** Terms, data-processing agreement and sub-processor list linked from every consent screen */
+        /**
+         * The terms, the data-processing agreement (one covers every integration) and the public
+         *     sub-processor list linked from every consent screen, with their versions. `503` while a
+         *     deployment has not published them: there is no terms-only state.
+         */
         readonly get: operations["getConnectLegal"];
         readonly put?: never;
         readonly post?: never;
@@ -239,7 +243,14 @@ export interface paths {
             readonly path?: never;
             readonly cookie?: never;
         };
-        /** Build the app.ever.co consent deep link for the product UI */
+        /**
+         * The app.ever.co consent deep link the product opens for its admin: signed, valid for 15
+         *     minutes, carrying ids, the integration key, the return address and the expiry only (no token,
+         *     no e-mail, no secret). `return` is optional; when present it must be an `https` URL without
+         *     credentials or fragment whose origin the installation declared when it connected
+         *     (`return_origins` of the redeem); plain `http` only on `localhost`, on a development
+         *     deployment.
+         */
         readonly get: operations["instanceGetConsentUrl"];
         readonly put?: never;
         readonly post?: never;
@@ -344,7 +355,8 @@ export interface paths {
         readonly put?: never;
         /**
          * Reports that the instance is alive, with its version (one write a minute is recorded; the
-         *     route answers `429` above one call a minute).
+         *     route answers `429` above one call a minute) and, when it sends one, its operator's local deny
+         *     list of integrations (`integrations_denied`).
          */
         readonly post: operations["instanceHeartbeat"];
         readonly delete?: never;
@@ -361,8 +373,10 @@ export interface paths {
             readonly cookie?: never;
         };
         /**
-         * Effective integration states for the calling instance
-         * @description Self-hosted instances see every integration disabled until an organization admin enables it; Ever-operated instances see the cloud defaults as real consent records.
+         * The calling installation's effective states: its installation-wide integrations, and per live
+         *     tenant link its per-link ones. A self-hosted installation reads every integration off until an
+         *     owner or admin of the linked organization enables it; nothing is written by this read.
+         *     Installations re-read it when `ever.consent.integration.*` reaches their feed.
          */
         readonly get: operations["instanceGetIntegrations"];
         readonly put?: never;
@@ -382,11 +396,38 @@ export interface paths {
         };
         readonly get?: never;
         /**
-         * Disable an integration from the instance side
-         * @description Instances may only disable (`enabled:false`), on operator action or instance policy. `404` when no state exists is treated by the SDK as already disabled.
+         * Switches one integration off from the installation (its operator's action, or its local
+         *     deny list with `reason: policy`, which switches the integration off on every tenant link and
+         *     stops every organization from enabling it until the deny is lifted). The heartbeat's
+         *     `integrations_denied` is the whole deny list: it must keep carrying a key denied here, and a
+         *     heartbeat that omits it lifts the deny. An installation may never switch an integration on
+         *     (`422`); with `reason: instance`, `404` when no state exists (the SDK treats it as already
+         *     off).
          */
         readonly put: operations["instanceDisableIntegration"];
         readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/v1/instances/me/integrations/{key}/accept": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * The operator's local accept (or decline) of an installation-wide integration the organization
+         *     that connected the installation consented to (`state: pending_operator`). Accepting enables it
+         *     (`ever.consent.integration.enabled`); declining revokes the consent (revoke source `operator`).
+         *     `409 illegal_transition` unless the state waits for exactly that consent.
+         */
+        readonly post: operations["instanceAcceptIntegration"];
         readonly delete?: never;
         readonly options?: never;
         readonly head?: never;
@@ -556,8 +597,9 @@ export interface paths {
         /**
          * Links the installation's anonymous statistics id to it (integration `stats_link`, enabled by
          *     the organization that connected it after the operator's local accept; never on an installation
-         *     Ever operates). The statement is signed with the statistics key and the call authenticated with
-         *     the connect key, so only an installation holding both keys links them. Only the id is stored.
+         *     Ever operates). The statement is signed with the statistics key, names the installation (`sub`:
+         *     its instance id) and the call is authenticated with the connect key, so only an installation
+         *     holding both keys links them. Only the id is stored; the link ends when the integration does.
          */
         readonly post: operations["instanceLinkStats"];
         readonly delete?: never;
@@ -881,25 +923,13 @@ export interface paths {
         };
         readonly get?: never;
         /**
-         * Enable (with consent) or disable an integration on an instance
-         * @description The only place where a consent is granted. Writes consent, state and
-         *     audit in one transaction; emits `integration.enabled`/`integration.disabled`
-         *     so the instance re-reads its states.
-         *
-         *     Two ways to call it, both by an owner or admin of the linked
-         *     organization: from app.ever.co (`personSession` or an Ever Platform
-         *     `everIdToken`; `consent_source = app_ever_co`), or from the product's own
-         *     consent dialog with `everIdStepUpToken`, an Ever ID token the product
-         *     obtained through a fresh sign-in (`auth_time` at most 300 s old, else
-         *     `403 step_up_required`) whose `azp` is the client of this instance (its
-         *     own client, or the product client of an Ever-operated instance). That
-         *     token is accepted on this operation only and for this instance's own
-         *     integrations only (`consent_source = product_ui`, `evidence.ui =
-         *     product:<product>`); `counterparty_discoverable` and `instance_url`
-         *     refuse it with `403 session_required` (they are enabled in app.ever.co
-         *     only), and so does any other instance. An installation-wide integration
-         *     of a customer-operated instance changed by an organization that does not
-         *     own the instance answers `403 not_connection_owner`.
+         * Enables an integration on an installation with an explicit consent, or disables it. Enabling
+         *     writes the consent record, the state and exactly one audit row in one transaction and tells
+         *     the installation (`ever.consent.integration.enabled`). An installation-wide integration
+         *     (`instance_url`, `stats_link`, `ever_id_login`, `webhooks`) is changed only by the organization
+         *     that connected a customer- or partner-operated installation, and waits for the operator's local
+         *     accept (`state: pending_operator`); installations Ever operates have theirs set by Ever.
+         *     Disabling revokes the consent. Any plan may switch any integration off.
          */
         readonly put: operations["putIntegrationState"];
         readonly post?: never;
@@ -1081,12 +1111,6 @@ export interface components {
              */
             readonly result: "deleted" | "anonymised" | "retained_legal" | "no_account" | "forwarded_to_controller" | "failed" | "exported";
         };
-        /** @description Who did something. Identifiers only, never an e-mail or name. */
-        readonly Actor: {
-            readonly id: string;
-            /** @enum {string} */
-            readonly kind: "person" | "instance" | "api_key" | "staff" | "service" | "system" | "visitor";
-        };
         readonly BillingLink: {
             readonly created_at: components["schemas"]["Timestamp"];
             readonly id: components["schemas"]["Ulid"];
@@ -1111,11 +1135,38 @@ export interface components {
          * @enum {string}
          */
         readonly ConnectKind: "cloud" | "self_hosted" | "works_app";
-        readonly ConsentUrl: {
-            readonly expires_at: components["schemas"]["Timestamp"];
+        /** @description The consent part of `IntegrationPut`. */
+        readonly ConsentInput: {
+            /** @description The explicit confirmation (`true`). */
+            readonly accepted: boolean;
             /**
-             * Format: uri
-             * @description Deep link into app.ever.co (`/connect/consent?...`) that the product UI opens; the person must be an owner or admin of the linked organization.
+             * @description Options chosen on the consent screen. No integration takes any: only an empty object (or
+             *     none) is accepted, anything else answers `422`. A consent record is immutable, so nothing
+             *     free-form ever enters it.
+             */
+            readonly config?: Record<string, never>;
+            /** @description The data-processing agreement version shown (must be the current one). */
+            readonly dpa_version: string;
+            /**
+             * Format: int32
+             * @description The scope version shown on the consent screen (must be the current one).
+             */
+            readonly scope_version: number;
+            /** @description The consent screen's version. */
+            readonly screen_version?: string | null;
+            /** @description The consent screen's language. */
+            readonly ui_locale?: string | null;
+        };
+        /** @description The consent deep link a product opens. */
+        readonly ConsentUrl: {
+            /**
+             * Format: date-time
+             * @description When it stops being accepted.
+             */
+            readonly expires_at: string;
+            /**
+             * @description The link into app.ever.co (`/connect/consent?...`); the person must be an owner or admin
+             *     of the linked organization.
              */
             readonly url: string;
         };
@@ -1426,7 +1477,7 @@ export interface components {
          *     unknown code by its HTTP status.
          * @enum {string}
          */
-        readonly ErrorCode: "validation_failed" | "not_found" | "unauthorized" | "forbidden_role" | "forbidden_scope" | "ambiguous_credentials" | "credential_revoked" | "instance_disconnected" | "instance_pending_approval" | "not_connection_owner" | "integration_disabled" | "integration_revoked" | "entitlement_required" | "tier_required" | "limit_exceeded" | "rate_limited" | "idempotency_mismatch" | "idempotency_in_progress" | "stale_version" | "module_disabled" | "handle_taken" | "handle_reserved" | "handle_retired" | "handle_invalid" | "handle_held" | "handle_held_by_you" | "code_invalid" | "code_expired" | "product_mismatch" | "product_not_supported" | "key_mismatch" | "signature_invalid" | "unlinked_org" | "schema_violation" | "mirror_owned_field" | "illegal_transition" | "already_exists" | "already_completed" | "billing_active" | "sso_required" | "reauth_required" | "session_required" | "step_up_required" | "session_bound" | "authorization_pending" | "slow_down" | "expired_token" | "already_connected" | "already_linked" | "already_claimed" | "invalid_client" | "public_jwk_invalid" | "identifier_claimed" | "salt_version_unknown" | "salt_version_retired" | "hashes_invalid" | "lookup_key_required" | "required_component" | "resync_required" | "last_owner" | "last_auth_method" | "instances_linked" | "install_in_progress" | "slug_reserved" | "checklist_incomplete" | "scope_version_outdated" | "method_not_allowed" | "payload_too_large" | "unsupported_media_type" | "gone" | "unavailable" | "upstream" | "database_absent" | "database_unreachable" | "topic_private" | "keys_unavailable" | "internal_error";
+        readonly ErrorCode: "validation_failed" | "not_found" | "unauthorized" | "forbidden_role" | "forbidden_scope" | "ambiguous_credentials" | "credential_revoked" | "instance_disconnected" | "instance_pending_approval" | "not_connection_owner" | "integration_disabled" | "integration_revoked" | "denied_by_policy" | "integration_not_available" | "entitlement_required" | "tier_required" | "limit_exceeded" | "rate_limited" | "idempotency_mismatch" | "idempotency_in_progress" | "stale_version" | "module_disabled" | "handle_taken" | "handle_reserved" | "handle_retired" | "handle_invalid" | "handle_held" | "handle_held_by_you" | "code_invalid" | "code_expired" | "product_mismatch" | "product_not_supported" | "key_mismatch" | "signature_invalid" | "unlinked_org" | "schema_violation" | "mirror_owned_field" | "illegal_transition" | "already_exists" | "already_completed" | "billing_active" | "sso_required" | "reauth_required" | "session_required" | "step_up_required" | "session_bound" | "authorization_pending" | "slow_down" | "expired_token" | "already_connected" | "already_linked" | "already_claimed" | "invalid_client" | "public_jwk_invalid" | "identifier_claimed" | "salt_version_unknown" | "salt_version_retired" | "hashes_invalid" | "lookup_key_required" | "required_component" | "resync_required" | "last_owner" | "last_auth_method" | "instances_linked" | "install_in_progress" | "slug_reserved" | "checklist_incomplete" | "scope_version_outdated" | "method_not_allowed" | "payload_too_large" | "unsupported_media_type" | "gone" | "unavailable" | "upstream" | "database_absent" | "database_unreachable" | "topic_private" | "keys_unavailable" | "internal_error";
         /**
          * @description One event on a webhook, the installation feed or SSE. Payloads carry identifiers and status
          *     only, never records; delivery is at-least-once: dedupe on `id`.
@@ -1538,6 +1589,13 @@ export interface components {
         };
         /** @description `POST /v1/instances/me/heartbeat`. */
         readonly HeartbeatBody: {
+            /**
+             * @description The integrations its operator denies for every organization
+             *     (`EVER_CONNECT_INTEGRATIONS_DENY`; `*` denies every one). Sent, it replaces the stored list:
+             *     a denied integration reads `denied_by_policy` and switches off; one no longer listed may be
+             *     enabled again by an organization. Absent, the stored list is kept.
+             */
+            readonly integrations_denied?: readonly string[] | null;
             /** @description The version of its Ever Connect module. */
             readonly module_version?: string | null;
             /** @description The products it serves now. */
@@ -1732,26 +1790,26 @@ export interface components {
              */
             readonly version_row: number;
         };
-        /** @description Instance-side change. An instance may only disable (local operator action or instance policy); enabling always happens as a person, in app.ever.co or in the product's own consent dialog after a fresh Ever ID sign-in (both through `putIntegrationState`). */
+        /** @description An installation switches one integration off (it may never switch one on). */
         readonly InstanceIntegrationPut: {
-            /** @constant */
-            readonly enabled: false;
-            /** @enum {string} */
-            readonly reason: "instance" | "policy";
-            readonly tenant_link_id?: components["schemas"]["Ulid"];
+            /** @description `false`. */
+            readonly enabled: boolean;
+            /** @description `instance` (the operator switched it off) or `policy` (the operator's deny list). */
+            readonly reason: string;
+            /** @description The tenant link, for a per-link integration. */
+            readonly tenant_link_id?: string | null;
         };
-        /** @description Effective state map for the calling instance; instances cache it and re-read on `consent.changed`. */
+        /**
+         * @description The effective states of the calling installation: its installation-wide integrations, and
+         *     per tenant link its per-link ones.
+         */
         readonly InstanceIntegrations: {
-            readonly catalog_version?: string;
-            readonly instance: {
-                readonly [key: string]: components["schemas"]["IntegrationStateBrief"];
-            };
-            /** @description Keyed by tenant link id. */
-            readonly links: {
-                readonly [key: string]: {
-                    readonly [key: string]: components["schemas"]["IntegrationStateBrief"];
-                };
-            };
+            /** @description The catalog version the states refer to. */
+            readonly catalog_version: string;
+            /** @description Installation-wide integrations, by key. */
+            readonly instance: Record<string, never>;
+            /** @description Per tenant link id, its per-link integrations by key. */
+            readonly links: Record<string, never>;
         };
         /** @description The connect key an instance holds (its id and rotation; never the key itself). */
         readonly InstanceKey: {
@@ -1770,66 +1828,93 @@ export interface components {
             /** @description Its tenant links that are not unlinked. */
             readonly tenant_links: readonly components["schemas"]["TenantLink"][];
         };
-        /**
-         * @description Enable (with an explicit consent) or disable one integration on one
-         *     instance, optionally for one tenant link. Enabling writes the consent
-         *     record, the state and the audit row in one transaction. Disabling keeps
-         *     the consent until it is revoked.
-         */
+        /** @description The operator's local accept or decline of an installation-wide integration waiting for it. */
+        readonly IntegrationAccept: {
+            /** @description Accept (`true`) or decline (`false`). */
+            readonly accepted: boolean;
+            /** @description The consent the state waits for. */
+            readonly consent_id: string;
+        };
+        /** @description Enable (with an explicit consent) or disable one integration on one installation. */
         readonly IntegrationPut: {
-            /** @description Required when `enabled: true`. */
-            readonly consent?: {
-                /** @constant */
-                readonly accepted: true;
-                readonly config?: Record<string, never>;
-                readonly dpa_version: string;
-                readonly scope_version: number;
-                readonly screen_version?: string;
-                readonly ui_locale?: string;
-            };
+            readonly consent?: null | components["schemas"]["ConsentInput"];
+            /** @description On or off. */
             readonly enabled: boolean;
-            readonly tenant_link_id?: components["schemas"]["Ulid"];
-        };
-        readonly IntegrationScope: {
-            /** @enum {string} */
-            readonly direction: "to_ever" | "from_ever";
-            /**
-             * @example employee.count
-             * @example invoice.counterparty_hash
-             */
-            readonly field_path: string;
-            /** @description Whether the value leaves the instance as a salted hash rather than clear text. */
-            readonly hashed?: boolean;
-            readonly purpose: string;
-            readonly required: boolean;
-            readonly retention: string;
-        };
-        readonly IntegrationState: components["schemas"]["IntegrationStateBrief"] & {
-            readonly changed_by?: components["schemas"]["Actor"];
-            /** @enum {string|null} */
-            readonly consent_source?: "app_ever_co" | "cloud_terms" | "product_ui" | null;
-            readonly dpa_version?: string | null;
-            /** Format: date-time */
-            readonly granted_at?: string | null;
-            readonly granted_by_person_id?: string | null;
-            readonly instance_id: components["schemas"]["Ulid"];
-            readonly integration_key: string;
-            /** Format: date-time */
-            readonly revoked_at?: string | null;
-            readonly scope?: {
-                readonly fields?: readonly components["schemas"]["IntegrationScope"][];
-            };
+            /** @description The tenant link, for a per-link integration (absent for an installation-wide one). */
             readonly tenant_link_id?: string | null;
-            readonly updated_at?: components["schemas"]["Timestamp"];
         };
-        readonly IntegrationStateBrief: {
-            /** @description Non-secret options chosen at consent time (for example which meters to report). */
-            readonly config?: Record<string, never>;
+        /**
+         * @description The effective state of one integration on one installation (and tenant link), with its
+         *     consent's provenance.
+         */
+        readonly IntegrationState: {
+            /** @description Non-secret options chosen at consent time. */
+            readonly config: Record<string, never>;
+            /** @description The consent in force, when there is one. */
             readonly consent_id?: string | null;
+            /** @description `app_ever_co`, `cloud_terms` or `product_ui`. */
+            readonly consent_source?: string | null;
+            /** @description The data-processing agreement version it was consented to. */
+            readonly dpa_version?: string | null;
+            /** @description Whether data may move. */
             readonly enabled: boolean;
+            /**
+             * Format: date-time
+             * @description When it was granted.
+             */
+            readonly granted_at?: string | null;
+            /**
+             * @description Who granted it: your own id when it was you, else `null` (another member, a deleted
+             *     person, or the cloud terms).
+             */
+            readonly granted_by_person_id?: string | null;
+            /** @description The installation. */
+            readonly instance_id: string;
+            /** @description The integration key. */
+            readonly integration_key: string;
+            /**
+             * @description `pending`, `accepted` or `declined` for an installation-wide integration of an
+             *     installation a customer or a partner operates; `null` elsewhere.
+             */
+            readonly operator_accept?: string | null;
+            /**
+             * Format: date-time
+             * @description When it was revoked.
+             */
+            readonly revoked_at?: string | null;
+            /**
+             * Format: int32
+             * @description The scope version it was consented to.
+             */
             readonly scope_version?: number | null;
-            /** @enum {string} */
-            readonly state: "available" | "enabled" | "disabled" | "revoked" | "denied_by_policy" | "hidden";
+            /** @description As in `IntegrationStateBrief`. */
+            readonly state: string;
+            /** @description The tenant link (`null` for an installation-wide integration). */
+            readonly tenant_link_id?: string | null;
+            /**
+             * Format: date-time
+             * @description When the state last changed (`null` when there is no state yet).
+             */
+            readonly updated_at?: string | null;
+        };
+        /** @description The effective state of one integration, briefly. */
+        readonly IntegrationStateBrief: {
+            /** @description Non-secret options chosen at consent time. */
+            readonly config: Record<string, never>;
+            /** @description The consent in force, when there is one. */
+            readonly consent_id?: string | null;
+            /** @description Whether data may move. */
+            readonly enabled: boolean;
+            /**
+             * Format: int32
+             * @description The scope version it was consented to.
+             */
+            readonly scope_version?: number | null;
+            /**
+             * @description `available` (off, can be enabled), `enabled`, `disabled`, `revoked`, `denied_by_policy`,
+             *     `pending_operator` (waiting for the installation operator's local accept) or `coming_soon`.
+             */
+            readonly state: string;
         };
         /** @description Callback from the product after a consented hand-off completed its part of the provisioning intent. Idempotent by `jti`. */
         readonly IntentComplete: {
@@ -1927,24 +2012,20 @@ export interface components {
              */
             readonly previous_valid_until: string;
         };
-        /** @description Terms, the data-processing agreement and the sub-processor list linked from every consent screen and cached by instances. One agreement covers every integration; a new `dpa_version` asks for consent again on every integration. */
+        /**
+         * @description The legal texts every consent screen links: one data-processing agreement covers every
+         *     integration, and one public list names every sub-processor.
+         */
         readonly Legal: {
-            /**
-             * Format: uri
-             * @description The data-processing agreement of Ever Platform.
-             */
+            /** @description The data-processing agreement. */
             readonly dpa_url: string;
-            /** @description Version of that agreement; equals `Integration.dpa_version` and is recorded in every consent. */
+            /** @description Its version, equal to every integration's `dpa_version`. */
             readonly dpa_version: string;
-            /** Format: uri */
-            readonly privacy_url?: string;
-            /**
-             * Format: uri
-             * @description The public list of sub-processors.
-             */
+            /** @description The public list of sub-processors. */
             readonly subprocessors_url: string;
-            /** Format: uri */
+            /** @description The terms. */
             readonly terms_url: string;
+            /** @description Their version. */
             readonly terms_version: string;
         };
         /**
@@ -2359,7 +2440,9 @@ export interface components {
          *     key, which becomes its credential. The connect key never signs anonymous statistics (those
          *     have a key of their own). The body carries no address or any other field outside this
          *     schema: an instance's public address is set by the organization in app.ever.co, or later by
-         *     the instance through a consented integration.
+         *     the instance through a consented integration. The optional `return_origins` are not stored:
+         *     the platform keeps a digest of each, to refuse a consent link that would return anywhere
+         *     else.
          */
         readonly RedeemRequest: {
             /** @description The connect code, `EVC-XXXX-XXXX-XXXX` (case-insensitive). */
@@ -2378,6 +2461,17 @@ export interface components {
             readonly product: string;
             /** @description Its connect key: an Ed25519 public JWK (`kty: OKP`, `crv: Ed25519`, `x`). */
             readonly public_jwk: Record<string, never>;
+            /**
+             * @description The origins (`https://host[:port]`; plain `http` only on `localhost`, `127.0.0.1` or
+             *     `[::1]`) the installation's consent links may return to, at most four. Only a digest of
+             *     each is kept, never the address; a consent link naming another host is refused. Absent or
+             *     empty: the installation's consent links carry no return address. A reconnect replaces
+             *     them when it names any.
+             * @example [
+             *       "https://gauzy.acme.example"
+             *     ]
+             */
+            readonly return_origins?: readonly string[] | null;
             /** @description The products it serves besides its own (a Gauzy API serving Teams). */
             readonly serves_products?: readonly string[] | null;
             readonly tenant?: null | components["schemas"]["RedeemTenant"];
@@ -2471,13 +2565,14 @@ export interface components {
         };
         /**
          * @description `POST /v1/instances/me/stats-link`: the installation links its anonymous statistics id to
-         *     itself. The statement is signed with the statistics key; the call is authenticated with the
-         *     connect key, so only an installation holding both can link them.
+         *     itself. The statement is signed with the statistics key and names this instance; the call is
+         *     authenticated with the connect key, so only an installation holding both can link them.
          */
         readonly StatsLinkCreate: {
             /**
              * @description A compact JWS (`alg: EdDSA`, `typ: ever-stats-link+jwt`) signed with the statistics key
-             *     over `{stats_instance_id, stats_public_jwk, iat}`, at most ten minutes old.
+             *     over `{stats_instance_id, stats_public_jwk, sub, iat}`, where `sub` is this instance's id
+             *     (the subject of its instance token), at most ten minutes old.
              */
             readonly statement_sig: string;
             /** @description The anonymous statistics id (UUID v4) the installation reports under. */
@@ -2872,27 +2967,18 @@ export interface operations {
         };
         readonly requestBody?: never;
         readonly responses: {
-            /** @description OK */
+            /** @description The legal texts (`Cache-Control: public, max-age=300, s-maxage=3600`) */
             readonly 200: {
                 headers: {
-                    readonly "Cache-Control"?: "public, max-age=300, s-maxage=3600";
                     readonly [name: string]: unknown;
                 };
                 content: {
                     readonly "application/json": components["schemas"]["Legal"];
                 };
             };
-            /** @description Any other error, as a problem document. */
-            readonly default: {
+            /** @description `unavailable`: the legal texts are not configured on this deployment */
+            readonly 503: {
                 headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
                     readonly [name: string]: unknown;
                 };
                 content: {
@@ -3372,10 +3458,17 @@ export interface operations {
     readonly instanceGetConsentUrl: {
         readonly parameters: {
             readonly query: {
+                /** @description The integration key. */
                 readonly integration: string;
-                readonly link?: components["schemas"]["Ulid"];
-                /** @description Absolute URL of the product page to return to (must be an origin the instance published or the same host the request came from). */
-                readonly return: string;
+                /** @description The tenant link, for a per-link integration. */
+                readonly link?: string;
+                /**
+                 * @description The absolute `https` URL of the product page to return to (plain `http` only on
+                 *     `localhost`, on a development deployment); no credentials, no fragment. Its origin must
+                 *     be one the installation declared when it connected (`return_origins` of the redeem).
+                 *     Absent: the consent screen ends without a return address.
+                 */
+                readonly return?: string;
             };
             readonly header?: never;
             readonly path?: never;
@@ -3383,7 +3476,7 @@ export interface operations {
         };
         readonly requestBody?: never;
         readonly responses: {
-            /** @description OK */
+            /** @description The link */
             readonly 200: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -3392,7 +3485,7 @@ export interface operations {
                     readonly "application/json": components["schemas"]["ConsentUrl"];
                 };
             };
-            /** @description Validation failed; unknown fields are rejected on writes (`validation_failed`, `schema_violation`, `code_invalid`, `idempotency_mismatch`, `mirror_owned_field`, `limit_exceeded`). */
+            /** @description `validation_failed` (an unknown integration, a missing, foreign or unlinked tenant link, a return address that is not https, carries credentials or a fragment, or whose origin the installation did not declare when it connected) or `integration_not_available` */
             readonly 422: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -3401,17 +3494,9 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Any other error, as a problem document. */
-            readonly default: {
+            /** @description `unavailable`: consent links are not configured on this deployment */
+            readonly 503: {
                 headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
                     readonly [name: string]: unknown;
                 };
                 content: {
@@ -3672,27 +3757,18 @@ export interface operations {
         };
         readonly requestBody?: never;
         readonly responses: {
-            /** @description OK */
+            /** @description The states (`Cache-Control: private, no-store`) */
             readonly 200: {
                 headers: {
-                    readonly "Cache-Control"?: "private, no-store";
                     readonly [name: string]: unknown;
                 };
                 content: {
                     readonly "application/json": components["schemas"]["InstanceIntegrations"];
                 };
             };
-            /** @description Any other error, as a problem document. */
-            readonly default: {
+            /** @description No valid instance token */
+            readonly 401: {
                 headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
                     readonly [name: string]: unknown;
                 };
                 content: {
@@ -3706,6 +3782,7 @@ export interface operations {
             readonly query?: never;
             readonly header?: never;
             readonly path: {
+                /** @description The integration key. */
                 readonly key: string;
             };
             readonly cookie?: never;
@@ -3716,7 +3793,7 @@ export interface operations {
             };
         };
         readonly responses: {
-            /** @description Disabled. */
+            /** @description Off (with `reason: policy`, also when no state existed: the key is denied) */
             readonly 200: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -3725,7 +3802,7 @@ export interface operations {
                     readonly "application/json": components["schemas"]["IntegrationStateBrief"];
                 };
             };
-            /** @description Not found, or the module that serves this route is disabled on this deployment (`not_found`, `module_disabled`). */
+            /** @description With `reason: instance`, no state for this integration (already off); or an unknown key */
             readonly 404: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -3734,7 +3811,7 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Validation failed; unknown fields are rejected on writes (`validation_failed`, `schema_violation`, `code_invalid`, `idempotency_mismatch`, `mirror_owned_field`, `limit_exceeded`). */
+            /** @description `validation_failed`: `enabled: true`, an unknown reason, a missing or foreign tenant link */
             readonly 422: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -3743,17 +3820,61 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Any other error, as a problem document. */
-            readonly default: {
+        };
+    };
+    readonly instanceAcceptIntegration: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header: {
+                /**
+                 * @description Client-generated key, unique per principal, at most 128 characters; remembered 24 h.
+                 *     The same key with the same request replays the first answer (`Idempotency-Replayed:
+                 *     true`); with a different request it answers `422 idempotency_mismatch`.
+                 */
+                readonly "Idempotency-Key": string;
+            };
+            readonly path: {
+                /** @description The integration key. */
+                readonly key: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["IntegrationAccept"];
+            };
+        };
+        readonly responses: {
+            /** @description Enabled (accepted) or revoked (declined) */
+            readonly 200: {
                 headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["IntegrationStateBrief"];
+                };
+            };
+            /** @description No state waiting for the operator for this key */
+            readonly 404: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `illegal_transition`: the state does not wait for this consent */
+            readonly 409: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `validation_failed` */
+            readonly 422: {
+                headers: {
                     readonly [name: string]: unknown;
                 };
                 content: {
@@ -4315,7 +4436,7 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description `validation_failed`: the body, or a statement that is malformed, does not verify, does not repeat the request or is older than ten minutes */
+            /** @description `validation_failed`: the body, or a statement that is malformed, does not verify, does not repeat the request, does not name this instance in `sub` or is older than ten minutes */
             readonly 422: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -5152,15 +5273,20 @@ export interface operations {
         readonly parameters: {
             readonly query?: never;
             readonly header: {
-                /** @description Client-generated key, unique per principal, <= 128 characters. See the `Idempotency` schema. */
+                /**
+                 * @description Client-generated key, unique per principal, at most 128 characters; remembered 24 h.
+                 *     The same key with the same request replays the first answer (`Idempotency-Replayed:
+                 *     true`); with a different request it answers `422 idempotency_mismatch`.
+                 */
                 readonly "Idempotency-Key": string;
             };
             readonly path: {
-                /** @description Instance id (ULID). */
-                readonly instance: components["schemas"]["Ulid"];
+                /** @description The installation id. */
+                readonly instance: string;
+                /** @description The integration key. */
                 readonly key: string;
-                /** @description Organization id (ULID). */
-                readonly org: components["schemas"]["Ulid"];
+                /** @description The organization id. */
+                readonly org: string;
             };
             readonly cookie?: never;
         };
@@ -5170,7 +5296,7 @@ export interface operations {
             };
         };
         readonly responses: {
-            /** @description State written. */
+            /** @description The state as it now is */
             readonly 200: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -5179,7 +5305,7 @@ export interface operations {
                     readonly "application/json": components["schemas"]["IntegrationState"];
                 };
             };
-            /** @description Forbidden (see the shared `Forbidden` codes), including the in-product consent refusals. */
+            /** @description `forbidden_role` (a member), `not_connection_owner` (an installation-wide integration changed by an organization that does not own the connection, or of an installation Ever operates), `denied_by_policy`, `entitlement_required`, `step_up_required` */
             readonly 403: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -5188,7 +5314,7 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Not found, or the module that serves this route is disabled on this deployment (`not_found`, `module_disabled`). */
+            /** @description No such organization, installation, link or integration, or not the caller's */
             readonly 404: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -5197,7 +5323,7 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Validation failed; unknown fields are rejected on writes (`validation_failed`, `schema_violation`, `code_invalid`, `idempotency_mismatch`, `mirror_owned_field`, `limit_exceeded`). */
+            /** @description `scope_version_outdated` (a stale scope or agreement version), `integration_not_available` (not offered, or the installation is not connected), `validation_failed` (also: any option in `consent.config`; no integration takes one) */
             readonly 422: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -5206,17 +5332,9 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Any other error, as a problem document. */
-            readonly default: {
+            /** @description `unavailable`: this deployment publishes no terms (no consent can be recorded), or a key it needs is missing */
+            readonly 503: {
                 headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
                     readonly [name: string]: unknown;
                 };
                 content: {
@@ -5399,7 +5517,7 @@ export interface operations {
             };
         };
         readonly responses: {
-            /** @description Accepted, or accepted replacing a report of the same `instance_id` and `period` received the same UTC day (`superseded`) */
+            /** @description Accepted, or accepted replacing a report of the same `instance_id` and `period` received the same UTC day (`superseded`); the same report (`report_id`) sent again the same UTC day is answered `202` and changes nothing */
             readonly 202: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -5453,7 +5571,7 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description `rate_limited`: the `instance_id` sent its reports for the UTC day, or the source address too many requests (`Retry-After`) */
+            /** @description `rate_limited` (`Retry-After`): the `instance_id` sent its reports for the UTC day or stored reports for two months that day, the source address sent too many requests or registered its new `instance_id`s for the hour, or no more new `instance_id`s are taken that day */
             readonly 429: {
                 headers: {
                     readonly [name: string]: unknown;

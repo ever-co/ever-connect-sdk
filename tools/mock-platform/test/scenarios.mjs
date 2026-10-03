@@ -14,6 +14,8 @@ const GOLDEN = fixture('stats/valid/gauzy.json');
 const GOLDEN_ID = JSON.parse(GOLDEN.toString('utf8')).instance_id;
 const jwk = (key) => ({ kty: 'OKP', crv: 'Ed25519', x: key.x });
 const idem = (label) => ({ 'idempotency-key': sha256Hex(label) });
+// A per-link call names its tenant link in Ever-Link-Id.
+const linkHeader = (c) => ({ 'ever-link-id': c.linkId });
 const redeemBody = (code, key = testKey('connectNext'), product = 'gauzy') => ({
   code,
   product,
@@ -21,6 +23,13 @@ const redeemBody = (code, key = testKey('connectNext'), product = 'gauzy') => ({
   install_source: 'self-hosted',
   public_jwk: jwk(key),
 });
+
+/** The golden with another report id (another report of the same installation and month). */
+function withReportId(bytes, n) {
+  const doc = JSON.parse(bytes.toString('utf8'));
+  doc.report_id = `${doc.report_id.slice(0, 24)}${String(n).padStart(12, '0')}`;
+  return Buffer.from(JSON.stringify(doc));
+}
 
 function report(bytes = GOLDEN, key = testKey('stats'), extra = {}) {
   return {
@@ -148,7 +157,7 @@ export const OK = {
     await env.call('POST', '/v1/stats/reports', report());
     return env.call('POST', '/v1/instances/me/stats-link', {
       token: c.token,
-      body: signStatsLinkStatement({ statsInstanceId: GOLDEN_ID, iat: env.now() }),
+      body: signStatsLinkStatement({ statsInstanceId: GOLDEN_ID, sub: c.instanceId, iat: env.now() }),
       headers: idem('sl'),
     });
   },
@@ -156,12 +165,13 @@ export const OK = {
     const c = await connected(env, { enable: ['counterparty_discoverable'] });
     return env.call('PUT', `/v1/instances/me/tenant-links/${c.linkId}/identifiers`, {
       token: c.token,
+      headers: linkHeader(c),
       body: { hashes: [{ kind: 'vat', salt_version: 1, hash: 'a'.repeat(64) }] },
     });
   },
   instanceDeleteLinkIdentifiers: async (env) => {
     const c = await connected(env, { enable: ['counterparty_discoverable'] });
-    return env.call('DELETE', `/v1/instances/me/tenant-links/${c.linkId}/identifiers`, { token: c.token });
+    return env.call('DELETE', `/v1/instances/me/tenant-links/${c.linkId}/identifiers`, { token: c.token, headers: linkHeader(c) });
   },
   getLookupSalt: (env) => env.call('GET', '/v1/lookup/salt'),
   getLookupTestVectors: (env) => env.call('GET', '/v1/lookup/test-vectors'),
@@ -201,12 +211,13 @@ export const OK = {
     const c = await connected(env, { enable: ['app_sync'] });
     return env.call('POST', '/v1/instances/me/mirror/apps', {
       token: c.token,
+      headers: linkHeader(c),
       body: { ops: [{ op: 'upsert', kind: 'app', external_id: 'w-1', external_version: 1, occurred_at: '2026-11-02T10:00:00Z' }] },
     });
   },
   instanceListMirroredApps: async (env) => {
     const c = await connected(env, { enable: ['app_sync'] });
-    return env.call('GET', '/v1/instances/me/mirror/apps?limit=10', { token: c.token });
+    return env.call('GET', '/v1/instances/me/mirror/apps?limit=10', { token: c.token, headers: linkHeader(c) });
   },
   instanceDisconnect: async (env) =>
     env.call('POST', '/v1/instances/me/disconnect', { token: (await connected(env)).token, headers: idem('d') }),
@@ -262,7 +273,7 @@ export const OK = {
         consent_id: env.state.instance(c.instanceId).integrations[`profile_import@${c.linkId}`].consent_id,
         fields: { name: 'Acme' },
       },
-      headers: idem('op'),
+      headers: { ...idem('op'), ...linkHeader(c) },
     });
   },
   resolveIdentity: async (env) => {
@@ -316,7 +327,11 @@ export const OK = {
   instanceReportInstallStatus: async (env) => {
     const c = await connected(env, { enable: ['marketplace_installs'] });
     const { install_id } = await env.admin('install', {});
-    return env.call('POST', `/v1/installs/${install_id}/status`, { token: c.token, body: { state: 'installing' }, headers: idem('is') });
+    return env.call('POST', `/v1/installs/${install_id}/status`, {
+      token: c.token,
+      body: { state: 'installing' },
+      headers: { ...idem('is'), ...linkHeader(c) },
+    });
   },
   connectDevice: (env) =>
     env.call('POST', '/v1/connect/device', {
@@ -373,30 +388,29 @@ export const OK = {
   instanceAcceptIntegration: async (env) => {
     const c = await connected(env);
     const { consent_id } = await env.admin('consent', { integration: 'stats_link', operator_accept: 'pending' });
-    return env.call('POST', '/v1/instances/me/integrations/stats_link/accept', { token: c.token, body: { consent_id, accepted: true } });
+    return env.call('POST', '/v1/instances/me/integrations/stats_link/accept', {
+      token: c.token,
+      body: { consent_id, accepted: true },
+      headers: idem('accept'),
+    });
   },
   instanceGetProviderGrant: async (env) => {
     const c = await connected(env, { enable: ['provider_access'] });
     const { grant_id } = await env.admin('provider-grant', {});
-    return env.call('GET', `/v1/instances/me/provider-grants/${grant_id}`, { token: c.token });
+    return env.call('GET', `/v1/instances/me/provider-grants/${grant_id}`, { token: c.token, headers: linkHeader(c) });
   },
   instanceReportProviderGrantStatus: async (env) => {
     const c = await connected(env, { enable: ['provider_access'] });
     const { grant_id } = await env.admin('provider-grant', {});
     return env.call('POST', `/v1/instances/me/provider-grants/${grant_id}/status`, {
       token: c.token,
+      headers: linkHeader(c),
       body: { grant_id, status: 'accepted', product_user_ref: 'user-2' },
     });
   },
   putIntegrationState: async (env) => {
     const c = await connected(env);
-    const r = await putState(
-      env,
-      c,
-      'counterparty_lookup',
-      await personToken(env, { auth_age_s: 300 }),
-      grant({ tenant_link_id: c.linkId }),
-    );
+    const r = await putState(env, c, 'usage_reporting', await personToken(env, { auth_age_s: 300 }), grant({ tenant_link_id: c.linkId }));
     if (r.body?.consent_source !== 'product_ui') throw new Error(`not a product_ui consent: ${r.text}`);
     return r;
   },
@@ -417,11 +431,15 @@ const calls = {
   statsLink: (env, c) =>
     env.call('POST', '/v1/instances/me/stats-link', {
       token: c.token,
-      body: signStatsLinkStatement({ statsInstanceId: GOLDEN_ID, iat: env.now() }),
+      body: signStatsLinkStatement({ statsInstanceId: GOLDEN_ID, sub: c.instanceId, iat: env.now() }),
       headers: idem('x'),
     }),
   identifiers: (env, c) =>
-    env.call('PUT', `/v1/instances/me/tenant-links/${c.linkId}/identifiers`, { token: c.token, body: { hashes: [] } }),
+    env.call('PUT', `/v1/instances/me/tenant-links/${c.linkId}/identifiers`, {
+      token: c.token,
+      headers: linkHeader(c),
+      body: { hashes: [] },
+    }),
   lookup: (env, c) =>
     env.call('POST', '/v1/lookup', {
       token: c.token,
@@ -437,6 +455,7 @@ const calls = {
   mirror: (env, c) =>
     env.call('POST', '/v1/instances/me/mirror/apps', {
       token: c.token,
+      headers: linkHeader(c),
       body: { ops: [{ op: 'upsert', kind: 'app', external_id: 'w', external_version: 1, occurred_at: '2026-11-02T10:00:00Z' }] },
     }),
   publicUrl: (env, c) => env.call('PUT', '/v1/instances/me/public-url', { token: c.token, body: { base_url: 'https://g.example.com' } }),
@@ -450,7 +469,7 @@ const calls = {
     env.call('POST', '/v1/instances/me/org-profile', {
       token: c.token,
       body: { tenant_link_id: c.linkId, consent_id: '01JMQCK0RG000000000000000C', fields: {} },
-      headers: idem('op'),
+      headers: { ...idem('op'), ...linkHeader(c) },
     }),
   resolve: (env, c) =>
     env.call('POST', '/v1/identity/resolve', { token: c.token, body: { issuer: 'https://auth.ever.co', subject: '275396402232829475' } }),
@@ -468,7 +487,11 @@ const calls = {
     }),
   install: async (env, c) => {
     const { install_id } = await env.admin('install', {});
-    return env.call('POST', `/v1/installs/${install_id}/status`, { token: c.token, body: { state: 'installing' }, headers: idem('i') });
+    return env.call('POST', `/v1/installs/${install_id}/status`, {
+      token: c.token,
+      body: { state: 'installing' },
+      headers: { ...idem('i'), ...linkHeader(c) },
+    });
   },
   webhookCreate: (env, c) =>
     env.call('POST', '/v1/instances/me/webhooks', {
@@ -478,7 +501,7 @@ const calls = {
     }),
   grant: async (env, c) => {
     const { grant_id } = await env.admin('provider-grant', {});
-    return env.call('GET', `/v1/instances/me/provider-grants/${grant_id}`, { token: c.token });
+    return env.call('GET', `/v1/instances/me/provider-grants/${grant_id}`, { token: c.token, headers: linkHeader(c) });
   },
   managed: async (env, c) =>
     env.call('POST', '/v1/instances/me/managed-operations/01JMQCK0RG000000000000000D/result', {
@@ -493,6 +516,10 @@ const integrationPairs = (row, integration, call) => ({
 });
 
 export const ERRORS = {
+  '2:503:unavailable': async (env) => {
+    await env.admin('faults', { legal_unavailable: true });
+    return env.call('GET', '/v1/connect/legal');
+  },
   '1:503:keys_unavailable': async (env) => {
     await env.admin('faults', { keys_unavailable: true });
     return env.call('GET', '/.well-known/ever-keys.json');
@@ -669,8 +696,18 @@ export const ERRORS = {
     for (let i = 0; i < 7; i += 1) r = await env.call('GET', '/v1/instances/me/entitlement', { token: c.token });
     return r;
   },
+  // A return address whose origin the installation did not declare when it connected.
   '9:422:validation_failed': async (env) =>
-    env.call('GET', '/v1/instances/me/consent-url?integration=stats_link', { token: (await connected(env)).token }),
+    env.call('GET', '/v1/instances/me/consent-url?integration=stats_link&return=https%3A%2F%2Fother.example.com%2Fback', {
+      token: (await connected(env)).token,
+    }),
+  '9:422:integration_not_available': async (env) =>
+    env.call('GET', '/v1/instances/me/consent-url?integration=ever_id_login', { token: (await connected(env)).token }),
+  '9:503:unavailable': async (env) => {
+    const c = await connected(env);
+    await env.admin('faults', { consent_links_unavailable: true });
+    return env.call('GET', '/v1/instances/me/consent-url?integration=stats_link', { token: c.token });
+  },
   '10:404:not_found': async (env) =>
     env.call('PUT', '/v1/instances/me/integrations/unknown_key', {
       token: (await connected(env)).token,
@@ -691,7 +728,7 @@ export const ERRORS = {
     await env.admin('consent', { integration: 'stats_link' });
     return env.call('POST', '/v1/instances/me/stats-link', {
       token: second.token,
-      body: signStatsLinkStatement({ statsInstanceId: GOLDEN_ID, iat: env.now() }),
+      body: signStatsLinkStatement({ statsInstanceId: GOLDEN_ID, sub: second.instanceId, iat: env.now() }),
       headers: idem('second'),
     });
   },
@@ -700,7 +737,7 @@ export const ERRORS = {
     await env.call('POST', '/v1/stats/reports', report());
     return env.call('POST', '/v1/instances/me/stats-link', {
       token: c.token,
-      body: signStatsLinkStatement({ statsInstanceId: GOLDEN_ID, iat: env.now() - 3600 }),
+      body: signStatsLinkStatement({ statsInstanceId: GOLDEN_ID, sub: c.instanceId, iat: env.now() - 3600 }),
       headers: idem('old'),
     });
   },
@@ -710,6 +747,7 @@ export const ERRORS = {
     const c = await connected(env, { enable: ['counterparty_discoverable'] });
     return env.call('PUT', `/v1/instances/me/tenant-links/${c.linkId}/identifiers`, {
       token: c.token,
+      headers: linkHeader(c),
       body: { hashes: [{ kind: 'vat', salt_version: 1, hash: 'd'.repeat(64) }] },
     });
   },
@@ -769,7 +807,11 @@ export const ERRORS = {
   ...integrationPairs(15, 'app_sync', calls.mirror),
   '15:413:payload_too_large': async (env) => {
     const c = await connected(env, { enable: ['app_sync'] });
-    return env.call('POST', '/v1/instances/me/mirror/apps', { token: c.token, raw: `{"ops":[${'"x",'.repeat(1100000)}"x"]}` });
+    return env.call('POST', '/v1/instances/me/mirror/apps', {
+      token: c.token,
+      headers: linkHeader(c),
+      raw: `{"ops":[${'"x",'.repeat(1100000)}"x"]}`,
+    });
   },
   '16:401:credential_revoked': async (env) => {
     const c = await connected(env);
@@ -818,7 +860,7 @@ export const ERRORS = {
   '17:422:schema_violation': (env) => env.call('POST', '/v1/stats/reports', report(fixture('stats/invalid/01-extra-field.json'))),
   '17:429:rate_limited': async (env) => {
     let r;
-    for (let i = 0; i < 25; i += 1) r = await env.call('POST', '/v1/stats/reports', report());
+    for (let i = 0; i < 25; i += 1) r = await env.call('POST', '/v1/stats/reports', report(withReportId(GOLDEN, i)));
     return r;
   },
   ...integrationPairs(18, 'instance_url', calls.publicUrl),
@@ -853,12 +895,14 @@ export const ERRORS = {
       body: { job_id: '01JMQCK0RG000000000000000H', result: 'ignored' },
     }),
   ...integrationPairs(21, 'profile_import', calls.orgProfile),
-  '21:422:validation_failed': async (env) =>
-    env.call('POST', '/v1/instances/me/org-profile', {
-      token: (await connected(env, { enable: ['profile_import'] })).token,
+  '21:422:validation_failed': async (env) => {
+    const c = await connected(env, { enable: ['profile_import'] });
+    return env.call('POST', '/v1/instances/me/org-profile', {
+      token: c.token,
       body: { fields: { email: 'x@example.com' } },
-      headers: idem('ov'),
-    }),
+      headers: { ...idem('ov'), ...linkHeader(c) },
+    });
+  },
   ...integrationPairs(22, 'ever_id_login', calls.resolve),
   '22:404:not_found': async (env) =>
     env.call('POST', '/v1/identity/resolve', {
@@ -925,16 +969,22 @@ export const ERRORS = {
     });
   },
   ...integrationPairs(28, 'marketplace_installs', calls.install),
-  '28:404:not_found': async (env) =>
-    env.call('POST', '/v1/installs/01JMQCK0RG000000000000000M/status', {
-      token: (await connected(env, { enable: ['marketplace_installs'] })).token,
+  '28:404:not_found': async (env) => {
+    const c = await connected(env, { enable: ['marketplace_installs'] });
+    return env.call('POST', '/v1/installs/01JMQCK0RG000000000000000M/status', {
+      token: c.token,
       body: { state: 'installing' },
-      headers: idem('in'),
-    }),
+      headers: { ...idem('in'), ...linkHeader(c) },
+    });
+  },
   '28:409:illegal_transition': async (env) => {
     const c = await connected(env, { enable: ['marketplace_installs'] });
     const { install_id } = await env.admin('install', { state: 'removed' });
-    return env.call('POST', `/v1/installs/${install_id}/status`, { token: c.token, body: { state: 'installing' }, headers: idem('it') });
+    return env.call('POST', `/v1/installs/${install_id}/status`, {
+      token: c.token,
+      body: { state: 'installing' },
+      headers: { ...idem('it'), ...linkHeader(c) },
+    });
   },
   '29:400:authorization_pending': async (env) => {
     const start = await OK.connectDevice(env);
@@ -1001,21 +1051,33 @@ export const ERRORS = {
     env.call('POST', '/v1/instances/me/integrations/no_such_key/accept', {
       token: (await connected(env)).token,
       body: { consent_id: '01JMQCK0RG000000000000000N', accepted: true },
+      headers: idem('accept'),
     }),
-  '31:409:illegal_transition': async (env) =>
+  // The state waits for another consent than the one named.
+  '31:409:illegal_transition': async (env) => {
+    const c = await connected(env);
+    await env.admin('consent', { integration: 'stats_link', operator_accept: 'pending' });
+    return env.call('POST', '/v1/instances/me/integrations/stats_link/accept', {
+      token: c.token,
+      body: { consent_id: '01JMQCK0RG000000000000000N', accepted: true },
+      headers: idem('accept'),
+    });
+  },
+  '31:422:validation_failed': async (env) =>
     env.call('POST', '/v1/instances/me/integrations/stats_link/accept', {
       token: (await connected(env)).token,
-      body: { consent_id: '01JMQCK0RG000000000000000N', accepted: true },
+      body: { consent_id: 'not-a-consent-id', accepted: true },
+      headers: idem('accept'),
     }),
   ...integrationPairs(32, 'provider_access', calls.grant),
   '32:409:illegal_transition': async (env) => {
     const c = await connected(env, { enable: ['provider_access'] });
     const { grant_id } = await env.admin('provider-grant', { status: 'invited' });
-    return env.call('GET', `/v1/instances/me/provider-grants/${grant_id}`, { token: c.token });
+    return env.call('GET', `/v1/instances/me/provider-grants/${grant_id}`, { token: c.token, headers: linkHeader(c) });
   },
   '33:403:step_up_required': async (env) => {
     const c = await connected(env);
-    return putState(env, c, 'counterparty_lookup', await personToken(env, { auth_age_s: 301 }), grant({ tenant_link_id: c.linkId }));
+    return putState(env, c, 'usage_reporting', await personToken(env, { auth_age_s: 301 }), grant({ tenant_link_id: c.linkId }));
   },
   '33:403:session_required': async (env) => {
     const c = await connected(env);
@@ -1023,7 +1085,7 @@ export const ERRORS = {
   },
   '33:403:forbidden_role': async (env) => {
     const c = await connected(env);
-    return putState(env, c, 'counterparty_lookup', await personToken(env, { role: 'member' }), grant({ tenant_link_id: c.linkId }));
+    return putState(env, c, 'usage_reporting', await personToken(env, { role: 'member' }), grant({ tenant_link_id: c.linkId }));
   },
   '33:403:not_connection_owner': async (env) => {
     const c = await connected(env);
@@ -1049,17 +1111,34 @@ export const ERRORS = {
   },
   '33:422:validation_failed': async (env) => {
     const c = await connected(env);
-    return putState(env, c, 'counterparty_lookup', await personToken(env, {}), {
+    return putState(env, c, 'usage_reporting', await personToken(env, {}), {
       enabled: true,
       consent: { scope_version: 1, dpa_version: '2026-10', accepted: false },
     });
+  },
+  '33:422:integration_not_available': async (env) => {
+    const c = await connected(env);
+    return putState(env, c, 'counterparty_lookup', await personToken(env, {}), grant({ tenant_link_id: c.linkId }));
+  },
+  '33:403:denied_by_policy': async (env) => {
+    const c = await connected(env);
+    await env.call('POST', '/v1/instances/me/heartbeat', {
+      token: c.token,
+      body: { version: '96.2.1', integrations_denied: ['usage_reporting'] },
+    });
+    return putState(env, c, 'usage_reporting', await personToken(env, {}), grant({ tenant_link_id: c.linkId }));
+  },
+  '33:503:unavailable': async (env) => {
+    const c = await connected(env);
+    await env.admin('faults', { legal_unavailable: true });
+    return putState(env, c, 'usage_reporting', await personToken(env, {}), grant({ tenant_link_id: c.linkId }));
   },
   '33:422:scope_version_outdated': async (env) => {
     const c = await connected(env);
     return putState(
       env,
       c,
-      'counterparty_lookup',
+      'usage_reporting',
       await personToken(env, {}),
       grant({ tenant_link_id: c.linkId, consent: { scope_version: 0, dpa_version: '2026-10', accepted: true } }),
     );

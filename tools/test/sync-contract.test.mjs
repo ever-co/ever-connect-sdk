@@ -7,7 +7,6 @@ import { test } from 'node:test';
 import YAML from 'yaml';
 import { checkPins, checkScope, pinLines } from '../check-schema-drift.mjs';
 import { REPO, readJson } from '../lib/common.mjs';
-import { applyTransform, CATALOG_PINS } from '../lib/vendor.mjs';
 import { checkRows } from '../sync-contract.mjs';
 
 const spec = YAML.parse(readFileSync(join(REPO, 'contracts/openapi/ever-platform.v1.yaml'), 'utf8'));
@@ -158,25 +157,11 @@ test('--strict=stats: the statistics schema, fixtures and calls are published an
   assert.equal(pins.get('contracts/stats/ever.stats.v1.schema.json'), sha);
 });
 
-test('the catalog transform pins public names and statuses and drops hidden rows', () => {
-  const seed = YAML.stringify({
-    integrations: [
-      { key: 'managed_operations', name: 'Working name', status: 'coming_soon' },
-      { key: 'counterparty_lookup', name: 'Lookup', status: 'active' },
-      { key: 'reserved_key', name: 'Reserved', status: 'hidden' },
-    ],
-  });
-  const doc = JSON.parse(applyTransform('catalog-yaml', seed));
-  assert.deepEqual(
-    doc.integrations.map((r) => [r.key, r.name, r.status]),
-    [
-      ['managed_operations', CATALOG_PINS.name.managed_operations, 'coming_soon'],
-      ['counterparty_lookup', 'Lookup', 'coming_soon'],
-    ],
-  );
-  const vendored = readJson(join(REPO, 'contracts/integrations/catalog.v1.json')).integrations;
-  for (const [key, name] of Object.entries(CATALOG_PINS.name)) {
-    assert.equal(vendored.find((r) => r.key === key)?.name, name, `${key} carries its public name in the vendored catalog`);
-    assert.equal(readJson(join(REPO, `contracts/integrations/${key}.json`)).name, name, `${key} carries its public name in its definition`);
-  }
+test('the catalog is the one the platform publishes: no hidden row, the public names', () => {
+  const entry = readJson(join(REPO, 'contracts/VENDOR.json')).files.find((f) => f.path === 'contracts/integrations/catalog.v1.json');
+  assert.deepEqual([entry.source, entry.transform, entry.provisional], ['contracts/integrations/catalog.v1.json', null, false]);
+  const rows = readJson(join(REPO, 'contracts/integrations/catalog.v1.json')).integrations;
+  assert.ok(rows.every((r) => r.status !== 'hidden'));
+  assert.equal(rows.find((r) => r.key === 'managed_operations')?.name, 'Maintenance operations');
+  assert.equal(readJson(join(REPO, 'contracts/integrations/managed_operations.json')).name, 'Maintenance operations');
 });

@@ -2,27 +2,26 @@
   "description": "Where every contract file of this repository comes from. Written by tools/sync-contract.mjs; checked by tools/check-schema-drift.mjs. `provisional` sources are drafts the platform has not published yet: tools/check-schema-drift.mjs --strict refuses them.",
   "platform": {
     "repository": "ever-co/platform",
-    "commit": "40af4a4b047a3ed31be1437440971dc5378b18b1"
+    "commit": "1294254638dca96ed8b1d7b7fd7289dd488578f0"
   },
   "openapi": {
     "target": "contracts/openapi/ever-platform.v1.yaml",
-    "sha256": "5d25bd366702095a124e67a1f1ecfc6d0fc19ca05c2a6bb36aae40f11507bc26",
+    "sha256": "320ee08efcb65de763bfee0fb5ac90f54e8228e672c957ef5ec838e8dcbd3995",
     "pinned": {
       "source": "contracts/openapi/ever-api.v1.json",
-      "sha256": "c4d0e330f01cc6ecc1b42384a968ba20ab9e8d12aecd5276e15c87bf72a79e1d"
+      "sha256": "3d1c268b03752e3146d8b5f9b39ebdde561c53f63c295da01d5ad297c8bf6048"
     },
     "design": {
       "source": "docs/specs/api",
-      "sha256": "480709a7c5752b106da9da034c478440307801acac3bd53a9cd180a5330a0926",
-      "files": 22
+      "sha256": "77ce63a394a6a2078db4d7c6d5d92540bad1ccbf351402e60e26dd5b30f1fed6",
+      "files": 21
     },
-    "operations": 53,
+    "operations": 54,
     "provisional_operations": [
       "completeProvisionIntent",
       "connectDevice",
       "connectDeviceToken",
       "discoverSso",
-      "getConnectLegal",
       "getLookupSalt",
       "getLookupTestVectors",
       "instanceAckRequest",
@@ -30,10 +29,7 @@
       "instanceCreatePersonLink",
       "instanceDeleteLinkIdentifiers",
       "instanceDeletePersonLink",
-      "instanceDisableIntegration",
-      "instanceGetConsentUrl",
       "instanceGetEntitlement",
-      "instanceGetIntegrations",
       "instanceGetLinkEntitlement",
       "instanceGetOidcClient",
       "instanceListMirroredApps",
@@ -47,7 +43,6 @@
       "instanceReportUsageReadings",
       "instanceRequestOidcClient",
       "lookupCounterparties",
-      "putIntegrationState",
       "resolveIdentity"
     ],
     "shape_differences": [
@@ -65,16 +60,18 @@
       }
     ],
     "schema_overrides": [],
+    "security_overrides": [
+      "putIntegrationState"
+    ],
     "pending_upstream_rows": [
       18,
-      31,
       32
     ]
   },
   "events": {
     "source": "contracts/events/catalog.json",
-    "version": "1.2",
-    "sha256": "3567de8d7704aac99241c9d9c391a762e943e34f27793d7e39eac9aef368f3d3",
+    "version": "1.3",
+    "sha256": "fceaec79bcf4a1f7a5099c1aff3fed18b6867e3417b8bb1ad9efb59e869bd2ed",
     "instance_types": [
       "ever.consent.consent.granted",
       "ever.consent.consent.revoked",
@@ -134,12 +131,12 @@
     },
     {
       "path": "contracts/integrations/catalog.v1.json",
-      "source": "docs/specs/seeds/integrations-catalog.yaml",
-      "source_sha256": "cdf9c8cb4e96674f97af604a6bb284ec533d06a9b4b500d69c68117ddbb27d37",
-      "sha256": "137b9d922a65cb3a8f1247c99db5f8a9118982de027d91906372a42a121d4924",
-      "transform": "catalog-yaml",
-      "provisional": true,
-      "upstream": "contracts/integrations/catalog.v1.json"
+      "source": "contracts/integrations/catalog.v1.json",
+      "source_sha256": "90e48db66a5e3d6f944993b858cb368d68192e88c91af380a624ed2bc9286cc4",
+      "sha256": "90e48db66a5e3d6f944993b858cb368d68192e88c91af380a624ed2bc9286cc4",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
     },
     {
       "path": "contracts/fixtures/lookup/test-vectors.json",
@@ -153,8 +150,8 @@
     {
       "path": "contracts/schemas/events/common.schema.json",
       "source": "contracts/events/schemas/common.schema.json",
-      "source_sha256": "9a1da8dfba700b880cddb1d9bd93900faad71f7053b63200aed6cdada6229bdd",
-      "sha256": "9a1da8dfba700b880cddb1d9bd93900faad71f7053b63200aed6cdada6229bdd",
+      "source_sha256": "8c67c396dc03509af67f3b37c02a279b967bc9925c27701dd536aaa5c113d77c",
+      "sha256": "8c67c396dc03509af67f3b37c02a279b967bc9925c27701dd536aaa5c113d77c",
       "transform": null,
       "provisional": false,
       "upstream": null
@@ -180,8 +177,8 @@
     {
       "path": "contracts/schemas/events/ever.consent.consent.revoked.v1.schema.json",
       "source": "contracts/events/schemas/ever.consent.consent.revoked.v1.schema.json",
-      "source_sha256": "118d3934f94bc113314f9c2821819c1fa71e02edcabc0e1e9cabb125760f7247",
-      "sha256": "118d3934f94bc113314f9c2821819c1fa71e02edcabc0e1e9cabb125760f7247",
+      "source_sha256": "18b8b9a5e7cd8db73d46785c74345043b9cd5fb5517e16f01e63dfe4d9bd4320",
+      "sha256": "18b8b9a5e7cd8db73d46785c74345043b9cd5fb5517e16f01e63dfe4d9bd4320",
       "transform": null,
       "provisional": false,
       "upstream": null
@@ -189,8 +186,8 @@
     {
       "path": "contracts/schemas/events/ever.consent.integration.disabled.v1.schema.json",
       "source": "contracts/events/schemas/ever.consent.integration.disabled.v1.schema.json",
-      "source_sha256": "0594161fffedc80bd7cde226354104cd2244d320bc16531ba7563f2b723c9b30",
-      "sha256": "0594161fffedc80bd7cde226354104cd2244d320bc16531ba7563f2b723c9b30",
+      "source_sha256": "319307914f320e6088944a5ed483d000bb8278c44e23bd808cddf9d9bb5c5659",
+      "sha256": "319307914f320e6088944a5ed483d000bb8278c44e23bd808cddf9d9bb5c5659",
       "transform": null,
       "provisional": false,
       "upstream": null
@@ -198,8 +195,8 @@
     {
       "path": "contracts/schemas/events/ever.consent.integration.enabled.v1.schema.json",
       "source": "contracts/events/schemas/ever.consent.integration.enabled.v1.schema.json",
-      "source_sha256": "7202f2c72f1b60304f3ff7e39d1912620f335eb82542165944f8160492fb7788",
-      "sha256": "7202f2c72f1b60304f3ff7e39d1912620f335eb82542165944f8160492fb7788",
+      "source_sha256": "8e6ad341ea0968485d85c3d814ae74a198d733557af2a4e2d2b8ef3a487c1006",
+      "sha256": "8e6ad341ea0968485d85c3d814ae74a198d733557af2a4e2d2b8ef3a487c1006",
       "transform": null,
       "provisional": false,
       "upstream": null

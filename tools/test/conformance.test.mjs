@@ -23,7 +23,9 @@ test('with issuance off, a well-formed redeem is 404 and a malformed one stays 4
 test('the cases stay non-destructive: no connect code that works, no organization change', () => {
   for (const c of loadCases()) {
     const req = buildRequest(c, 'http://127.0.0.1:1');
-    assert.ok(['GET', 'POST'].includes(req.method), c.id);
+    assert.ok(['GET', 'POST', 'PUT'].includes(req.method), c.id);
+    // A write that changes state is only ever sent without a valid credential.
+    if (req.method === 'PUT') assert.equal(c.expect.status, 401, c.id);
     assert.doesNotMatch(String(req.body ?? ''), /EVC-TEST-|EVL-/, c.id);
     assert.ok(!req.path.startsWith('/v1/orgs'), c.id);
   }

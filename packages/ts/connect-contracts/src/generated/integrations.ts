@@ -51,7 +51,6 @@ export interface IntegrationDefinition {
   readonly name: string;
   readonly description: string;
   readonly category: string;
-  readonly owner_module: string;
   readonly direction: 'outbound' | 'inbound' | 'both';
   readonly defaults: { readonly cloud: boolean; readonly self_hosted: boolean };
   readonly availability: {
@@ -60,7 +59,6 @@ export interface IntegrationDefinition {
   };
   readonly requires_feature: string | null;
   readonly products: readonly string[];
-  readonly phase: number;
   readonly status: 'active' | 'coming_soon';
   readonly scope_version: number;
   readonly revoke_effect: string;
@@ -75,7 +73,6 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
     "name": "Installation address",
     "description": "Shows the public address of this installation to its own organization in app.ever.co, and on the public profile if the owner turns that section on.",
     "category": "profile",
-    "owner_module": "registry",
     "direction": "outbound",
     "defaults": {
       "cloud": true,
@@ -93,7 +90,6 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
       "rec",
       "traduora"
     ],
-    "phase": 2,
     "status": "active",
     "scope_version": 1,
     "revoke_effect": "The stored address is removed.",
@@ -115,7 +111,6 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
     "name": "Link usage statistics to this organization",
     "description": "Connects the anonymous statistics identity of this self-hosted installation to your organization, so you can see your installation's latest statistics report in app.ever.co. Without this link, statistics stay anonymous. It is never offered on Ever Cloud, where one installation serves many organizations.",
     "category": "stats",
-    "owner_module": "stats",
     "direction": "outbound",
     "defaults": {
       "cloud": false,
@@ -133,7 +128,6 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
       "rec",
       "traduora"
     ],
-    "phase": 2,
     "status": "active",
     "scope_version": 1,
     "revoke_effect": "The link is cleared. Later statistics reports are anonymous again.",
@@ -173,7 +167,6 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
     "name": "Sign in with Ever ID",
     "description": "Adds Ever ID as an extra sign-in option in this installation. Existing sign-in methods keep working unchanged.",
     "category": "identity",
-    "owner_module": "identity",
     "direction": "both",
     "defaults": {
       "cloud": true,
@@ -190,7 +183,6 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
       "rec",
       "traduora"
     ],
-    "phase": 2,
     "status": "coming_soon",
     "scope_version": 1,
     "revoke_effect": "The Ever ID client for this installation is deleted and its local settings are cleared. Existing local sessions are not affected.",
@@ -267,7 +259,6 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
     "name": "Check contacts on Ever Platform",
     "description": "When you click 'Check on Ever Platform' on a contact, the installation sends salted hashes of that contact's VAT number, registration number or e-mail and gets back the handle of any organization that chose to be discoverable. The values themselves never leave the installation.",
     "category": "lookup",
-    "owner_module": "lookup",
     "direction": "outbound",
     "defaults": {
       "cloud": true,
@@ -282,7 +273,6 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
       "gauzy",
       "works"
     ],
-    "phase": 2,
     "status": "coming_soon",
     "scope_version": 1,
     "revoke_effect": "The button is hidden and cached results are purged.",
@@ -323,7 +313,6 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
     "name": "Let your partners find you",
     "description": "Publishes salted hashes of your own organization's tax ID, registration number and billing e-mail, so other organizations that already know these values can find your Ever Platform handle. Nothing is findable by browsing or searching. It is off everywhere, Ever Cloud included, until an owner of your organization turns it on in app.ever.co.",
     "category": "lookup",
-    "owner_module": "registry",
     "direction": "outbound",
     "defaults": {
       "cloud": false,
@@ -340,7 +329,6 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
       "rec",
       "traduora"
     ],
-    "phase": 2,
     "status": "coming_soon",
     "scope_version": 1,
     "revoke_effect": "The stored hashes are deleted.",
@@ -380,7 +368,6 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
     "name": "Import into public profile",
     "description": "Copies your organization's name, website, description, logo and country into your ever.co profile draft, and only when you click 'Import into public profile'. You review the draft before anything is published.",
     "category": "profile",
-    "owner_module": "registry",
     "direction": "outbound",
     "defaults": {
       "cloud": true,
@@ -395,7 +382,6 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
       "gauzy",
       "works"
     ],
-    "phase": 3,
     "status": "coming_soon",
     "scope_version": 1,
     "revoke_effect": "Nothing further is copied. Profile fields you already published stay until you edit them.",
@@ -461,9 +447,8 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
   usage_reporting: {
     "key": "usage_reporting",
     "name": "Usage reporting",
-    "description": "Sends daily counts of the meters you choose (for example active employees or seats) for plans that are priced by usage. On Ever Cloud the row starts on under the Ever Cloud terms, because cloud plans are billed on these counts (for example per employee for Ever Gauzy and Ever Teams, on the latest successful count). A self-hosted installation sends nothing unless an administrator turns it on.",
+    "description": "Sends daily counts of a plan's metered quantities (for example active employees or seats) for plans that are priced by usage. On Ever Cloud it will start on under the Ever Cloud terms once cloud plans are billed on these counts (for example per employee for Ever Gauzy and Ever Teams, on the latest successful count); until then it stays off. A self-hosted installation sends nothing unless an administrator turns it on.",
     "category": "entitlements",
-    "owner_module": "entitlements",
     "direction": "outbound",
     "defaults": {
       "cloud": true,
@@ -478,11 +463,10 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
       "gauzy",
       "works"
     ],
-    "phase": 2,
     "status": "active",
     "scope_version": 1,
     "revoke_effect": "Reports stop.",
-    "notes": "Ever Cloud: starts on under the Ever Cloud terms (for example Ever Gauzy and Ever Teams per-employee plans; a missed count never raises the bill above the last known number). Self-hosted: off unless an administrator consents.",
+    "notes": "Ever Cloud: will start on under the Ever Cloud terms once per-usage cloud billing is available (for example Ever Gauzy and Ever Teams per-employee plans; a missed count never raises the bill above the last known number); off until then. Self-hosted: off unless an administrator consents.",
     "scope": [
       {
         "field_path": "meters.active_employees",
@@ -537,7 +521,6 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
     "name": "Apps and deployments",
     "description": "Lists the apps you build and deploy in Ever Works on your organization's account pages, and on your public profile if you choose. Only identifiers and status move. App content, repositories, budgets, agents and memory never leave Ever Works.",
     "category": "apps",
-    "owner_module": "registry",
     "direction": "outbound",
     "defaults": {
       "cloud": true,
@@ -551,7 +534,6 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
     "products": [
       "works"
     ],
-    "phase": 2,
     "status": "active",
     "scope_version": 1,
     "revoke_effect": "Pending updates are drained and no further updates are sent.",
@@ -663,7 +645,6 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
     "name": "Link cloud billing",
     "description": "Links your existing Ever Gauzy Cloud billing account to your Ever Platform organization, so all your plans show in one place. Prices, limits and existing offers do not change.",
     "category": "billing",
-    "owner_module": "billing",
     "direction": "outbound",
     "defaults": {
       "cloud": true,
@@ -677,7 +658,6 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
     "products": [
       "gauzy"
     ],
-    "phase": 2,
     "status": "active",
     "scope_version": 1,
     "revoke_effect": "The link is removed. Billing itself continues unchanged.",
@@ -699,7 +679,6 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
     "name": "Event delivery",
     "description": "Lets Ever Platform send signed notifications (for example 'your plan changed') to installations that can receive them. Installations that only make outbound connections use polling instead.",
     "category": "events",
-    "owner_module": "events",
     "direction": "inbound",
     "defaults": {
       "cloud": true,
@@ -714,7 +693,6 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
       "gauzy",
       "works"
     ],
-    "phase": 2,
     "status": "active",
     "scope_version": 1,
     "revoke_effect": "The endpoint is deleted. The installation falls back to polling.",
@@ -745,7 +723,6 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
     "name": "Maintenance operations",
     "description": "Lets an owner or admin ask this self-hosted installation, from app.ever.co, to run a maintenance operation: an update, a backup, a restore check or a health report. Requests reach the installation through its own outbound connection; the operator also turns the feature on locally and sets when and what may run. Backups stay in your own storage, and Ever Platform sees only each operation's status and size. Ever never connects in.",
     "category": "entitlements",
-    "owner_module": "registry",
     "direction": "both",
     "defaults": {
       "cloud": false,
@@ -762,7 +739,6 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
       "rec",
       "traduora"
     ],
-    "phase": 2,
     "status": "coming_soon",
     "scope_version": 1,
     "revoke_effect": "Queued operations are cancelled and nothing further runs.",
@@ -839,7 +815,6 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
     "name": "Grant a provider access",
     "description": "Lets a service provider you choose on apps.ever.co (for example an accountant or payroll provider) work in your installation with a role and scope you pick. The grant shows in Integrations & data and you can revoke it at any time.",
     "category": "marketplace",
-    "owner_module": "registry",
     "direction": "both",
     "defaults": {
       "cloud": true,
@@ -854,11 +829,10 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
       "gauzy",
       "works"
     ],
-    "phase": 4,
     "status": "coming_soon",
     "scope_version": 1,
     "revoke_effect": "The provider's access is removed from the installation.",
-    "notes": "The field list is provisional until the provider-access flow is specified (Phase 4).",
+    "notes": "The field list is provisional until the provider-access flow is specified.",
     "scope": [
       {
         "field_path": "grant.provider_organization_id",
@@ -895,7 +869,6 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
     "name": "Install apps from apps.ever.co",
     "description": "Lets you install an app you picked on apps.ever.co into this installation. The installation picks up the request and runs its normal plugin installer, then reports whether the install worked.",
     "category": "marketplace",
-    "owner_module": "listings",
     "direction": "both",
     "defaults": {
       "cloud": true,
@@ -910,7 +883,6 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
       "gauzy",
       "works"
     ],
-    "phase": 4,
     "status": "coming_soon",
     "scope_version": 1,
     "revoke_effect": "Install requests are no longer delivered. Installed apps stay installed.",

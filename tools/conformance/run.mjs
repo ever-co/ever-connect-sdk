@@ -155,6 +155,7 @@ export function compare(c, answer, reference = null, profile = {}) {
   if (answer.status !== expect.status) diffs.push(`status ${answer.status}, expected ${expect.status}`);
   if (expect.code && answer.code !== expect.code) diffs.push(`code ${answer.code}, expected ${expect.code}`);
   for (const f of expect.required ?? []) if (!answer.body || !(f in answer.body)) diffs.push(`no ${f} in the answer`);
+  for (const f of expect.absent ?? []) if (answer.body && f in answer.body) diffs.push(`${f} in the answer`);
   const first = answer.body?.errors?.[0];
   if (expect.path !== undefined && first?.path !== expect.path) diffs.push(`errors[0].path ${first?.path}, expected ${expect.path}`);
   if (expect.error !== undefined && first?.code !== expect.error) diffs.push(`errors[0].code ${first?.code}, expected ${expect.error}`);

@@ -3,7 +3,6 @@
   "name": "Link cloud billing",
   "description": "Links your existing Ever Gauzy Cloud billing account to your Ever Platform organization, so all your plans show in one place. Prices, limits and existing offers do not change.",
   "category": "billing",
-  "owner_module": "billing",
   "direction": "outbound",
   "defaults": {
     "cloud": true,
@@ -17,7 +16,6 @@
   "products": [
     "gauzy"
   ],
-  "phase": 2,
   "status": "active",
   "scope_version": 1,
   "revoke_effect": "The link is removed. Billing itself continues unchanged.",

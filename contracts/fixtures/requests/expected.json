@@ -20,6 +20,11 @@
       "valid": false,
       "path": "/public_url"
     },
+    "redeem.invalid-five-return-origins.json": {
+      "schema": "RedeemRequest",
+      "valid": false,
+      "path": "/return_origins"
+    },
     "token.json": {
       "schema": "TokenRequest",
       "valid": true
@@ -79,10 +84,10 @@
       "schema": "InstanceIntegrationPut",
       "valid": true
     },
-    "set-integration.invalid-enable-attempt.json": {
+    "set-integration.invalid-missing-reason.json": {
       "schema": "InstanceIntegrationPut",
       "valid": false,
-      "path": "/enabled"
+      "path": "/reason"
     },
     "set-integration.invalid-extra-field.json": {
       "schema": "InstanceIntegrationPut",
@@ -294,10 +299,10 @@
       "schema": "IntegrationPut",
       "valid": true
     },
-    "integration-put.product-ui.invalid-not-accepted.json": {
+    "integration-put.product-ui.invalid-missing-scope-version.json": {
       "schema": "IntegrationPut",
       "valid": false,
-      "path": "/consent/accepted"
+      "path": "/consent/scope_version"
     },
     "integration-put.product-ui.invalid-extra-field.json": {
       "schema": "IntegrationPut",
@@ -333,11 +338,11 @@
       "path": "/unexpected_field"
     },
     "integration-accept.json": {
-      "schema": "pending:instanceAcceptIntegration",
+      "schema": "IntegrationAccept",
       "valid": true
     },
     "integration-accept.invalid-extra-field.json": {
-      "schema": "pending:instanceAcceptIntegration",
+      "schema": "IntegrationAccept",
       "valid": false,
       "path": "/unexpected_field"
     },

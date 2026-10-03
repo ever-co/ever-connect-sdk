@@ -3,7 +3,6 @@
   "name": "Let your partners find you",
   "description": "Publishes salted hashes of your own organization's tax ID, registration number and billing e-mail, so other organizations that already know these values can find your Ever Platform handle. Nothing is findable by browsing or searching. It is off everywhere, Ever Cloud included, until an owner of your organization turns it on in app.ever.co.",
   "category": "lookup",
-  "owner_module": "registry",
   "direction": "outbound",
   "defaults": {
     "cloud": false,
@@ -20,7 +19,6 @@
     "rec",
     "traduora"
   ],
-  "phase": 2,
   "status": "coming_soon",
   "scope_version": 1,
   "revoke_effect": "The stored hashes are deleted.",

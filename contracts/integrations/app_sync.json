@@ -3,7 +3,6 @@
   "name": "Apps and deployments",
   "description": "Lists the apps you build and deploy in Ever Works on your organization's account pages, and on your public profile if you choose. Only identifiers and status move. App content, repositories, budgets, agents and memory never leave Ever Works.",
   "category": "apps",
-  "owner_module": "registry",
   "direction": "outbound",
   "defaults": {
     "cloud": true,
@@ -17,7 +16,6 @@
   "products": [
     "works"
   ],
-  "phase": 2,
   "status": "active",
   "scope_version": 1,
   "revoke_effect": "Pending updates are drained and no further updates are sent.",

@@ -47,6 +47,9 @@ export const DEFAULT_CONFIG = {
     managed: { updates: false, backups: false, support_level: 'community' },
   },
   integrations: { cloud_defaults: false, enabled: [] },
+  // Consent: app.ever.co's address for consent links, and whether a link may return to plain http
+  // on localhost (a development deployment; Ever Platform's own deployments allow https only).
+  consent: { web_url: 'https://app.ever.co', allow_local_return: true },
   lookup: {
     salt_versions: [
       { version: 1, salt: b64url(sha256('ever-connect-sdk/mock/lookup-salt/1')), active_from: '2026-11-01T00:00:00Z', retire_after: null },
@@ -64,12 +67,24 @@ export const DEFAULT_CONFIG = {
     heartbeat_min_interval_s: 60,
     entitlement_reads_per_hour: 6,
     stats_reports_per_day: 24,
+    stats_periods_per_day: 2,
+    stats_new_ids_per_address_hour: 10,
+    stats_new_ids_per_day: 2000,
     lookup_queries_per_min: 60,
     sso_discover_per_min: 60,
     device_starts_per_hour: 10,
     webhook_endpoints: 5,
   },
-  faults: { keys_unavailable: false, webhooks_module_disabled: false, revoke_credential_at_call: null, connect_issuance_off: false },
+  // legal_unavailable: no terms published (legal texts 503, no consent recorded: 503);
+  // consent_links_unavailable: consent links not configured (503).
+  faults: {
+    keys_unavailable: false,
+    webhooks_module_disabled: false,
+    revoke_credential_at_call: null,
+    connect_issuance_off: false,
+    legal_unavailable: false,
+    consent_links_unavailable: false,
+  },
 };
 
 function merge(base, over) {
@@ -105,6 +120,8 @@ export class MockState {
     this.statsPins = new Map();
     this.heldKeys = new Set();
     this.statsReports = [];
+    // New statistics ids: per source address and hour, and per UTC day (counts only).
+    this.statsNewIds = new Map();
     this.intents = new Map();
     this.installs = new Map();
     this.grants = new Map();

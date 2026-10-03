@@ -32,7 +32,7 @@ afterEach(async () => {
 });
 
 describe('the statistics sender against the mock', () => {
-  it('sends every golden (accepted, then superseded the same day), and a second key resets the identity', async () => {
+  it('sends every golden (accepted; the same report again changes nothing; a later one supersedes it), and a second key resets the identity', async () => {
     env = await startMock();
     const signer = statsSignerFromSeed(seed('sender-key'));
     for (const product of ['gauzy', 'teams', 'works', 'rec', 'traduora']) {
@@ -43,7 +43,15 @@ describe('the statistics sender against the mock', () => {
         status: 202,
         superseded: false,
       });
+      // The same report again (a retry after a lost answer) changes nothing.
       expect(await sendStatsReport(signed, { baseUrl: env.url, userAgent: USER_AGENT })).toEqual({
+        kind: 'accepted',
+        status: 202,
+        superseded: false,
+      });
+      // A later report of the same month the same day replaces it.
+      const later = signStatsReport({ ...report, report_id: `${report.report_id.slice(0, 24)}000000000002` }, signer);
+      expect(await sendStatsReport(later, { baseUrl: env.url, userAgent: USER_AGENT })).toEqual({
         kind: 'accepted',
         status: 202,
         superseded: true,

@@ -270,6 +270,9 @@ fn strict_json_names_the_offence_where_it_stands() {
         (b"{\"a\":1,}", "", ErrorCode::Type),
         ("\u{feff}{}".as_bytes(), "", ErrorCode::Type),
         (br#""\ud800""#, "", ErrorCode::Type),
+        // Four hex digits exactly, never a sign.
+        (br#""\u+041""#, "", ErrorCode::Type),
+        (br#""\ud83d\u+e00""#, "", ErrorCode::Type),
         (&[0xff, b'{', b'}'], "", ErrorCode::Type),
         (
             deep.as_bytes(),

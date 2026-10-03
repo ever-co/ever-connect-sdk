@@ -39,6 +39,14 @@
         "platform",
         "scope_bumped"
       ]
+    },
+    "operator_accept": {
+      "enum": [
+        "pending",
+        "accepted",
+        "declined"
+      ],
+      "description": "installation-wide integrations of an installation a customer or a partner operates: pending until the operator accepts locally (enabled stays false), then accepted or declined"
     }
   }
 }

@@ -3,7 +3,6 @@
   "name": "Link usage statistics to this organization",
   "description": "Connects the anonymous statistics identity of this self-hosted installation to your organization, so you can see your installation's latest statistics report in app.ever.co. Without this link, statistics stay anonymous. It is never offered on Ever Cloud, where one installation serves many organizations.",
   "category": "stats",
-  "owner_module": "stats",
   "direction": "outbound",
   "defaults": {
     "cloud": false,
@@ -21,7 +20,6 @@
     "rec",
     "traduora"
   ],
-  "phase": 2,
   "status": "active",
   "scope_version": 1,
   "revoke_effect": "The link is cleared. Later statistics reports are anonymous again.",

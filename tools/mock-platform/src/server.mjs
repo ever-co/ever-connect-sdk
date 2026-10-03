@@ -7,12 +7,13 @@ import { createServer } from 'node:http';
 import { adminRoutes } from './admin.mjs';
 import { contract } from './contract.mjs';
 import { sha256Hex } from './crypto.mjs';
-import { isInstanceWide } from './model.mjs';
+import { isInstanceWide, stateLabel } from './model.mjs';
 import { fail, HttpProblem, problemBody } from './problem.mjs';
 import { Recorder } from './record.mjs';
 import { connectHandlers, keyAccepted } from './routes/connect.mjs';
 import { consentHandlers } from './routes/consent.mjs';
 import { instanceHandlers } from './routes/instance.mjs';
+import { integrationsHandlers } from './routes/integrations.mjs';
 import { linkHandlers } from './routes/links.mjs';
 import { lookupHandlers } from './routes/lookup.mjs';
 import { managedHandlers } from './routes/managed.mjs';
@@ -28,6 +29,7 @@ import { requestSchemaName, validateComponent, validatePending } from './validat
 const HANDLERS = {
   ...connectHandlers,
   ...instanceHandlers,
+  ...integrationsHandlers,
   ...linkHandlers,
   ...statsHandlers,
   ...statsLinkHandlers,
@@ -126,13 +128,31 @@ export function integrationState(instance, key, linkId) {
   return any.find(([, v]) => v.state === 'enabled')?.[1] ?? any[0]?.[1];
 }
 
+const TENANT_LINK_ID = /^[0-9A-HJKMNP-TV-Z]{26}$/;
+const linkProblem = (code, message) => fail(422, 'validation_failed', message, { errors: [{ path: '#Ever-Link-Id', code, message }] });
+
+/**
+ * The integration gate, as the platform's: the tenant link comes from `Ever-Link-Id` (a value that
+ * is not a tenant link id is refused for every key), a per-link key needs it, and the key must be
+ * enabled for that link (an installation-wide key: for the installation).
+ */
 function gate(ctx) {
   const key = ctx.route.integration;
   if (!key) return;
-  const linkId = ctx.params.link ?? ctx.headers['ever-link-id'] ?? ctx.body?.tenant_link_id ?? null;
-  const s = integrationState(ctx.instance, key, linkId);
-  if (s?.state === 'enabled') return;
-  if (s?.state === 'revoked') fail(403, 'integration_revoked');
+  const raw = ctx.headers['ever-link-id'];
+  const named = raw === undefined ? null : String(raw).trim();
+  if (named !== null && !TENANT_LINK_ID.test(named)) linkProblem('invalid', 'Ever-Link-Id is not a tenant link id');
+  let s;
+  if (isInstanceWide(key)) s = ctx.instance.integrations[key];
+  else {
+    if (named === null) linkProblem('required', 'this integration acts for one tenant link: name it in Ever-Link-Id');
+    const link = ctx.instance.links[named];
+    s = link && link.state === 'active' ? ctx.instance.integrations[`${key}@${named}`] : undefined;
+  }
+  const label = s ? stateLabel(ctx.instance, key, s) : 'disabled';
+  if (label === 'enabled' && s.enabled !== false) return;
+  if (label === 'revoked') fail(403, 'integration_revoked');
+  if (label === 'denied_by_policy') fail(403, 'denied_by_policy', "the installation's operator denies this integration");
   fail(403, 'integration_disabled', `the ${key} integration is not enabled`);
 }
 

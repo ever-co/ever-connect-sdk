@@ -3,7 +3,6 @@
   "name": "Sign in with Ever ID",
   "description": "Adds Ever ID as an extra sign-in option in this installation. Existing sign-in methods keep working unchanged.",
   "category": "identity",
-  "owner_module": "identity",
   "direction": "both",
   "defaults": {
     "cloud": true,
@@ -20,7 +19,6 @@
     "rec",
     "traduora"
   ],
-  "phase": 2,
   "status": "coming_soon",
   "scope_version": 1,
   "revoke_effect": "The Ever ID client for this installation is deleted and its local settings are cleared. Existing local sessions are not affected.",

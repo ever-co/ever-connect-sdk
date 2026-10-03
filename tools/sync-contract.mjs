@@ -89,6 +89,7 @@ export function build(platform) {
     config,
     rowsByOperation,
     version,
+    securityOverrides: pending.security_overrides ?? {},
     title: 'Ever Platform API: instance-facing contract',
     description:
       'The calls an installation of an Ever product makes to Ever Platform: the operations that accept an instance token, the public operations a product calls (key manifest, connect, statistics, lookup salt) and the two Ever ID reads a product makes with the token of a person who signed in. Every operation carries `x-ever-row`, its row in the outbound-call table. Errors are `application/problem+json` with a stable `code`.',
@@ -132,6 +133,7 @@ export function build(platform) {
       shape_differences: subset.shapeDifferences,
       renamed_schemas: subset.collisions,
       schema_overrides: Object.keys(pending.schema_overrides ?? {}).sort(),
+      security_overrides: Object.keys(pending.security_overrides ?? {}).sort(),
       pending_upstream_rows: [...new Set(pending.operations.map((p) => p.row))].sort((a, b) => a - b),
     },
     events: vendored.events,

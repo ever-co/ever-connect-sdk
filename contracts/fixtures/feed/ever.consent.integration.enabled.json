@@ -22,7 +22,8 @@
         "integration_key": "stats_link",
         "enabled": true,
         "consent_id": "01JMQ9333S7HHPXBYNTN1AQZRK",
-        "reason": "consent"
+        "reason": "consent",
+        "operator_accept": "pending"
       }
     }
   ],

@@ -3,7 +3,6 @@
   "name": "Installation address",
   "description": "Shows the public address of this installation to its own organization in app.ever.co, and on the public profile if the owner turns that section on.",
   "category": "profile",
-  "owner_module": "registry",
   "direction": "outbound",
   "defaults": {
     "cloud": true,
@@ -21,7 +20,6 @@
     "rec",
     "traduora"
   ],
-  "phase": 2,
   "status": "active",
   "scope_version": 1,
   "revoke_effect": "The stored address is removed.",

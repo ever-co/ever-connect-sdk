@@ -64,12 +64,20 @@ Every key is optional; `tools/mock-platform/mock.config.example.json` shows the 
 | `codes` | `EVC-TEST-0000-0001` (gauzy, ready), `EVC-TEST-0000-0003` (gauzy, pending approval), `EVC-TEST-0000-0004` (works), `EVL-TEST-0000-0002` (link) | connect and link codes with their product, organization, lifetime and approval state |
 | `entitlement` | `tier: paid` with lookup, discoverability, handle, public profile and Ever ID sign-in | the content of issued entitlement documents |
 | `integrations` | `{cloud_defaults: false, enabled: []}` | integrations consented at connect |
+| `consent` | `{web_url: 'https://app.ever.co', allow_local_return: true}` | the address consent links point to, and whether their return address may be plain `http` on localhost (a development deployment; Ever Platform's own deployments take `https` only) |
 | `lookup` | one salt version, one opted-in VAT number | lookup salts, opt-ins and claimed hashes |
 | `people` | one Ever ID person, owner of the organization | people the person tokens are issued for |
-| `limits` | the platform's rate limits | wrong codes per hour (connect codes per client address, link codes per installation, with `wrong_link_codes_per_address_hour` as the per-address backstop), tokens per hour per installation (`tokens_per_hour`), heartbeat interval, entitlement reads per hour, statistics reports per day, lookup and discovery rates, device starts, webhook endpoints |
-| `faults` | none | `keys_unavailable`, `webhooks_module_disabled`, `revoke_credential_at_call`, `connect_issuance_off` (a deployment that issues no connect or link codes: a well-formed redeem or link-code redemption answers 404, a malformed body still 422) |
+| `limits` | the platform's rate limits | wrong codes per hour (connect codes per client address, link codes per installation, with `wrong_link_codes_per_address_hour` as the per-address backstop), tokens per hour per installation (`tokens_per_hour`), heartbeat interval, entitlement reads per hour, statistics reports per day (`stats_reports_per_day`), months stored per statistics id and day (`stats_periods_per_day`), new statistics ids per source address and hour (`stats_new_ids_per_address_hour`) and per day (`stats_new_ids_per_day`), lookup and discovery rates, device starts, webhook endpoints |
+| `faults` | none | `keys_unavailable`, `webhooks_module_disabled`, `revoke_credential_at_call`, `connect_issuance_off` (a deployment that issues no connect or link codes: a well-formed redeem or link-code redemption answers 404, a malformed body still 422), `legal_unavailable` (no terms published: the legal texts and any consent write answer 503), `consent_links_unavailable` (consent links not configured: 503) |
 
 ---
+
+### 2.1 Integrations as the mock keeps them
+
+- A call gated by a per-link integration names its tenant link in `Ever-Link-Id` (`422 validation_failed` at `#Ever-Link-Id` without it, or with a value that is not a tenant link id); an installation-wide integration (`instance_url`, `stats_link`, `ever_id_login`, `webhooks`, and `managed_operations` until its platform module exists) ignores the link.
+- The heartbeat's `integrations_denied` is the installation's whole local deny list: a key it names goes off on every link and reads `denied_by_policy`; a later heartbeat without the key lifts the deny. Switching an integration off with `reason: policy` adds the key to the list.
+- The consent link takes an optional `return`, accepted only when its origin is one the redeem declared (`return_origins`, at most four, normalised).
+- An integration the catalog marks `coming_soon` reads `coming_soon` and cannot be enabled through the API, as on Ever Platform; `POST /__mock/consent` still enables one, so a product can test what comes next.
 
 ## 3. The call record
 

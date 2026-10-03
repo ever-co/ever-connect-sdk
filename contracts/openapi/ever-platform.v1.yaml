@@ -109,49 +109,28 @@ paths:
       x-ever-row: 29
   /v1/connect/legal:
     get:
+      summary: |-
+        The terms, the data-processing agreement (one covers every integration) and the public
+        sub-processor list linked from every consent screen, with their versions. `503` while a
+        deployment has not published them: there is no terms-only state.
       tags:
         - consent
-      summary: Terms, data-processing agreement and sub-processor list linked from every consent screen
-      x-ever-phase: 2
-      x-ever-auth: public
       x-ever-rate-limit: public-read
       operationId: getConnectLegal
       security: []
       responses:
         "200":
-          description: OK
-          headers:
-            Cache-Control:
-              schema:
-                type: string
-                const: public, max-age=300, s-maxage=3600
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Legal"
-        default:
-          description: Any other error, as a problem document.
-          headers:
-            x-request-id:
-              description: The request id (generated or echoed). Quote it in support requests.
-              schema:
-                type: string
-            RateLimit-Limit:
-              description: IETF RateLimit header; requests allowed in the current window for this principal class.
-              schema:
-                type: integer
-            RateLimit-Remaining:
-              description: IETF RateLimit header; requests remaining in the current window.
-              schema:
-                type: integer
-            RateLimit-Reset:
-              description: IETF RateLimit header; seconds until the window resets.
-              schema:
-                type: integer
+          description: "The legal texts (`Cache-Control: public, max-age=300, s-maxage=3600`)"
+        "503":
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+          description: "`unavailable`: the legal texts are not configured on this deployment"
       x-ever-row: 2
   /v1/connect/redeem:
     post:
@@ -685,71 +664,61 @@ paths:
       x-ever-row: 25
   /v1/instances/me/consent-url:
     get:
+      summary: |-
+        The app.ever.co consent deep link the product opens for its admin: signed, valid for 15
+        minutes, carrying ids, the integration key, the return address and the expiry only (no token,
+        no e-mail, no secret). `return` is optional; when present it must be an `https` URL without
+        credentials or fragment whose origin the installation declared when it connected
+        (`return_origins` of the redeem); plain `http` only on `localhost`, on a development
+        deployment.
       tags:
         - consent
-      summary: Build the app.ever.co consent deep link for the product UI
-      x-ever-phase: 2
-      x-ever-auth: instance
       x-ever-rate-limit: instance
       operationId: instanceGetConsentUrl
       security:
         - instanceToken: []
       parameters:
-        - name: integration
+        - description: The integration key.
           in: query
+          name: integration
           required: true
           schema:
             type: string
-            maxLength: 64
-        - name: link
+        - description: The tenant link, for a per-link integration.
           in: query
+          name: link
           required: false
           schema:
-            $ref: "#/components/schemas/Ulid"
-        - name: return
+            type: string
+        - description: |-
+            The absolute `https` URL of the product page to return to (plain `http` only on
+            `localhost`, on a development deployment); no credentials, no fragment. Its origin must
+            be one the installation declared when it connected (`return_origins` of the redeem).
+            Absent: the consent screen ends without a return address.
           in: query
-          required: true
-          description: Absolute URL of the product page to return to (must be an origin the instance published or the same host the request came from).
+          name: return
+          required: false
           schema:
             type: string
-            format: uri
-            maxLength: 2048
       responses:
         "200":
-          description: OK
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ConsentUrl"
+          description: The link
         "422":
-          description: Validation failed; unknown fields are rejected on writes (`validation_failed`, `schema_violation`, `code_invalid`, `idempotency_mismatch`, `mirror_owned_field`, `limit_exceeded`).
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-        default:
-          description: Any other error, as a problem document.
-          headers:
-            x-request-id:
-              description: The request id (generated or echoed). Quote it in support requests.
-              schema:
-                type: string
-            RateLimit-Limit:
-              description: IETF RateLimit header; requests allowed in the current window for this principal class.
-              schema:
-                type: integer
-            RateLimit-Remaining:
-              description: IETF RateLimit header; requests remaining in the current window.
-              schema:
-                type: integer
-            RateLimit-Reset:
-              description: IETF RateLimit header; seconds until the window resets.
-              schema:
-                type: integer
+          description: "`validation_failed` (an unknown integration, a missing, foreign or unlinked tenant link, a return address that is not https, carries credentials or a fragment, or whose origin the installation did not declare when it connected) or `integration_not_available`"
+        "503":
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+          description: "`unavailable`: consent links are not configured on this deployment"
       x-ever-row: 9
   /v1/instances/me/disconnect:
     post:
@@ -972,7 +941,8 @@ paths:
     post:
       summary: |-
         Reports that the instance is alive, with its version (one write a minute is recorded; the
-        route answers `429` above one call a minute).
+        route answers `429` above one call a minute) and, when it sends one, its operator's local deny
+        list of integrations (`integrations_denied`).
       tags:
         - registry
       x-ever-rate-limit: instance-heartbeat
@@ -1013,121 +983,144 @@ paths:
       x-ever-row: 6
   /v1/instances/me/integrations:
     get:
+      summary: |-
+        The calling installation's effective states: its installation-wide integrations, and per live
+        tenant link its per-link ones. A self-hosted installation reads every integration off until an
+        owner or admin of the linked organization enables it; nothing is written by this read.
+        Installations re-read it when `ever.consent.integration.*` reaches their feed.
       tags:
         - consent
-      summary: Effective integration states for the calling instance
-      description: Self-hosted instances see every integration disabled until an organization admin enables it; Ever-operated instances see the cloud defaults as real consent records.
-      x-ever-phase: 2
-      x-ever-auth: instance
       x-ever-rate-limit: instance
       operationId: instanceGetIntegrations
       security:
         - instanceToken: []
       responses:
         "200":
-          description: OK
-          headers:
-            Cache-Control:
-              schema:
-                type: string
-                const: private, no-store
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/InstanceIntegrations"
-        default:
-          description: Any other error, as a problem document.
-          headers:
-            x-request-id:
-              description: The request id (generated or echoed). Quote it in support requests.
-              schema:
-                type: string
-            RateLimit-Limit:
-              description: IETF RateLimit header; requests allowed in the current window for this principal class.
-              schema:
-                type: integer
-            RateLimit-Remaining:
-              description: IETF RateLimit header; requests remaining in the current window.
-              schema:
-                type: integer
-            RateLimit-Reset:
-              description: IETF RateLimit header; seconds until the window resets.
-              schema:
-                type: integer
+          description: "The states (`Cache-Control: private, no-store`)"
+        "401":
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+          description: No valid instance token
       x-ever-row: 9
   /v1/instances/me/integrations/{key}:
     put:
+      summary: |-
+        Switches one integration off from the installation (its operator's action, or its local
+        deny list with `reason: policy`, which switches the integration off on every tenant link and
+        stops every organization from enabling it until the deny is lifted). The heartbeat's
+        `integrations_denied` is the whole deny list: it must keep carrying a key denied here, and a
+        heartbeat that omits it lifts the deny. An installation may never switch an integration on
+        (`422`); with `reason: instance`, `404` when no state exists (the SDK treats it as already
+        off).
       tags:
         - consent
-      summary: Disable an integration from the instance side
-      description: Instances may only disable (`enabled:false`), on operator action or instance policy. `404` when no state exists is treated by the SDK as already disabled.
-      x-ever-phase: 2
-      x-ever-auth: instance
       x-ever-rate-limit: instance
-      x-ever-idempotent: false
       operationId: instanceDisableIntegration
       security:
         - instanceToken: []
       parameters:
-        - name: key
+        - description: The integration key.
           in: path
+          name: key
           required: true
           schema:
             type: string
-            maxLength: 64
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/InstanceIntegrationPut"
+        required: true
       responses:
         "200":
-          description: Disabled.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/IntegrationStateBrief"
+          description: "Off (with `reason: policy`, also when no state existed: the key is denied)"
         "404":
-          description: Not found, or the module that serves this route is disabled on this deployment (`not_found`, `module_disabled`).
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+          description: "With `reason: instance`, no state for this integration (already off); or an unknown key"
         "422":
-          description: Validation failed; unknown fields are rejected on writes (`validation_failed`, `schema_violation`, `code_invalid`, `idempotency_mismatch`, `mirror_owned_field`, `limit_exceeded`).
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-        default:
-          description: Any other error, as a problem document.
-          headers:
-            x-request-id:
-              description: The request id (generated or echoed). Quote it in support requests.
-              schema:
-                type: string
-            RateLimit-Limit:
-              description: IETF RateLimit header; requests allowed in the current window for this principal class.
-              schema:
-                type: integer
-            RateLimit-Remaining:
-              description: IETF RateLimit header; requests remaining in the current window.
-              schema:
-                type: integer
-            RateLimit-Reset:
-              description: IETF RateLimit header; seconds until the window resets.
-              schema:
-                type: integer
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          description: "`validation_failed`: `enabled: true`, an unknown reason, a missing or foreign tenant link"
       x-ever-row: 10
+  /v1/instances/me/integrations/{key}/accept:
+    post:
+      summary: |-
+        The operator's local accept (or decline) of an installation-wide integration the organization
+        that connected the installation consented to (`state: pending_operator`). Accepting enables it
+        (`ever.consent.integration.enabled`); declining revokes the consent (revoke source `operator`).
+        `409 illegal_transition` unless the state waits for exactly that consent.
+      tags:
+        - consent
+      x-ever-idempotent: true
+      x-ever-rate-limit: instance
+      operationId: instanceAcceptIntegration
+      security:
+        - instanceToken: []
+      parameters:
+        - description: The integration key.
+          in: path
+          name: key
+          required: true
+          schema:
+            type: string
+        - description: |-
+            Client-generated key, unique per principal, at most 128 characters; remembered 24 h.
+            The same key with the same request replays the first answer (`Idempotency-Replayed:
+            true`); with a different request it answers `422 idempotency_mismatch`.
+          in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            maxLength: 128
+            minLength: 1
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IntegrationAccept"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntegrationStateBrief"
+          description: Enabled (accepted) or revoked (declined)
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: No state waiting for the operator for this key
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "`illegal_transition`: the state does not wait for this consent"
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "`validation_failed`"
+      x-ever-row: 31
   /v1/instances/me/keys:
     post:
       summary: |-
@@ -1732,8 +1725,9 @@ paths:
       summary: |-
         Links the installation's anonymous statistics id to it (integration `stats_link`, enabled by
         the organization that connected it after the operator's local accept; never on an installation
-        Ever operates). The statement is signed with the statistics key and the call authenticated with
-        the connect key, so only an installation holding both keys links them. Only the id is stored.
+        Ever operates). The statement is signed with the statistics key, names the installation (`sub`:
+        its instance id) and the call is authenticated with the connect key, so only an installation
+        holding both keys links them. Only the id is stored; the link ends when the integration does.
       tags:
         - registry
       x-ever-idempotent: true
@@ -1784,7 +1778,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-          description: "`validation_failed`: the body, or a statement that is malformed, does not verify, does not repeat the request or is older than ten minutes"
+          description: "`validation_failed`: the body, or a statement that is malformed, does not verify, does not repeat the request, does not name this instance in `sub` or is older than ten minutes"
       x-ever-row: 11
   /v1/instances/me/tenant-links:
     post:
@@ -2735,139 +2729,89 @@ paths:
       x-ever-row: 23
   /v1/orgs/{org}/instances/{instance}/integrations/{key}:
     put:
+      summary: |-
+        Enables an integration on an installation with an explicit consent, or disables it. Enabling
+        writes the consent record, the state and exactly one audit row in one transaction and tells
+        the installation (`ever.consent.integration.enabled`). An installation-wide integration
+        (`instance_url`, `stats_link`, `ever_id_login`, `webhooks`) is changed only by the organization
+        that connected a customer- or partner-operated installation, and waits for the operator's local
+        accept (`state: pending_operator`); installations Ever operates have theirs set by Ever.
+        Disabling revokes the consent. Any plan may switch any integration off.
       tags:
         - consent
-      summary: Enable (with consent) or disable an integration on an instance
-      description: |
-        The only place where a consent is granted. Writes consent, state and
-        audit in one transaction; emits `integration.enabled`/`integration.disabled`
-        so the instance re-reads its states.
-
-        Two ways to call it, both by an owner or admin of the linked
-        organization: from app.ever.co (`personSession` or an Ever Platform
-        `everIdToken`; `consent_source = app_ever_co`), or from the product's own
-        consent dialog with `everIdStepUpToken`, an Ever ID token the product
-        obtained through a fresh sign-in (`auth_time` at most 300 s old, else
-        `403 step_up_required`) whose `azp` is the client of this instance (its
-        own client, or the product client of an Ever-operated instance). That
-        token is accepted on this operation only and for this instance's own
-        integrations only (`consent_source = product_ui`, `evidence.ui =
-        product:<product>`); `counterparty_discoverable` and `instance_url`
-        refuse it with `403 session_required` (they are enabled in app.ever.co
-        only), and so does any other instance. An installation-wide integration
-        of a customer-operated instance changed by an organization that does not
-        own the instance answers `403 not_connection_owner`.
-      x-ever-phase: 2
-      x-ever-auth: person owner|admin (app.ever.co session or Ever Platform token; or a step-up product token for this instance)
-      x-ever-rate-limit: person
+      x-ever-fresh-auth-s: 300
       x-ever-idempotent: true
+      x-ever-rate-limit: person
       operationId: putIntegrationState
       security:
         - everIdStepUpToken: []
       parameters:
-        - name: org
+        - description: The organization id.
           in: path
-          required: true
-          description: Organization id (ULID).
-          schema:
-            $ref: "#/components/schemas/Ulid"
-        - name: instance
-          in: path
-          required: true
-          description: Instance id (ULID).
-          schema:
-            $ref: "#/components/schemas/Ulid"
-        - name: key
-          in: path
+          name: org
           required: true
           schema:
             type: string
-            maxLength: 64
-        - name: Idempotency-Key
+        - description: The installation id.
+          in: path
+          name: instance
+          required: true
+          schema:
+            type: string
+        - description: The integration key.
+          in: path
+          name: key
+          required: true
+          schema:
+            type: string
+        - description: |-
+            Client-generated key, unique per principal, at most 128 characters; remembered 24 h.
+            The same key with the same request replays the first answer (`Idempotency-Replayed:
+            true`); with a different request it answers `422 idempotency_mismatch`.
           in: header
+          name: Idempotency-Key
           required: true
-          description: Client-generated key, unique per principal, <= 128 characters. See the `Idempotency` schema.
           schema:
-            type: string
-            minLength: 1
             maxLength: 128
+            minLength: 1
+            type: string
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/IntegrationPut"
+        required: true
       responses:
         "200":
-          description: State written.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/IntegrationState"
+          description: The state as it now is
         "403":
-          description: Forbidden (see the shared `Forbidden` codes), including the in-product consent refusals.
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-              examples:
-                step_up_required:
-                  summary: The product token is older than 300 s since sign-in
-                  value:
-                    type: https://api.ever.co/problems/step_up_required
-                    title: A fresh sign-in is required
-                    status: 403
-                    code: step_up_required
-                    detail: Sign in with Ever ID again, then confirm.
-                not_connection_owner:
-                  summary: An installation-wide integration changed by an organization that does not own the installation
-                  value:
-                    type: https://api.ever.co/problems/not_connection_owner
-                    title: Only the organization that connected this installation can change this integration
-                    status: 403
-                    code: not_connection_owner
-                session_required:
-                  summary: A product token used for counterparty_discoverable or instance_url
-                  value:
-                    type: https://api.ever.co/problems/session_required
-                    title: Enable this integration in app.ever.co
-                    status: 403
-                    code: session_required
+          description: "`forbidden_role` (a member), `not_connection_owner` (an installation-wide integration changed by an organization that does not own the connection, or of an installation Ever operates), `denied_by_policy`, `entitlement_required`, `step_up_required`"
         "404":
-          description: Not found, or the module that serves this route is disabled on this deployment (`not_found`, `module_disabled`).
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+          description: No such organization, installation, link or integration, or not the caller's
         "422":
-          description: Validation failed; unknown fields are rejected on writes (`validation_failed`, `schema_violation`, `code_invalid`, `idempotency_mismatch`, `mirror_owned_field`, `limit_exceeded`).
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-        default:
-          description: Any other error, as a problem document.
-          headers:
-            x-request-id:
-              description: The request id (generated or echoed). Quote it in support requests.
-              schema:
-                type: string
-            RateLimit-Limit:
-              description: IETF RateLimit header; requests allowed in the current window for this principal class.
-              schema:
-                type: integer
-            RateLimit-Remaining:
-              description: IETF RateLimit header; requests remaining in the current window.
-              schema:
-                type: integer
-            RateLimit-Reset:
-              description: IETF RateLimit header; seconds until the window resets.
-              schema:
-                type: integer
+          description: "`scope_version_outdated` (a stale scope or agreement version), `integration_not_available` (not offered, or the installation is not connected), `validation_failed` (also: any option in `consent.config`; no integration takes one)"
+        "503":
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+          description: "`unavailable`: this deployment publishes no terms (no consent can be recorded), or a key it needs is missing"
       x-ever-row: 33
   /v1/provision-intents/{jti}/complete:
     post:
@@ -3099,7 +3043,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/StatsAccepted"
-          description: Accepted, or accepted replacing a report of the same `instance_id` and `period` received the same UTC day (`superseded`)
+          description: Accepted, or accepted replacing a report of the same `instance_id` and `period` received the same UTC day (`superseded`); the same report (`report_id`) sent again the same UTC day is answered `202` and changes nothing
         "400":
           content:
             application/problem+json:
@@ -3135,7 +3079,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-          description: "`rate_limited`: the `instance_id` sent its reports for the UTC day, or the source address too many requests (`Retry-After`)"
+          description: "`rate_limited` (`Retry-After`): the `instance_id` sent its reports for the UTC day or stored reports for two months that day, the source address sent too many requests or registered its new `instance_id`s for the hour, or no more new `instance_id`s are taken that day"
         "503":
           content:
             application/problem+json:
@@ -3458,26 +3402,6 @@ components:
           type: string
           format: uri
           description: For export receipts, a signed URL of the product's own export.
-    Actor:
-      type: object
-      description: Who did something. Identifiers only, never an e-mail or name.
-      required:
-        - kind
-        - id
-      additionalProperties: false
-      properties:
-        kind:
-          type: string
-          enum:
-            - person
-            - instance
-            - api_key
-            - staff
-            - service
-            - system
-            - visitor
-        id:
-          type: string
     BillingLink:
       type: object
       required:
@@ -3533,18 +3457,57 @@ components:
         - self_hosted
         - works_app
       type: string
-    ConsentUrl:
+    ConsentInput:
+      additionalProperties: false
+      description: The consent part of `IntegrationPut`.
+      properties:
+        accepted:
+          description: The explicit confirmation (`true`).
+          type: boolean
+        config:
+          description: |-
+            Options chosen on the consent screen. No integration takes any: only an empty object (or
+            none) is accepted, anything else answers `422`. A consent record is immutable, so nothing
+            free-form ever enters it.
+          type: object
+        dpa_version:
+          description: The data-processing agreement version shown (must be the current one).
+          type: string
+        scope_version:
+          description: The scope version shown on the consent screen (must be the current one).
+          format: int32
+          type: integer
+        screen_version:
+          description: The consent screen's version.
+          type:
+            - string
+            - "null"
+        ui_locale:
+          description: The consent screen's language.
+          type:
+            - string
+            - "null"
+      required:
+        - scope_version
+        - dpa_version
+        - accepted
       type: object
+    ConsentUrl:
+      description: The consent deep link a product opens.
+      properties:
+        expires_at:
+          description: When it stops being accepted.
+          format: date-time
+          type: string
+        url:
+          description: |-
+            The link into app.ever.co (`/connect/consent?...`); the person must be an owner or admin
+            of the linked organization.
+          type: string
       required:
         - url
         - expires_at
-      properties:
-        url:
-          type: string
-          format: uri
-          description: Deep link into app.ever.co (`/connect/consent?...`) that the product UI opens; the person must be an owner or admin of the linked organization.
-        expires_at:
-          $ref: "#/components/schemas/Timestamp"
+      type: object
     Context:
       description: The authoritative view of who the caller is and what they may act on.
       properties:
@@ -4131,6 +4094,8 @@ components:
         - not_connection_owner
         - integration_disabled
         - integration_revoked
+        - denied_by_policy
+        - integration_not_available
         - entitlement_required
         - tier_required
         - limit_exceeded
@@ -4380,6 +4345,17 @@ components:
       additionalProperties: false
       description: "`POST /v1/instances/me/heartbeat`."
       properties:
+        integrations_denied:
+          description: |-
+            The integrations its operator denies for every organization
+            (`EVER_CONNECT_INTEGRATIONS_DENY`; `*` denies every one). Sent, it replaces the stored list:
+            a denied integration reads `denied_by_policy` and switches off; one no longer listed may be
+            enabled again by an organization. Absent, the stored list is kept.
+          items:
+            type: string
+          type:
+            - array
+            - "null"
         module_version:
           description: The version of its Ever Connect module.
           type:
@@ -4717,43 +4693,43 @@ components:
         - version_row
       type: object
     InstanceIntegrationPut:
-      type: object
-      description: Instance-side change. An instance may only disable (local operator action or instance policy); enabling always happens as a person, in app.ever.co or in the product's own consent dialog after a fresh Ever ID sign-in (both through `putIntegrationState`).
+      additionalProperties: false
+      description: An installation switches one integration off (it may never switch one on).
+      properties:
+        enabled:
+          description: "`false`."
+          type: boolean
+        reason:
+          description: "`instance` (the operator switched it off) or `policy` (the operator's deny list)."
+          type: string
+        tenant_link_id:
+          description: The tenant link, for a per-link integration.
+          type:
+            - string
+            - "null"
       required:
         - enabled
         - reason
-      additionalProperties: false
-      properties:
-        enabled:
-          type: boolean
-          const: false
-        tenant_link_id:
-          $ref: "#/components/schemas/Ulid"
-        reason:
-          type: string
-          enum:
-            - instance
-            - policy
-    InstanceIntegrations:
       type: object
-      description: Effective state map for the calling instance; instances cache it and re-read on `consent.changed`.
+    InstanceIntegrations:
+      description: |-
+        The effective states of the calling installation: its installation-wide integrations, and
+        per tenant link its per-link ones.
+      properties:
+        catalog_version:
+          description: The catalog version the states refer to.
+          type: string
+        instance:
+          description: Installation-wide integrations, by key.
+          type: object
+        links:
+          description: Per tenant link id, its per-link integrations by key.
+          type: object
       required:
         - instance
         - links
-      properties:
-        instance:
-          type: object
-          additionalProperties:
-            $ref: "#/components/schemas/IntegrationStateBrief"
-        links:
-          type: object
-          description: Keyed by tenant link id.
-          additionalProperties:
-            type: object
-            additionalProperties:
-              $ref: "#/components/schemas/IntegrationStateBrief"
-        catalog_version:
-          type: string
+        - catalog_version
+      type: object
     InstanceKey:
       description: The connect key an instance holds (its id and rotation; never the key itself).
       properties:
@@ -4784,153 +4760,155 @@ components:
         - instance
         - tenant_links
       type: object
-    IntegrationPut:
-      type: object
-      description: |
-        Enable (with an explicit consent) or disable one integration on one
-        instance, optionally for one tenant link. Enabling writes the consent
-        record, the state and the audit row in one transaction. Disabling keeps
-        the consent until it is revoked.
-      required:
-        - enabled
+    IntegrationAccept:
       additionalProperties: false
+      description: The operator's local accept or decline of an installation-wide integration waiting for it.
       properties:
+        accepted:
+          description: Accept (`true`) or decline (`false`).
+          type: boolean
+        consent_id:
+          description: The consent the state waits for.
+          type: string
+      required:
+        - consent_id
+        - accepted
+      type: object
+    IntegrationPut:
+      additionalProperties: false
+      description: Enable (with an explicit consent) or disable one integration on one installation.
+      properties:
+        consent:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/ConsentInput"
+              description: Required when enabling.
         enabled:
+          description: On or off.
           type: boolean
         tenant_link_id:
-          $ref: "#/components/schemas/Ulid"
-        consent:
-          type: object
-          description: "Required when `enabled: true`."
-          required:
-            - scope_version
-            - dpa_version
-            - accepted
-          additionalProperties: false
-          properties:
-            scope_version:
-              type: integer
-            dpa_version:
-              type: string
-            accepted:
-              type: boolean
-              const: true
-            config:
-              type: object
-            screen_version:
-              type: string
-            ui_locale:
-              type: string
-    IntegrationScope:
-      type: object
-      required:
-        - field_path
-        - direction
-        - purpose
-        - retention
-        - required
-      properties:
-        field_path:
-          type: string
-          examples:
-            - employee.count
-            - invoice.counterparty_hash
-        direction:
-          type: string
-          enum:
-            - to_ever
-            - from_ever
-        purpose:
-          type: string
-        retention:
-          type: string
-        required:
-          type: boolean
-        hashed:
-          type: boolean
-          description: Whether the value leaves the instance as a salted hash rather than clear text.
-    IntegrationState:
-      allOf:
-        - $ref: "#/components/schemas/IntegrationStateBrief"
-        - type: object
-          required:
-            - instance_id
-            - integration_key
-          properties:
-            instance_id:
-              $ref: "#/components/schemas/Ulid"
-            tenant_link_id:
-              type:
-                - string
-                - "null"
-            integration_key:
-              type: string
-            dpa_version:
-              type:
-                - string
-                - "null"
-            consent_source:
-              type:
-                - string
-                - "null"
-              enum:
-                - app_ever_co
-                - cloud_terms
-                - product_ui
-                - null
-            granted_by_person_id:
-              type:
-                - string
-                - "null"
-            granted_at:
-              type:
-                - string
-                - "null"
-              format: date-time
-            revoked_at:
-              type:
-                - string
-                - "null"
-              format: date-time
-            changed_by:
-              $ref: "#/components/schemas/Actor"
-            updated_at:
-              $ref: "#/components/schemas/Timestamp"
-            scope:
-              type: object
-              properties:
-                fields:
-                  type: array
-                  items:
-                    $ref: "#/components/schemas/IntegrationScope"
-    IntegrationStateBrief:
-      type: object
+          description: The tenant link, for a per-link integration (absent for an installation-wide one).
+          type:
+            - string
+            - "null"
       required:
         - enabled
-        - state
+      type: object
+    IntegrationState:
+      description: |-
+        The effective state of one integration on one installation (and tenant link), with its
+        consent's provenance.
       properties:
-        enabled:
-          type: boolean
-        state:
-          type: string
-          enum:
-            - available
-            - enabled
-            - disabled
-            - revoked
-            - denied_by_policy
-            - hidden
+        config:
+          description: Non-secret options chosen at consent time.
+          type: object
         consent_id:
+          description: The consent in force, when there is one.
+          type:
+            - string
+            - "null"
+        consent_source:
+          description: "`app_ever_co`, `cloud_terms` or `product_ui`."
+          type:
+            - string
+            - "null"
+        dpa_version:
+          description: The data-processing agreement version it was consented to.
+          type:
+            - string
+            - "null"
+        enabled:
+          description: Whether data may move.
+          type: boolean
+        granted_at:
+          description: When it was granted.
+          format: date-time
+          type:
+            - string
+            - "null"
+        granted_by_person_id:
+          description: |-
+            Who granted it: your own id when it was you, else `null` (another member, a deleted
+            person, or the cloud terms).
+          type:
+            - string
+            - "null"
+        instance_id:
+          description: The installation.
+          type: string
+        integration_key:
+          description: The integration key.
+          type: string
+        operator_accept:
+          description: |-
+            `pending`, `accepted` or `declined` for an installation-wide integration of an
+            installation a customer or a partner operates; `null` elsewhere.
+          type:
+            - string
+            - "null"
+        revoked_at:
+          description: When it was revoked.
+          format: date-time
           type:
             - string
             - "null"
         scope_version:
+          description: The scope version it was consented to.
+          format: int32
           type:
             - integer
             - "null"
+        state:
+          description: As in `IntegrationStateBrief`.
+          type: string
+        tenant_link_id:
+          description: The tenant link (`null` for an installation-wide integration).
+          type:
+            - string
+            - "null"
+        updated_at:
+          description: When the state last changed (`null` when there is no state yet).
+          format: date-time
+          type:
+            - string
+            - "null"
+      required:
+        - instance_id
+        - integration_key
+        - enabled
+        - state
+        - config
+      type: object
+    IntegrationStateBrief:
+      description: The effective state of one integration, briefly.
+      properties:
         config:
+          description: Non-secret options chosen at consent time.
           type: object
-          description: Non-secret options chosen at consent time (for example which meters to report).
+        consent_id:
+          description: The consent in force, when there is one.
+          type:
+            - string
+            - "null"
+        enabled:
+          description: Whether data may move.
+          type: boolean
+        scope_version:
+          description: The scope version it was consented to.
+          format: int32
+          type:
+            - integer
+            - "null"
+        state:
+          description: |-
+            `available` (off, can be enabled), `enabled`, `disabled`, `revoked`, `denied_by_policy`,
+            `pending_operator` (waiting for the installation operator's local accept) or `coming_soon`.
+          type: string
+      required:
+        - enabled
+        - state
+        - config
+      type: object
     IntentComplete:
       type: object
       description: Callback from the product after a consented hand-off completed its part of the provisioning intent. Idempotent by `jti`.
@@ -5097,34 +5075,32 @@ components:
         - previous_valid_until
       type: object
     Legal:
-      type: object
-      description: Terms, the data-processing agreement and the sub-processor list linked from every consent screen and cached by instances. One agreement covers every integration; a new `dpa_version` asks for consent again on every integration.
+      description: |-
+        The legal texts every consent screen links: one data-processing agreement covers every
+        integration, and one public list names every sub-processor.
+      properties:
+        dpa_url:
+          description: The data-processing agreement.
+          type: string
+        dpa_version:
+          description: Its version, equal to every integration's `dpa_version`.
+          type: string
+        subprocessors_url:
+          description: The public list of sub-processors.
+          type: string
+        terms_url:
+          description: The terms.
+          type: string
+        terms_version:
+          description: Their version.
+          type: string
       required:
         - terms_url
         - terms_version
         - dpa_url
         - dpa_version
         - subprocessors_url
-      properties:
-        terms_url:
-          type: string
-          format: uri
-        terms_version:
-          type: string
-        dpa_url:
-          type: string
-          format: uri
-          description: The data-processing agreement of Ever Platform.
-        dpa_version:
-          type: string
-          description: Version of that agreement; equals `Integration.dpa_version` and is recorded in every consent.
-        subprocessors_url:
-          type: string
-          format: uri
-          description: The public list of sub-processors.
-        privacy_url:
-          type: string
-          format: uri
+      type: object
     LicenceId:
       type: string
       description: Customer-facing certificate id exactly as printed on an existing ever.co certificate. It is a claim token, never a key.
@@ -6021,7 +5997,9 @@ components:
         key, which becomes its credential. The connect key never signs anonymous statistics (those
         have a key of their own). The body carries no address or any other field outside this
         schema: an instance's public address is set by the organization in app.ever.co, or later by
-        the instance through a consented integration.
+        the instance through a consented integration. The optional `return_origins` are not stored:
+        the platform keeps a digest of each, to refuse a consent link that would return anywhere
+        else.
       properties:
         code:
           description: The connect code, `EVC-XXXX-XXXX-XXXX` (case-insensitive).
@@ -6044,6 +6022,21 @@ components:
         public_jwk:
           description: "Its connect key: an Ed25519 public JWK (`kty: OKP`, `crv: Ed25519`, `x`)."
           type: object
+        return_origins:
+          description: |-
+            The origins (`https://host[:port]`; plain `http` only on `localhost`, `127.0.0.1` or
+            `[::1]`) the installation's consent links may return to, at most four. Only a digest of
+            each is kept, never the address; a consent link naming another host is refused. Absent or
+            empty: the installation's consent links carry no return address. A reconnect replaces
+            them when it names any.
+          example:
+            - https://gauzy.acme.example
+          items:
+            type: string
+          maxItems: 4
+          type:
+            - array
+            - "null"
         serves_products:
           description: The products it serves besides its own (a Gauzy API serving Teams).
           items:
@@ -6224,13 +6217,14 @@ components:
       additionalProperties: false
       description: |-
         `POST /v1/instances/me/stats-link`: the installation links its anonymous statistics id to
-        itself. The statement is signed with the statistics key; the call is authenticated with the
-        connect key, so only an installation holding both can link them.
+        itself. The statement is signed with the statistics key and names this instance; the call is
+        authenticated with the connect key, so only an installation holding both can link them.
       properties:
         statement_sig:
           description: |-
             A compact JWS (`alg: EdDSA`, `typ: ever-stats-link+jwt`) signed with the statistics key
-            over `{stats_instance_id, stats_public_jwk, iat}`, at most ten minutes old.
+            over `{stats_instance_id, stats_public_jwk, sub, iat}`, where `sub` is this instance's id
+            (the subject of its instance token), at most ten minutes old.
           type: string
         stats_instance_id:
           description: The anonymous statistics id (UUID v4) the installation reports under.

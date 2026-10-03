@@ -97,6 +97,7 @@ export async function startMock(config = {}) {
         public_jwk: { kty: 'OKP', crv: 'Ed25519', x: key.x },
       };
       if (tenant) body.tenant = tenant;
+      body.return_origins = ['https://gauzy.example.com'];
       const redeem = await api.call('POST', '/v1/connect/redeem', {
         body,
         headers: { 'idempotency-key': idem ?? createHash('sha256').update(`${key.x}|${code}`).digest('hex') },

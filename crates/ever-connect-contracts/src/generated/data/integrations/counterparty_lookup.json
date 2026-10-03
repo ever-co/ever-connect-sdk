@@ -3,7 +3,6 @@
   "name": "Check contacts on Ever Platform",
   "description": "When you click 'Check on Ever Platform' on a contact, the installation sends salted hashes of that contact's VAT number, registration number or e-mail and gets back the handle of any organization that chose to be discoverable. The values themselves never leave the installation.",
   "category": "lookup",
-  "owner_module": "lookup",
   "direction": "outbound",
   "defaults": {
     "cloud": true,
@@ -18,7 +17,6 @@
     "gauzy",
     "works"
   ],
-  "phase": 2,
   "status": "coming_soon",
   "scope_version": 1,
   "revoke_effect": "The button is hidden and cached results are purged.",

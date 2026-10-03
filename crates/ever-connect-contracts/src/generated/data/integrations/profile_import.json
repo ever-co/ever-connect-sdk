@@ -3,7 +3,6 @@
   "name": "Import into public profile",
   "description": "Copies your organization's name, website, description, logo and country into your ever.co profile draft, and only when you click 'Import into public profile'. You review the draft before anything is published.",
   "category": "profile",
-  "owner_module": "registry",
   "direction": "outbound",
   "defaults": {
     "cloud": true,
@@ -18,7 +17,6 @@
     "gauzy",
     "works"
   ],
-  "phase": 3,
   "status": "coming_soon",
   "scope_version": 1,
   "revoke_effect": "Nothing further is copied. Profile fields you already published stay until you edit them.",

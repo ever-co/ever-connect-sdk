@@ -19,6 +19,13 @@ afterEach(async () => {
   env = null;
 });
 
+/** A report with another report id (another report of the same installation and month). */
+function withReportId(bytes, n) {
+  const doc = JSON.parse(bytes.toString('utf8'));
+  doc.report_id = `${doc.report_id.slice(0, 24)}${String(n).padStart(12, '0')}`;
+  return Buffer.from(JSON.stringify(doc));
+}
+
 function signedReport(bytes, key = testKey('stats'), { keyId } = {}) {
   const headers = { 'ever-stats-key': key.x, 'ever-stats-signature': `ed25519=${signBytes(key.privateKey, bytes)}` };
   if (keyId) headers['ever-stats-key-id'] = keyId;
@@ -438,41 +445,70 @@ describe('rows 6-10 and 16', () => {
     ).toBe(r.body.seq + 1);
   });
 
-  it('integrations, consent link and the local disable (enable is refused by the closed schema)', async () => {
+  it('integrations, the consent link and the local disable, as the platform answers them', async () => {
     env = await startMock();
     const { token, linkId } = await env.connect();
     const states = await env.call('GET', '/v1/instances/me/integrations', { token });
     expectOk(expect, states, 200, 'instanceGetIntegrations');
-    expect(states.body.instance.stats_link.state).toBe('available');
-    expect(states.body.links[linkId].counterparty_lookup.state).toBe('available');
-    const url = await env.call(
-      'GET',
-      `/v1/instances/me/consent-url?integration=counterparty_lookup&link=${linkId}&return=https%3A%2F%2Fgauzy.example.com%2Fsettings`,
-      { token },
-    );
-    expectOk(expect, url, 200, 'instanceGetConsentUrl');
-    await env.admin('consent', { integration: 'counterparty_lookup' });
-    expectOk(
-      expect,
-      await env.call('PUT', '/v1/instances/me/integrations/counterparty_lookup', {
-        token,
-        body: { enabled: false, reason: 'policy', tenant_link_id: linkId },
-      }),
-      200,
-      'instanceDisableIntegration',
-    );
+    expect(states.body.instance.stats_link).toMatchObject({ state: 'available', enabled: false, config: {} });
+    expect(states.body.links[linkId].counterparty_lookup.state).toBe('coming_soon');
+    expect(states.body.links[linkId].usage_reporting.state).toBe('available');
+    const link = (query) => env.call('GET', `/v1/instances/me/consent-url?${query}`, { token });
+    // The return address is optional; when present its origin is one the redeem declared.
+    expectOk(expect, await link('integration=stats_link'), 200, 'instanceGetConsentUrl');
+    const declared = await link(`integration=usage_reporting&link=${linkId}&return=https%3A%2F%2Fgauzy.example.com%2Fsettings`);
+    expectOk(expect, declared, 200, 'instanceGetConsentUrl');
+    expect(new URL(declared.body.url).searchParams.get('return')).toBe('https://gauzy.example.com/settings');
+    const field = async (query, path, code = 'invalid') => {
+      const r = await link(query);
+      expectProblem(expect, r, 422, 'validation_failed');
+      expect(r.body.errors[0]).toMatchObject({ path, code });
+    };
+    await field('integration=stats_link&return=https%3A%2F%2Fother.example.com', '?return');
+    await field('integration=stats_link&return=https%3A%2F%2Fu%3Ap%40gauzy.example.com', '?return');
+    await field('integration=stats_link&return=https%3A%2F%2Fgauzy.example.com%2F%23f', '?return');
+    await field('integration=usage_reporting', '?link', 'required');
+    await field(`integration=stats_link&link=${linkId}`, '?link');
+    expectProblem(expect, await link('integration=ever_id_login'), 422, 'integration_not_available');
+    // Switching off: never on, never a state that does not exist, and the operator's deny.
+    const put = (key, body) => env.call('PUT', `/v1/instances/me/integrations/${key}`, { token, body });
     expectProblem(
       expect,
-      await env.call('PUT', '/v1/instances/me/integrations/counterparty_lookup', { token, body: { enabled: true, reason: 'instance' } }),
+      await put('usage_reporting', { enabled: true, reason: 'instance', tenant_link_id: linkId }),
       422,
       'validation_failed',
     );
-    expectProblem(
-      expect,
-      await env.call('PUT', '/v1/instances/me/integrations/no_such_key', { token, body: { enabled: false, reason: 'instance' } }),
-      404,
-      'not_found',
-    );
+    expectProblem(expect, await put('usage_reporting', { enabled: false, reason: 'instance', tenant_link_id: linkId }), 404, 'not_found');
+    expectProblem(expect, await put('no_such_key', { enabled: false, reason: 'instance' }), 404, 'not_found');
+    const denied = await put('usage_reporting', { enabled: false, reason: 'policy', tenant_link_id: linkId });
+    expectOk(expect, denied, 200, 'instanceDisableIntegration');
+    expect(denied.body.state).toBe('denied_by_policy');
+    const after = await env.call('GET', '/v1/instances/me/integrations', { token });
+    expect(after.body.links[linkId].usage_reporting.state).toBe('denied_by_policy');
+    // The heartbeat carries the whole deny list (keys, or *): one without the key lifts the deny.
+    const bad = await env.call('POST', '/v1/instances/me/heartbeat', {
+      token,
+      body: { version: '96.2.1', integrations_denied: ['Not A Key'] },
+    });
+    expectProblem(expect, bad, 422, 'validation_failed');
+    expect(
+      (await env.call('POST', '/v1/instances/me/heartbeat', { token, body: { version: '96.2.1', integrations_denied: [] } })).status,
+    ).toBe(200);
+    const lifted = await env.call('GET', '/v1/instances/me/integrations', { token });
+    expect(lifted.body.links[linkId].usage_reporting.state).not.toBe('denied_by_policy');
+  });
+
+  it('a per-link integration names its tenant link in Ever-Link-Id', async () => {
+    env = await startMock();
+    const { token, linkId } = await env.connect();
+    await env.admin('consent', { integration: 'counterparty_lookup' });
+    const body = { salt_version: 1, hashes: ['c'.repeat(64)] };
+    const missing = await env.call('POST', '/v1/lookup', { token, body });
+    expectProblem(expect, missing, 422, 'validation_failed');
+    expect(missing.body.errors[0]).toMatchObject({ path: '#Ever-Link-Id', code: 'required' });
+    const malformed = await env.call('POST', '/v1/lookup', { token, body, headers: { 'ever-link-id': 'link-1' } });
+    expect(malformed.body.errors[0]).toMatchObject({ path: '#Ever-Link-Id', code: 'invalid' });
+    expect((await env.call('POST', '/v1/lookup', { token, body, headers: { 'ever-link-id': linkId } })).status).toBe(200);
   });
 
   it('disconnect: the next call is credential_revoked', async () => {
@@ -495,7 +531,9 @@ describe('row 17: statistics reports', () => {
     const first = await env.call('POST', '/v1/stats/reports', signedReport(bytes));
     expectOk(expect, first, 202, 'ingestStatsReport');
     expect(first.body).toEqual({ accepted: true });
-    const second = await env.call('POST', '/v1/stats/reports', signedReport(bytes));
+    const again = await env.call('POST', '/v1/stats/reports', signedReport(bytes));
+    expect(again.body).toEqual({ accepted: true });
+    const second = await env.call('POST', '/v1/stats/reports', signedReport(withReportId(bytes, 2)));
     expect(second.body).toEqual({ accepted: true, superseded: true });
     expectProblem(expect, await env.call('POST', '/v1/stats/reports', signedReport(bytes, testKey('statsOther'))), 409, 'key_mismatch');
   });
@@ -621,12 +659,35 @@ describe('row 17: statistics reports', () => {
   it('allows 24 reports a day per statistics id, then 429', async () => {
     env = await startMock();
     const bytes = statsFixture('valid/rec.json');
-    for (let i = 0; i < 24; i += 1) expect((await env.call('POST', '/v1/stats/reports', signedReport(bytes))).status).toBe(202);
-    const limited = await env.call('POST', '/v1/stats/reports', signedReport(bytes));
+    for (let i = 0; i < 24; i += 1)
+      expect((await env.call('POST', '/v1/stats/reports', signedReport(withReportId(bytes, i)))).status).toBe(202);
+    // The same report again takes no slot.
+    expect((await env.call('POST', '/v1/stats/reports', signedReport(withReportId(bytes, 3)))).body).toEqual({ accepted: true });
+    const limited = await env.call('POST', '/v1/stats/reports', signedReport(withReportId(bytes, 24)));
     expectProblem(expect, limited, 429, 'rate_limited');
     const retryAfter = Number(limited.headers.get('retry-after'));
     expect(retryAfter).toBeGreaterThan(0);
     expect(retryAfter).toBeLessThanOrEqual(86400);
+  });
+
+  it('stores two months a day per statistics id, and takes ten new ids an hour from one address', async () => {
+    env = await startMock();
+    const gauzy = JSON.parse(statsFixture('valid/gauzy.json').toString('utf8'));
+    const month = (period, n) =>
+      Buffer.from(JSON.stringify({ ...gauzy, period, report_id: `${gauzy.report_id.slice(0, 24)}${String(n).padStart(12, '0')}` }));
+    expect((await env.call('POST', '/v1/stats/reports', signedReport(month('2026-09', 1)))).status).toBe(202);
+    expect((await env.call('POST', '/v1/stats/reports', signedReport(month('2026-10', 2)))).status).toBe(202);
+    const third = await env.call('POST', '/v1/stats/reports', signedReport(month('2026-08', 3)));
+    expectProblem(expect, third, 429, 'rate_limited');
+    expect(Number(third.headers.get('retry-after'))).toBeGreaterThan(0);
+    // Nine more new ids from this address this hour, then the hourly budget is spent.
+    const fresh = (n) => Buffer.from(JSON.stringify({ ...gauzy, instance_id: `3d2b1a0c-5e4f-4a6b-8c7d-${String(n).padStart(12, '0')}` }));
+    for (let i = 1; i <= 9; i += 1) expect((await env.call('POST', '/v1/stats/reports', signedReport(fresh(i)))).status).toBe(202);
+    const budget = await env.call('POST', '/v1/stats/reports', signedReport(fresh(10)));
+    expectProblem(expect, budget, 429, 'rate_limited');
+    expect(Number(budget.headers.get('retry-after'))).toBeLessThanOrEqual(3600);
+    // A pinned id is never refused by the budget.
+    expect((await env.call('POST', '/v1/stats/reports', signedReport(month('2026-09', 4)))).status).toBe(202);
   });
 
   it('a connect-key rotation leaves the statistics pin alone', async () => {
