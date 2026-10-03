@@ -155,10 +155,16 @@ export function instanceEventData(instance) {
   };
 }
 
+/** The platform re-signs its key manifest when the newest one is 7 days old. */
+const MANIFEST_REFRESH_S = 604800;
+
 export const connectHandlers = {
   get_key_manifest({ state, issuer }) {
     if (state.faults.keys_unavailable) fail(503, 'keys_unavailable');
-    const iat = state.keysRotatedAt ?? state.config.clock.start;
+    // As on the platform: a rotation re-signs the manifest, and so does every seventh day after it
+    // (a manifest lives 30 days).
+    const base = state.keysRotatedAt ?? state.config.clock.start;
+    const iat = base + Math.floor(Math.max(0, state.now() - base) / MANIFEST_REFRESH_S) * MANIFEST_REFRESH_S;
     return {
       status: 200,
       body: signManifest({ issuer, iat, keys: manifestEntries(state) }),

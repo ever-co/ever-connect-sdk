@@ -1,0 +1,73 @@
+{
+  "description": "The verification outcome of each document in the contract's order (typ, alg, manifest not expired, kid in the root-verified manifest with purpose entitlement, signature, schema id, issuer, audience, closed schema, instance, subject, iat/nbf, seq).",
+  "fixtures": {
+    "invalid/extra-claim.jws": {
+      "code": "schema_violation",
+      "reason": "a claim outside the closed schema",
+      "valid": false
+    },
+    "invalid/instance-with-link-member.jws": {
+      "code": "schema_violation",
+      "reason": "an instance document carries no link member (the schema's if/then on sub)",
+      "valid": false
+    },
+    "invalid/link-names-another-link.jws": {
+      "code": "subject_mismatch",
+      "reason": "a link document whose tenant_link_id is not the link of its sub",
+      "valid": false
+    },
+    "invalid/manifest-expired.jws": {
+      "code": "manifest_expired",
+      "reason": "verified after the manifest's exp: keys of an expired manifest verify no new document",
+      "valid": false
+    },
+    "invalid/seq-beyond-i-json.jws": {
+      "code": "schema_violation",
+      "reason": "an integer above 2^53 - 1, the schema's maximum",
+      "valid": false
+    },
+    "invalid/stale-seq.jws": {
+      "code": "entitlement_stale",
+      "reason": "a lower seq than the cached document's",
+      "valid": false
+    },
+    "invalid/tampered-kid.jws": {
+      "code": "bad_signature",
+      "reason": "the header names another trusted entitlement key; the first one signed",
+      "valid": false
+    },
+    "invalid/wrong-issuer.jws": {
+      "code": "issuer_mismatch",
+      "reason": "another issuer than the manifest's and the expected one",
+      "valid": false
+    },
+    "invalid/wrong-subject.jws": {
+      "code": "subject_mismatch",
+      "reason": "a link document where the instance document is expected",
+      "valid": false
+    },
+    "invalid/wrong-typ.jws": {
+      "code": "bad_typ",
+      "reason": "not an entitlement document type",
+      "valid": false
+    },
+    "valid/instance-paid.jws": {
+      "kid": "ent-test-1",
+      "seq": 17,
+      "subject": "instance:01JC5M2R4T6V8X0Z2B4D6F8H0J",
+      "valid": true
+    },
+    "valid/link-free.jws": {
+      "kid": "ent-test-1",
+      "seq": 1,
+      "subject": "link:01JC9A1B2C3D4E5F6G7H8J9K01",
+      "valid": true
+    },
+    "valid/link-included.jws": {
+      "kid": "ent-test-1",
+      "seq": 4,
+      "subject": "link:01JC7Q0V3A8M2K9R4T6Y8B1D3F",
+      "valid": true
+    }
+  }
+}

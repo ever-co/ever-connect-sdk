@@ -50,7 +50,9 @@ The checks and their order are in [docs/entitlements.md](../../docs/entitlements
 are the same as in the TypeScript package. A `KeySet` comes only from `KeySet::verify`,
 `KeySet::restore`, `update` or the client's `refresh_keys`; `VerifiedKeyManifest` and
 `ManifestKey` are read through getters. `unsafe_root_keys` replaces the pinned roots: tests and
-offline tools only. The client's `verify_entitlement_refreshing` owns the unknown-key refresh rule.
+offline tools only. The client's `verify_entitlement_refreshing` owns the refresh rules (an
+expired manifest, an unknown key id), and the client holds back an entitlement read the platform
+would refuse for its rate class (`Error::RateLimited`).
 
 ## The client
 

@@ -1,0 +1,46 @@
+{
+  "$comment": "Verify every file at `now` (or at its `now_by_file` time) with the manifest of keys/manifest.json (verified once, at `now`, against the roots of keys/roots.json pinned for the expected issuer), expecting the installation and subject named per file; `cached` is the stored document of the subject when one is given.",
+  "cached_by_file": {
+    "invalid/stale-seq.jws": {
+      "iat": 1793606400,
+      "seq": 17
+    }
+  },
+  "expected_instance_id_by_file": {
+    "invalid/extra-claim.jws": "01JC5M2R4T6V8X0Z2B4D6F8H0J",
+    "invalid/instance-with-link-member.jws": "01JC5M2R4T6V8X0Z2B4D6F8H0J",
+    "invalid/link-names-another-link.jws": "01JB0000EVERC10VDGAVZY0001",
+    "invalid/manifest-expired.jws": "01JC5M2R4T6V8X0Z2B4D6F8H0J",
+    "invalid/seq-beyond-i-json.jws": "01JC5M2R4T6V8X0Z2B4D6F8H0J",
+    "invalid/stale-seq.jws": "01JC5M2R4T6V8X0Z2B4D6F8H0J",
+    "invalid/tampered-kid.jws": "01JC5M2R4T6V8X0Z2B4D6F8H0J",
+    "invalid/wrong-issuer.jws": "01JC5M2R4T6V8X0Z2B4D6F8H0J",
+    "invalid/wrong-subject.jws": "01JC5M2R4T6V8X0Z2B4D6F8H0J",
+    "invalid/wrong-typ.jws": "01JC5M2R4T6V8X0Z2B4D6F8H0J",
+    "valid/instance-paid.jws": "01JC5M2R4T6V8X0Z2B4D6F8H0J",
+    "valid/link-free.jws": "01JC97K315N7Q9S1V3W5Y7A9C1",
+    "valid/link-included.jws": "01JB0000EVERC10VDGAVZY0001"
+  },
+  "expected_issuer": "https://mock-platform.test",
+  "expected_subject_by_file": {
+    "invalid/extra-claim.jws": "instance:01JC5M2R4T6V8X0Z2B4D6F8H0J",
+    "invalid/instance-with-link-member.jws": "instance:01JC5M2R4T6V8X0Z2B4D6F8H0J",
+    "invalid/link-names-another-link.jws": "link:01JC7Q0V3A8M2K9R4T6Y8B1D3F",
+    "invalid/manifest-expired.jws": "instance:01JC5M2R4T6V8X0Z2B4D6F8H0J",
+    "invalid/seq-beyond-i-json.jws": "instance:01JC5M2R4T6V8X0Z2B4D6F8H0J",
+    "invalid/stale-seq.jws": "instance:01JC5M2R4T6V8X0Z2B4D6F8H0J",
+    "invalid/tampered-kid.jws": "instance:01JC5M2R4T6V8X0Z2B4D6F8H0J",
+    "invalid/wrong-issuer.jws": "instance:01JC5M2R4T6V8X0Z2B4D6F8H0J",
+    "invalid/wrong-subject.jws": "instance:01JC5M2R4T6V8X0Z2B4D6F8H0J",
+    "invalid/wrong-typ.jws": "instance:01JC5M2R4T6V8X0Z2B4D6F8H0J",
+    "valid/instance-paid.jws": "instance:01JC5M2R4T6V8X0Z2B4D6F8H0J",
+    "valid/link-free.jws": "link:01JC9A1B2C3D4E5F6G7H8J9K01",
+    "valid/link-included.jws": "link:01JC7Q0V3A8M2K9R4T6Y8B1D3F"
+  },
+  "manifest": "keys/manifest.json",
+  "now": 1793613600,
+  "now_by_file": {
+    "invalid/manifest-expired.jws": 1796119200
+  },
+  "roots_file": "keys/roots.json"
+}

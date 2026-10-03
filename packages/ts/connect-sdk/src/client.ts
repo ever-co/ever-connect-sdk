@@ -19,7 +19,7 @@ import { CONSTANTS, type operations, type Product } from '@ever-co/connect-contr
 import { signClientAssertion } from './assertion';
 import { ULID } from './encoding';
 import { type CachedEntitlement, type VerifiedEntitlement, verifyEntitlement } from './entitlement';
-import { EntitlementError, NotConnectedError, ProblemError, RequestRefusedError } from './errors';
+import { EntitlementError, NotConnectedError, ProblemError, RateLimitedError, RequestRefusedError } from './errors';
 import { OPERATIONS, type OperationId, type OperationSpec, REQUEST_SCHEMAS, SDK_VERSION } from './generated/operations';
 import type { InstanceSigner } from './keys';
 import { KeySet, type KeySetUpdate } from './keyset';
@@ -225,11 +225,37 @@ export function createEverPlatformClient(o: EverPlatformClientOptions) {
     }
   }
 
+  // The entitlement reads (rate class `instance-entitlement`): the platform answers, per installation
+  // and path, a bucket of `entitlement.max_reads_per_hour` reads refilled one every
+  // 3600 / max_reads_per_hour seconds (the generic cell rate algorithm). The client keeps the same
+  // account per path, holds back a read the platform would refuse, and honours a 429's `Retry-After`.
+  const ENTITLEMENT_WINDOW_S = 3600;
+  const readInterval = ENTITLEMENT_WINDOW_S / CONSTANTS.entitlement.max_reads_per_hour;
+  const readTolerance = readInterval * (CONSTANTS.entitlement.max_reads_per_hour - 1);
+  const nextRead = new Map<string, number>();
+  const heldUntil = new Map<string, number>();
+  function rateWait(op: OperationSpec, path: string, at: number): number {
+    if (op.rateLimit !== 'instance-entitlement') return 0;
+    const held = (heldUntil.get(path) ?? 0) - at;
+    const ahead = Math.max(nextRead.get(path) ?? at, at) - at;
+    return Math.ceil(Math.max(held, ahead - readTolerance, 0));
+  }
+  function rateNote(op: OperationSpec, path: string, at: number, res: WireResponse): void {
+    if (op.rateLimit !== 'instance-entitlement') return;
+    nextRead.set(path, Math.max(nextRead.get(path) ?? at, at) + readInterval);
+    if (res.status === 429) {
+      const retry = Number(res.headers.get('retry-after'));
+      heldUntil.set(path, at + (Number.isSafeInteger(retry) && retry > 0 ? retry : readInterval));
+    }
+  }
+
   /** Sends one operation of the table. */
   async function call<Id extends OperationId>(id: Id, input: CallInput<RequestBody<Id>> = {}): Promise<ResponseBody<Id> | NotModified> {
     const p = prepare(id, input as CallInput);
     // No Registry id: refuse before anything goes out (the token would need one).
     if (p.op.auth === 'instance' && !tokens.held && !registryId()) throw new NotConnectedError();
+    const wait = rateWait(p.op, p.path, now());
+    if (wait > 0) throw new RateLimitedError(wait);
     for (let attempt = 0; ; attempt += 1) {
       const headers: Record<string, string> = { ...p.headers, 'x-request-id': randomUUID() };
       if (p.op.auth === 'instance') headers.authorization = `Bearer ${await tokens.get()}`;
@@ -244,6 +270,7 @@ export function createEverPlatformClient(o: EverPlatformClientOptions) {
         maxResponseBytes: p.maxResponseBytes,
         signal: input.signal,
       });
+      rateNote(p.op, p.path, now(), res);
       if (res.status === 401 && p.op.auth === 'instance') {
         const problem = problemFrom(res);
         tokens.invalidate();
@@ -422,10 +449,11 @@ export function createEverPlatformClient(o: EverPlatformClientOptions) {
       });
     },
     /**
-     * Verifies an entitlement document and owns the unknown-key rule: on `unknown_kid` with
+     * Verifies an entitlement document and owns the key-set refresh rules: on `unknown_kid` with
      * `refreshSuggested`, the key set is refreshed once (at most every 10 minutes) and the document
-     * verified again; a second `unknown_kid` is final. Answers the result and the key set to keep
-     * (a new one when the refresh replaced it).
+     * verified again; a second `unknown_kid` is final. On `manifest_expired` (keys of an expired
+     * manifest verify no new document), the key set is refreshed and the document verified again.
+     * Answers the result and the key set to keep (a new one when the refresh replaced it).
      */
     async verifyEntitlementRefreshing(
       jws: string,
@@ -434,8 +462,12 @@ export function createEverPlatformClient(o: EverPlatformClientOptions) {
       try {
         return { verified: client.verifyEntitlement(jws, v), keySet: v.keySet };
       } catch (error) {
-        if (!(error instanceof EntitlementError) || error.code !== 'unknown_kid' || !error.refreshSuggested) throw error;
-        if (!v.keySet.unknownKidRefreshAllowed(v.now ?? now())) throw error;
+        if (!(error instanceof EntitlementError)) throw error;
+        // An expired manifest: fetch the current one. An unknown key id the manifest does not list:
+        // fetch it at most once every 10 minutes.
+        const expired = error.code === 'manifest_expired';
+        const unknown = error.code === 'unknown_kid' && error.refreshSuggested && v.keySet.unknownKidRefreshAllowed(v.now ?? now());
+        if (!expired && !unknown) throw error;
         const update = await client.keys.refresh(v.keySet);
         if (!update.replaced) throw error;
         return { verified: client.verifyEntitlement(jws, { ...v, keySet: update.keySet }), keySet: update.keySet };

@@ -13,7 +13,7 @@
 //! 7. the payload is `{iss, iat, exp, keys_sha256, root_kid}`, `root_kid` = header `kid`: `malformed`
 //! 8. payload `iss` is the expected issuer (an origin): `issuer_mismatch`
 //! 9. `iat <= now + 300`: `manifest_not_yet_valid`
-//! 10. `now < exp`: `manifest_expired`
+//! 10. `now < exp` (not for a stored manifest read back by [`KeySet::restore`]): `manifest_expired`
 //! 11. `keys_sha256` is the hex SHA-256 of the RFC 8785 canonical JSON of `keys`: `keys_sha256_mismatch`
 //!
 //! The issuer is always given: a manifest is verified for one issuer and the keys it vouches for
@@ -40,7 +40,7 @@ use sha2::{Digest as _, Sha256};
 
 use crate::encoding::hex;
 use crate::jcs::canonical_json;
-use crate::jws::{decode, str_of, strong_key, verify_ed25519};
+use crate::jws::{decode, ijson_integer, str_of, strong_key, verify_ed25519};
 use crate::schema::violations;
 
 /// Seconds of clock difference tolerated on `iat` and on a key's validity window.
@@ -486,6 +486,24 @@ pub fn verify_key_manifest(
     body: &Value,
     options: &VerifyKeyManifestOptions<'_>,
 ) -> Result<VerifiedKeyManifest, KeyManifestError> {
+    verify(body, options, false)
+}
+
+/// The same checks for a manifest read back from storage, except its `exp`: reading a stored key
+/// set back (a restart) is not a new verification, and the keys of an expired manifest verify no
+/// new document (`manifest_expired` from the entitlement verifier). Used by `KeySet::restore` only.
+pub(crate) fn verify_stored_key_manifest(
+    body: &Value,
+    options: &VerifyKeyManifestOptions<'_>,
+) -> Result<VerifiedKeyManifest, KeyManifestError> {
+    verify(body, options, true)
+}
+
+fn verify(
+    body: &Value,
+    options: &VerifyKeyManifestOptions<'_>,
+    stored: bool,
+) -> Result<VerifiedKeyManifest, KeyManifestError> {
     let roots = options
         .unsafe_root_keys
         .unwrap_or_else(|| pinned_root_keys());
@@ -537,11 +555,10 @@ pub fn verify_key_manifest(
     {
         return Err(KeyManifestError::Malformed);
     }
-    let int = |name: &str| {
-        payload
-            .get(name)
-            .and_then(Value::as_i64)
-            .ok_or(KeyManifestError::Malformed)
+    // `iat` and `exp` are I-JSON integers as written.
+    let int = |name: &str| match payload.get(name) {
+        Some(Value::Number(n)) if ijson_integer(n) => n.as_i64().ok_or(KeyManifestError::Malformed),
+        _ => Err(KeyManifestError::Malformed),
     };
     let (iat, exp) = (int("iat")?, int("exp")?);
     // 8. The issuer.
@@ -552,7 +569,7 @@ pub fn verify_key_manifest(
     if iat > now.saturating_add(CLOCK_SKEW_S) {
         return Err(KeyManifestError::ManifestNotYetValid);
     }
-    if now >= exp {
+    if !stored && now >= exp {
         return Err(KeyManifestError::ManifestExpired);
     }
     // 11. The served keys are the keys the root signed.

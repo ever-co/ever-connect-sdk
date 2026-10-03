@@ -2,11 +2,12 @@
  * Compact JWS (RFC 7515) with EdDSA over Ed25519 (RFC 8037) only, and RFC 8785 canonical JSON for
  * the one shape the key manifest needs (arrays and objects of strings, integers and nulls).
  *
- * A JWS is decoded by one rule in both SDKs: at most 64 KiB; three canonical base64url parts;
- * header and payload are JSON objects in valid UTF-8 (a leading byte-order mark is not
- * whitespace); every number is an integer token (no fraction, no exponent, no negative zero)
- * within plus or minus 2^53 - 1; no string or member name holds a lone surrogate; at most 127
- * nested arrays and objects. Anything else is `malformed`.
+ * A JWS is decoded by one rule in both SDKs and on the platform: at most 64 KiB; three canonical
+ * base64url parts; header and payload are JSON objects in valid UTF-8 (a leading byte-order mark
+ * is not whitespace); no string or member name holds a lone surrogate; every number fits a double
+ * (a number past it does not parse); at most 127 nested arrays and objects. Anything else is
+ * `malformed`. How a number is written is checked where the value is read: the verifiers require
+ * the integer claims they read to be I-JSON integers ({@link numberForms}).
  */
 import { createPublicKey, verify as edVerify, type KeyObject } from 'node:crypto';
 import { isSmallOrder } from './ed25519';
@@ -14,49 +15,103 @@ import { b64url, fromB64url } from './encoding';
 
 /** The longest compact JWS a verifier reads. */
 export const MAX_JWS_LENGTH = 65536;
+/** The largest integer a claim may hold (I-JSON: 2^53 - 1). */
+export const MAX_INTEGER = 9007199254740991;
 /** The deepest nesting of arrays and objects a JWS part may have. */
 const MAX_DEPTH = 127;
 const MAX_SAFE = 9007199254740991n;
 const INTEGER_TOKEN = /^(0|-?[1-9][0-9]*)$/;
 const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
+const WHITESPACE = new Set([' ', '\t', '\n', '\r']);
+
+const pointerSegment = (s: string) => s.replace(/~/g, '~0').replace(/\//g, '~1');
+
+/** Whether a number token is an I-JSON integer: no fraction, no exponent, not `-0`, within plus or minus 2^53 - 1. */
+function integerToken(token: string): boolean {
+  if (!INTEGER_TOKEN.test(token)) return false;
+  const n = BigInt(token);
+  return n <= MAX_SAFE && n >= -MAX_SAFE;
+}
+
+interface Frame {
+  readonly array: boolean;
+  /** The JSON pointer of the container. */
+  readonly at: string;
+  key: string;
+  index: number;
+  expectKey: boolean;
+}
 
 /**
- * Whether the JSON text (already known to parse) uses only safe integer number tokens and nests at
- * most MAX_DEPTH arrays and objects.
+ * How each number of a JSON text (already known to parse) is written: a map from the JSON pointer
+ * of every number to whether it is an I-JSON integer (no fraction, no exponent, not `-0`, within
+ * plus or minus 2^53 - 1). A member given twice counts as `JSON.parse` reads it: the last one.
+ * `null` when the text nests more than 127 arrays and objects.
  */
-export function jsonTokensAreStrict(text: string): boolean {
-  let depth = 0;
+export function numberForms(text: string): Map<string, boolean> | null {
+  const forms = new Map<string, boolean>();
+  const stack: Frame[] = [];
+  /** The pointer of the value that starts here. */
+  const here = (): string => {
+    const top = stack.at(-1);
+    if (!top) return '';
+    return `${top.at}/${top.array ? String(top.index) : pointerSegment(top.key)}`;
+  };
+  /** A value replaces whatever an earlier member of the same name held. */
+  const begin = (at: string) => {
+    for (const k of [...forms.keys()]) if (k === at || k.startsWith(`${at}/`)) forms.delete(k);
+  };
   let i = 0;
   while (i < text.length) {
     const c = text[i] as string;
-    if (c === '"') {
-      i += 1;
-      while (i < text.length && text[i] !== '"') i += text[i] === '\\' ? 2 : 1;
+    if (WHITESPACE.has(c)) {
       i += 1;
       continue;
     }
-    if (c === '[' || c === '{') {
-      depth += 1;
-      if (depth > MAX_DEPTH) return false;
-    } else if (c === ']' || c === '}') depth -= 1;
-    else if (c === '-' || (c >= '0' && c <= '9')) {
+    const top = stack.at(-1);
+    if (c === '{' || c === '[') {
+      const at = here();
+      begin(at);
+      if (stack.length >= MAX_DEPTH) return null;
+      stack.push({ array: c === '[', at, key: '', index: 0, expectKey: c === '{' });
+      i += 1;
+    } else if (c === '}' || c === ']') {
+      stack.pop();
+      i += 1;
+    } else if (c === ',') {
+      if (top?.array) top.index += 1;
+      else if (top) top.expectKey = true;
+      i += 1;
+    } else if (c === ':') {
+      if (top) top.expectKey = false;
+      i += 1;
+    } else if (c === '"') {
+      let j = i + 1;
+      while (j < text.length && text[j] !== '"') j += text[j] === '\\' ? 2 : 1;
+      const raw = text.slice(i, j + 1);
+      if (top && !top.array && top.expectKey) top.key = JSON.parse(raw) as string;
+      else begin(here());
+      i = j + 1;
+    } else if (c === '-' || (c >= '0' && c <= '9')) {
       let j = i + 1;
       while (j < text.length && /[0-9eE.+-]/.test(text[j] as string)) j += 1;
-      const token = text.slice(i, j);
-      if (!INTEGER_TOKEN.test(token)) return false;
-      const n = BigInt(token);
-      if (n > MAX_SAFE || n < -MAX_SAFE) return false;
+      const at = here();
+      begin(at);
+      forms.set(at, integerToken(text.slice(i, j)));
       i = j;
-      continue;
+    } else {
+      // true, false, null
+      begin(here());
+      while (i < text.length && /[a-z]/.test(text[i] as string)) i += 1;
     }
-    i += 1;
   }
-  return true;
+  return forms;
 }
 
-/** Whether every string and member name of a parsed value is well formed (no lone surrogate). */
+/** Whether every string and member name is well formed (no lone surrogate) and every number is finite. */
 function wellFormed(value: unknown): boolean {
   if (typeof value === 'string') return !LONE_SURROGATE.test(value);
+  if (typeof value === 'number') return Number.isFinite(value);
   if (Array.isArray(value)) return value.every(wellFormed);
   if (value !== null && typeof value === 'object') return Object.entries(value).every(([k, v]) => !LONE_SURROGATE.test(k) && wellFormed(v));
   return true;
@@ -66,6 +121,11 @@ function wellFormed(value: unknown): boolean {
 export interface DecodedJws {
   readonly header: Record<string, unknown>;
   readonly payload: Record<string, unknown>;
+  /**
+   * How each number of the payload is written, by JSON pointer: true for an I-JSON integer
+   * ({@link numberForms}).
+   */
+  readonly payloadNumbers: ReadonlyMap<string, boolean>;
   /** `base64url(header) "." base64url(payload)`, the bytes the signature covers. */
   readonly signingInput: string;
   readonly signature: Uint8Array;
@@ -73,13 +133,15 @@ export interface DecodedJws {
 
 const isRecord = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v);
 
-function json(part: string): Record<string, unknown> | null {
+function json(part: string): { value: Record<string, unknown>; numbers: Map<string, boolean> } | null {
   const bytes = fromB64url(part);
   if (!bytes) return null;
   try {
     const text = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes);
     const value: unknown = JSON.parse(text);
-    return isRecord(value) && jsonTokensAreStrict(text) && wellFormed(value) ? value : null;
+    if (!isRecord(value) || !wellFormed(value)) return null;
+    const numbers = numberForms(text);
+    return numbers ? { value, numbers } : null;
   } catch {
     return null;
   }
@@ -95,7 +157,16 @@ export function decodeJws(token: unknown): DecodedJws | null {
   const payload = json(p);
   const signature = fromB64url(s);
   if (!header || !payload || !signature) return null;
-  return { header, payload, signingInput: `${h}.${p}`, signature };
+  return { header: header.value, payload: payload.value, payloadNumbers: payload.numbers, signingInput: `${h}.${p}`, signature };
+}
+
+/**
+ * The first of `pointers` (in the order given) whose value is a number that is not an I-JSON
+ * integer as written, or null. A pointer without a number is not checked here (the schema is).
+ */
+export function firstNonInteger(numbers: ReadonlyMap<string, boolean>, pointers: readonly string[]): string | null {
+  for (const p of pointers) if (numbers.get(p) === false) return p;
+  return null;
 }
 
 /** Public keys already imported (public data; bounded). */

@@ -290,8 +290,10 @@ export interface paths {
             readonly cookie?: never;
         };
         /**
-         * Current instance-wide entitlement document
-         * @description At most 6 per hour. `If-None-Match: "<seq>"` answers `304`. Refresh every `refresh_after_s` and on `entitlement.issued`.
+         * The calling installation's signed entitlement document. The first call issues it; later calls
+         *     answer the current one, or a new one with a higher `seq` once what it holds changed. Send
+         *     `If-None-Match: "<seq>"` to get `304` while the cached document is current. At most six calls
+         *     an hour: refresh every `ever.refresh_after_s` and when the event feed announces a new document.
          */
         readonly get: operations["instanceGetEntitlement"];
         readonly put?: never;
@@ -668,7 +670,11 @@ export interface paths {
             readonly path?: never;
             readonly cookie?: never;
         };
-        /** Entitlement document for one tenant link */
+        /**
+         * The signed entitlement document of one of the calling installation's tenant links: one
+         *     organization on a multi-tenant installation, with nothing of any other. A link of another
+         *     installation answers `404`.
+         */
         readonly get: operations["instanceGetLinkEntitlement"];
         readonly put?: never;
         readonly post?: never;
@@ -1395,69 +1401,6 @@ export interface components {
              */
             readonly kind: string;
         };
-        /**
-         * @description Decoded `ever.entitlement.v1` claims (the `ever` object of the JWS) plus
-         *     envelope metadata. A lower `seq` never replaces a higher one. `handle` is
-         *     the only human-readable field.
-         */
-        readonly Entitlement: {
-            readonly expires_at: components["schemas"]["Timestamp"];
-            readonly features: {
-                readonly [key: string]: boolean;
-            };
-            /** @description Offline grace after `expires_at` during which platform features keep working (default 2 592 000 = 30 d). */
-            readonly grace_s?: number;
-            readonly handle?: components["schemas"]["Handle"];
-            readonly id: components["schemas"]["Ulid"];
-            readonly instance_id?: string | null;
-            readonly issued_at: components["schemas"]["Timestamp"];
-            readonly kid: string;
-            readonly licence_ids?: readonly components["schemas"]["LicenceId"][];
-            readonly limits: components["schemas"]["Limits"];
-            readonly managed?: {
-                readonly backups?: boolean;
-                /** @enum {string} */
-                readonly support_level?: "community" | "standard" | "priority";
-                readonly updates?: boolean;
-            };
-            readonly meters?: components["schemas"]["Meters"];
-            readonly not_before?: components["schemas"]["Timestamp"];
-            readonly org_id?: components["schemas"]["Ulid"];
-            readonly plan?: {
-                /** @description Catalog lookup key of the tier-defining fact, `community`, or the plan code of a staff grant. */
-                readonly code?: string;
-                readonly ref?: string | null;
-                readonly source?: components["schemas"]["PlanSource"];
-            };
-            readonly products: readonly components["schemas"]["ProductCode"][];
-            /** @enum {string} */
-            readonly reason?: "subscription_changed" | "scheduled_refresh" | "instance_connected" | "instance_disconnected" | "link_created" | "link_unlinked" | "staff_override" | "licence_attached" | "key_retired" | "revoked";
-            /** @description Refresh cadence (default 21 600 = 6 h). */
-            readonly refresh_after_s?: number;
-            /** Format: date-time */
-            readonly revoked_at?: string | null;
-            /** Format: int64 */
-            readonly seq: number;
-            readonly subject: {
-                readonly id: components["schemas"]["Ulid"];
-                /** @enum {string} */
-                readonly kind: "org" | "instance" | "link";
-            };
-            readonly tenant_id?: components["schemas"]["Ulid"];
-            readonly tenant_link_id?: string | null;
-            readonly tier: components["schemas"]["Tier"];
-        };
-        /** @description The signed document as fetched by an instance. `ETag` equals `"<seq>"`. */
-        readonly EntitlementDocument: {
-            readonly claims?: components["schemas"]["Entitlement"];
-            /** @description Compact JWS, header `{"alg":"EdDSA","kid":"...","typ":"ever-entitlement+jwt"}`. Store the bytes as received. */
-            readonly document: string;
-            readonly expires_at: components["schemas"]["Timestamp"];
-            readonly issued_at?: components["schemas"]["Timestamp"];
-            readonly refresh_after_s: number;
-            /** Format: int64 */
-            readonly seq: number;
-        };
         /** @description `{kind, id}` of who caused an event (never an e-mail or a name). */
         readonly EnvelopeActor: {
             /** @description Its id. */
@@ -1513,15 +1456,6 @@ export interface components {
              */
             readonly version: number;
         };
-        /**
-         * @description The closed feature key set of the `ever.entitlement.v1` document
-         *     (see the entitlement document format); the same keys are used by the plan
-         *     catalog and by `Integration.requires_feature`. Adding a key is additive;
-         *     clients ignore unknown keys. Managed add-ons are the `managed` object, not
-         *     features.
-         * @enum {string}
-         */
-        readonly FeatureKey: "handle" | "discoverability" | "lookup" | "profile.public" | "profile.badges" | "listings" | "marketplace.buy" | "instances.multi" | "ever_id_login" | "app_sync" | "usage_reporting" | "provider_access";
         /** @description An acknowledgement. */
         readonly FeedAck: {
             /** @description The cursor of the last event processed. */
@@ -1790,6 +1724,24 @@ export interface components {
              */
             readonly version_row: number;
         };
+        /** @description A signed entitlement document as an installation receives it. */
+        readonly InstanceEntitlement: {
+            /**
+             * @description The compact JWS (`ever.entitlement.v1`, `typ` `ever-entitlement+jwt`); verify it with the
+             *     key set at `/.well-known/ever-keys.json` and store the bytes as received.
+             */
+            readonly document: string;
+            /**
+             * Format: date-time
+             * @description When the document expires; the offline grace (`ever.grace_s`) follows.
+             */
+            readonly expires_at: string;
+            /**
+             * Format: int64
+             * @description The document's `seq` (also the `ETag`).
+             */
+            readonly seq: number;
+        };
         /** @description An installation switches one integration off (it may never switch one on). */
         readonly InstanceIntegrationPut: {
             /** @description `false`. */
@@ -2028,31 +1980,6 @@ export interface components {
             /** @description Their version. */
             readonly terms_version: string;
         };
-        /**
-         * @description Customer-facing certificate id exactly as printed on an existing ever.co certificate. It is a claim token, never a key.
-         * @example EVER-GAUZY-SB-1A2B3C4D
-         */
-        readonly LicenceId: string;
-        /**
-         * @description The closed limit key set of the `ever.entitlement.v1` document; `-1` means unlimited.
-         * @enum {string}
-         */
-        readonly LimitKey: "instances.connected" | "listings.published" | "api.rpm" | "members" | "webhooks.endpoints" | "lookup.hashes_per_day" | "lookup.queries_per_min";
-        /**
-         * @description Numeric limits keyed by `LimitKey` (`-1` = unlimited). Values come from the plan catalog and may change without an API version bump.
-         * @example {
-         *       "instances.connected": 3,
-         *       "listings.published": 5,
-         *       "api.rpm": 600,
-         *       "members": 100,
-         *       "webhooks.endpoints": 10,
-         *       "lookup.hashes_per_day": 6000,
-         *       "lookup.queries_per_min": 60
-         *     }
-         */
-        readonly Limits: {
-            readonly [key: string]: number;
-        };
         /** @description A tenant link as the instance sees it (never who linked it). */
         readonly LinkedTenant: {
             /** @description The product tenant's name as reported. */
@@ -2179,17 +2106,6 @@ export interface components {
          * @enum {string}
          */
         readonly MeterKey: "instances.connected" | "listings.published" | "members" | "apps.registered" | "webhooks.endpoints" | "api.requests" | "lookup.queries" | "lookup.hashes" | "employees.reported" | "stats.reports";
-        /** @description Usage per meter key. */
-        readonly Meters: {
-            readonly [key: string]: {
-                /** Format: int64 */
-                readonly limit?: number | null;
-                /** @description `YYYY-MM`, `YYYY-MM-DD`, or null for gauges. */
-                readonly period?: string | null;
-                /** Format: int64 */
-                readonly used: number;
-            };
-        };
         readonly MirrorAppData: {
             /** @enum {string} */
             readonly base_kind: "none" | "ever" | "oss";
@@ -2394,11 +2310,6 @@ export interface components {
             readonly product_user_ref: string;
             readonly tenant_link_id?: components["schemas"]["Ulid"];
         };
-        /**
-         * @description Evidence of the tier-defining grant; the same vocabulary as `plan.source` in the `ever.entitlement.v1` document and the `subscription.changed` event.
-         * @enum {string}
-         */
-        readonly PlanSource: "community" | "stripe_subscription" | "licence_certificate" | "works_licence_purchase" | "cloud_plan" | "staff";
         /**
          * @description Pricing is delegated to the app; `external` means the vendor bills on its own site.
          * @enum {string}
@@ -2699,11 +2610,6 @@ export interface components {
                 readonly salt_version: number;
             }[];
         };
-        /**
-         * @description `included` is derived from an active link on an Ever-operated instance and is never sold.
-         * @enum {string}
-         */
-        readonly Tier: "free" | "paid" | "bundle" | "included";
         /**
          * Format: date-time
          * @description RFC 3339, always UTC (`Z`).
@@ -3553,61 +3459,58 @@ export interface operations {
     readonly instanceGetEntitlement: {
         readonly parameters: {
             readonly query?: never;
-            readonly header?: {
-                /** @description Conditional read; a matching strong `ETag` answers `304 Not Modified` with an empty body. */
-                readonly "If-None-Match"?: string;
-            };
+            readonly header?: never;
             readonly path?: never;
             readonly cookie?: never;
         };
         readonly requestBody?: never;
         readonly responses: {
-            /** @description OK */
+            /** @description The document (`ETag: "<seq>"`, `Cache-Control: private, no-store`) */
             readonly 200: {
                 headers: {
-                    /** @description Strong entity tag. For versioned aggregates it is `"<version>"`; for other GET bodies <= 256 KB it is a body hash. */
-                    readonly ETag?: string;
                     readonly [name: string]: unknown;
                 };
                 content: {
-                    readonly "application/json": components["schemas"]["EntitlementDocument"];
+                    readonly "application/json": components["schemas"]["InstanceEntitlement"];
                 };
             };
-            /** @description Not modified; the cached representation is current. Empty body. */
+            /** @description The cached document is current */
             readonly 304: {
                 headers: {
                     readonly [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Rate limit exceeded for this principal class (`rate_limited`). */
-            readonly 429: {
+            /** @description No valid instance token */
+            readonly 401: {
                 headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description Seconds to wait before retrying. */
-                    readonly "Retry-After"?: number;
                     readonly [name: string]: unknown;
                 };
                 content: {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Any other error, as a problem document. */
-            readonly default: {
+            /** @description `instance_pending_approval` */
+            readonly 403: {
                 headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `module_disabled`: entitlements are off on this deployment */
+            readonly 404: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `rate_limited` */
+            readonly 429: {
+                headers: {
                     readonly [name: string]: unknown;
                 };
                 content: {
@@ -4638,37 +4541,50 @@ export interface operations {
     readonly instanceGetLinkEntitlement: {
         readonly parameters: {
             readonly query?: never;
-            readonly header?: {
-                /** @description Conditional read; a matching strong `ETag` answers `304 Not Modified` with an empty body. */
-                readonly "If-None-Match"?: string;
-            };
+            readonly header?: never;
             readonly path: {
-                /** @description Tenant link id (ULID). */
-                readonly link: components["schemas"]["Ulid"];
+                /** @description The tenant link id. */
+                readonly link: string;
             };
             readonly cookie?: never;
         };
         readonly requestBody?: never;
         readonly responses: {
-            /** @description OK */
+            /** @description The document (`ETag: "<seq>"`) */
             readonly 200: {
                 headers: {
-                    /** @description Strong entity tag. For versioned aggregates it is `"<version>"`; for other GET bodies <= 256 KB it is a body hash. */
-                    readonly ETag?: string;
                     readonly [name: string]: unknown;
                 };
                 content: {
-                    readonly "application/json": components["schemas"]["EntitlementDocument"];
+                    readonly "application/json": components["schemas"]["InstanceEntitlement"];
                 };
             };
-            /** @description Not modified; the cached representation is current. Empty body. */
+            /** @description The cached document is current */
             readonly 304: {
                 headers: {
                     readonly [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Not found, or the module that serves this route is disabled on this deployment (`not_found`, `module_disabled`). */
+            /** @description No valid instance token */
+            readonly 401: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `instance_pending_approval` */
+            readonly 403: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such link of this installation, or `module_disabled` */
             readonly 404: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -4677,17 +4593,9 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Any other error, as a problem document. */
-            readonly default: {
+            /** @description `rate_limited` */
+            readonly 429: {
                 headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
                     readonly [name: string]: unknown;
                 };
                 content: {

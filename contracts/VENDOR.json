@@ -2,18 +2,18 @@
   "description": "Where every contract file of this repository comes from. Written by tools/sync-contract.mjs; checked by tools/check-schema-drift.mjs. `provisional` sources are drafts the platform has not published yet: tools/check-schema-drift.mjs --strict refuses them.",
   "platform": {
     "repository": "ever-co/platform",
-    "commit": "6c7b960b29a591e40b85cbd28ce38e510d11187f"
+    "commit": "106a7235c835578a7b8d5f6d592d0ea1f59444a0"
   },
   "openapi": {
     "target": "contracts/openapi/ever-platform.v1.yaml",
-    "sha256": "320ee08efcb65de763bfee0fb5ac90f54e8228e672c957ef5ec838e8dcbd3995",
+    "sha256": "e5a81ba5b8e56db1d602ddef0d08c821654984d7975fccd5c8ca2290f4b957b8",
     "pinned": {
       "source": "contracts/openapi/ever-api.v1.json",
-      "sha256": "3d1c268b03752e3146d8b5f9b39ebdde561c53f63c295da01d5ad297c8bf6048"
+      "sha256": "d6d3d0935c48833e2123f3da98f7bff0161f3ffa226f9a98051984f754690098"
     },
     "design": {
       "source": "docs/specs/api",
-      "sha256": "77ce63a394a6a2078db4d7c6d5d92540bad1ccbf351402e60e26dd5b30f1fed6",
+      "sha256": "6ba721413052a29368a66a7ac19795adb0653c9467680d8f2587702b6b2f3175",
       "files": 21
     },
     "operations": 54,
@@ -29,8 +29,6 @@
       "instanceCreatePersonLink",
       "instanceDeleteLinkIdentifiers",
       "instanceDeletePersonLink",
-      "instanceGetEntitlement",
-      "instanceGetLinkEntitlement",
       "instanceGetOidcClient",
       "instanceListMirroredApps",
       "instanceMirrorApps",
@@ -114,8 +112,8 @@
     {
       "path": "contracts/schemas/ever.entitlement.v1.json",
       "source": "contracts/entitlements/ever.entitlement.v1.schema.json",
-      "source_sha256": "c39ffc42f6dbc2d871b1af04dcdc9a0f7472ca726612dd82ff712fdf3fd6bd79",
-      "sha256": "c39ffc42f6dbc2d871b1af04dcdc9a0f7472ca726612dd82ff712fdf3fd6bd79",
+      "source_sha256": "5fb0404cb84b32fbf07fab0354223f8b390785f6bcfeaf05cde0e99e4262f143",
+      "sha256": "5fb0404cb84b32fbf07fab0354223f8b390785f6bcfeaf05cde0e99e4262f143",
       "transform": null,
       "provisional": false,
       "upstream": null
@@ -764,6 +762,186 @@
       "source": "contracts/fixtures/stats/valid/works.json",
       "source_sha256": "7e166873e2ddf6f1832bc2ba79e969dfa7d22509c29ca33a1b63a28606ef4491",
       "sha256": "7e166873e2ddf6f1832bc2ba79e969dfa7d22509c29ca33a1b63a28606ef4491",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/entitlement-platform/context.json",
+      "source": "contracts/fixtures/entitlement/context.json",
+      "source_sha256": "7bc832afef62a650287506291674b7635093a26b1fcf52638d92c62d228977c1",
+      "sha256": "7bc832afef62a650287506291674b7635093a26b1fcf52638d92c62d228977c1",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/entitlement-platform/expected.json",
+      "source": "contracts/fixtures/entitlement/expected.json",
+      "source_sha256": "75e04cae4a2611274a7dd60162d987cfb10a85dd743ff348dd9c978a60ade535",
+      "sha256": "75e04cae4a2611274a7dd60162d987cfb10a85dd743ff348dd9c978a60ade535",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/entitlement-platform/invalid/extra-claim.jws",
+      "source": "contracts/fixtures/entitlement/invalid/extra-claim.jws",
+      "source_sha256": "f46497819c9b1b688b5020f4d8b0b8386c5fcc9af1cd039a7e5c231a09de55aa",
+      "sha256": "f46497819c9b1b688b5020f4d8b0b8386c5fcc9af1cd039a7e5c231a09de55aa",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/entitlement-platform/invalid/instance-with-link-member.jws",
+      "source": "contracts/fixtures/entitlement/invalid/instance-with-link-member.jws",
+      "source_sha256": "53535ea12a2fa2dd9e02a9cbb768363ef2833722eda40fbce5849f19b4594f36",
+      "sha256": "53535ea12a2fa2dd9e02a9cbb768363ef2833722eda40fbce5849f19b4594f36",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/entitlement-platform/invalid/link-names-another-link.jws",
+      "source": "contracts/fixtures/entitlement/invalid/link-names-another-link.jws",
+      "source_sha256": "7578c783ddf4fd766e03249fabfe6c5084b5cb19871f08adf38c01c0909edbc1",
+      "sha256": "7578c783ddf4fd766e03249fabfe6c5084b5cb19871f08adf38c01c0909edbc1",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/entitlement-platform/invalid/manifest-expired.jws",
+      "source": "contracts/fixtures/entitlement/invalid/manifest-expired.jws",
+      "source_sha256": "0586886f5aba35d691bfb7b0caa5b1f3f9a272a5a78ce4d0b16870c7ee6086a5",
+      "sha256": "0586886f5aba35d691bfb7b0caa5b1f3f9a272a5a78ce4d0b16870c7ee6086a5",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/entitlement-platform/invalid/seq-beyond-i-json.jws",
+      "source": "contracts/fixtures/entitlement/invalid/seq-beyond-i-json.jws",
+      "source_sha256": "37f512fe01ddc48e93b9f2641a1287b9f563b3da9f2bcefd0977ee234e2c6166",
+      "sha256": "37f512fe01ddc48e93b9f2641a1287b9f563b3da9f2bcefd0977ee234e2c6166",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/entitlement-platform/invalid/stale-seq.jws",
+      "source": "contracts/fixtures/entitlement/invalid/stale-seq.jws",
+      "source_sha256": "6763c47e44cf6e273d9e3eaa4d1527b4ac8e51d6de078f065214bd6469fdca74",
+      "sha256": "6763c47e44cf6e273d9e3eaa4d1527b4ac8e51d6de078f065214bd6469fdca74",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/entitlement-platform/invalid/tampered-kid.jws",
+      "source": "contracts/fixtures/entitlement/invalid/tampered-kid.jws",
+      "source_sha256": "e36c501519a475874eadc6b4ec40fda92d9e161d4cbfb658062b9fe7ca84a752",
+      "sha256": "e36c501519a475874eadc6b4ec40fda92d9e161d4cbfb658062b9fe7ca84a752",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/entitlement-platform/invalid/wrong-issuer.jws",
+      "source": "contracts/fixtures/entitlement/invalid/wrong-issuer.jws",
+      "source_sha256": "5e3366ddda83e8c18246b460ba5dc405558904eb1ef9111efeee69398b19164e",
+      "sha256": "5e3366ddda83e8c18246b460ba5dc405558904eb1ef9111efeee69398b19164e",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/entitlement-platform/invalid/wrong-subject.jws",
+      "source": "contracts/fixtures/entitlement/invalid/wrong-subject.jws",
+      "source_sha256": "f8518ed04621903c10c6052a54fdd6bc6f5b05a7735670a027d98c76a7e6c83a",
+      "sha256": "f8518ed04621903c10c6052a54fdd6bc6f5b05a7735670a027d98c76a7e6c83a",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/entitlement-platform/invalid/wrong-typ.jws",
+      "source": "contracts/fixtures/entitlement/invalid/wrong-typ.jws",
+      "source_sha256": "67bb140d96a1cf0658615652af90602f7766710fbec837c013301b804b836fb7",
+      "sha256": "67bb140d96a1cf0658615652af90602f7766710fbec837c013301b804b836fb7",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/entitlement-platform/keys/manifest.json",
+      "source": "contracts/fixtures/entitlement/keys/manifest.json",
+      "source_sha256": "3db476412c650d3688b07bc58ab4235df1d6beec68cb1d1286f815637b00bfde",
+      "sha256": "3db476412c650d3688b07bc58ab4235df1d6beec68cb1d1286f815637b00bfde",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/entitlement-platform/keys/roots.json",
+      "source": "contracts/fixtures/entitlement/keys/roots.json",
+      "source_sha256": "c5ea99a262773532dadf1103a9fb364fc497f358e685a9b2d1cde71b4da8e07c",
+      "sha256": "c5ea99a262773532dadf1103a9fb364fc497f358e685a9b2d1cde71b4da8e07c",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/entitlement-platform/valid/instance-paid.claims.json",
+      "source": "contracts/fixtures/entitlement/valid/instance-paid.claims.json",
+      "source_sha256": "f5ec6f20c8e679d3a91b0d6b2994d44a02524cdc2a96b0636d6a05087df1a365",
+      "sha256": "f5ec6f20c8e679d3a91b0d6b2994d44a02524cdc2a96b0636d6a05087df1a365",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/entitlement-platform/valid/instance-paid.jws",
+      "source": "contracts/fixtures/entitlement/valid/instance-paid.jws",
+      "source_sha256": "0586886f5aba35d691bfb7b0caa5b1f3f9a272a5a78ce4d0b16870c7ee6086a5",
+      "sha256": "0586886f5aba35d691bfb7b0caa5b1f3f9a272a5a78ce4d0b16870c7ee6086a5",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/entitlement-platform/valid/link-free.claims.json",
+      "source": "contracts/fixtures/entitlement/valid/link-free.claims.json",
+      "source_sha256": "d3689db0cc2b0c9d2140508364c2cebf32d28edd00c8c581cd8f632b74d8dedf",
+      "sha256": "d3689db0cc2b0c9d2140508364c2cebf32d28edd00c8c581cd8f632b74d8dedf",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/entitlement-platform/valid/link-free.jws",
+      "source": "contracts/fixtures/entitlement/valid/link-free.jws",
+      "source_sha256": "ca6bae2cc53602f8384026f38f867ac12aefa660a439db08864ea936682f6861",
+      "sha256": "ca6bae2cc53602f8384026f38f867ac12aefa660a439db08864ea936682f6861",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/entitlement-platform/valid/link-included.claims.json",
+      "source": "contracts/fixtures/entitlement/valid/link-included.claims.json",
+      "source_sha256": "e7f56e927a5db7e885c8f141a3b4d254271ec41a020bc5d843217818582c36b9",
+      "sha256": "e7f56e927a5db7e885c8f141a3b4d254271ec41a020bc5d843217818582c36b9",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/entitlement-platform/valid/link-included.jws",
+      "source": "contracts/fixtures/entitlement/valid/link-included.jws",
+      "source_sha256": "b34a80330589abc301fcc7197aeb6f565a6e4dea4201415ca14a6a2cf35895f6",
+      "sha256": "b34a80330589abc301fcc7197aeb6f565a6e4dea4201415ca14a6a2cf35895f6",
       "transform": null,
       "provisional": false,
       "upstream": null

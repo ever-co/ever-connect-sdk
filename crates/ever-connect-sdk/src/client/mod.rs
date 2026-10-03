@@ -170,6 +170,60 @@ pub struct EverPlatformClient {
     user_agent: String,
     options: ClientOptions,
     tokens: InstanceTokens,
+    entitlement_reads: EntitlementReads,
+}
+
+/// The rate class of the entitlement reads.
+const ENTITLEMENT_RATE_CLASS: &str = "instance-entitlement";
+/// The window the platform counts entitlement reads in.
+const ENTITLEMENT_WINDOW_S: i64 = 3600;
+
+/// The entitlement reads (rate class `instance-entitlement`): the platform answers, per
+/// installation and path, a bucket of `entitlement.max_reads_per_hour` reads refilled one every
+/// 3600 / max_reads_per_hour seconds (the generic cell rate algorithm). The client keeps the same
+/// account per path (the earliest time the next read conforms, and a 429's `Retry-After`), and holds
+/// back a read the platform would refuse.
+#[derive(Debug, Default)]
+struct EntitlementReads(std::sync::Mutex<std::collections::HashMap<String, (i64, i64)>>);
+
+impl EntitlementReads {
+    /// The seconds between two reads, and how far ahead of now the account may run.
+    fn interval_and_tolerance() -> (i64, i64) {
+        let max = ever_connect_contracts::constants()
+            .pointer("/entitlement/max_reads_per_hour")
+            .and_then(Value::as_i64)
+            .filter(|n| *n > 0)
+            .unwrap_or(6);
+        let interval = ENTITLEMENT_WINDOW_S / max;
+        (interval, interval * (max - 1))
+    }
+
+    /// Seconds to wait before the next read of `path` (0: send it).
+    fn wait(&self, path: &str, now: i64) -> i64 {
+        let reads = self
+            .0
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        let (next, held_until) = reads.get(path).copied().unwrap_or((now, 0));
+        let (_, tolerance) = Self::interval_and_tolerance();
+        (held_until - now)
+            .max(next.max(now) - now - tolerance)
+            .max(0)
+    }
+
+    /// Records a read that went out, and a 429's `Retry-After`.
+    fn note(&self, path: &str, now: i64, status: u16, retry_after_s: Option<i64>) {
+        let mut reads = self
+            .0
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        let (interval, _) = Self::interval_and_tolerance();
+        let (next, held_until) = reads.entry(path.to_owned()).or_insert((now, 0));
+        *next = (*next).max(now).saturating_add(interval);
+        if status == 429 {
+            *held_until = now.saturating_add(retry_after_s.filter(|s| *s > 0).unwrap_or(interval));
+        }
+    }
 }
 
 impl fmt::Debug for EverPlatformClient {
@@ -300,6 +354,7 @@ impl EverPlatformClient {
             user_agent,
             options,
             tokens: InstanceTokens::default(),
+            entitlement_reads: EntitlementReads::default(),
         })
     }
 
@@ -646,6 +701,15 @@ impl EverPlatformClient {
         {
             return Err(Error::NotConnected);
         }
+        let limited = p.op.rate_limit == Some(ENTITLEMENT_RATE_CLASS);
+        if limited {
+            let wait = self.entitlement_reads.wait(&p.path, self.now());
+            if wait > 0 {
+                return Err(Error::RateLimited {
+                    retry_after_s: wait.unsigned_abs(),
+                });
+            }
+        }
         let mut attempt = 0;
         loop {
             let authorization = match p.op.auth {
@@ -654,6 +718,15 @@ impl EverPlatformClient {
                 OperationAuth::None => None,
             };
             let res = self.send_prepared(&p, authorization).await?;
+            if limited {
+                let retry_after = res
+                    .headers
+                    .get("retry-after")
+                    .and_then(|v| v.to_str().ok())
+                    .and_then(|v| v.trim().parse::<i64>().ok());
+                self.entitlement_reads
+                    .note(&p.path, self.now(), res.status, retry_after);
+            }
             if res.status == 401 && p.op.auth == OperationAuth::Instance {
                 let problem = self.problem(&res);
                 self.tokens.invalidate().await;
@@ -730,10 +803,12 @@ impl EverPlatformClient {
         )?)
     }
 
-    /// Verifies an entitlement document and owns the unknown-key rule: on `unknown_kid` with
+    /// Verifies an entitlement document and owns the key-set refresh rules: on `unknown_kid` with
     /// `refresh_suggested`, the key set is refreshed once (at most every 10 minutes) and the
-    /// document verified again; a second `unknown_kid` is final. Answers the result and, when the
-    /// refresh replaced it, the new key set to keep.
+    /// document verified again; a second `unknown_kid` is final. On `manifest_expired` (keys of an
+    /// expired manifest verify no new document), the key set is refreshed and the document
+    /// verified again. Answers the result and, when the refresh replaced it, the new key set to
+    /// keep.
     ///
     /// # Errors
     /// [`Error::NotConnected`] without a Registry id; [`Error::Entitlement`]; the errors of the
@@ -747,9 +822,10 @@ impl EverPlatformClient {
     ) -> Result<(VerifiedEntitlement, Option<KeySet>), Error> {
         match self.verify_entitlement(jws, key_set, subject, cached) {
             Err(Error::Entitlement(e))
-                if e.code == EntitlementErrorCode::UnknownKid
-                    && e.refresh_suggested
-                    && key_set.unknown_kid_refresh_allowed(self.now()) =>
+                if e.code == EntitlementErrorCode::ManifestExpired
+                    || (e.code == EntitlementErrorCode::UnknownKid
+                        && e.refresh_suggested
+                        && key_set.unknown_kid_refresh_allowed(self.now())) =>
             {
                 match self.refresh_keys(Some(key_set)).await? {
                     KeySetUpdate::Replaced(next) => {

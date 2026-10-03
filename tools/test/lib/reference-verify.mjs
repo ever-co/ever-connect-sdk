@@ -84,26 +84,77 @@ export function utcSeconds(text) {
   return Math.floor(date.getTime() / 1000);
 }
 
-/** Every number token a safe integer (no fraction, exponent or -0); at most 127 levels. */
-function strictTokens(text) {
-  let depth = 0;
-  for (let i = 0; i < text.length; ) {
+/**
+ * The JSON text again, with every number kept as the token it was written as: a small recursive
+ * descent over text JSON.parse already accepted. Members given twice keep the last value, as
+ * JSON.parse does. Answers {tree, depth}: `tree` mirrors the value with numbers as {token}.
+ */
+function tokenTree(text) {
+  let i = 0;
+  let deepest = 0;
+  const ws = () => {
+    while (i < text.length && ' \t\n\r'.includes(text[i])) i += 1;
+  };
+  const string = () => {
+    const start = i;
+    for (i += 1; text[i] !== '"'; i += text[i] === '\\' ? 2 : 1);
+    i += 1;
+    return JSON.parse(text.slice(start, i));
+  };
+  const value = (depth) => {
+    ws();
     const c = text[i];
-    if (c === '"') {
-      for (i += 1; i < text.length && text[i] !== '"'; i += text[i] === '\\' ? 2 : 1);
+    if (c === '{' || c === '[') {
+      deepest = Math.max(deepest, depth + 1);
+      const array = c === '[';
+      const out = array ? [] : {};
       i += 1;
-    } else if (c === '{' || c === '[') {
-      if (++depth > 127) return false;
-      i += 1;
-    } else if (c === '}' || c === ']') {
-      depth -= 1;
-      i += 1;
-    } else if (c === '-' || /[0-9]/.test(c)) {
-      const token = /^[-+0-9.eE]+/.exec(text.slice(i))[0];
-      if (!/^(0|-?[1-9][0-9]*)$/.test(token) || BigInt(token) > MAX_SAFE || BigInt(token) < -MAX_SAFE) return false;
-      i += token.length;
-    } else i += 1;
+      ws();
+      if (text[i] === (array ? ']' : '}')) {
+        i += 1;
+        return out;
+      }
+      for (;;) {
+        if (array) out.push(value(depth + 1));
+        else {
+          ws();
+          const key = string();
+          ws();
+          i += 1; // :
+          Object.defineProperty(out, key, { value: value(depth + 1), enumerable: true, configurable: true, writable: true });
+        }
+        ws();
+        if (text[i++] !== ',') return out;
+      }
+    }
+    if (c === '"') return string();
+    const literal = /^(true|false|null|-?[0-9][0-9.eE+-]*)/.exec(text.slice(i))[0];
+    i += literal.length;
+    return /^[-0-9]/.test(literal) ? { token: literal } : JSON.parse(literal);
+  };
+  const tree = value(0);
+  return { tree, depth: deepest };
+}
+
+/** The token a number was written as, at a JSON pointer of a token tree; undefined otherwise. */
+function tokenAt(tree, pointer) {
+  let node = tree;
+  for (const raw of pointer.split('/').slice(1)) {
+    const key = raw.replace(/~1/g, '/').replace(/~0/g, '~');
+    if (node === null || typeof node !== 'object' || !Object.hasOwn(node, key)) return undefined;
+    node = node[key];
   }
+  return node !== null && typeof node === 'object' && typeof node.token === 'string' ? node.token : undefined;
+}
+
+/** An I-JSON integer as written: no fraction, no exponent, not -0, within plus or minus 2^53 - 1. */
+const integerToken = (token) => /^(0|-?[1-9][0-9]*)$/.test(token) && BigInt(token) <= MAX_SAFE && BigInt(token) >= -MAX_SAFE;
+
+/** Every number finite (a number past a double does not parse). */
+function finite(v) {
+  if (typeof v === 'number') return Number.isFinite(v);
+  if (Array.isArray(v)) return v.every(finite);
+  if (v && typeof v === 'object') return Object.values(v).every(finite);
   return true;
 }
 
@@ -117,8 +168,9 @@ function wellFormed(v) {
 
 /**
  * A compact JWS, strictly: at most 64 KiB; three canonical base64url parts (no padding, no stray
- * bits); header and payload JSON objects in valid UTF-8; safe integers only; no lone surrogate; at
- * most 127 levels. Anything else is `null` (malformed).
+ * bits); header and payload JSON objects in valid UTF-8; numbers that fit a double; no lone
+ * surrogate; at most 127 levels. Anything else is `null` (malformed). The payload's token tree
+ * comes with it, to read how its numbers are written.
  */
 function decodeJws(token) {
   if (typeof token !== 'string' || token.length > 65536) return null;
@@ -135,7 +187,9 @@ function decodeJws(token) {
     try {
       const text = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(b);
       const v = JSON.parse(text);
-      return v !== null && typeof v === 'object' && !Array.isArray(v) && strictTokens(text) && wellFormed(v) ? v : null;
+      if (v === null || typeof v !== 'object' || Array.isArray(v) || !wellFormed(v) || !finite(v)) return null;
+      const { tree, depth } = tokenTree(text);
+      return depth <= 127 ? { v, tree } : null;
     } catch {
       return null;
     }
@@ -143,7 +197,7 @@ function decodeJws(token) {
   const header = object(parts[0]);
   const payload = object(parts[1]);
   if (!header || !payload || !bytes(parts[2])) return null;
-  return { header, payload, signingInput: `${parts[0]}.${parts[1]}`, signature: parts[2] };
+  return { header: header.v, payload: payload.v, tokens: payload.tree, signingInput: `${parts[0]}.${parts[1]}`, signature: parts[2] };
 }
 
 /** Ed25519 under the strict rule: no small-order key, no small-order R. */
@@ -192,12 +246,13 @@ export function verifyManifest(body, roots, issuer, now) {
   if (!root) return { ok: false, code: 'unknown_root' };
   if (!verifyStrict(root.x, decoded.signingInput, decoded.signature)) return { ok: false, code: 'bad_signature' };
   const p = decoded.payload;
-  if (!payloadShape(p) || p.root_kid !== root.kid) return { ok: false, code: 'malformed' };
+  const written = ['/iat', '/exp'].every((at) => integerToken(tokenAt(decoded.tokens, at) ?? ''));
+  if (!payloadShape(p) || !written || p.root_kid !== root.kid) return { ok: false, code: 'malformed' };
   if (p.iss !== expected) return { ok: false, code: 'issuer_mismatch' };
   if (p.iat > now + SKEW) return { ok: false, code: 'manifest_not_yet_valid' };
   if (now >= p.exp) return { ok: false, code: 'manifest_expired' };
   if (sha256Hex(canonicalJson(body.keys)) !== p.keys_sha256) return { ok: false, code: 'keys_sha256_mismatch' };
-  return { ok: true, keys: body.keys, issuer: expected, issuedAt: p.iat };
+  return { ok: true, keys: body.keys, issuer: expected, issuedAt: p.iat, expiresAt: p.exp };
 }
 
 /** The key `kid` for `purpose` at `now` (state and window); null otherwise. */
@@ -214,29 +269,35 @@ function findKey(keys, kid, purpose, now) {
 }
 
 /**
- * Verifies an entitlement document in the order of the entitlement verification rules: the key
- * set's issuer, then typ, alg, kid (purpose entitlement, inside its window), signature,
- * schema/iss/aud, instance and subject (with the link members), iat/nbf, seq. Answers
+ * Verifies an entitlement document in the order of the entitlement verification rules (the
+ * contract's): typ, alg, the manifest not past its exp, kid (purpose entitlement, inside its
+ * window), signature, schema id, iss (the expected issuer and the key set's), aud, the closed
+ * schema with the integer claims written as I-JSON integers, instance and subject (a link
+ * document names its link), iat/nbf, seq. Answers
  * {ok, claims, kid} or {ok: false, code, refreshSuggested}.
  */
-export function verifyEntitlement(jws, { keys, keysIssuer, issuer, instanceId, subject, cached, now }) {
+export function verifyEntitlement(jws, { keys, keysIssuer, manifestExpiresAt, issuer, instanceId, subject, cached, now }) {
   const expected = origin(issuer);
-  if (expected === null || (keysIssuer ?? expected) !== expected) return { ok: false, code: 'issuer_mismatch' };
   const decoded = decodeJws(jws);
   if (!decoded) return { ok: false, code: 'malformed' };
   const { header, payload } = decoded;
   if (header.typ !== ENTITLEMENT_TYP) return { ok: false, code: 'bad_typ' };
   if (header.alg !== 'EdDSA' || 'crit' in header) return { ok: false, code: 'bad_alg' };
+  if (manifestExpiresAt !== undefined && now >= manifestExpiresAt) return { ok: false, code: 'manifest_expired' };
   const kid = typeof header.kid === 'string' ? header.kid : null;
   const key = kid === null ? null : findKey(keys, kid, 'entitlement', now);
   if (!key) return { ok: false, code: 'unknown_kid', refreshSuggested: kid !== null && !keys.some((k) => k.kid === kid) };
   if (!verifyStrict(key.x, decoded.signingInput, decoded.signature)) return { ok: false, code: 'bad_signature' };
   const ever = payload.ever !== null && typeof payload.ever === 'object' && !Array.isArray(payload.ever) ? payload.ever : null;
   if (ever?.schema !== 'ever.entitlement.v1') return { ok: false, code: 'schema_violation' };
-  if (payload.iss !== expected) return { ok: false, code: 'issuer_mismatch' };
+  if (expected === null || payload.iss !== expected || (keysIssuer ?? expected) !== expected) return { ok: false, code: 'issuer_mismatch' };
   if (payload.aud !== 'ever-connect') return { ok: false, code: 'audience_mismatch' };
   const schema = validateSchema('entitlement', payload);
-  if (!schema.ok) return { ok: false, code: 'schema_violation', path: schema.errors[0].path };
+  const claimForms = ['/exp', '/ever/grace_s', '/ever/seq', '/iat', '/nbf'].filter((at) => {
+    const token = tokenAt(decoded.tokens, at);
+    return token !== undefined && !integerToken(token);
+  });
+  if (!schema.ok || claimForms.length > 0) return { ok: false, code: 'schema_violation' };
   if (payload.ever.instance_id !== instanceId) return { ok: false, code: 'instance_mismatch' };
   if (payload.sub !== subject) return { ok: false, code: 'subject_mismatch' };
   const linked = payload.ever.tenant_link_id !== undefined || payload.ever.tenant !== undefined;

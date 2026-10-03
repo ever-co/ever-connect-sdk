@@ -22,6 +22,8 @@ export interface OperationSpec {
   readonly success: readonly number[];
   readonly row: number;
   readonly integration: string | null;
+  /** The platform's rate-limit class (`x-ever-rate-limit`), when the contract names one. */
+  readonly rateLimit: string | null;
   readonly status: 'pinned' | 'provisional' | 'pending_upstream';
 }
 
@@ -42,6 +44,7 @@ export const OPERATIONS = {
     ],
     "row": 1,
     "integration": null,
+    "rateLimit": null,
     "status": "pinned"
   },
   "connectDevice": {
@@ -65,6 +68,7 @@ export const OPERATIONS = {
     ],
     "row": 29,
     "integration": null,
+    "rateLimit": "connect",
     "status": "provisional"
   },
   "getConnectLegal": {
@@ -83,6 +87,7 @@ export const OPERATIONS = {
     ],
     "row": 2,
     "integration": null,
+    "rateLimit": "public-read",
     "status": "pinned"
   },
   "connectRedeem": {
@@ -106,6 +111,7 @@ export const OPERATIONS = {
     ],
     "row": 3,
     "integration": null,
+    "rateLimit": null,
     "status": "pinned"
   },
   "connectDeviceToken": {
@@ -129,6 +135,7 @@ export const OPERATIONS = {
     ],
     "row": 29,
     "integration": null,
+    "rateLimit": "connect",
     "status": "provisional"
   },
   "redeliverWebhook": {
@@ -149,6 +156,7 @@ export const OPERATIONS = {
     ],
     "row": 30,
     "integration": "webhooks",
+    "rateLimit": "person",
     "status": "pinned"
   },
   "resolveIdentity": {
@@ -172,6 +180,7 @@ export const OPERATIONS = {
     ],
     "row": 22,
     "integration": "ever_id_login",
+    "rateLimit": "instance",
     "status": "provisional"
   },
   "instanceReportInstallStatus": {
@@ -197,6 +206,7 @@ export const OPERATIONS = {
     ],
     "row": 28,
     "integration": "marketplace_installs",
+    "rateLimit": "instance",
     "status": "provisional"
   },
   "getInstanceSelf": {
@@ -215,6 +225,7 @@ export const OPERATIONS = {
     ],
     "row": 6,
     "integration": null,
+    "rateLimit": null,
     "status": "pinned"
   },
   "instanceAckRequest": {
@@ -238,6 +249,7 @@ export const OPERATIONS = {
     ],
     "row": 20,
     "integration": null,
+    "rateLimit": "instance",
     "status": "provisional"
   },
   "instanceCreateBillingLink": {
@@ -261,6 +273,7 @@ export const OPERATIONS = {
     ],
     "row": 25,
     "integration": "billing_link",
+    "rateLimit": "instance",
     "status": "provisional"
   },
   "instanceGetConsentUrl": {
@@ -283,6 +296,7 @@ export const OPERATIONS = {
     ],
     "row": 9,
     "integration": null,
+    "rateLimit": "instance",
     "status": "pinned"
   },
   "instanceDisconnect": {
@@ -301,6 +315,7 @@ export const OPERATIONS = {
     ],
     "row": 16,
     "integration": null,
+    "rateLimit": null,
     "status": "pinned"
   },
   "instanceGetEntitlement": {
@@ -320,7 +335,8 @@ export const OPERATIONS = {
     ],
     "row": 8,
     "integration": null,
-    "status": "provisional"
+    "rateLimit": "instance-entitlement",
+    "status": "pinned"
   },
   "instancePollEvents": {
     "id": "instancePollEvents",
@@ -342,6 +358,7 @@ export const OPERATIONS = {
     ],
     "row": 7,
     "integration": null,
+    "rateLimit": "instance",
     "status": "pinned"
   },
   "instanceAckEvents": {
@@ -365,6 +382,7 @@ export const OPERATIONS = {
     ],
     "row": 7,
     "integration": null,
+    "rateLimit": "instance",
     "status": "pinned"
   },
   "instanceHeartbeat": {
@@ -388,6 +406,7 @@ export const OPERATIONS = {
     ],
     "row": 6,
     "integration": null,
+    "rateLimit": "instance-heartbeat",
     "status": "pinned"
   },
   "instanceGetIntegrations": {
@@ -406,6 +425,7 @@ export const OPERATIONS = {
     ],
     "row": 9,
     "integration": null,
+    "rateLimit": "instance",
     "status": "pinned"
   },
   "instanceDisableIntegration": {
@@ -431,6 +451,7 @@ export const OPERATIONS = {
     ],
     "row": 10,
     "integration": null,
+    "rateLimit": "instance",
     "status": "pinned"
   },
   "instanceAcceptIntegration": {
@@ -456,6 +477,7 @@ export const OPERATIONS = {
     ],
     "row": 31,
     "integration": null,
+    "rateLimit": "instance",
     "status": "pinned"
   },
   "instanceRotateKey": {
@@ -479,6 +501,7 @@ export const OPERATIONS = {
     ],
     "row": 16,
     "integration": null,
+    "rateLimit": "instance",
     "status": "pinned"
   },
   "instanceReportManagedOperationResult": {
@@ -504,6 +527,7 @@ export const OPERATIONS = {
     ],
     "row": 34,
     "integration": "managed_operations",
+    "rateLimit": "instance",
     "status": "provisional"
   },
   "instanceListMirroredApps": {
@@ -525,6 +549,7 @@ export const OPERATIONS = {
     ],
     "row": 15,
     "integration": "app_sync",
+    "rateLimit": "instance",
     "status": "provisional"
   },
   "instanceMirrorApps": {
@@ -548,6 +573,7 @@ export const OPERATIONS = {
     ],
     "row": 15,
     "integration": "app_sync",
+    "rateLimit": "instance",
     "status": "provisional"
   },
   "instanceGetOidcClient": {
@@ -566,6 +592,7 @@ export const OPERATIONS = {
     ],
     "row": 14,
     "integration": "ever_id_login",
+    "rateLimit": "instance",
     "status": "provisional"
   },
   "instanceRequestOidcClient": {
@@ -589,6 +616,7 @@ export const OPERATIONS = {
     ],
     "row": 14,
     "integration": "ever_id_login",
+    "rateLimit": "instance",
     "status": "provisional"
   },
   "instancePushOrgProfile": {
@@ -612,6 +640,7 @@ export const OPERATIONS = {
     ],
     "row": 21,
     "integration": "profile_import",
+    "rateLimit": "instance",
     "status": "provisional"
   },
   "instanceCreatePersonLink": {
@@ -635,6 +664,7 @@ export const OPERATIONS = {
     ],
     "row": 19,
     "integration": "ever_id_login",
+    "rateLimit": "instance",
     "status": "provisional"
   },
   "instanceDeletePersonLink": {
@@ -655,6 +685,7 @@ export const OPERATIONS = {
     ],
     "row": 19,
     "integration": "ever_id_login",
+    "rateLimit": "instance",
     "status": "provisional"
   },
   "instanceLinkStats": {
@@ -678,6 +709,7 @@ export const OPERATIONS = {
     ],
     "row": 11,
     "integration": "stats_link",
+    "rateLimit": "instance",
     "status": "pinned"
   },
   "instanceCreateTenantLink": {
@@ -701,6 +733,7 @@ export const OPERATIONS = {
     ],
     "row": 5,
     "integration": null,
+    "rateLimit": "instance",
     "status": "pinned"
   },
   "instanceUnlinkTenantLink": {
@@ -721,6 +754,7 @@ export const OPERATIONS = {
     ],
     "row": 5,
     "integration": null,
+    "rateLimit": null,
     "status": "pinned"
   },
   "instanceRekeyTenantLink": {
@@ -746,6 +780,7 @@ export const OPERATIONS = {
     ],
     "row": 5,
     "integration": null,
+    "rateLimit": "instance",
     "status": "provisional"
   },
   "instanceGetLinkEntitlement": {
@@ -767,7 +802,8 @@ export const OPERATIONS = {
     ],
     "row": 8,
     "integration": null,
-    "status": "provisional"
+    "rateLimit": "instance-entitlement",
+    "status": "pinned"
   },
   "instancePutLinkIdentifiers": {
     "id": "instancePutLinkIdentifiers",
@@ -792,6 +828,7 @@ export const OPERATIONS = {
     ],
     "row": 12,
     "integration": "counterparty_discoverable",
+    "rateLimit": "instance",
     "status": "provisional"
   },
   "instanceDeleteLinkIdentifiers": {
@@ -812,6 +849,7 @@ export const OPERATIONS = {
     ],
     "row": 12,
     "integration": "counterparty_discoverable",
+    "rateLimit": "instance",
     "status": "provisional"
   },
   "instanceReportUsage": {
@@ -835,6 +873,7 @@ export const OPERATIONS = {
     ],
     "row": 27,
     "integration": "usage_reporting",
+    "rateLimit": "instance",
     "status": "provisional"
   },
   "instanceReportUsageReadings": {
@@ -858,6 +897,7 @@ export const OPERATIONS = {
     ],
     "row": 27,
     "integration": "usage_reporting",
+    "rateLimit": "instance",
     "status": "provisional"
   },
   "instanceCreateWebhook": {
@@ -881,6 +921,7 @@ export const OPERATIONS = {
     ],
     "row": 30,
     "integration": "webhooks",
+    "rateLimit": "instance",
     "status": "pinned"
   },
   "instanceToken": {
@@ -904,6 +945,7 @@ export const OPERATIONS = {
     ],
     "row": 4,
     "integration": null,
+    "rateLimit": null,
     "status": "pinned"
   },
   "lookupCounterparties": {
@@ -927,6 +969,7 @@ export const OPERATIONS = {
     ],
     "row": 13,
     "integration": "counterparty_lookup",
+    "rateLimit": "lookup",
     "status": "provisional"
   },
   "getLookupSalt": {
@@ -945,6 +988,7 @@ export const OPERATIONS = {
     ],
     "row": 13,
     "integration": null,
+    "rateLimit": "public-read",
     "status": "provisional"
   },
   "getLookupTestVectors": {
@@ -963,6 +1007,7 @@ export const OPERATIONS = {
     ],
     "row": 13,
     "integration": null,
+    "rateLimit": "public-read",
     "status": "provisional"
   },
   "getMyContext": {
@@ -981,6 +1026,7 @@ export const OPERATIONS = {
     ],
     "row": 23,
     "integration": null,
+    "rateLimit": null,
     "status": "pinned"
   },
   "listMyMemberships": {
@@ -999,6 +1045,7 @@ export const OPERATIONS = {
     ],
     "row": 23,
     "integration": null,
+    "rateLimit": null,
     "status": "pinned"
   },
   "putIntegrationState": {
@@ -1026,6 +1073,7 @@ export const OPERATIONS = {
     ],
     "row": 33,
     "integration": null,
+    "rateLimit": "person",
     "status": "pinned"
   },
   "completeProvisionIntent": {
@@ -1051,6 +1099,7 @@ export const OPERATIONS = {
     ],
     "row": 26,
     "integration": null,
+    "rateLimit": "instance",
     "status": "provisional"
   },
   "discoverSso": {
@@ -1071,6 +1120,7 @@ export const OPERATIONS = {
     ],
     "row": 24,
     "integration": null,
+    "rateLimit": "public-availability",
     "status": "provisional"
   },
   "ingestStatsReport": {
@@ -1094,6 +1144,7 @@ export const OPERATIONS = {
     ],
     "row": 17,
     "integration": null,
+    "rateLimit": "stats-ingest",
     "status": "pinned"
   },
   "deleteWebhook": {
@@ -1114,6 +1165,7 @@ export const OPERATIONS = {
     ],
     "row": 30,
     "integration": null,
+    "rateLimit": "person",
     "status": "pinned"
   },
   "updateWebhook": {
@@ -1139,6 +1191,7 @@ export const OPERATIONS = {
     ],
     "row": 30,
     "integration": "webhooks",
+    "rateLimit": "person",
     "status": "pinned"
   },
   "listWebhookDeliveries": {
@@ -1163,6 +1216,7 @@ export const OPERATIONS = {
     ],
     "row": 30,
     "integration": null,
+    "rateLimit": "person",
     "status": "pinned"
   },
   "rotateWebhookSecret": {
@@ -1183,6 +1237,7 @@ export const OPERATIONS = {
     ],
     "row": 30,
     "integration": "webhooks",
+    "rateLimit": "person",
     "status": "pinned"
   },
   "testWebhook": {
@@ -1215,6 +1270,7 @@ export const OPERATIONS = {
     ],
     "row": 30,
     "integration": "webhooks",
+    "rateLimit": "person",
     "status": "pinned"
   },
 } as const satisfies { readonly [id: string]: OperationSpec };

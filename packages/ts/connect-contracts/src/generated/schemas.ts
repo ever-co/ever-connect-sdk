@@ -454,14 +454,10 @@ export interface StatsReportV1Aggregates4 {
   translations_changed?: StatsReportV1Count;
 }
 
-export type EntitlementV1Ulid = string;
-export type EntitlementV1Product = 'gauzy' | 'teams' | 'works' | 'rec' | 'traduora' | 'demand';
-export type EntitlementV1ProductId = string;
-
 /**
- * The only wire format of the entitlement document. Served verbatim at GET /v1/entitlements/schema; vendored in the SDK as contracts/schemas/ever.entitlement.v1.json with a sha256 drift test; every signed document is validated against it by the issuer's tests. Closed at every level; handle is the only human-readable field.
+ * The only wire format of the entitlement document. Served verbatim at GET /v1/entitlements/schema; vendored in the SDK as contracts/schemas/ever.entitlement.v1.json with a sha256 drift test; every signed document is validated against it by the issuer's tests. Closed at every level; handle is the only human-readable field. Integers are I-JSON integers (at most 2^53 - 1). The members of ever follow the subject: an org document names no installation or link, an instance document names its installation and no link, a link document names its installation, its tenant_link_id and its tenant (a verifier also checks that sub is link:<tenant_link_id>).
  */
-export interface EntitlementV1 {
+export type EntitlementV1 = {
   iss: string;
   aud: 'ever-connect';
   sub: string;
@@ -552,7 +548,11 @@ export interface EntitlementV1 {
     grace_s: number;
     refresh_after_s: number;
   };
-}
+};
+export type EntitlementV1Ulid = string;
+export type EntitlementV1Product = 'gauzy' | 'teams' | 'works' | 'rec' | 'traduora' | 'demand';
+export type EntitlementV1ProductId = string;
+
 export interface EntitlementV1Meter {
   used: number;
   period: string | null;
@@ -2768,7 +2768,7 @@ export const SCHEMAS = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://api.ever.co/v1/entitlements/schema/ever.entitlement.v1",
     "title": "ever.entitlement.v1 JWS payload",
-    "description": "The only wire format of the entitlement document. Served verbatim at GET /v1/entitlements/schema; vendored in the SDK as contracts/schemas/ever.entitlement.v1.json with a sha256 drift test; every signed document is validated against it by the issuer's tests. Closed at every level; handle is the only human-readable field.",
+    "description": "The only wire format of the entitlement document. Served verbatim at GET /v1/entitlements/schema; vendored in the SDK as contracts/schemas/ever.entitlement.v1.json with a sha256 drift test; every signed document is validated against it by the issuer's tests. Closed at every level; handle is the only human-readable field. Integers are I-JSON integers (at most 2^53 - 1). The members of ever follow the subject: an org document names no installation or link, an instance document names its installation and no link, a link document names its installation, its tenant_link_id and its tenant (a verifier also checks that sub is link:<tenant_link_id>).",
     "type": "object",
     "additionalProperties": false,
     "required": [
@@ -2800,15 +2800,18 @@ export const SCHEMAS = {
       },
       "iat": {
         "type": "integer",
-        "minimum": 0
+        "minimum": 0,
+        "maximum": 9007199254740991
       },
       "nbf": {
         "type": "integer",
-        "minimum": 0
+        "minimum": 0,
+        "maximum": 9007199254740991
       },
       "exp": {
         "type": "integer",
-        "minimum": 0
+        "minimum": 0,
+        "maximum": 9007199254740991
       },
       "ever": {
         "type": "object",
@@ -2835,7 +2838,8 @@ export const SCHEMAS = {
           },
           "seq": {
             "type": "integer",
-            "minimum": 1
+            "minimum": 1,
+            "maximum": 9007199254740991
           },
           "org_id": {
             "$ref": "#/$defs/ulid"
@@ -3001,31 +3005,38 @@ export const SCHEMAS = {
             "properties": {
               "instances.connected": {
                 "type": "integer",
-                "minimum": -1
+                "minimum": -1,
+                "maximum": 9007199254740991
               },
               "listings.published": {
                 "type": "integer",
-                "minimum": -1
+                "minimum": -1,
+                "maximum": 9007199254740991
               },
               "api.rpm": {
                 "type": "integer",
-                "minimum": -1
+                "minimum": -1,
+                "maximum": 9007199254740991
               },
               "members": {
                 "type": "integer",
-                "minimum": -1
+                "minimum": -1,
+                "maximum": 9007199254740991
               },
               "webhooks.endpoints": {
                 "type": "integer",
-                "minimum": -1
+                "minimum": -1,
+                "maximum": 9007199254740991
               },
               "lookup.hashes_per_day": {
                 "type": "integer",
-                "minimum": -1
+                "minimum": -1,
+                "maximum": 9007199254740991
               },
               "lookup.queries_per_min": {
                 "type": "integer",
-                "minimum": -1
+                "minimum": -1,
+                "maximum": 9007199254740991
               }
             }
           },
@@ -3091,15 +3102,81 @@ export const SCHEMAS = {
           },
           "grace_s": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "refresh_after_s": {
             "type": "integer",
-            "minimum": 60
+            "minimum": 60,
+            "maximum": 9007199254740991
           }
         }
       }
     },
+    "allOf": [
+      {
+        "if": {
+          "properties": {
+            "sub": {
+              "pattern": "^org:"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "ever": {
+              "properties": {
+                "instance_id": false,
+                "tenant_link_id": false,
+                "tenant": false
+              }
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "sub": {
+              "pattern": "^instance:"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "ever": {
+              "required": [
+                "instance_id"
+              ],
+              "properties": {
+                "tenant_link_id": false,
+                "tenant": false
+              }
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "sub": {
+              "pattern": "^link:"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "ever": {
+              "required": [
+                "instance_id",
+                "tenant_link_id",
+                "tenant"
+              ]
+            }
+          }
+        }
+      }
+    ],
     "$defs": {
       "ulid": {
         "type": "string",
@@ -3131,7 +3208,8 @@ export const SCHEMAS = {
         "properties": {
           "used": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "period": {
             "type": [

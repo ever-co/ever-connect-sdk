@@ -1,0 +1,69 @@
+{
+  "aud": "ever-connect",
+  "ever": {
+    "features": {
+      "app_sync": false,
+      "discoverability": true,
+      "ever_id_login": true,
+      "handle": true,
+      "instances.multi": true,
+      "listings": true,
+      "lookup": true,
+      "marketplace.buy": true,
+      "profile.badges": true,
+      "profile.public": true,
+      "provider_access": false,
+      "usage_reporting": false
+    },
+    "grace_s": 2592000,
+    "handle": "northwind",
+    "instance_id": "01JC5M2R4T6V8X0Z2B4D6F8H0J",
+    "licence_ids": [
+      "EVER-GAUZY-SB-1A2B3C4D"
+    ],
+    "limits": {
+      "api.rpm": 600,
+      "instances.connected": 3,
+      "listings.published": 5,
+      "lookup.hashes_per_day": 6000,
+      "lookup.queries_per_min": 60,
+      "members": 100,
+      "webhooks.endpoints": 10
+    },
+    "managed": {
+      "backups": false,
+      "support_level": "standard",
+      "updates": false
+    },
+    "meters": {
+      "instances.connected": {
+        "period": null,
+        "used": 2
+      },
+      "lookup.queries": {
+        "period": "2026-10",
+        "used": 140
+      }
+    },
+    "org_id": "01JBX1A2B3C4D5E6F7G8H9J0K1",
+    "plan": {
+      "code": "ever_gauzy_selfhosted_small_business_lifetime",
+      "ref": "EVER-GAUZY-SB-1A2B3C4D",
+      "source": "licence_certificate"
+    },
+    "products": [
+      "gauzy"
+    ],
+    "refresh_after_s": 21600,
+    "schema": "ever.entitlement.v1",
+    "seq": 17,
+    "tenant_id": "01JBX0Z9Y8X7W6V5V4T3S2R1Q0",
+    "tier": "paid"
+  },
+  "exp": 1794214800,
+  "iat": 1793610000,
+  "iss": "https://mock-platform.test",
+  "jti": "01JC7R2Y6P8R0T2V4X6Z8B0D2F",
+  "nbf": 1793609940,
+  "sub": "instance:01JC5M2R4T6V8X0Z2B4D6F8H0J"
+}

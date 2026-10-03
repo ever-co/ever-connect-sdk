@@ -77,7 +77,8 @@ export function entitlementClaims(state, instance, link = null) {
 
 function entitlementAnswer(ctx, link) {
   const { state, instance, headers } = ctx;
-  const wait = state.hit(`entitlement|${instance.id}|${link?.id ?? 'instance'}`, state.config.limits.entitlement_reads_per_hour, 3600);
+  // As on the platform: per installation and path, a bucket of six refilled one every 10 minutes.
+  const wait = state.bucket(`entitlement|${instance.id}|${link?.id ?? 'instance'}`, state.config.limits.entitlement_reads_per_hour, 3600);
   if (wait > 0) fail(429, 'rate_limited', undefined, { retry_after_s: wait });
   const seq = instance.entitlement_seq[link ? link.id : 'instance'];
   const inm = headers['if-none-match'];

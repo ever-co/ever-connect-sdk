@@ -63,6 +63,19 @@ export class AssertionError extends Error {
   }
 }
 
+/**
+ * A call the client holds back because the platform would refuse it for its rate class (the
+ * entitlement reads: `entitlement.max_reads_per_hour` per path, or the `Retry-After` of a 429):
+ * nothing was sent. Retry after `retryAfterS` seconds.
+ */
+export class RateLimitedError extends Error {
+  override readonly name = 'RateLimitedError';
+  readonly code = 'rate_limited';
+  constructor(readonly retryAfterS: number) {
+    super(`held back before sending: rate_limited (retry after ${retryAfterS} s)`);
+  }
+}
+
 /** A request the client refuses before any I/O: a missing idempotency key, a body that breaks its schema, a body over its limit. */
 export class RequestRefusedError extends Error {
   override readonly name = 'RequestRefusedError';
@@ -102,6 +115,7 @@ export type EntitlementErrorCode =
   | 'malformed'
   | 'bad_typ'
   | 'bad_alg'
+  | 'manifest_expired'
   | 'unknown_kid'
   | 'bad_signature'
   | 'schema_violation'

@@ -6,7 +6,8 @@
  *   contracts/openapi/ever-platform.v1.yaml   the instance-facing subset of the Ever Platform API,
  *                                             every operation stamped with its outbound-call row
  *   contracts/schemas/**, contracts/integrations/catalog.v1.json, contracts/fixtures/lookup/…,
- *   contracts/fixtures/connect/vectors/**, contracts/fixtures/stats/**
+ *   contracts/fixtures/connect/vectors/**, contracts/fixtures/stats/**,
+ *   contracts/fixtures/entitlement-platform/**
  *                                             the vendored schemas, catalog, vectors and fixtures
  *   contracts/VENDOR.json                     where each file came from, its sha256, and which
  *                                             sources are still provisional
@@ -22,7 +23,7 @@ import { join, relative } from 'node:path';
 import YAML from 'yaml';
 import { diffOutputs, platformRepo, REPO, readJson, sha256, stableJson, walk, writeText } from './lib/common.mjs';
 import { buildSubset, METHODS, subsetYaml } from './lib/openapi-subset.mjs';
-import { CONNECT_VECTORS, STATS_FIXTURES, vendor } from './lib/vendor.mjs';
+import { CONNECT_VECTORS, ENTITLEMENT_FIXTURES, STATS_FIXTURES, vendor } from './lib/vendor.mjs';
 
 const SPEC_PATH = 'contracts/openapi/ever-platform.v1.yaml';
 const VENDOR_PATH = 'contracts/VENDOR.json';
@@ -191,7 +192,7 @@ function main() {
   // Files written before but no longer produced (an event schema that left the instance audience,
   // an authored vector or fixture the platform's published set replaces).
   const ownedDirs = ['contracts/schemas/events'];
-  for (const vendored of [CONNECT_VECTORS, STATS_FIXTURES])
+  for (const vendored of [CONNECT_VECTORS, STATS_FIXTURES, ENTITLEMENT_FIXTURES])
     if (vendorDoc.files.some((e) => e.path.startsWith(`${vendored.path}/`))) ownedDirs.push(vendored.path);
   for (const dir of ownedDirs)
     for (const path of walk(join(REPO, dir)).map((p) => relative(REPO, p).split('\\').join('/')))

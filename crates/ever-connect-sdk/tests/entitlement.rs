@@ -315,3 +315,144 @@ mod review_forgery {
         }
     }
 }
+
+/// The rules the platform's reference verifier added: the manifest's expiry, how integer claims
+/// are written, and a link document naming its own link.
+mod rules {
+    use base64::Engine as _;
+    use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+    use ed25519_dalek::{Signer as _, SigningKey};
+    use ever_connect_sdk::entitlement::{
+        EntitlementError, EntitlementErrorCode, EntitlementStatus, VerifyEntitlementOptions,
+        verify_entitlement,
+    };
+    use serde_json::Value;
+    use sha2::{Digest as _, Sha256};
+
+    use super::{fixture, key_set};
+
+    /// A document over exact payload text, signed by the fixture's entitlement key.
+    fn sign_text(payload: &str) -> String {
+        let seed: [u8; 32] = Sha256::digest("ever-connect-sdk/test-entitlement/1").into();
+        let header = r#"{"alg":"EdDSA","kid":"test-entitlement-1","typ":"ever-entitlement+jwt"}"#;
+        let input = format!(
+            "{}.{}",
+            URL_SAFE_NO_PAD.encode(header),
+            URL_SAFE_NO_PAD.encode(payload)
+        );
+        let signature = SigningKey::from_bytes(&seed).sign(input.as_bytes());
+        format!("{input}.{}", URL_SAFE_NO_PAD.encode(signature.to_bytes()))
+    }
+
+    fn claims_text(file: &str) -> String {
+        serde_json::to_string(&fixture(file)).unwrap()
+    }
+
+    fn verify(jws: &str, subject_file: &str, now: Option<i64>) -> Result<i64, EntitlementError> {
+        let ctx = fixture("entitlement/context.json");
+        let set = key_set();
+        let subject = ctx["expected_subject_by_file"]
+            .get(subject_file)
+            .unwrap_or(&ctx["expected_subject"])
+            .as_str()
+            .unwrap()
+            .to_owned();
+        verify_entitlement(
+            jws,
+            &VerifyEntitlementOptions {
+                key_set: &set,
+                expected_issuer: ctx["expected_issuer"].as_str().unwrap(),
+                expected_instance_id: ctx["expected_instance_id"].as_str().unwrap(),
+                expected_subject: &subject,
+                cached: None,
+                now: now.or(ctx["now"].as_i64()),
+            },
+        )
+        .map(|v| v.seq)
+    }
+
+    fn code(r: Result<i64, EntitlementError>) -> &'static str {
+        r.map_or_else(|e| e.code.as_str(), |_| "ok")
+    }
+
+    #[test]
+    fn keys_of_an_expired_manifest_verify_no_new_document() {
+        let exp = key_set().manifest().expires_at();
+        let good = sign_text(&claims_text("entitlement/valid/instance.claims.json"));
+        assert!(verify(&good, "valid/instance.jws", Some(exp - 1)).is_ok());
+        let set = key_set();
+        let ctx = fixture("entitlement/context.json");
+        let stale = verify_entitlement(
+            &good,
+            &VerifyEntitlementOptions {
+                key_set: &set,
+                expected_issuer: ctx["expected_issuer"].as_str().unwrap(),
+                expected_instance_id: ctx["expected_instance_id"].as_str().unwrap(),
+                expected_subject: ctx["expected_subject"].as_str().unwrap(),
+                cached: None,
+                now: Some(exp - 1),
+            },
+        )
+        .unwrap();
+        assert_eq!(stale.status, EntitlementStatus::Stale);
+        let expired = verify(&good, "valid/instance.jws", Some(exp)).unwrap_err();
+        assert_eq!(expired.code, EntitlementErrorCode::ManifestExpired);
+        assert!(!expired.refresh_suggested);
+    }
+
+    #[test]
+    fn integer_claims_are_ijson_integers_as_written() {
+        let text = claims_text("entitlement/valid/instance.claims.json");
+        let with = |from: &str, to: &str| {
+            assert!(text.contains(from), "{from}");
+            sign_text(&text.replacen(from, to, 1))
+        };
+        let fraction = verify(&with("\"seq\":3", "\"seq\":3.0"), "", None).unwrap_err();
+        assert_eq!(fraction.code, EntitlementErrorCode::SchemaViolation);
+        assert_eq!(fraction.path.as_deref(), Some("/ever/seq"));
+        assert_eq!(
+            code(verify(
+                &with("\"seq\":3", "\"seq\":9007199254740992"),
+                "",
+                None
+            )),
+            "schema_violation"
+        );
+        assert_eq!(
+            code(verify(&with("\"seq\":3", "\"seq\":1e400"), "", None)),
+            "malformed"
+        );
+        assert_eq!(
+            code(verify(&with("\"seq\":3", "\"seq\":-0"), "", None)),
+            "schema_violation"
+        );
+        // A member given twice: the last one counts.
+        assert_eq!(
+            verify(&with("\"seq\":3", "\"seq\":3.0,\"seq\":3"), "", None).unwrap(),
+            3
+        );
+        // Other numbers only meet the schema.
+        assert_eq!(
+            verify(&with("\"api.rpm\":600", "\"api.rpm\":600.0"), "", None).unwrap(),
+            3
+        );
+    }
+
+    #[test]
+    fn a_link_document_names_its_own_link_and_an_instance_document_no_link() {
+        let mut link: Value = fixture("entitlement/valid/link.claims.json");
+        link["ever"]["tenant_link_id"] = "01JHGF4PAY0P5JJ7J2A56VSRZN".into();
+        let elsewhere = sign_text(&serde_json::to_string(&link).unwrap());
+        assert_eq!(
+            code(verify(&elsewhere, "valid/link.jws", None)),
+            "subject_mismatch"
+        );
+        let mut instance: Value = fixture("entitlement/valid/instance.claims.json");
+        instance["ever"]["tenant_link_id"] = "01JHGF4PAY0P5JJ7J2A56VSRZM".into();
+        let linked = sign_text(&serde_json::to_string(&instance).unwrap());
+        assert_eq!(
+            code(verify(&linked, "valid/instance.jws", None)),
+            "schema_violation"
+        );
+    }
+}

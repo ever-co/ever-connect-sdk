@@ -234,13 +234,13 @@
           "method": "GET",
           "path": "/v1/instances/me/entitlement",
           "operation_id": "instanceGetEntitlement",
-          "status": "provisional"
+          "status": "pinned"
         },
         {
           "method": "GET",
           "path": "/v1/instances/me/tenant-links/{link}/entitlement",
           "operation_id": "instanceGetLinkEntitlement",
-          "status": "provisional"
+          "status": "pinned"
         }
       ],
       "trigger": "while connected: every 6 h, at boot, on an entitlement notice, on demand",

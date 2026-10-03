@@ -432,28 +432,32 @@ mod refreshing {
 
     use super::{Reply, options, platform};
 
-    const ISSUER: &str = "https://mock-platform.test";
+    pub(super) const ISSUER: &str = "https://mock-platform.test";
 
-    fn fixtures() -> PathBuf {
+    pub(super) fn fixtures() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../contracts/fixtures")
     }
-    fn fixture(p: &str) -> Value {
+    pub(super) fn fixture(p: &str) -> Value {
         serde_json::from_slice(&std::fs::read(fixtures().join(p)).unwrap()).unwrap()
     }
 
     /// The fixture manifest without `test-entitlement-2`, signed by the TEST root 100 s earlier.
     fn older_manifest_without_ent_2() -> Value {
+        manifest_signed_at(1_793_613_600 - 100, Some("test-entitlement-2"))
+    }
+
+    /// The fixture manifest's keys (without `without`), signed by the TEST root at `iat`.
+    pub(super) fn manifest_signed_at(iat: i64, without: Option<&str>) -> Value {
         let valid = fixture("keys/manifest.valid.json");
         let keys = Value::Array(
             valid["keys"]
                 .as_array()
                 .unwrap()
                 .iter()
-                .filter(|k| k["kid"] != "test-entitlement-2")
+                .filter(|k| without.is_none_or(|kid| k["kid"] != kid))
                 .cloned()
                 .collect(),
         );
-        let iat = 1_793_613_600 - 100;
         let payload = json!({"iss": ISSUER, "iat": iat, "exp": iat + 2_592_000, "keys_sha256": keys_sha256(&keys).unwrap(), "root_kid": "test-root-1"});
         let header = json!({"alg": "EdDSA", "kid": "test-root-1", "typ": "ever-key-manifest+jwt"});
         let input = format!(
@@ -466,7 +470,7 @@ mod refreshing {
         json!({"manifest": format!("{input}.{}", URL_SAFE_NO_PAD.encode(signature.to_bytes())), "keys": keys})
     }
 
-    fn case(name: &str) -> String {
+    pub(super) fn case(name: &str) -> String {
         fixture("entitlement/structured.json")["cases"]
             .as_array()
             .unwrap()
@@ -539,5 +543,145 @@ mod refreshing {
         };
         assert_eq!(e.code, EntitlementErrorCode::UnknownKid);
         assert_eq!(server.calls().len(), 1);
+    }
+}
+
+mod manifest_expiry {
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicI64, Ordering};
+
+    use ever_connect_sdk::client::{Error, EverPlatformClient};
+    use ever_connect_sdk::entitlement::{EntitlementErrorCode, EntitlementStatus};
+    use ever_connect_sdk::keyset::KeySet;
+    use ever_connect_sdk::manifest::{RootKey, VerifyKeyManifestOptions};
+
+    use super::refreshing::{ISSUER, case, fixture, fixtures, manifest_signed_at};
+    use super::{Reply, options, platform};
+
+    #[tokio::test]
+    async fn an_expired_manifest_is_refreshed_and_the_document_verified_again() {
+        const NOW: i64 = 1_793_613_600;
+        // A manifest that expires 50 s after NOW; the server serves the fixture manifest (iat NOW).
+        let older = manifest_signed_at(NOW - 2_592_000 + 50, None);
+        let now = Arc::new(AtomicI64::new(NOW + 60));
+        let server = platform(|_| Reply::json(200, &fixture("keys/manifest.valid.json")));
+        let mut o = options(&server.url);
+        o.issuer = Some(ISSUER.into());
+        o.root_keys_file = Some(fixtures().join("keys/roots.json"));
+        let clock = Arc::clone(&now);
+        o.clock = Some(Arc::new(move || clock.load(Ordering::SeqCst)));
+        let client = EverPlatformClient::new(o).unwrap();
+        let roots: Vec<RootKey> = fixture("keys/roots.json")["keys"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(RootKey::from_jwk)
+            .collect();
+        let before = KeySet::verify(
+            &older,
+            &VerifyKeyManifestOptions {
+                issuer: ISSUER,
+                unsafe_root_keys: Some(&roots),
+                now: Some(NOW - 10),
+            },
+        )
+        .unwrap();
+        let document = case("baseline/instance");
+        let Err(Error::Entitlement(e)) = client.verify_entitlement(&document, &before, None, None)
+        else {
+            panic!()
+        };
+        assert_eq!(e.code, EntitlementErrorCode::ManifestExpired);
+        let (verified, next) = client
+            .verify_entitlement_refreshing(&document, &before, None, None)
+            .await
+            .unwrap();
+        assert_eq!(verified.status, EntitlementStatus::Valid);
+        assert_eq!(next.unwrap().manifest().issued_at(), NOW);
+        assert_eq!(server.calls().len(), 1);
+    }
+}
+
+mod entitlement_reads {
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
+
+    use ever_connect_sdk::client::{Error, EverPlatformClient};
+    use serde_json::json;
+
+    use super::{LINK, Reply, options, platform};
+
+    fn document() -> Reply {
+        Reply::json(
+            200,
+            &json!({"document": "x.y.z", "seq": 3, "expires_at": "2026-11-08T10:00:00Z"}),
+        )
+    }
+
+    #[tokio::test]
+    async fn a_read_the_bucket_would_refuse_is_held_back_and_each_link_has_its_own_bucket() {
+        let now = Arc::new(AtomicI64::new(1_793_613_600));
+        let server = platform(|_| document());
+        let mut o = options(&server.url);
+        let clock = Arc::clone(&now);
+        o.clock = Some(Arc::new(move || clock.load(Ordering::SeqCst)));
+        let client = EverPlatformClient::new(o).unwrap();
+        let reads = || {
+            server
+                .calls()
+                .iter()
+                .filter(|c| c.path == "/v1/instances/me/entitlement")
+                .count()
+        };
+        for _ in 0..6 {
+            client.entitlement(None).await.unwrap();
+        }
+        assert_eq!(
+            client.entitlement(None).await.unwrap_err(),
+            Error::RateLimited { retry_after_s: 600 }
+        );
+        assert_eq!(reads(), 6);
+        client.link_entitlement(LINK, None).await.unwrap();
+        now.fetch_add(599, Ordering::SeqCst);
+        assert_eq!(
+            client.entitlement(None).await.unwrap_err(),
+            Error::RateLimited { retry_after_s: 1 }
+        );
+        now.fetch_add(1, Ordering::SeqCst);
+        client.entitlement(None).await.unwrap();
+        assert_eq!(reads(), 7);
+        assert_eq!(
+            client.entitlement(None).await.unwrap_err(),
+            Error::RateLimited { retry_after_s: 600 }
+        );
+    }
+
+    #[tokio::test]
+    async fn a_429_holds_the_path_back_for_its_retry_after() {
+        let now = Arc::new(AtomicI64::new(1_793_613_600));
+        let limited = Arc::new(AtomicBool::new(true));
+        let flag = Arc::clone(&limited);
+        let server = platform(move |_| {
+            if flag.load(Ordering::SeqCst) {
+                Reply::json(429, &json!({"code": "rate_limited"})).header("retry-after", "120")
+            } else {
+                document()
+            }
+        });
+        let mut o = options(&server.url);
+        let clock = Arc::clone(&now);
+        o.clock = Some(Arc::new(move || clock.load(Ordering::SeqCst)));
+        let client = EverPlatformClient::new(o).unwrap();
+        let Err(Error::Problem(p)) = client.entitlement(None).await else {
+            panic!()
+        };
+        assert_eq!(p.status, 429);
+        limited.store(false, Ordering::SeqCst);
+        assert_eq!(
+            client.entitlement(None).await.unwrap_err(),
+            Error::RateLimited { retry_after_s: 120 }
+        );
+        now.fetch_add(120, Ordering::SeqCst);
+        assert!(client.entitlement(None).await.is_ok());
     }
 }

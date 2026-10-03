@@ -1,5 +1,5 @@
 {
-  "description": "Verification outcome of each document in the order of the entitlement verification rules (typ, alg, kid in the root-verified manifest with purpose entitlement, signature, schema and claims, instance and subject, iat/nbf, seq), with the inputs of context.json; a valid document also names its status at the context time (valid; stale inside the grace after exp; paused past it). A verifier that checks the closed schema first may answer a code from also_acceptable.",
+  "description": "Verification outcome of each document in the order of the entitlement verification rules (typ, alg, the manifest not past its exp, kid in the root-verified manifest with purpose entitlement, signature, schema and claims, instance and subject, iat/nbf, seq), with the inputs of context.json; a valid document also names its status at the context time (valid; stale inside the grace after exp; paused past it). A verifier that checks the closed schema first may answer a code from also_acceptable.",
   "fixtures": {
     "valid/instance.jws": {
       "valid": true,

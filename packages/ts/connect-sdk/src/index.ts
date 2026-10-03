@@ -24,6 +24,7 @@ export {
   LookupVectorError,
   NotConnectedError,
   ProblemError,
+  RateLimitedError,
   RequestRefusedError,
   ResponseTooLargeError,
   TimeoutError,
