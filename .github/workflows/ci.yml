@@ -7,8 +7,12 @@ name: CI
 #                       the statistics contract is held to the strict rules (published, byte for byte)
 #   contract-sync       the contract and the vendored files equal the ever-co/platform checkout they
 #                       were synchronised from (needs the read token; skipped with a notice without it)
-#   ts                  frozen install, Biome, build, type check and every TypeScript and tool test
-#   rust                formatting, Clippy and the crate tests
+#   ts                  frozen install, Biome, build, type check, the hand-written-client check and
+#                       every TypeScript and tool test (the client, the verifier and its mutation
+#                       corpus, redaction, the sample flow against the mock)
+#   rust                formatting, Clippy (every feature set), the crate tests (the sample flow
+#                       against the mock included), the lookup vectors without the client, no
+#                       HTTP client without the client feature, and cargo deny
 #   fixtures-roundtrip  TypeScript (ajv) and Rust (jsonschema + generated types) agree on every fixture
 #   mock-rows           the mock answers every row and problem code; its image builds and starts
 #   tools               the egress harness unit tests and its self-test with the failing control
@@ -87,8 +91,10 @@ jobs:
         run: node tools/fixtures/build-signed.mjs --check
       - name: Vendored files match VENDOR.json
         run: node tools/check-schema-drift.mjs
-      - name: The statistics contract is published and vendored byte for byte (strict)
-        run: node tools/check-schema-drift.mjs --strict=stats
+      - name: The statistics contract and the client-assertion vectors are published and vendored byte for byte (strict)
+        run: |
+          node tools/check-schema-drift.mjs --strict=stats
+          node tools/check-schema-drift.mjs --strict=connect
 
   contract-sync:
     name: contract-sync
@@ -139,6 +145,7 @@ jobs:
           node tools/sync-contract.mjs --check
           node tools/check-schema-drift.mjs
           node tools/check-schema-drift.mjs --strict=stats
+          node tools/check-schema-drift.mjs --strict=connect
 
   ts:
     name: ts
@@ -161,6 +168,10 @@ jobs:
         run: pnpm run build
       - name: Type check
         run: pnpm -r --if-present run typecheck
+      - name: Only the generated client makes requests (the known-bad fixture must fail)
+        run: |
+          node tools/check-handwritten-client.mjs --self-test
+          node tools/check-handwritten-client.mjs
       - name: Workspace tests
         run: pnpm run test:workspaces
       - name: Tool tests (contract, schemas, constants, fixtures, managed operations)
@@ -169,7 +180,7 @@ jobs:
   rust:
     name: rust
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
         with:
@@ -184,12 +195,46 @@ jobs:
       - name: Toolchain (pinned by rust-toolchain.toml)
         run: rustup toolchain install && rustup show active-toolchain
       - uses: Swatinem/rust-cache@v2
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
       - name: Formatting
         run: cargo fmt --all -- --check
-      - name: Clippy
-        run: cargo clippy --workspace --all-targets --locked -- -D warnings
-      - name: Tests
-        run: cargo test --workspace --locked
+      - name: Clippy (all features)
+        run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+      - name: Clippy (each feature set without the default client)
+        run: |
+          for features in "" entitlement lookup usage stats entitlement,lookup; do
+            echo "features: [${features}]"
+            cargo clippy -p ever-connect-sdk --no-default-features ${features:+--features "$features"} --locked -- -D warnings
+          done
+      - name: No HTTP client without the client feature
+        run: |
+          count=$(cargo tree -p ever-connect-sdk --no-default-features --features entitlement,lookup -e normal --locked | grep -c reqwest || true)
+          echo "reqwest crates in the tree: ${count}"
+          test "${count}" = 0
+      - name: Start the mock platform (TEST root, https issuer, real clock)
+        run: |
+          pnpm install --frozen-lockfile
+          EVER_MOCK_CONFIG_JSON='{"issuer":"https://mock-platform.test"}' \
+            nohup node tools/mock-platform/bin/ever-mock-platform.mjs --port 8080 --host 127.0.0.1 > mock.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8080/__mock/healthz >/dev/null 2>&1; then echo "ready after ${i}s"; break; fi
+            sleep 1
+          done
+      - name: Tests (all features; the sample flow runs against the mock)
+        env:
+          EVER_MOCK_PLATFORM_URL: http://127.0.0.1:8080
+        run: cargo test --workspace --all-features --locked
+      - name: Lookup vectors without the client (what the platform consumes)
+        run: cargo test -p ever-connect-sdk --no-default-features --features lookup --test lookup_vectors --locked
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny
+      - name: Supply chain (licences, bans, sources, advisories)
+        run: cargo deny check
 
   fixtures-roundtrip:
     name: fixtures-roundtrip

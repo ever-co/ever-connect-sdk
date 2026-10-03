@@ -1,0 +1,208 @@
+name: Release
+
+# Tags: contracts-v*, ts-v* and rust-v*. Every run builds, writes the SBOMs and packs the packages
+# and crates (the dry run); the publish jobs run only when the repository variable
+# SDK_PUBLISH_ENABLED is `true` (unset by default: they show as skipped).
+#
+#   guard     a tag refuses a TEST root (`test-` kid in contracts/constants.json), generated files
+#             that differ from the contract, vendored files that are not strictly the platform's,
+#             and anything the public-safe gate refuses
+#   build     build, type check, SBOMs (CycloneDX for the npm packages and the crates), npm pack
+#             and cargo package (the dry run), uploaded as workflow artifacts
+#   publish-* npm with provenance (trusted publishing, no long-lived token): contracts, then sdk,
+#             then tools; crates.io from the `crates-io` environment: contracts, then sdk
+#
+# Runners: GitHub-hosted `ubuntu-latest` only.
+on:
+  push:
+    tags:
+      - "contracts-v*"
+      - "ts-v*"
+      - "rust-v*"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Build, SBOMs and packs only (the publish jobs need SDK_PUBLISH_ENABLED=true and a tag)
+        type: boolean
+        default: true
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  CI: "1"
+  CARGO_TERM_COLOR: always
+
+jobs:
+  guard:
+    name: guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install rustup (when the runner image has no Rust)
+        run: |
+          if ! command -v rustup >/dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 --retry 10 --retry-connrefused -fsSL https://sh.rustup.rs \
+              | sh -s -- --default-toolchain none -y
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          fi
+      - name: Toolchain (pinned by rust-toolchain.toml)
+        run: rustup toolchain install && rustup show active-toolchain
+      - name: Install (frozen)
+        run: pnpm install --frozen-lockfile
+      - name: No TEST root in a release
+        run: |
+          node -e '
+            const roots = require("./contracts/constants.json").root_keys;
+            const test = roots.filter((k) => k.kid.startsWith("test-")).map((k) => k.kid);
+            if (test.length === 0) { console.log("root_keys: " + roots.map((k) => k.kid + " (" + k.iss + ")").join(", ")); process.exit(0); }
+            const msg = "root_keys holds a TEST root (" + test.join(", ") + "): a release needs the production root";
+            if (process.env.GITHUB_REF.startsWith("refs/tags/")) { console.error("::error::" + msg); process.exit(1); }
+            console.log("::warning::" + msg + " (dry run: not refused)");
+          '
+      - name: Generated files equal the contract
+        run: |
+          node tools/generate.mjs --check
+          node tools/split-integrations.mjs --check
+          node tools/fixtures/build-signed.mjs --check
+      - name: Vendored files are strictly the platform's (a tag refuses any provisional source)
+        run: |
+          node tools/check-schema-drift.mjs
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            node tools/check-schema-drift.mjs --strict
+          else
+            node tools/check-schema-drift.mjs --strict || echo "::warning::strict drift fails: no tag may be cut until it passes"
+          fi
+      - name: Public-safe gate
+        env:
+          EVER_BANNED_PHRASES_JSON: ${{ secrets.EVER_BANNED_PHRASES_JSON }}
+        run: |
+          node tools/check-public-safe.mjs --self-test
+          node tools/check-public-safe.mjs
+
+  build:
+    name: build
+    needs: guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install rustup (when the runner image has no Rust)
+        run: |
+          if ! command -v rustup >/dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 --retry 10 --retry-connrefused -fsSL https://sh.rustup.rs \
+              | sh -s -- --default-toolchain none -y
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          fi
+      - name: Toolchain (pinned by rust-toolchain.toml)
+        run: rustup toolchain install && rustup show active-toolchain
+      - uses: Swatinem/rust-cache@v2
+      - name: Install (frozen) and build
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build
+          pnpm -r --if-present run typecheck
+      - name: npm packs (the dry run)
+        run: |
+          mkdir -p release/npm
+          for p in connect-contracts connect-sdk connect-tools; do
+            (cd "packages/ts/$p" && pnpm pack --pack-destination ../../../release/npm)
+          done
+          ls -l release/npm
+      - name: Crate packages (the dry run; the SDK crate is verified once the contracts crate is published)
+        run: |
+          cargo package -p ever-connect-contracts --locked
+          cargo package -p ever-connect-sdk --no-verify --exclude-lockfile
+          mkdir -p release/crates && cp target/package/*.crate release/crates/
+          ls -l release/crates
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-cyclonedx
+      - name: SBOMs (CycloneDX)
+        run: |
+          mkdir -p release/sbom
+          cargo cyclonedx --format json --all-features
+          find crates -name '*.cdx.json' -exec cp {} release/sbom/ \;
+          npx --yes @cyclonedx/cdxgen@11 -t pnpm -o release/sbom/npm.cdx.json --no-install-deps .
+          ls -l release/sbom
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-${{ github.run_id }}
+          path: release
+          retention-days: 30
+
+  publish-npm:
+    name: publish-npm
+    needs: build
+    if: vars.SDK_PUBLISH_ENABLED == 'true' && startsWith(github.ref, 'refs/tags/ts-v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+      - name: Build
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build
+      - name: Publish with provenance (contracts, sdk, tools)
+        run: |
+          for p in connect-contracts connect-sdk connect-tools; do
+            (cd "packages/ts/$p" && pnpm publish --provenance --access public --no-git-checks)
+          done
+
+  publish-crates:
+    name: publish-crates
+    needs: build
+    if: vars.SDK_PUBLISH_ENABLED == 'true' && startsWith(github.ref, 'refs/tags/rust-v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: crates-io
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install rustup (when the runner image has no Rust)
+        run: |
+          if ! command -v rustup >/dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 --retry 10 --retry-connrefused -fsSL https://sh.rustup.rs \
+              | sh -s -- --default-toolchain none -y
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          fi
+      - name: Toolchain (pinned by rust-toolchain.toml)
+        run: rustup toolchain install && rustup show active-toolchain
+      - name: Publish (contracts, then sdk)
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          cargo publish -p ever-connect-contracts --locked
+          cargo publish -p ever-connect-sdk --locked

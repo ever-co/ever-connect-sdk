@@ -1,0 +1,41 @@
+{
+  "manifest": "eyJhbGciOiJFZERTQSIsImtpZCI6ImV2ZXItMjAyNjEwLTg3MDQiLCJ0eXAiOiJldmVyLWtleS1tYW5pZmVzdCtqd3QifQ.eyJleHAiOjE3OTM0MDkwMjQsImlhdCI6MTc5MDgxNzAyNCwiaXNzIjoiaHR0cHM6Ly9hcGktc3RhZ2UuZXZlci5jbyIsImtleXNfc2hhMjU2IjoiOGFhZDgwZjA2YjVjZWJiZGExOWEyOWRkZjUxMGQwMDIwMDBjN2I5ZTBkNTc4NGZkNWY3YWI5NTVmZjA2ZWU2MyIsInJvb3Rfa2lkIjoiZXZlci0yMDI2MTAtODcwNCJ9.kks8yQbYZknVjOWDcNCYlVOt34WG7YzDEeI691NdIIeUKJGAIv8xOsbmkGYxbTO10yA7dRzNZ7SBEOol-3JIAQ",
+  "keys": [
+    {
+      "alg": "EdDSA",
+      "crv": "Ed25519",
+      "ever_purpose": "assertion",
+      "kid": "ever-202610-c64d",
+      "kty": "OKP",
+      "not_after": null,
+      "not_before": "2026-10-01T01:10:22Z",
+      "state": "active",
+      "use": "sig",
+      "x": "h_wtwnolBxSPztSbq3wbGk0ZhbJBmIssV9mMVjBLo_k"
+    },
+    {
+      "alg": "EdDSA",
+      "crv": "Ed25519",
+      "ever_purpose": "intent",
+      "kid": "ever-202610-cd41",
+      "kty": "OKP",
+      "not_after": null,
+      "not_before": "2026-10-01T01:10:23Z",
+      "state": "active",
+      "use": "sig",
+      "x": "nYqXINE7wE8uRisnx5YSxa-C3Hf1nzvOaerIm4W5JMM"
+    },
+    {
+      "alg": "EdDSA",
+      "crv": "Ed25519",
+      "ever_purpose": "entitlement",
+      "kid": "ever-202610-2d93",
+      "kty": "OKP",
+      "not_after": null,
+      "not_before": "2026-10-01T01:10:24Z",
+      "state": "active",
+      "use": "sig",
+      "x": "uiqjrKH6Pu98q210_PYcKMqmWGWz8k-5WABQhp000vM"
+    }
+  ]
+}

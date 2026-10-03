@@ -62,7 +62,8 @@
       "flags": "",
       "allow_lines": [
         "^\\s*\"license\"\\s*:\\s*\"Apache-2\\.0\",?\\s*$",
-        "^\\s*license\\s*=\\s*\"Apache-2\\.0\"\\s*$"
+        "^\\s*license\\s*=\\s*\"Apache-2\\.0\"\\s*$",
+        "^\\s*\"Apache-2\\.0( WITH LLVM-exception)?\",?\\s*$"
       ],
       "allow_files": [
         "LICENSE",
@@ -168,7 +169,9 @@
       "api.ever.co",
       "app.ever.co",
       "auth.ever.co",
-      "apps.ever.co"
+      "apps.ever.co",
+      "api-dev.ever.co",
+      "api-stage.ever.co"
     ]
   },
   "paths": [

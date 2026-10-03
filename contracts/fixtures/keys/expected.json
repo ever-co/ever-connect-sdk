@@ -1,5 +1,5 @@
 {
-  "description": "Verification outcome of each manifest against the TEST root in roots.json at the context time.",
+  "description": "Verification outcome of each manifest against the TEST root in roots.json, for the issuer and at the time of context.json. The checks run in this order: schema, JWS shape, typ, alg, pinned root, signature, payload, issuer, iat (300 s skew), exp, keys_sha256.",
   "fixtures": {
     "manifest.valid.json": {
       "valid": true,
@@ -12,11 +12,33 @@
     },
     "manifest.keys-sha256-mismatch.json": {
       "valid": false,
-      "code": "keys_mismatch"
+      "code": "keys_sha256_mismatch",
+      "reason": "a key was appended to the signed list"
+    },
+    "manifest.keys-stripped.json": {
+      "valid": false,
+      "code": "keys_sha256_mismatch",
+      "reason": "a key was removed from the signed list"
     },
     "manifest.unknown-root.json": {
       "valid": false,
-      "code": "unknown_root"
+      "code": "unknown_root",
+      "reason": "signed by a root that is not pinned"
+    },
+    "manifest.expired.json": {
+      "valid": false,
+      "code": "manifest_expired",
+      "reason": "issued 31 days ago (a manifest lives 30 days)"
+    },
+    "manifest.not-yet-valid.json": {
+      "valid": false,
+      "code": "manifest_not_yet_valid",
+      "reason": "issued 301 s in the future"
+    },
+    "manifest.wrong-issuer.json": {
+      "valid": false,
+      "code": "issuer_mismatch",
+      "reason": "names another issuer"
     }
   }
 }

@@ -1,6 +1,6 @@
 // The sample client flow against the mock with plain fetch and the generated contract types:
 // redeem -> token -> entitlement -> integrations -> link -> heartbeat -> events -> lookup ->
-// disconnect. The SDK client re-runs the same flow once it exists.
+// disconnect. The SDK client runs the same flow in packages/ts/connect-sdk/test/mock-flow/.
 import { createHash } from 'node:crypto';
 import type {
   components,

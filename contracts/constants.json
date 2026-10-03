@@ -139,6 +139,24 @@
       "x": "slsZoNmmvLZONnDVCJ_lF6TV46dFWyDmWR9svtaZzMk",
       "use": "sig",
       "alg": "EdDSA"
+    },
+    {
+      "kid": "ever-202610-0d77",
+      "iss": "https://api-dev.ever.co",
+      "kty": "OKP",
+      "crv": "Ed25519",
+      "x": "cgULEqOov0n4s9I8luZboIgJp9mIGusmsSdSL4oCjKk",
+      "use": "sig",
+      "alg": "EdDSA"
+    },
+    {
+      "kid": "ever-202610-8704",
+      "iss": "https://api-stage.ever.co",
+      "kty": "OKP",
+      "crv": "Ed25519",
+      "x": "Ync-MW21JL72GOiS-RVrlvS3gyFH5Krh5f6I66jw1Qc",
+      "use": "sig",
+      "alg": "EdDSA"
     }
   ],
   "root_keys_file_env": "EVER_PLATFORM_ROOT_KEYS_FILE",

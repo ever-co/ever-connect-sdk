@@ -1,0 +1,35 @@
+{
+  "description": "The places outside the generated operation table that may hold a request call or a /v1/ path, each with its reason (tools/check-handwritten-client.mjs). Every other file of the packages and crates makes no request of its own.",
+  "exemptions": [
+    {
+      "path": "packages/ts/connect-sdk/src/transport.ts",
+      "rules": ["fetch"],
+      "reason": "the one place the TypeScript client hands a request to fetch; it holds no path of its own and refuses any URL outside the base URL"
+    },
+    {
+      "path": "packages/ts/connect-sdk/src/assertion.ts",
+      "rules": ["path"],
+      "reason": "signKeyRotation names the rotation endpoint as the audience of its proofs; it signs, it sends nothing"
+    },
+    {
+      "path": "packages/ts/connect-sdk/src/stats/index.ts",
+      "rules": ["path"],
+      "reason": "signStatsReport and sendStatsReport: the statistics sender of stats-only use (no token, no client), over the statistics path the contract pins"
+    },
+    {
+      "path": "crates/ever-connect-sdk/src/client/guard.rs",
+      "rules": ["reqwest"],
+      "reason": "the one place the Rust client hands a request to reqwest; it holds no path of its own and refuses any URL outside the base URL"
+    },
+    {
+      "path": "crates/ever-connect-sdk/src/assertion.rs",
+      "rules": ["path"],
+      "reason": "sign_key_rotation names the rotation endpoint as the audience of its proofs; it signs, it sends nothing"
+    },
+    {
+      "path": "crates/ever-connect-sdk/src/stats/mod.rs",
+      "rules": ["path"],
+      "reason": "the statistics checks and signer name the statistics path the contract pins; the crate sends the report through the client"
+    }
+  ]
+}

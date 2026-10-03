@@ -1,0 +1,8 @@
+# cargo-release: the crates are released together, with the version of the workspace, from a
+# `rust-v<version>` tag; the publish itself is the release workflow's job (SDK_PUBLISH_ENABLED).
+allow-branch = ["main"]
+shared-version = true
+tag-name = "rust-v{{version}}"
+consolidate-commits = true
+publish = false
+push = false

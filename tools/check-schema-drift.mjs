@@ -60,6 +60,41 @@ export const STRICT_SCOPES = {
     operations: ['ingestStatsReport', 'instanceLinkStats'],
     schema: 'contracts/schemas/ever.stats.v1.json',
   },
+  // The client assertion and key rotation vectors the client is held to.
+  connect: {
+    files: (path) => path.startsWith('contracts/fixtures/connect/vectors/'),
+    folder: 'contracts/fixtures/connect/vectors',
+    operations: ['instanceToken', 'instanceRotateKey', 'connectRedeem'],
+    schema: null,
+  },
+  // The entitlement document: the schema, the issuer-signed fixtures and the document calls.
+  entitlement: {
+    files: (path) => path === 'contracts/schemas/ever.entitlement.v1.json' || path.startsWith('contracts/fixtures/entitlement/issuer/'),
+    folder: 'contracts/fixtures/entitlement/issuer',
+    operations: ['instanceGetEntitlement', 'instanceGetLinkEntitlement'],
+    schema: 'contracts/schemas/ever.entitlement.v1.json',
+  },
+  // The key manifest: its schema and the manifest call.
+  keys: {
+    files: (path) => path === 'contracts/schemas/ever.key-manifest.v1.json',
+    folder: null,
+    operations: ['get_key_manifest'],
+    schema: 'contracts/schemas/ever.key-manifest.v1.json',
+  },
+  // Lookup normalisation: the published vectors and the lookup calls.
+  lookup: {
+    files: (path) => path === 'contracts/fixtures/lookup/test-vectors.json',
+    folder: null,
+    operations: ['getLookupSalt', 'getLookupTestVectors', 'lookupCounterparties'],
+    schema: 'contracts/fixtures/lookup/test-vectors.json',
+  },
+  // ever.usage.v1 and the usage calls.
+  usage: {
+    files: (path) => path === 'contracts/schemas/ever.usage.v1.json',
+    folder: null,
+    operations: ['instanceReportUsage', 'instanceReportUsageReadings'],
+    schema: 'contracts/schemas/ever.usage.v1.json',
+  },
 };
 
 /** Every file under a folder of this repository, as repository paths. */
@@ -93,17 +128,20 @@ export function checkScope(name, vendorDoc, { platform = null, present = null } 
   if (!scope) return [`--strict=${name}: no such scope (${Object.keys(STRICT_SCOPES).join(', ')})`];
   const errors = [];
   const entries = vendorDoc.files.filter((e) => scope.files(e.path));
-  if (!entries.some((e) => e.path === scope.schema)) errors.push(`${scope.schema}: not vendored`);
+  const authored = (vendorDoc.authored ?? []).some((a) => a.path === scope.schema);
+  if (scope.schema && !authored && !entries.some((e) => e.path === scope.schema)) errors.push(`${scope.schema}: not vendored`);
   for (const e of entries) {
     if (e.provisional) errors.push(`${e.path}: provisional source ${e.source} (the platform has not published ${e.upstream} yet)`);
     if (e.transform !== null) errors.push(`${e.path}: vendored through the transform ${e.transform}, not byte for byte`);
   }
   const listed = new Set(entries.map((e) => e.path));
-  const files = present ?? filesUnder(scope.folder);
-  if (!files.some((p) => listed.has(p))) errors.push(`${scope.folder}/: not vendored from the platform`);
-  else for (const p of files) if (!listed.has(p)) errors.push(`${p}: not in VENDOR.json (a file the platform does not publish)`);
+  if (scope.folder) {
+    const files = present ?? filesUnder(scope.folder);
+    if (!files.some((p) => listed.has(p))) errors.push(`${scope.folder}/: not vendored from the platform`);
+    else for (const p of files) if (!listed.has(p)) errors.push(`${p}: not in VENDOR.json (a file the platform does not publish)`);
+  }
   for (const { path } of vendorDoc.authored ?? [])
-    if (scope.files(path) || path === `${scope.folder}/`) errors.push(`${path}: still authored here`);
+    if (scope.files(path) || (scope.folder && path === `${scope.folder}/`)) errors.push(`${path}: still authored here`);
   for (const id of scope.operations)
     if (vendorDoc.openapi.provisional_operations.includes(id))
       errors.push(`contract: ${id} still comes from the design, not the pinned spec`);

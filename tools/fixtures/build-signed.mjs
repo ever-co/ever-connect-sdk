@@ -8,7 +8,8 @@
  *                requests per kind with invalid twins, and expected.json
  *   keys/        key manifests signed by the TEST root (valid, keys-sha256 mismatch, unknown root),
  *                the TEST root as a JWKS for EVER_PLATFORM_ROOT_KEYS_FILE, and the test context
- *   entitlement/ valid instance and link documents and the invalid set, each with its expected code
+ *   entitlement/ valid instance and link documents and the invalid set, each with its expected code,
+ *                and the answers of the seeded mutation corpus (mutations.json)
  *   consent/     valid and invalid consent records; consent-screen/ the seven blocks per key
  *   usage/       valid and invalid usage reports (ever.usage.v1: counts and timestamps only)
  *   index.json   every schema-bound fixture with its schema and verdict, the vendored statistics
@@ -39,8 +40,10 @@ import {
   testRootEntry,
 } from '../mock-platform/src/keys.mjs';
 import { validateComponent, validateEnvelope, validateEventData, validatePending, validateSchema } from '../mock-platform/src/validate.mjs';
+import { verifyEntitlement as referenceVerify } from '../test/lib/reference-verify.mjs';
 import { example } from './example.mjs';
 import { hex64, iso, NOW, ulid, uuid } from './ids.mjs';
+import { CODE_LETTERS, corpusSha256, MUTATION_BASES, MUTATION_COUNT, MUTATION_SEED, mutationCorpus } from './mutations.mjs';
 
 // The entitlement schema accepts only https issuers, so the offline fixtures use an https issuer
 // (the running mock answers with its own configured issuer).
@@ -459,23 +462,42 @@ function keys() {
   const files = {};
   const keysArr = manifestKeys();
   const valid = signManifest({ issuer: ISSUER, iat: NOW, keys: keysArr });
-  const mismatch = signManifest({ issuer: ISSUER, iat: NOW, keys: keysArr, keysShaOverride: '0'.repeat(64) });
+  // The served list differs from the signed one: a key appended, or a key removed.
+  const extraKey = {
+    ...manifestEntry(testKey('stranger'), { notBefore: NOW - 86400 }),
+    kid: 'test-entitlement-3',
+    ever_purpose: 'entitlement',
+  };
+  const appended = { manifest: valid.manifest, keys: [...keysArr, extraKey] };
+  const stripped = { manifest: valid.manifest, keys: keysArr.slice(1) };
   const unknownRoot = signManifest({ issuer: ISSUER, iat: NOW, keys: keysArr, root: testKey('unknownRoot') });
+  const expired = signManifest({ issuer: ISSUER, iat: NOW - 31 * 86400, keys: manifestKeys(NOW - 31 * 86400) });
+  const notYetValid = signManifest({ issuer: ISSUER, iat: NOW + 301, keys: keysArr });
+  const otherIssuer = signManifest({ issuer: 'https://api.example.com', iat: NOW, keys: keysArr });
   for (const [name, body] of Object.entries({
     'manifest.valid': valid,
-    'manifest.keys-sha256-mismatch': mismatch,
+    'manifest.keys-sha256-mismatch': appended,
+    'manifest.keys-stripped': stripped,
     'manifest.unknown-root': unknownRoot,
+    'manifest.expired': expired,
+    'manifest.not-yet-valid': notYetValid,
+    'manifest.wrong-issuer': otherIssuer,
   })) {
     const v = validateSchema('keyManifest', body);
     if (!v.ok) throw new Error(`keys/${name}.json does not validate: ${JSON.stringify(v.errors[0])}`);
     files[`keys/${name}.json`] = json(body);
   }
   files['keys/expected.json'] = json({
-    description: 'Verification outcome of each manifest against the TEST root in roots.json at the context time.',
+    description:
+      'Verification outcome of each manifest against the TEST root in roots.json, for the issuer and at the time of context.json. The checks run in this order: schema, JWS shape, typ, alg, pinned root, signature, payload, issuer, iat (300 s skew), exp, keys_sha256.',
     fixtures: {
       'manifest.valid.json': { valid: true, trusted_kids: keysArr.map((k) => k.kid) },
-      'manifest.keys-sha256-mismatch.json': { valid: false, code: 'keys_mismatch' },
-      'manifest.unknown-root.json': { valid: false, code: 'unknown_root' },
+      'manifest.keys-sha256-mismatch.json': { valid: false, code: 'keys_sha256_mismatch', reason: 'a key was appended to the signed list' },
+      'manifest.keys-stripped.json': { valid: false, code: 'keys_sha256_mismatch', reason: 'a key was removed from the signed list' },
+      'manifest.unknown-root.json': { valid: false, code: 'unknown_root', reason: 'signed by a root that is not pinned' },
+      'manifest.expired.json': { valid: false, code: 'manifest_expired', reason: 'issued 31 days ago (a manifest lives 30 days)' },
+      'manifest.not-yet-valid.json': { valid: false, code: 'manifest_not_yet_valid', reason: 'issued 301 s in the future' },
+      'manifest.wrong-issuer.json': { valid: false, code: 'issuer_mismatch', reason: 'names another issuer' },
     },
   });
   files['keys/roots.json'] = json({ keys: [testRootEntry(ISSUER)] });
@@ -563,10 +585,23 @@ function entitlements() {
   };
   const instance = entitlementClaims({ subject: `instance:${IDS.instance}` });
   const link = entitlementClaims({ subject: `link:${IDS.link}`, link: IDS.link });
-  for (const [name, claims] of Object.entries({ instance, link })) {
+  // Status cases: valid documents whose exp has passed (inside and past the 30-day grace), and
+  // one issued 299 s in the future (inside the 300 s skew).
+  const week = 604800;
+  const inGrace = entitlementClaims({ subject: `instance:${IDS.instance}`, seq: 4, iat: NOW - week - 86400 });
+  const pastGrace = entitlementClaims({ subject: `instance:${IDS.instance}`, seq: 5, iat: NOW - week - 2592000 - 3600 });
+  const skew = entitlementClaims({ subject: `instance:${IDS.instance}`, seq: 6, iat: NOW + 299 });
+  const statusCases = {
+    instance: [instance, 'valid'],
+    link: [link, 'valid'],
+    'expired-in-grace': [inGrace, 'stale'],
+    'expired-past-grace': [pastGrace, 'paused'],
+    'skew-plus-299': [{ ...skew, nbf: NOW + 299 }, 'valid'],
+  };
+  for (const [name, [claims, status]] of Object.entries(statusCases)) {
     const v = validateSchema('entitlement', claims);
     if (!v.ok) throw new Error(`entitlement ${name} claims do not validate: ${JSON.stringify(v.errors[0])}`);
-    add('valid', name, signEntitlement(claims), claims, { valid: true, kid: key.kid, seq: claims.ever.seq, subject: claims.sub });
+    add('valid', name, signEntitlement(claims), claims, { valid: true, kid: key.kid, seq: claims.ever.seq, subject: claims.sub, status });
   }
   const sign = (claims, header = {}, k = key) => signJws(k.privateKey, { kid: k.kid, typ: ENTITLEMENT_TYP, ...header }, claims);
   const good = sign(instance);
@@ -579,6 +614,14 @@ function entitlements() {
       'the header names another trusted entitlement key; the signature was made by the first',
     ],
     'tampered-seq': [tamper({ seq: 99 }), 'bad_signature', 'the payload changed after signing'],
+    'tampered-instance-id': [tamper({ instance_id: IDS.otherInstance }), 'bad_signature', 'the instance id changed after signing'],
+    'alg-none': [`${b64url(JSON.stringify({ alg: 'none', kid: key.kid, typ: ENTITLEMENT_TYP }))}.${p}.`, 'bad_alg', 'an unsigned document'],
+    'unmanifested-key': [
+      signJws(testKey('stranger').privateKey, { kid: key.kid, typ: ENTITLEMENT_TYP }, instance),
+      'bad_signature',
+      'signed by a key the manifest does not list, under the id of a listed key',
+    ],
+    'extra-claim': [sign({ ...instance, extra: true }), 'schema_violation', 'a claim outside the closed schema'],
     'wrong-instance': [
       sign({ ...instance, ever: { ...instance.ever, instance_id: IDS.otherInstance } }),
       'instance_mismatch',
@@ -602,8 +645,8 @@ function entitlements() {
       'bad_alg',
       'only EdDSA is accepted',
     ],
-    'iat-future': [sign({ ...instance, iat: NOW + 600, nbf: NOW - 60 }), 'iat_in_future', 'issued more than 300 s in the future'],
-    'nbf-future': [sign({ ...instance, nbf: NOW + 600 }), 'nbf_in_future', 'not valid before more than 300 s in the future'],
+    'iat-future': [sign({ ...instance, iat: NOW + 301, nbf: NOW - 60 }), 'iat_in_future', 'issued 301 s in the future (the skew is 300 s)'],
+    'nbf-future': [sign({ ...instance, nbf: NOW + 301 }), 'nbf_in_future', 'not valid before 301 s in the future (the skew is 300 s)'],
     'unknown-kid': [
       signJws(testKey('stranger').privateKey, { kid: 'test-entitlement-9', typ: ENTITLEMENT_TYP }, instance),
       'unknown_kid',
@@ -637,9 +680,45 @@ function entitlements() {
   for (const [name, [jws, code, reason, also]] of Object.entries(invalid)) {
     add('invalid', name, jws, null, { valid: false, code, reason, ...(also ? { also_acceptable: also } : {}) });
   }
+  // The seeded mutation corpus: one bit flipped per case; the reference verifier's answer for
+  // each case, one letter per case, which every verifier must reproduce.
+  const bases = MUTATION_BASES.map((name) => files[`entitlement/${name}`].trim());
+  const corpus = mutationCorpus(bases);
+  const subjects = [`instance:${IDS.instance}`, `link:${IDS.link}`];
+  const letters = Object.fromEntries(Object.entries(CODE_LETTERS).map(([code, letter]) => [code, letter]));
+  const answers = corpus
+    .map(({ base, jws }) => {
+      const r = referenceVerify(jws, {
+        keys: manifestKeys(),
+        issuer: ISSUER,
+        instanceId: IDS.instance,
+        subject: subjects[base],
+        cached: null,
+        now: NOW,
+      });
+      if (r.ok) throw new Error('a mutated document verified');
+      return letters[r.code];
+    })
+    .join('');
+  const counts = {};
+  for (const [code, letter] of Object.entries(letters)) {
+    const n = answers.split(letter).length - 1;
+    if (n > 0) counts[code] = n;
+  }
+  files['entitlement/mutations.json'] = json({
+    description:
+      'The seeded mutation corpus of the entitlement verifiers (tools/fixtures/mutations.mjs; the Rust tests carry the same generator): each case flips one bit of a valid document, so none verifies. corpus_sha256 pins the corpus; answers holds one letter per case (letters maps them to codes), which the TypeScript and Rust verifiers must both reproduce, with the inputs of context.json and no cached document.',
+    seed: MUTATION_SEED,
+    count: MUTATION_COUNT,
+    bases: MUTATION_BASES,
+    corpus_sha256: corpusSha256(corpus),
+    letters,
+    counts,
+    answers,
+  });
   files['entitlement/expected.json'] = json({
     description:
-      'Verification outcome of each document in the order of the entitlement verification rules (typ, alg, kid in the root-verified manifest with purpose entitlement, signature, schema and claims, instance and subject, iat/nbf, seq), with the inputs of context.json. A verifier that checks the closed schema first may answer a code from also_acceptable.',
+      'Verification outcome of each document in the order of the entitlement verification rules (typ, alg, kid in the root-verified manifest with purpose entitlement, signature, schema and claims, instance and subject, iat/nbf, seq), with the inputs of context.json; a valid document also names its status at the context time (valid; stale inside the grace after exp; paused past it). A verifier that checks the closed schema first may answer a code from also_acceptable.',
     fixtures: expected,
   });
   files['entitlement/context.json'] = json({
@@ -650,7 +729,7 @@ function entitlements() {
     expected_subject: `instance:${IDS.instance}`,
     expected_subject_by_file: { 'valid/link.jws': `link:${IDS.link}` },
     cached: { seq: 3, iat: NOW - 3600 },
-    cached_by_file: { 'valid/instance.jws': null, 'valid/link.jws': null },
+    cached_by_file: Object.fromEntries(Object.keys(statusCases).map((name) => [`valid/${name}.jws`, null])),
     now: NOW,
   });
   return files;

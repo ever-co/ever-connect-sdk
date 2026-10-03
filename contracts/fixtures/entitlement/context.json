@@ -13,7 +13,10 @@
   },
   "cached_by_file": {
     "valid/instance.jws": null,
-    "valid/link.jws": null
+    "valid/link.jws": null,
+    "valid/expired-in-grace.jws": null,
+    "valid/expired-past-grace.jws": null,
+    "valid/skew-plus-299.jws": null
   },
   "now": 1793613600
 }

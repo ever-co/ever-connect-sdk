@@ -123,7 +123,9 @@ export function build() {
   constants.stats_headers = { key: pick('-Key'), signature: pick('-Signature'), key_id: pick('-Key-Id') };
   constants.feed_event_types = vendorDoc.events.instance_types;
   constants.integration_keys = keys;
-  constants.root_keys = [testRootEntry(TEST_ROOT_ISSUER)];
+  // The TEST root first; the roots of the Ever Platform environments (pinned per issuer by their
+  // own reviewed change) are kept as they are.
+  constants.root_keys = [testRootEntry(TEST_ROOT_ISSUER), ...(constants.root_keys ?? []).filter((k) => !k.kid.startsWith('test-'))];
   files['contracts/constants.json'] = stableJson(constants, { sort: false });
   return files;
 }

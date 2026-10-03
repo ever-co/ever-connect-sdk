@@ -1,6 +1,6 @@
 [package]
 name = "ever-connect-sdk"
-description = "Ever Platform connection SDK for Rust: the managed-operation runner and the anonymous statistics signer; the client and the verifiers are added on top of it."
+description = "Ever Platform connection SDK for Rust: the client, the key manifest and entitlement verifier, the client assertion, lookup normalisation, usage readings, anonymous statistics signing and the managed-operation runner."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -14,17 +14,35 @@ categories = ["api-bindings"]
 workspace = true
 
 [features]
-default = ["stats"]
-# The anonymous statistics checks, signer and answer classification (no HTTP client).
-stats = ["dep:base64", "dep:ed25519-dalek", "dep:getrandom", "dep:regex", "dep:sha2"]
+default = ["client"]
+# The HTTP client (reqwest with rustls and the webpki roots; no OpenSSL), the client assertion and
+# the instance keys. Without it the crate pulls no HTTP client.
+client = ["entitlement", "stats", "lookup", "usage", "dep:reqwest", "dep:tokio", "dep:getrandom"]
+# The key manifest and entitlement document verifier.
+entitlement = ["schema", "dep:base64", "dep:ed25519-dalek", "dep:sha2"]
+# The anonymous statistics checks, signer and answer classification.
+stats = ["schema", "dep:base64", "dep:ed25519-dalek", "dep:getrandom", "dep:sha2"]
+# Lookup normalisation (version 1) and the salted hash.
+lookup = ["dep:base64", "dep:sha2", "dep:idna", "dep:unicode-normalization"]
+# The ever.usage.v1 reading validator.
+usage = ["schema"]
+# The JSON Schema checker the verifiers and validators share (internal).
+schema = ["dep:fancy-regex"]
 
 [dependencies]
-ever-connect-contracts = { path = "../ever-connect-contracts" }
+ever-connect-contracts = { path = "../ever-connect-contracts", version = "1.0.0-rc.1" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 jsonschema = { workspace = true }
 base64 = { workspace = true, optional = true }
 ed25519-dalek = { workspace = true, optional = true }
 getrandom = { workspace = true, optional = true }
-regex = { workspace = true, optional = true }
+fancy-regex = { workspace = true, optional = true }
+idna = { workspace = true, optional = true }
+unicode-normalization = { workspace = true, optional = true }
+reqwest = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }
 sha2 = { workspace = true, optional = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "time", "sync"] }
