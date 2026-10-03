@@ -19,7 +19,7 @@ import { CONSTANTS, type operations, type Product } from '@ever-co/connect-contr
 import { signClientAssertion } from './assertion';
 import { ULID } from './encoding';
 import { type CachedEntitlement, type VerifiedEntitlement, verifyEntitlement } from './entitlement';
-import { NotConnectedError, ProblemError, RequestRefusedError } from './errors';
+import { EntitlementError, NotConnectedError, ProblemError, RequestRefusedError } from './errors';
 import { OPERATIONS, type OperationId, type OperationSpec, REQUEST_SCHEMAS, SDK_VERSION } from './generated/operations';
 import type { InstanceSigner } from './keys';
 import { KeySet, type KeySetUpdate } from './keyset';
@@ -28,7 +28,7 @@ import { pinnedRootKeys, type RootKey, type VerifiedKeyManifest, verifyKeyManife
 import { schemaViolations } from './schema';
 import type { SignedStatsReport } from './stats';
 import { InstanceTokens } from './token';
-import { checkBaseUrl, problemFrom, send, type TransportConfig, type WireResponse } from './transport';
+import { checkBaseUrl, MAX_RESPONSE_BYTES, problemFrom, send, type TransportConfig, type WireResponse } from './transport';
 
 type Ops = operations;
 type JsonOf<T> = T extends { readonly content: { readonly 'application/json': infer B } } ? B : undefined;
@@ -209,7 +209,9 @@ export function createEverPlatformClient(o: EverPlatformClientOptions) {
     } else if (input.body !== undefined) throw new RequestRefusedError('invalid_body', [{ path: '', code: 'unknown_field' }]);
     const timeoutMs =
       id === 'instancePollEvents' ? ((input.waitS ?? CONSTANTS.feed.wait_s) + 5) * 1000 : op.method === 'GET' ? readMs : writeMs;
-    return { op, path, query, headers, body, timeoutMs };
+    // Mirrored app listings may be large; every other answer is small.
+    const maxResponseBytes = id === 'instanceListMirroredApps' ? 16 * MAX_RESPONSE_BYTES : MAX_RESPONSE_BYTES;
+    return { op, path, query, headers, body, timeoutMs, maxResponseBytes };
   }
 
   async function answer(op: OperationSpec, res: WireResponse): Promise<unknown> {
@@ -239,6 +241,7 @@ export function createEverPlatformClient(o: EverPlatformClientOptions) {
         headers,
         body: p.body,
         timeoutMs: p.timeoutMs,
+        maxResponseBytes: p.maxResponseBytes,
         signal: input.signal,
       });
       if (res.status === 401 && p.op.auth === 'instance') {
@@ -273,7 +276,7 @@ export function createEverPlatformClient(o: EverPlatformClientOptions) {
 
   async function manifest(): Promise<VerifiedKeyManifest> {
     const body = await plain('get_key_manifest');
-    return verifyKeyManifest(body, { rootKeys, issuer, now: now() });
+    return verifyKeyManifest(body, { unsafeRootKeys: rootKeys, issuer, now: now() });
   }
 
   const client = {
@@ -287,8 +290,8 @@ export function createEverPlatformClient(o: EverPlatformClientOptions) {
       /** Fetches the manifest and builds the next key set; a refused manifest keeps `current`. */
       async refresh(current?: KeySet): Promise<KeySetUpdate> {
         const body = await plain('get_key_manifest');
-        if (current) return current.update(body, { rootKeys, issuer, now: now() });
-        return { keySet: KeySet.verify(body, { rootKeys, issuer, now: now() }), replaced: true, error: null };
+        if (current) return current.update(body, { unsafeRootKeys: rootKeys, issuer, now: now() });
+        return { keySet: KeySet.verify(body, { unsafeRootKeys: rootKeys, issuer, now: now() }), replaced: true, error: null };
       },
       /** The roots this client trusts. */
       rootKeys: () => rootKeys,
@@ -417,6 +420,26 @@ export function createEverPlatformClient(o: EverPlatformClientOptions) {
         cached: v.cached,
         now: v.now ?? now(),
       });
+    },
+    /**
+     * Verifies an entitlement document and owns the unknown-key rule: on `unknown_kid` with
+     * `refreshSuggested`, the key set is refreshed once (at most every 10 minutes) and the document
+     * verified again; a second `unknown_kid` is final. Answers the result and the key set to keep
+     * (a new one when the refresh replaced it).
+     */
+    async verifyEntitlementRefreshing(
+      jws: string,
+      v: { keySet: KeySet; subject?: string; cached?: CachedEntitlement | null; now?: number },
+    ): Promise<{ verified: VerifiedEntitlement; keySet: KeySet }> {
+      try {
+        return { verified: client.verifyEntitlement(jws, v), keySet: v.keySet };
+      } catch (error) {
+        if (!(error instanceof EntitlementError) || error.code !== 'unknown_kid' || !error.refreshSuggested) throw error;
+        if (!v.keySet.unknownKidRefreshAllowed(v.now ?? now())) throw error;
+        const update = await client.keys.refresh(v.keySet);
+        if (!update.replaced) throw error;
+        return { verified: client.verifyEntitlement(jws, { ...v, keySet: update.keySet }), keySet: update.keySet };
+      }
     },
     toJSON: () => ({ baseUrl: base.toString() }),
     [Symbol.for('nodejs.util.inspect.custom')]: () => `EverPlatformClient { baseUrl: ${base.toString()} }`,

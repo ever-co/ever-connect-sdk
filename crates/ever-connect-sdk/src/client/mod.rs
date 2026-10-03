@@ -27,12 +27,13 @@ use serde_json::{Value, json};
 
 pub use self::error::{Error, ProblemError, ProblemFieldError};
 use self::generated::{HeaderRule, OPERATIONS, Operation, OperationAuth, REQUEST_SCHEMAS};
-use self::guard::{Base, WireResponse, check_base_url, http_client, url_for};
+use self::guard::{Base, MAX_RESPONSE_BYTES, WireResponse, check_base_url, http_client, url_for};
 use self::token::InstanceTokens;
 use crate::assertion::{ClientAssertionOptions, sign_client_assertion};
 use crate::encoding::is_ulid;
 use crate::entitlement::{
-    CachedEntitlement, VerifiedEntitlement, VerifyEntitlementOptions, verify_entitlement,
+    CachedEntitlement, EntitlementErrorCode, VerifiedEntitlement, VerifyEntitlementOptions,
+    verify_entitlement,
 };
 use crate::keys::InstanceSigner;
 use crate::keyset::{KeySet, KeySetUpdate};
@@ -237,6 +238,7 @@ struct Prepared {
     headers: Vec<(String, String)>,
     body: Option<Vec<u8>>,
     timeout: Duration,
+    max_response_bytes: usize,
 }
 
 impl EverPlatformClient {
@@ -450,6 +452,12 @@ impl EverPlatformClient {
         } else {
             self.options.write_timeout
         };
+        // Mirrored app listings may be large; every other answer is small.
+        let max_response_bytes = if op.id == "instanceListMirroredApps" {
+            16 * MAX_RESPONSE_BYTES
+        } else {
+            MAX_RESPONSE_BYTES
+        };
         Ok(Prepared {
             op,
             path,
@@ -457,6 +465,7 @@ impl EverPlatformClient {
             headers,
             body,
             timeout,
+            max_response_bytes,
         })
     }
 
@@ -563,6 +572,7 @@ impl EverPlatformClient {
             headers,
             p.body.clone(),
             p.timeout,
+            p.max_response_bytes,
         )
         .await
     }
@@ -674,8 +684,8 @@ impl EverPlatformClient {
 
     fn manifest_options(&self) -> VerifyKeyManifestOptions<'_> {
         VerifyKeyManifestOptions {
-            root_keys: Some(&self.roots),
-            issuer: Some(&self.issuer),
+            issuer: &self.issuer,
+            unsafe_root_keys: Some(&self.roots),
             now: Some(self.now()),
         }
     }
@@ -718,6 +728,39 @@ impl EverPlatformClient {
                 now: Some(self.now()),
             },
         )?)
+    }
+
+    /// Verifies an entitlement document and owns the unknown-key rule: on `unknown_kid` with
+    /// `refresh_suggested`, the key set is refreshed once (at most every 10 minutes) and the
+    /// document verified again; a second `unknown_kid` is final. Answers the result and, when the
+    /// refresh replaced it, the new key set to keep.
+    ///
+    /// # Errors
+    /// [`Error::NotConnected`] without a Registry id; [`Error::Entitlement`]; the errors of the
+    /// manifest fetch.
+    pub async fn verify_entitlement_refreshing(
+        &self,
+        jws: &str,
+        key_set: &KeySet,
+        subject: Option<&str>,
+        cached: Option<CachedEntitlement>,
+    ) -> Result<(VerifiedEntitlement, Option<KeySet>), Error> {
+        match self.verify_entitlement(jws, key_set, subject, cached) {
+            Err(Error::Entitlement(e))
+                if e.code == EntitlementErrorCode::UnknownKid
+                    && e.refresh_suggested
+                    && key_set.unknown_kid_refresh_allowed(self.now()) =>
+            {
+                match self.refresh_keys(Some(key_set)).await? {
+                    KeySetUpdate::Replaced(next) => {
+                        let verified = self.verify_entitlement(jws, &next, subject, cached)?;
+                        Ok((verified, Some(next)))
+                    }
+                    _ => Err(Error::Entitlement(e)),
+                }
+            }
+            other => other.map(|v| (v, None)),
+        }
     }
 
     // ------------------------------------------------------------------------------ connect
@@ -1010,6 +1053,7 @@ impl EverPlatformClient {
             headers,
             body: Some(signed.body.clone()),
             timeout: self.options.write_timeout,
+            max_response_bytes: MAX_RESPONSE_BYTES,
         };
         let res = self.send_prepared(&p, None).await?;
         self.answer(op, &res).map(Answer::into_json)

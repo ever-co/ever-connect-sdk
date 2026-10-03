@@ -47,14 +47,30 @@ export function isLocalUrl(url: string): boolean {
   }
 }
 
-/** The origin of a URL (`https://api.ever.co`), or null when it is not an http(s) URL. */
+const AUTHORITY = /^[A-Za-z][A-Za-z0-9+.-]*:\/\/([^/?#]*)/;
+
+/**
+ * The origin of an http(s) URL (`https://api.ever.co`), or null. The rule both SDKs share
+ * (vectors in `contracts/fixtures/keys/origins.json`): the authority holds only ASCII letters,
+ * digits and `. _ - : [ ]` (so userinfo, percent-escapes, backslashes, spaces and hosts that are
+ * not ASCII are refused); the URL standard's origin otherwise, except that a host it would
+ * rewrite (an IPv4 address not in dotted-decimal form, an IPv6 address not in its shortest form)
+ * is refused.
+ */
 export function originOf(url: string): string | null {
+  const m = AUTHORITY.exec(url);
+  if (!m || !/^[A-Za-z0-9._:[\]-]*$/.test(m[1] as string)) return null;
+  let u: URL;
   try {
-    const u = new URL(url);
-    return u.protocol === 'https:' || u.protocol === 'http:' ? u.origin : null;
+    u = new URL(url);
   } catch {
     return null;
   }
+  if (u.protocol !== 'https:' && u.protocol !== 'http:') return null;
+  const authority = (m[1] as string).toLowerCase();
+  const colon = authority.lastIndexOf(':');
+  const host = colon >= 0 && !authority.slice(colon).includes(']') ? authority.slice(0, colon) : authority;
+  return u.hostname === host ? u.origin : null;
 }
 
 let warned = false;

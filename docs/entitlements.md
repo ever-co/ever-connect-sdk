@@ -23,40 +23,49 @@ The body (`contracts/schemas/ever.key-manifest.v1.json`) has two members:
 | `keys` | the published Ed25519 keys: `kty: OKP`, `crv: Ed25519`, `kid`, `x`, `use: sig`, `alg: EdDSA`, `ever_purpose` (`entitlement`, `assertion` or `intent`), `state` (`active`, or `previous` during a rotation overlap), `not_before`, `not_after` |
 | `manifest` | a compact JWS signed by a **root key**, header `{alg: EdDSA, kid: <root kid>, typ: ever-key-manifest+jwt}`, payload `{iss, iat, exp, keys_sha256, root_kid}` with `exp` 30 days after `iat` |
 
-The SDK trusts the served `keys` only when every check passes, in this order (the first failure is the answer):
+A manifest is always verified **for one issuer**: the caller names it (`verifyKeyManifest(body, { issuer })`; `KeySet.verify`, `KeySet.restore` and `keySet.update` take the same option; in Rust `VerifyKeyManifestOptions { issuer, .. }` or `VerifyKeyManifestOptions::for_issuer(issuer)`). There is no default: without an issuer the call is refused, and the issuer is never taken from a root. The SDK trusts the served `keys` only when every check passes, in this order (the first failure is the answer):
 
 | # | Check | Code |
 |---|---|---|
-| 1 | the body is `{manifest, keys}` under the closed schema | `schema_violation` |
-| 2 | `manifest` is three canonical base64url parts with JSON objects | `malformed` |
+| 1 | the body is `{manifest, keys}` under the closed schema; every `not_before`/`not_after` is a UTC time that exists; every key `x` is a curve point of large order | `schema_violation` |
+| 2 | `manifest` is a compact JWS under the decoding rule below | `malformed` |
 | 3 | header `typ` is `ever-key-manifest+jwt` | `bad_typ` |
 | 4 | header `alg` is `EdDSA` and there is no `crit`, before any key is looked at | `bad_alg` |
-| 5 | header `kid` is a pinned root, pinned for this issuer | `unknown_root` |
-| 6 | the root's Ed25519 signature | `bad_signature` |
+| 5 | header `kid` is a root pinned for this issuer (a root's `iss` names the one issuer it vouches for), and the root is a strong key | `unknown_root` |
+| 6 | the root's Ed25519 signature, verified strictly (no small-order point, no non-canonical encoding) | `bad_signature` |
 | 7 | the payload is `{iss, iat, exp, keys_sha256, root_kid}` and `root_kid` is the header's `kid` | `malformed` |
-| 8 | `iss` is the API origin | `issuer_mismatch` |
+| 8 | `iss` is the issuer the manifest is verified for | `issuer_mismatch` |
 | 9 | `iat` is at most 300 s in the future | `manifest_not_yet_valid` |
 | 10 | `exp` has not passed | `manifest_expired` |
 | 11 | `keys_sha256` is the hexadecimal SHA-256 of the RFC 8785 canonical JSON of the served `keys` | `keys_sha256_mismatch` |
 
-A key of a verified manifest verifies a document only for its own `ever_purpose`, in state `active` or `previous`, inside its `not_before`/`not_after` window (300 s of clock skew). An installation caches the verified key set (`KeySet` keeps it in memory; the product stores `toJSON()`, which holds no secret, and `KeySet.restore` verifies it again), fetches it again every 24 h (`key_manifest.refresh_s`), and on a key id it does not know, at most once every 10 minutes (`key_manifest.unknown_kid_refresh_min_s`). A manifest that fails verification, or is older than the cached one, never replaces it.
+**The decoding rule** (every compact JWS the SDK reads: manifests and entitlement documents, the same in both languages): at most 64 KiB; three canonical base64url parts (no padding, no other alphabet, no stray bits); header and payload are JSON objects in valid UTF-8 without a byte order mark, with well-formed strings (no lone surrogate) and at most 127 levels of nesting; every number is an integer without fraction or exponent, between -(2^53-1) and 2^53-1 (`3.0`, `1e3`, `-0` and `9007199254740992` are `malformed`).
+
+**Key times** are RFC 3339 UTC times (`2026-11-01T10:00:00Z`, an optional fraction of a second): an offset, a space, a lower-case `z`, a leap second or a day that does not exist refuses the whole manifest (`schema_violation`). A key is never trusted on a time the SDK cannot read.
+
+A key of a verified manifest verifies a document only for its own `ever_purpose`, in state `active` or `previous`, inside its `not_before`/`not_after` window (300 s of clock skew). An installation caches the verified key set (`KeySet` keeps it in memory; the product stores `toJSON()` (Rust: `stored()`), which holds no secret, and `KeySet.restore(stored, { issuer })` verifies it again for the issuer the installation is configured for; a stored fetch time in the future counts as now), fetches it again every 24 h (`key_manifest.refresh_s`), and on a key id it does not know, at most once every 10 minutes (`key_manifest.unknown_kid_refresh_min_s`). A manifest that fails verification, is for another issuer, or is older than the cached one never replaces it.
+
+**Verified objects cannot be made by hand.** A `KeySet` comes only from `KeySet.verify`, `KeySet.restore`, `keySet.update` or the client's `keys.refresh` (Rust: `KeySet::verify`, `KeySet::restore`, `update`, `refresh_keys`); `verifyEntitlement` refuses anything else. In TypeScript the verified manifest is branded (`isVerifiedKeyManifest`) and `KeySet.fromManifest` accepts only one that `verifyKeyManifest` returned; in Rust `VerifiedKeyManifest` and `ManifestKey` have private fields (read through getters) and `KeySet::from_manifest` is private to the crate. A product persists the served body and restores it; it never rebuilds a verified object from stored fields.
 
 ### Pinned roots
 
-Roots are pinned per issuer in `root_keys` (`contracts/constants.json`): a root vouches only for manifests whose `iss` is the issuer it is pinned for.
+Roots are pinned per issuer in `root_keys` (`contracts/constants.json`): a root vouches only for manifests whose `iss` is the issuer it is pinned for, so the development or staging root never vouches for a production manifest.
 
 | Issuer | Root `kid` | Use |
 |---|---|---|
-| `http://mock-platform:8080` | `test-root-1` | the mock platform; derived from a public seed, it signs nothing anyone trusts. A release refuses a `test-` root |
 | `https://api-dev.ever.co` | `ever-202610-0d77` | product builds that talk to the development API |
 | `https://api-stage.ever.co` | `ever-202610-8704` | product builds that talk to the staging API |
 | `https://api.ever.co` | pending | added by its own reviewed change once the production root exists; until then no release is tagged |
 
 A root changes only in an SDK release, with the old and the new root pinned side by side for the transition (adding a root is a minor release, removing one a major release).
 
+No TEST root is pinned. The TEST root (`test-root-1`) is derived from a public seed, so anyone can sign with it: it lives in `contracts/fixtures/keys/roots.json` (for the SDK's own tests) and in the mock platform (`testRootEntry(issuer)` from `ever-mock-platform/keys`), and a local run passes it through the override below. A release still refuses a `test-` root in `root_keys`.
+
 ### Test roots for local runs
 
-`EVER_PLATFORM_ROOT_KEYS_FILE` names a JWKS file (`{"keys": [...]}`) of extra roots, and the client's `rootKeys` option (`root_keys` in Rust) adds roots in code. Both are honoured **only when the API base URL is a local address** (`root_keys_file_hosts` in `contracts/constants.json`: `localhost`, loopback, the private ranges and `*.localhost`); on any other base URL they are ignored with one warning. The same rule holds for the client's `issuer` option, which lets a local run name another issuer (the mock signs as `https://mock-platform.test` in the SDK's own tests). They exist for continuous integration against the mock platform.
+`EVER_PLATFORM_ROOT_KEYS_FILE` names a JWKS file (`{"keys": [...]}`) of extra roots, each with the `iss` it vouches for, and the client's `rootKeys` option (`root_keys` in Rust) adds roots in code. Both are honoured **only when the API base URL is a local address** (`root_keys_file_hosts` in `contracts/constants.json`: `localhost`, loopback, the private ranges and `*.localhost`); on any other base URL they are ignored with one warning. The same rule holds for the client's `issuer` option, which lets a local run name another issuer (the mock signs as `https://mock-platform.test` in the SDK's own tests). They exist for continuous integration against the mock platform.
+
+Below the client, `unsafeRootKeys` (`unsafe_root_keys` in Rust) on `verifyKeyManifest` and `KeySet` **replaces** the pinned roots on any base URL; it is named for what it does and is meant for tests and offline tools only. Product code leaves it out.
 
 ---
 
@@ -88,22 +97,23 @@ The SDK checks an entitlement document in this order and stops at the first fail
 
 | # | Check | Code |
 |---|---|---|
-| 1 | a compact JWS: exactly three canonical base64url parts with JSON objects | `malformed` |
+| 0 | the key set was verified for the expected issuer (a key set vouches for documents of its own issuer only), before the document is decoded | `issuer_mismatch` |
+| 1 | a compact JWS under the decoding rule of section 1 | `malformed` |
 | 2 | header `typ` is `ever-entitlement+jwt` | `bad_typ` |
 | 3 | `alg` is `EdDSA` and there is no `crit` header, checked before any key lookup (no `none`, no RS256) | `bad_alg` |
 | 4 | `kid` names a key of the root-verified key set with `ever_purpose: entitlement`, `state` `active` or `previous`, inside its window | `unknown_kid` (with `refreshSuggested` when the manifest does not list the id at all) |
-| 5 | the Ed25519 signature over `base64url(header).base64url(payload)` | `bad_signature` |
+| 5 | the Ed25519 signature over `base64url(header).base64url(payload)`, verified strictly (no small-order point, no non-canonical encoding) | `bad_signature` |
 | 6 | `ever.schema` is `ever.entitlement.v1` | `schema_violation` |
 | 7 | `iss` is the origin of the API | `issuer_mismatch` |
 | 8 | `aud` is `ever-connect` | `audience_mismatch` |
 | 9 | the whole payload validates against the closed schema | `schema_violation` (with the JSON pointer of the first field) |
 | 10 | `ever.instance_id` is this installation's Registry id | `instance_mismatch` |
-| 11 | `sub` is the subject asked for | `subject_mismatch` |
+| 11 | `sub` is the subject asked for; a `link:` document names its own link (`ever.tenant_link_id` is the id after `link:`), an `instance:` document carries neither `ever.tenant_link_id` nor `ever.tenant` | `subject_mismatch` |
 | 12 | `iat` is at most 300 s in the future | `iat_in_future` |
 | 13 | `nbf` is at most 300 s in the future | `nbf_in_future` |
 | 14 | `ever.seq` is higher than the cached document's, or equal with a later `iat` | `entitlement_stale` |
 
-On `unknown_kid` with `refreshSuggested`, the product refreshes the key set once (`KeySet.unknownKidRefreshAllowed` says whether 10 minutes have passed) and verifies again; a second `unknown_kid` is final. A document that fails any check is discarded and the previous one is kept; no error carries the token or a claim value, only the code.
+On `unknown_kid` with `refreshSuggested`, the product refreshes the key set once (`KeySet.unknownKidRefreshAllowed` says whether 10 minutes have passed) and verifies again; a second `unknown_kid` is final. The clients do this for you: `client.verifyEntitlementRefreshing(jws, { keySet })` answers `{ verified, keySet }` (Rust: `verify_entitlement_refreshing` answers the result and, when the refresh replaced it, the new key set to keep). A document that fails any check is discarded and the previous one is kept; no error carries the token or a claim value, only the code.
 
 `exp` is not a verification failure. It decides what the verified document allows (`entitlementStatus`, from the cached document only, never from the state of the connection):
 
@@ -115,7 +125,7 @@ On `unknown_kid` with `refreshSuggested`, the product refreshes the key set once
 
 ### Offline import
 
-An installation without egress can be given a document by hand (downloaded from app.ever.co and uploaded in the product's admin page). The same checks apply; the installation needs only its stored key set (`KeySet.restore`) and the root pinned in the SDK.
+An installation without egress can be given a document by hand (downloaded from app.ever.co and uploaded in the product's admin page). The same checks apply; the installation needs only its stored key set (`KeySet.restore(stored, { issuer })`, with the issuer it is configured for) and the root pinned in the SDK for that issuer.
 
 ---
 
@@ -142,5 +152,5 @@ An installation without egress can be given a document by hand (downloaded from 
 | Schemas | `contracts/schemas/ever.key-manifest.v1.json`, `contracts/schemas/ever.entitlement.v1.json` |
 | Constants (roots, lifetimes, refresh intervals, the roots file hosts) | `contracts/constants.json`, also exported by `@ever-co/connect-contracts` and the `ever-connect-contracts` crate |
 | The verifier | `@ever-co/connect-sdk` (`verifyKeyManifest`, `KeySet`, `verifyEntitlement`, `entitlementStatus`); the `ever-connect-sdk` crate, feature `entitlement` (`manifest`, `keyset`, `entitlement`) |
-| Fixtures with expected outcomes | `contracts/fixtures/keys/` (TEST root), `contracts/fixtures/keys-platform/` (manifests the development and staging APIs serve), `contracts/fixtures/entitlement/` (with `mutations.json`: the answers of the seeded mutation corpus both languages reproduce) |
+| Fixtures with expected outcomes | `contracts/fixtures/keys/` (TEST root, the small-order encodings, the shared origin vectors), `contracts/fixtures/keys-platform/` (manifests the development and staging APIs serve), `contracts/fixtures/entitlement/` (with `mutations.json`: the answers of the seeded mutation corpus, and `structured.json`: documents and manifests built on purpose with the answers of the reference verifier; both languages reproduce every answer) |
 | A platform that signs both | the mock platform (`docs/mock-platform.md`): `GET /.well-known/ever-keys.json` and the entitlement routes, signed with the TEST keys; `POST /__mock/keys/rotate` and `POST /__mock/entitlement/reissue` drive rotation and re-issue |

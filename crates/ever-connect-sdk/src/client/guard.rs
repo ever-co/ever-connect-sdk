@@ -132,6 +132,9 @@ pub(crate) fn url_for(
     Ok(url)
 }
 
+/// The largest answer body read by default.
+pub(crate) const MAX_RESPONSE_BYTES: usize = 4 * 1024 * 1024;
+
 /// An answer, read in full.
 pub(crate) struct WireResponse {
     pub(crate) status: u16,
@@ -160,6 +163,7 @@ pub(crate) async fn send(
     headers: Vec<(String, String)>,
     body: Option<Vec<u8>>,
     timeout: Duration,
+    max_response_bytes: usize,
 ) -> Result<WireResponse, Error> {
     let method = reqwest::Method::from_bytes(method.as_bytes())
         .map_err(|_| Error::InvalidOptions("method"))?;
@@ -186,7 +190,24 @@ pub(crate) async fn send(
         return Err(Error::EgressRefused { code: "redirect" });
     }
     let headers = response.headers().clone();
-    let body = response.bytes().await.map_err(failed)?.to_vec();
+    if response
+        .content_length()
+        .is_some_and(|n| n > max_response_bytes as u64)
+    {
+        return Err(Error::ResponseTooLarge {
+            limit_bytes: max_response_bytes,
+        });
+    }
+    let mut response = response;
+    let mut body = Vec::new();
+    while let Some(chunk) = response.chunk().await.map_err(failed)? {
+        if body.len() + chunk.len() > max_response_bytes {
+            return Err(Error::ResponseTooLarge {
+                limit_bytes: max_response_bytes,
+            });
+        }
+        body.extend_from_slice(&chunk);
+    }
     Ok(WireResponse {
         status,
         headers,

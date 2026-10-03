@@ -71,10 +71,12 @@ test('integration keys are the non-hidden catalog keys and requires_feature name
   }
 });
 
-test('root_keys: the TEST root first, then the Ever Platform roots, each pinned to one issuer', () => {
-  const [root, ...pinned] = constants.root_keys;
-  assert.ok(root.kid.startsWith('test-'), 'a release refuses test- roots');
-  assert.equal(root.x, testKey('root').x);
+test('root_keys: the Ever Platform roots only, each pinned to one issuer; never a TEST root', () => {
+  const pinned = constants.root_keys;
+  assert.ok(
+    pinned.every((k) => !k.kid.startsWith('test-') && k.x !== testKey('root').x),
+    'the TEST root reaches a client through the local-only override only',
+  );
   assert.equal(constants.root_keys_file_env, 'EVER_PLATFORM_ROOT_KEYS_FILE');
   const kids = new Set();
   for (const key of pinned) {

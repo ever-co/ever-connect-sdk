@@ -51,7 +51,7 @@ export function testKey(name) {
 
 export const testKeyNames = () => Object.keys(DEFS);
 
-/** The TEST root as a JWKS entry for EVER_PLATFORM_ROOT_KEYS_FILE and constants.root_keys. */
+/** The TEST root as a JWKS entry for EVER_PLATFORM_ROOT_KEYS_FILE (local runs; the SDK pins no TEST root). */
 export function testRootEntry(issuer) {
   const root = testKey('root');
   return { kid: root.kid, iss: issuer, kty: 'OKP', crv: 'Ed25519', x: root.x, use: 'sig', alg: 'EdDSA' };

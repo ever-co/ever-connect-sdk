@@ -78,6 +78,11 @@ pub enum Error {
     Assertion(AssertionError),
     /// The request did not complete (connection, TLS, an answer that is not JSON).
     Transport(String),
+    /// An answer larger than the client reads (the read stopped at the limit).
+    ResponseTooLarge {
+        /// The limit, in bytes.
+        limit_bytes: usize,
+    },
     /// The client options are not usable.
     InvalidOptions(&'static str),
 }
@@ -95,6 +100,7 @@ impl Error {
             Self::KeyManifest(e) => e.code(),
             Self::Assertion(e) => e.code(),
             Self::Transport(_) => "transport",
+            Self::ResponseTooLarge { .. } => "response_too_large",
             Self::InvalidOptions(_) => "invalid_options",
         }
     }
@@ -124,6 +130,9 @@ impl fmt::Display for Error {
             Self::KeyManifest(e) => e.fmt(f),
             Self::Assertion(e) => e.fmt(f),
             Self::Transport(m) => write!(f, "the request did not complete: {m}"),
+            Self::ResponseTooLarge { limit_bytes } => {
+                write!(f, "answer larger than {limit_bytes} bytes")
+            }
             Self::InvalidOptions(m) => write!(f, "invalid client options: {m}"),
         }
     }
@@ -154,46 +163,65 @@ impl From<AssertionError> for Error {
 
 /// Replaces every instance token (`evit_…`) and every compact JWS (an assertion, a document) in
 /// `text` with `[redacted]`. The client keeps no copy of a secret to look for: both are recognised
-/// by their shape.
+/// by their shape. Tokens first, anywhere (also inside something that looks like a document), then
+/// documents: the same two rules, in the same order, as the TypeScript client.
 pub(crate) fn redact(text: &str) -> String {
-    let out = text.to_owned();
-    let mut result = String::with_capacity(out.len());
-    let mut rest = out.as_str();
-    while !rest.is_empty() {
-        let token_start = rest.find("evit_");
-        let jws_start = rest.find("eyJ");
-        let start = match (token_start, jws_start) {
-            (Some(a), Some(b)) => a.min(b),
-            (Some(a), None) | (None, Some(a)) => a,
-            (None, None) => {
-                result.push_str(rest);
-                break;
+    redact_documents(&redact_tokens(text))
+}
+
+const fn token_char(b: u8) -> bool {
+    b.is_ascii_alphanumeric() || b == b'_' || b == b'-'
+}
+
+/// `evit_[A-Za-z0-9_-]+` becomes `[redacted]`.
+fn redact_tokens(text: &str) -> String {
+    let b = text.as_bytes();
+    let mut out = String::with_capacity(text.len());
+    let mut copied = 0;
+    let mut i = 0;
+    while i < b.len() {
+        if b[i..].starts_with(b"evit_") {
+            let run = b[i + 5..].iter().take_while(|c| token_char(**c)).count();
+            if run > 0 {
+                out.push_str(&text[copied..i]);
+                out.push_str("[redacted]");
+                i += 5 + run;
+                copied = i;
+                continue;
             }
-        };
-        result.push_str(&rest[..start]);
-        let tail = &rest[start..];
-        let len = tail
-            .find(|c: char| !(c.is_ascii_alphanumeric() || c == '_' || c == '-' || c == '.'))
-            .unwrap_or(tail.len());
-        let candidate = &tail[..len];
-        let is_token = candidate.starts_with("evit_");
-        let is_jws = candidate.starts_with("eyJ") && candidate.matches('.').count() >= 2;
-        if is_token || is_jws {
-            result.push_str("[redacted]");
-        } else {
-            result.push_str(candidate);
         }
-        rest = &tail[len..];
-        if len == 0 {
-            // Not a secret and nothing consumed: keep one character and move on.
-            let mut chars = rest.chars();
-            if let Some(c) = chars.next() {
-                result.push(c);
-            }
-            rest = chars.as_str();
-        }
+        i += 1;
     }
-    result
+    out.push_str(&text[copied..]);
+    out
+}
+
+/// `eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*` becomes `[redacted]`.
+fn redact_documents(text: &str) -> String {
+    let b = text.as_bytes();
+    let run = |from: usize| b[from..].iter().take_while(|c| token_char(**c)).count();
+    let mut out = String::with_capacity(text.len());
+    let mut copied = 0;
+    let mut i = 0;
+    while i < b.len() {
+        if b[i..].starts_with(b"eyJ") {
+            let first = i + 3 + run(i + 3);
+            if b.get(first) == Some(&b'.') {
+                let second = run(first + 1);
+                if second > 0 && b.get(first + 1 + second) == Some(&b'.') {
+                    let end = first + 2 + second + run(first + 2 + second);
+                    out.push_str(&text[copied..i]);
+                    out.push_str("[redacted]");
+                    i = end;
+                    copied = i;
+                    continue;
+                }
+            }
+        }
+        i += 1;
+    }
+    out.push_str(&text[copied..]);
+    out
 }
 
 #[cfg(test)]
@@ -205,5 +233,11 @@ mod tests {
         let out =
             redact("bad evit_abc-123 and eyJhbGciOiJFZERTQSJ9.eyJpc3MiOiJ4In0.sig and eyJnot");
         assert_eq!(out, "bad [redacted] and [redacted] and eyJnot");
+        // A token glued to something that starts like a document is still a token.
+        assert_eq!(redact("x eyJab_evit_SECRET y"), "x eyJab_[redacted] y");
+        assert_eq!(
+            redact("évit_ ünï evit_ eyJ..x eyJa.b.c"),
+            "évit_ ünï evit_ eyJ..x [redacted]"
+        );
     }
 }

@@ -1,0 +1,233 @@
+{
+  "description": "The origin rule both SDKs apply to an issuer (the expected issuer, the iss of a root, the issuer of a key set): the authority holds only ASCII letters, digits and . _ - : [ ]; scheme and host lower case; the default port dropped and leading zeros of a port removed (past 65535 refused); a host the URL standard would rewrite (IPv4 not in dotted-decimal form, IPv6 not in its shortest form) refused. origin null means refused.",
+  "vectors": [
+    {
+      "url": "https://api.ever.co",
+      "origin": "https://api.ever.co"
+    },
+    {
+      "url": "https://API.Ever.CO/v1/x?y#z",
+      "origin": "https://api.ever.co"
+    },
+    {
+      "url": "HTTPS://api.ever.co",
+      "origin": "https://api.ever.co"
+    },
+    {
+      "url": "https://api.ever.co:443",
+      "origin": "https://api.ever.co"
+    },
+    {
+      "url": "https://api.ever.co:0443",
+      "origin": "https://api.ever.co"
+    },
+    {
+      "url": "https://api.ever.co:",
+      "origin": "https://api.ever.co"
+    },
+    {
+      "url": "http://api.ever.co:80/",
+      "origin": "http://api.ever.co"
+    },
+    {
+      "url": "https://api.ever.co:8443",
+      "origin": "https://api.ever.co:8443"
+    },
+    {
+      "url": "http://127.0.0.1:08080/",
+      "origin": "http://127.0.0.1:8080"
+    },
+    {
+      "url": "http://localhost:3000",
+      "origin": "http://localhost:3000"
+    },
+    {
+      "url": "http://mock-platform:8080",
+      "origin": "http://mock-platform:8080"
+    },
+    {
+      "url": "https://mock-platform.test",
+      "origin": "https://mock-platform.test"
+    },
+    {
+      "url": "https://api.ever.co.",
+      "origin": "https://api.ever.co."
+    },
+    {
+      "url": "https://my_host.example",
+      "origin": "https://my_host.example"
+    },
+    {
+      "url": "http://[::1]:9/",
+      "origin": "http://[::1]:9"
+    },
+    {
+      "url": "http://[0::1]/",
+      "origin": null
+    },
+    {
+      "url": "http://[::FFFF:7f00:1]/",
+      "origin": "http://[::ffff:7f00:1]"
+    },
+    {
+      "url": "http://[::127.0.0.1]/",
+      "origin": null
+    },
+    {
+      "url": "http://[1:0:0:2:0:0:0:3]/",
+      "origin": null
+    },
+    {
+      "url": "http://[1:0:0:0:2:0:0:3]/",
+      "origin": null
+    },
+    {
+      "url": "http://[1:2:3:4:5:6:7:0]/",
+      "origin": "http://[1:2:3:4:5:6:7:0]"
+    },
+    {
+      "url": "http://[1:0:3:4:5:6:7:8]/",
+      "origin": "http://[1:0:3:4:5:6:7:8]"
+    },
+    {
+      "url": "https://user@api.ever.co",
+      "origin": null
+    },
+    {
+      "url": "https://user:pw@api.ever.co",
+      "origin": null
+    },
+    {
+      "url": "https://api.ever.co\\@evil.example",
+      "origin": null
+    },
+    {
+      "url": "https://api.ever.co\\x",
+      "origin": null
+    },
+    {
+      "url": "https://api%2Eever.co",
+      "origin": null
+    },
+    {
+      "url": "https://bücher.example",
+      "origin": null
+    },
+    {
+      "url": "https://xn--bcher-kva.example",
+      "origin": "https://xn--bcher-kva.example"
+    },
+    {
+      "url": " https://api.ever.co",
+      "origin": null
+    },
+    {
+      "url": "https://api.ever.co /x",
+      "origin": null
+    },
+    {
+      "url": "https://api.ever\n.co",
+      "origin": null
+    },
+    {
+      "url": "https:api.ever.co",
+      "origin": null
+    },
+    {
+      "url": "https://",
+      "origin": null
+    },
+    {
+      "url": "https://:443",
+      "origin": null
+    },
+    {
+      "url": "https://api.ever.co:70000",
+      "origin": null
+    },
+    {
+      "url": "https://api.ever.co:65535",
+      "origin": "https://api.ever.co:65535"
+    },
+    {
+      "url": "https://api.ever.co:0000000000443",
+      "origin": "https://api.ever.co"
+    },
+    {
+      "url": "https://api.ever.co:099999999999",
+      "origin": null
+    },
+    {
+      "url": "https://api.ever.co:abc",
+      "origin": null
+    },
+    {
+      "url": "https://api.ever.co:+1",
+      "origin": null
+    },
+    {
+      "url": "http://127.1/",
+      "origin": null
+    },
+    {
+      "url": "http://0x7f.0.0.1/",
+      "origin": null
+    },
+    {
+      "url": "http://0177.0.0.1/",
+      "origin": null
+    },
+    {
+      "url": "http://1.2.3.04/",
+      "origin": null
+    },
+    {
+      "url": "http://2130706433/",
+      "origin": null
+    },
+    {
+      "url": "http://1.2.3.4./",
+      "origin": null
+    },
+    {
+      "url": "http://a.123/",
+      "origin": null
+    },
+    {
+      "url": "http://a.0x/",
+      "origin": null
+    },
+    {
+      "url": "http://a.0xzz/",
+      "origin": "http://a.0xzz"
+    },
+    {
+      "url": "http://256.0.0.1/",
+      "origin": null
+    },
+    {
+      "url": "http://10.0.0.5:8080",
+      "origin": "http://10.0.0.5:8080"
+    },
+    {
+      "url": "ftp://api.ever.co",
+      "origin": null
+    },
+    {
+      "url": "api.ever.co",
+      "origin": null
+    },
+    {
+      "url": "file:///etc/passwd",
+      "origin": null
+    },
+    {
+      "url": "https://a[b]",
+      "origin": null
+    },
+    {
+      "url": "http://[::1]x/",
+      "origin": null
+    }
+  ]
+}

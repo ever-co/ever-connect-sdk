@@ -1,6 +1,7 @@
+import { createPublicKey } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { EntitlementError, entitlementStatus, KeySet, type RootKey, verifyEntitlement } from '../src/index';
-import { fixture, fixtureText, signRaw } from './helpers';
+import { EntitlementError, entitlementStatus, KeySet, keysSha256, type RootKey, verifyEntitlement } from '../src/index';
+import { fixture, fixtureText, signRaw, testPrivateKey } from './helpers';
 
 const ctx = fixture<{
   expected_issuer: string;
@@ -13,7 +14,7 @@ const ctx = fixture<{
 }>('entitlement/context.json');
 const keysCtx = fixture<{ issuer: string; now: number }>('keys/context.json');
 const roots = fixture<{ keys: RootKey[] }>('keys/roots.json').keys;
-const keySet = KeySet.verify(fixture('keys/manifest.valid.json'), { rootKeys: roots, issuer: keysCtx.issuer, now: keysCtx.now });
+const keySet = KeySet.verify(fixture('keys/manifest.valid.json'), { unsafeRootKeys: roots, issuer: keysCtx.issuer, now: keysCtx.now });
 const expected = fixture<{
   fixtures: Record<
     string,
@@ -140,10 +141,81 @@ describe('the steps', () => {
     expect(codeOf(() => verifyEntitlement(instance, { ...opts, now: claims.iat - 300 }))).toBe('ok');
     expect(codeOf(() => verifyEntitlement(instance, { ...opts, now: claims.iat - 301 }))).toBe('iat_in_future');
   });
-  it('a verified manifest works as well as a key set', () => {
-    expect(verifyEntitlement(instance, { ...opts, keySet: undefined, manifest: keySet.manifest }).kid).toBe('test-entitlement-1');
+  it('only a key set built by KeySet verifies: no manifest, no object of the same shape', () => {
+    expect(() => verifyEntitlement(instance, { ...opts, keySet: undefined as never })).toThrow(TypeError);
+    expect(() => verifyEntitlement(instance, { ...opts, keySet: { ...keySet } as never })).toThrow(TypeError);
+    const fake = Object.create(KeySet.prototype);
+    expect(() => verifyEntitlement(instance, { ...opts, keySet: fake })).toThrow(TypeError);
+  });
+  it('a key set verifies documents of its own issuer only (checked first)', () => {
+    expect(codeOf(() => verifyEntitlement(instance, { ...opts, expectedIssuer: 'https://api.ever.co' }))).toBe('issuer_mismatch');
+    expect(codeOf(() => verifyEntitlement('not a document', { ...opts, expectedIssuer: 'https://api.ever.co' }))).toBe('issuer_mismatch');
+  });
+  it('a link document names its own link; an instance document carries no link member', () => {
+    const linked = sign({}, { ...claims, ever: { ...claims.ever, tenant_link_id: '01JHGF4PAY0P5JJ7J2A56VSRZM' } });
+    expect(codeOf(() => verifyEntitlement(linked, opts))).toBe('subject_mismatch');
+  });
+  it('a JWS over 64 KiB is malformed', () => {
+    expect(codeOf(() => verifyEntitlement(`${instance}${'A'.repeat(65536)}`, opts))).toBe('malformed');
   });
 });
+
+describe('the review forgery (a TEST-root manifest and an attacker document for the production issuer)', () => {
+  // The TEST root's private key is derivable from a public seed label: anyone can sign a key
+  // manifest with it, listing their own key, and a document for any issuer with that key.
+  const PROD = 'https://api.ever.co';
+  const claims = fixture('entitlement/valid/instance.claims.json');
+  const opts = options('valid/instance.jws');
+  const attackerX = makeAttacker();
+  const forgedManifest = (() => {
+    const keys = [
+      ...fixture('keys/manifest.valid.json').keys,
+      { ...fixture('keys/manifest.valid.json').keys[1], kid: 'attacker-1', x: attackerX },
+    ];
+    const payload = { iss: PROD, iat: ctx.now, exp: ctx.now + 2592000, keys_sha256: keysSha256(keys), root_kid: 'test-root-1' };
+    return { manifest: signRaw('test-root/1', { alg: 'EdDSA', kid: 'test-root-1', typ: 'ever-key-manifest+jwt' }, payload), keys };
+  })();
+  const forgedDocument = signRaw(
+    'test-stranger/1',
+    { alg: 'EdDSA', kid: 'attacker-1', typ: 'ever-entitlement+jwt' },
+    { ...claims, iss: PROD, ever: { ...claims.ever, tier: 'bundle' } },
+  );
+  it('is refused on every path: verify, restore and update need the issuer; the TEST root is not pinned', () => {
+    expect(() => KeySet.restore({ document: forgedManifest, fetchedAt: ctx.now }, {} as never)).toThrow(TypeError);
+    for (const fn of [
+      () => KeySet.restore({ document: forgedManifest, fetchedAt: ctx.now }, { issuer: PROD, now: ctx.now }),
+      () => KeySet.verify(forgedManifest, { issuer: PROD, now: ctx.now }),
+      () => KeySet.verify(forgedManifest, { issuer: PROD, unsafeRootKeys: roots, now: ctx.now }),
+    ])
+      expect(() => fn()).toThrow(expect.objectContaining({ code: 'unknown_root' }));
+  });
+  it('a key set of the TEST issuer never vouches for a production document', () => {
+    const testIssuerSet = KeySet.verify(
+      {
+        ...forgedManifest,
+        manifest: signRaw(
+          'test-root/1',
+          { alg: 'EdDSA', kid: 'test-root-1', typ: 'ever-key-manifest+jwt' },
+          {
+            iss: ctx.expected_issuer,
+            iat: ctx.now,
+            exp: ctx.now + 2592000,
+            keys_sha256: keysSha256(forgedManifest.keys),
+            root_kid: 'test-root-1',
+          },
+        ),
+      },
+      { issuer: ctx.expected_issuer, unsafeRootKeys: roots, now: ctx.now },
+    );
+    expect(codeOf(() => verifyEntitlement(forgedDocument, { ...opts, keySet: testIssuerSet, expectedIssuer: PROD }))).toBe(
+      'issuer_mismatch',
+    );
+  });
+});
+
+function makeAttacker(): string {
+  return createPublicKey(testPrivateKey('test-stranger/1')).export({ format: 'jwk' }).x as string;
+}
 
 describe('entitlementStatus: the ladder', () => {
   const c = { exp: 1000, ever: { grace_s: 100 } };

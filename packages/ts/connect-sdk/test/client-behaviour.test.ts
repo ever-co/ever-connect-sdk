@@ -334,6 +334,15 @@ describe('8. local base URL only: overrides', () => {
   });
 });
 
+describe('answer size', () => {
+  it('an answer over the limit is refused, by its length or while it is read', async () => {
+    const big = fake(() => new Response('x'.repeat(10), { status: 200, headers: { 'content-length': String(5 * 1024 * 1024) } }));
+    await expect(client(big).connect.legal()).rejects.toMatchObject({ name: 'ResponseTooLargeError' });
+    const streamed = fake(() => new Response(new Uint8Array(4 * 1024 * 1024 + 1), { status: 200 }));
+    await expect(client(streamed).connect.legal()).rejects.toMatchObject({ name: 'ResponseTooLargeError' });
+  });
+});
+
 describe('the client object', () => {
   it('shows its base URL only', async () => {
     const f = platform();

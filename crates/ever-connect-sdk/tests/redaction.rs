@@ -94,8 +94,8 @@ fn a_refused_document_names_the_code_never_a_claim_value() {
     let set = KeySet::verify(
         &read("keys/manifest.valid.json"),
         &VerifyKeyManifestOptions {
-            root_keys: Some(&roots),
-            issuer: ctx["expected_issuer"].as_str(),
+            unsafe_root_keys: Some(&roots),
+            issuer: ctx["expected_issuer"].as_str().unwrap(),
             now: ctx["now"].as_i64(),
         },
     )

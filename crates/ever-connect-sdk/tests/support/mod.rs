@@ -20,9 +20,20 @@ pub struct Reply {
     pub headers: Vec<(String, String)>,
     pub body: Vec<u8>,
     pub delay_ms: u64,
+    /// Sent without `content-length`: the body ends when the connection closes.
+    pub streamed: bool,
 }
 
 impl Reply {
+    pub const fn bytes(body: Vec<u8>, streamed: bool) -> Self {
+        Self {
+            status: 200,
+            headers: Vec::new(),
+            body,
+            delay_ms: 0,
+            streamed,
+        }
+    }
     pub fn json(status: u16, body: &serde_json::Value) -> Self {
         let content_type = if status >= 400 {
             "application/problem+json"
@@ -34,6 +45,7 @@ impl Reply {
             headers: vec![("content-type".into(), content_type.into())],
             body: body.to_string().into_bytes(),
             delay_ms: 0,
+            streamed: false,
         }
     }
     pub fn empty(status: u16) -> Self {
@@ -42,6 +54,7 @@ impl Reply {
             headers: Vec::new(),
             body: Vec::new(),
             delay_ms: 0,
+            streamed: false,
         }
     }
     pub fn header(mut self, name: &str, value: &str) -> Self {
@@ -109,11 +122,10 @@ impl Server {
                     if reply.delay_ms > 0 {
                         std::thread::sleep(std::time::Duration::from_millis(reply.delay_ms));
                     }
-                    let mut head = format!(
-                        "HTTP/1.1 {} X\r\ncontent-length: {}\r\nconnection: close\r\n",
-                        reply.status,
-                        reply.body.len()
-                    );
+                    let mut head = format!("HTTP/1.1 {} X\r\nconnection: close\r\n", reply.status);
+                    if !reply.streamed {
+                        head.push_str(&format!("content-length: {}\r\n", reply.body.len()));
+                    }
                     for (k, v) in &reply.headers {
                         head.push_str(&format!("{k}: {v}\r\n"));
                     }

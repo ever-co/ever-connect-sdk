@@ -25,6 +25,7 @@ export {
   NotConnectedError,
   ProblemError,
   RequestRefusedError,
+  ResponseTooLargeError,
   TimeoutError,
   UsageValidationError,
 } from './errors';
@@ -50,7 +51,7 @@ export { MANAGED_OPERATION_KINDS } from './managed/executor';
 export type { ManagedOperationRunnerOptions, RunOutcome, RunReport } from './managed/runner';
 export { createManagedOperationRunner, MANAGED_REQUESTED, sanitizeResult } from './managed/runner';
 export type { KeyManifestDocument, ManifestKey, RootKey, VerifiedKeyManifest, VerifyKeyManifestOptions } from './manifest';
-export { CLOCK_SKEW_S, keysSha256, pinnedRootKeys, verifyKeyManifest } from './manifest';
+export { CLOCK_SKEW_S, isVerifiedKeyManifest, keysSha256, pinnedRootKeys, verifyKeyManifest } from './manifest';
 export type {
   SendStatsReportOptions,
   SignedStatsReport,

@@ -11,7 +11,7 @@
  *   contracts/constants.json            contracts_version, code patterns, install_sources, products,
  *                                       stats_headers (from the statistics operation's headers),
  *                                       feed_event_types (instance audience of the event catalog),
- *                                       integration_keys and the TEST root in root_keys
+ *                                       integration_keys; root_keys never holds a TEST root
  *
  *   node tools/split-integrations.mjs           write
  *   node tools/split-integrations.mjs --check   regenerate and compare
@@ -20,9 +20,7 @@ import { existsSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import YAML from 'yaml';
 import { diffOutputs, REPO, readJson, sha256, stableJson, writeText } from './lib/common.mjs';
-import { testRootEntry } from './mock-platform/src/keys.mjs';
 
-export const TEST_ROOT_ISSUER = 'http://mock-platform:8080';
 const INTEGRATIONS_DIR = 'contracts/integrations';
 const KEEP = new Set(['catalog.v1.json', 'overrides.json']);
 export const SCOPE_LOCK = 'scope-versions.lock.json';
@@ -123,9 +121,10 @@ export function build() {
   constants.stats_headers = { key: pick('-Key'), signature: pick('-Signature'), key_id: pick('-Key-Id') };
   constants.feed_event_types = vendorDoc.events.instance_types;
   constants.integration_keys = keys;
-  // The TEST root first; the roots of the Ever Platform environments (pinned per issuer by their
-  // own reviewed change) are kept as they are.
-  constants.root_keys = [testRootEntry(TEST_ROOT_ISSUER), ...(constants.root_keys ?? []).filter((k) => !k.kid.startsWith('test-'))];
+  // The roots of the Ever Platform environments, each pinned for its issuer by its own reviewed
+  // change, are kept as they are; a TEST root is never pinned (the mock's root reaches a client
+  // through the local-only override).
+  constants.root_keys = (constants.root_keys ?? []).filter((k) => !k.kid.startsWith('test-'));
   files['contracts/constants.json'] = stableJson(constants, { sort: false });
   return files;
 }

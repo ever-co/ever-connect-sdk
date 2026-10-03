@@ -1,31 +1,37 @@
 /**
  * The key manifest (`GET /.well-known/ever-keys.json`): the platform's signing keys, vouched for by
- * a compact JWS signed by a pinned root key. No key of a manifest is trusted unless every check
- * below passes; the checks run in this order and the first failure is the answer:
+ * a compact JWS signed by a root key pinned for the issuer. No key of a manifest is trusted unless
+ * every check below passes; the checks run in this order and the first failure is the answer:
  *
- *   1. the body is `{manifest, keys}` under the closed `ever.key-manifest.v1` schema  schema_violation
- *   2. `manifest` is a compact JWS of three canonical base64url parts with JSON objects  malformed
+ *   1. the body is `{manifest, keys}` under the closed `ever.key-manifest.v1` schema, every key
+ *      time is a UTC time that exists, and every key is a curve point of large order  schema_violation
+ *   2. `manifest` is a compact JWS (the decoding rule of `decodeJws`)                    malformed
  *   3. header `typ` is `ever-key-manifest+jwt`                                          bad_typ
  *   4. header `alg` is `EdDSA` and there is no `crit`                                   bad_alg
- *   5. header `kid` is a pinned root (pinned for this issuer when the root names one)   unknown_root
- *   6. the Ed25519 signature of the root over `header.payload`                          bad_signature
+ *   5. header `kid` is a root pinned for the expected issuer                            unknown_root
+ *   6. the root's Ed25519 signature over `header.payload` (strict)                      bad_signature
  *   7. the payload is `{iss, iat, exp, keys_sha256, root_kid}` with `root_kid` = header `kid`  malformed
  *   8. payload `iss` is the expected issuer (an origin)                                 issuer_mismatch
  *   9. `iat <= now + 300`                                                               manifest_not_yet_valid
  *  10. `now < exp`                                                                      manifest_expired
  *  11. `keys_sha256` is the hex SHA-256 of the RFC 8785 canonical JSON of `keys`        keys_sha256_mismatch
+ *
+ * The issuer is always given: a manifest is verified for one issuer and the keys it vouches for
+ * verify documents of that issuer only. A verified manifest can only come from this function.
  */
 import { CONSTANTS, SCHEMAS } from '@ever-co/connect-contracts';
-import { sha256Hex } from './encoding';
+import { isCurvePoint, isSmallOrder } from './ed25519';
+import { fromB64url, sha256Hex } from './encoding';
 import { KeyManifestError } from './errors';
 import { canonicalJson, decodeJws, verifyEd25519 } from './jws';
 import { originOf } from './local';
 import { schemaViolations } from './schema';
+import { parseUtcTime } from './time';
 
 /** Seconds of clock difference tolerated on `iat` and on a key's validity window. */
 export const CLOCK_SKEW_S = 300;
 
-/** A pinned root public key (`CONSTANTS.root_keys` entries; `iss` pins it to one issuer). */
+/** A root public key: `iss` pins it to one issuer; a root without `iss` vouches for nothing. */
 export interface RootKey {
   readonly kid: string;
   readonly x: string;
@@ -56,11 +62,17 @@ export interface KeyManifestDocument {
   readonly keys: readonly ManifestKey[];
 }
 
-/** A key manifest that passed every check. */
+declare const verified: unique symbol;
+
+/**
+ * A key manifest that passed every check. Only `verifyKeyManifest` creates one: an object of the
+ * same shape built elsewhere is refused wherever a verified manifest is required.
+ */
 export interface VerifiedKeyManifest {
+  readonly [verified]: true;
   readonly keys: readonly ManifestKey[];
   readonly rootKid: string;
-  /** The issuer origin the manifest names. */
+  /** The issuer origin the manifest was verified for (and names). */
   readonly issuer: string;
   /** Unix seconds. */
   readonly issuedAt: number;
@@ -72,67 +84,81 @@ export interface VerifiedKeyManifest {
 
 /** Options of {@link verifyKeyManifest}. */
 export interface VerifyKeyManifestOptions {
+  /** The issuer the manifest is for: the API origin (`EVER_PLATFORM_API_URL`). Required. */
+  readonly issuer: string;
   /**
-   * The roots to trust. Default: the pinned `CONSTANTS.root_keys`. Passing roots replaces the
-   * pinned ones for this call (tests and offline tools); the client adds extra roots only for a
-   * local base URL (see `resolveRootKeys`).
+   * Roots that REPLACE the pinned `CONSTANTS.root_keys` for this call: for tests, local runs and
+   * offline tools only. A product passes nothing here; the client adds extra roots for a local
+   * base URL only (see `resolveRootKeys`).
    */
-  readonly rootKeys?: readonly RootKey[];
-  /**
-   * The issuer the payload must name (the API origin). Default: the `iss` the matched root is
-   * pinned to; a root without `iss` then requires this option.
-   */
-  readonly issuer?: string;
+  readonly unsafeRootKeys?: readonly RootKey[];
   /** Unix seconds. */
   readonly now?: number;
 }
 
 const MANIFEST_SCHEMA = SCHEMAS.keyManifest as unknown as { readonly [key: string]: unknown };
 const PAYLOAD_SCHEMA = (MANIFEST_SCHEMA.$defs as { payload: unknown }).payload;
+const VERIFIED = new WeakSet<object>();
 
-/** The pinned root keys of this SDK release. */
+/** Whether `value` is a manifest `verifyKeyManifest` answered (not an object of the same shape). */
+export const isVerifiedKeyManifest = (value: unknown): value is VerifiedKeyManifest =>
+  value !== null && typeof value === 'object' && VERIFIED.has(value);
+
+/** The pinned root keys of this SDK release (one per issuer; no TEST root). */
 export const pinnedRootKeys = (): readonly RootKey[] => CONSTANTS.root_keys as readonly RootKey[];
 
 /** Lower-case hex SHA-256 of the RFC 8785 canonical JSON of a key list (`keys_sha256`). */
 export const keysSha256 = (keys: unknown): string => sha256Hex(canonicalJson(keys));
 
+/** Whether a base64url public key is a curve point of large order. */
+const strongKey = (x: string): boolean => {
+  const raw = fromB64url(x);
+  return raw?.length === 32 && isCurvePoint(raw) && !isSmallOrder(raw);
+};
+
+/** The key rules the schema cannot say: times that exist, keys of large order. */
+function keysWellFormed(keys: readonly ManifestKey[]): boolean {
+  return keys.every(
+    (k) =>
+      parseUtcTime(k.not_before) !== null &&
+      (k.not_after === undefined || k.not_after === null || parseUtcTime(k.not_after) !== null) &&
+      strongKey(k.x),
+  );
+}
+
 /**
- * Verifies a key manifest body. Answers the keys it vouches for, or throws
+ * Verifies a key manifest body for one issuer. Answers the keys it vouches for, or throws
  * {@link KeyManifestError} with the code of the first failed check.
  */
-export function verifyKeyManifest(body: unknown, options?: VerifyKeyManifestOptions): VerifiedKeyManifest;
-/** The positional form: `verifyKeyManifest(body, rootKeys?, now?)`. */
-export function verifyKeyManifest(body: unknown, rootKeys?: readonly RootKey[], now?: number): VerifiedKeyManifest;
-export function verifyKeyManifest(
-  body: unknown,
-  second?: VerifyKeyManifestOptions | readonly RootKey[],
-  third?: number,
-): VerifiedKeyManifest {
-  const o: VerifyKeyManifestOptions = Array.isArray(second)
-    ? { rootKeys: second as readonly RootKey[], now: third }
-    : ((second as VerifyKeyManifestOptions | undefined) ?? {});
-  const roots = o.rootKeys ?? pinnedRootKeys();
-  const now = Math.floor(o.now ?? Date.now() / 1000);
+export function verifyKeyManifest(body: unknown, options: VerifyKeyManifestOptions): VerifiedKeyManifest {
+  if (!options || typeof options.issuer !== 'string') throw new TypeError('verifyKeyManifest needs the issuer (the API origin)');
+  const roots = options.unsafeRootKeys ?? pinnedRootKeys();
+  const now = Math.floor(options.now ?? Date.now() / 1000);
+  const expected = originOf(options.issuer);
 
-  // 1. The closed schema of the served body.
+  // 1. The closed schema of the served body, and the key rules it cannot say.
   if (schemaViolations(MANIFEST_SCHEMA, body).length > 0) throw new KeyManifestError('schema_violation');
   const doc = body as KeyManifestDocument;
-  // 2. Three canonical base64url parts with JSON objects.
+  if (!keysWellFormed(doc.keys)) throw new KeyManifestError('schema_violation');
+  // 2. A compact JWS.
   const jws = decodeJws(doc.manifest);
   if (!jws) throw new KeyManifestError('malformed');
   const { header, payload } = jws;
   // 3-4. Type, then algorithm (before any key is looked at).
   if (header.typ !== CONSTANTS.key_manifest_typ) throw new KeyManifestError('bad_typ');
   if (header.alg !== 'EdDSA' || 'crit' in header) throw new KeyManifestError('bad_alg');
-  // 5. A pinned root, pinned to this issuer when the root names one.
-  const expected = o.issuer === undefined ? undefined : originOf(o.issuer);
-  if (o.issuer !== undefined && expected === null) throw new KeyManifestError('issuer_mismatch');
-  const root = roots.find(
-    (r) =>
-      typeof header.kid === 'string' &&
-      r.kid === header.kid &&
-      (r.iss === undefined || expected === undefined || originOf(r.iss) === expected),
-  );
+  // 5. A root pinned for this issuer: a root vouches only for the issuer it names.
+  const root =
+    expected === null
+      ? undefined
+      : roots.find(
+          (r) =>
+            typeof header.kid === 'string' &&
+            r.kid === header.kid &&
+            typeof r.iss === 'string' &&
+            originOf(r.iss) === expected &&
+            strongKey(r.x),
+        );
   if (!root) throw new KeyManifestError('unknown_root');
   // 6. The root's signature.
   if (!verifyEd25519(root.x, jws.signingInput, jws.signature)) throw new KeyManifestError('bad_signature');
@@ -141,20 +167,23 @@ export function verifyKeyManifest(
     throw new KeyManifestError('malformed');
   const p = payload as { iss: string; iat: number; exp: number; keys_sha256: string; root_kid: string };
   // 8. The issuer.
-  const issuer = expected ?? (root.iss === undefined ? null : originOf(root.iss));
-  if (issuer === null || p.iss !== issuer) throw new KeyManifestError('issuer_mismatch');
+  if (p.iss !== expected) throw new KeyManifestError('issuer_mismatch');
   // 9-10. The validity window.
   if (p.iat > now + CLOCK_SKEW_S) throw new KeyManifestError('manifest_not_yet_valid');
   if (now >= p.exp) throw new KeyManifestError('manifest_expired');
   // 11. The served keys are the keys the root signed.
   if (keysSha256(doc.keys) !== p.keys_sha256) throw new KeyManifestError('keys_sha256_mismatch');
 
-  return Object.freeze({
-    keys: Object.freeze(doc.keys.map((k) => Object.freeze({ ...k }))),
+  // A deep, frozen copy: nothing the caller still holds can change what was verified.
+  const keys = Object.freeze((JSON.parse(JSON.stringify(doc.keys)) as ManifestKey[]).map((k) => Object.freeze(k)));
+  const result = Object.freeze({
+    keys,
     rootKid: root.kid,
-    issuer,
+    issuer: expected,
     issuedAt: p.iat,
     expiresAt: p.exp,
-    document: { manifest: doc.manifest, keys: doc.keys },
-  });
+    document: Object.freeze({ manifest: doc.manifest, keys }),
+  }) as unknown as VerifiedKeyManifest;
+  VERIFIED.add(result);
+  return result;
 }

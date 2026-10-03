@@ -2,18 +2,23 @@
  * The entitlement document verifier (`ever.entitlement.v1`), the one implementation every product
  * uses. The checks run in this order and fail closed at the first one that does not pass:
  *
- *   1. a compact JWS: exactly three canonical base64url parts with JSON objects   malformed
+ *   0. the key set was verified for the expected issuer (a key set of one issuer
+ *      never vouches for a document of another)                                   issuer_mismatch
+ *   1. a compact JWS (the decoding rule of `decodeJws`: 64 KiB, canonical parts,
+ *      safe integers only, well-formed strings, 127 levels)                       malformed
  *   2. header `typ` is `ever-entitlement+jwt`                                     bad_typ
  *   3. header `alg` is `EdDSA` and there is no `crit` (before any key lookup)     bad_alg
  *   4. header `kid` is in the root-verified key set, purpose `entitlement`,
  *      state `active` or `previous`, inside its validity window                   unknown_kid
- *   5. the Ed25519 signature over `header.payload`                                bad_signature
+ *   5. the Ed25519 signature over `header.payload` (strict: no small-order point)  bad_signature
  *   6. `ever.schema` is `ever.entitlement.v1`                                     schema_violation
  *   7. `iss` is the origin of the expected issuer                                 issuer_mismatch
  *   8. `aud` is `ever-connect`                                                    audience_mismatch
  *   9. the closed schema of the whole payload                                     schema_violation
  *  10. `ever.instance_id` is this installation's Registry id                      instance_mismatch
- *  11. `sub` is the expected subject (`instance:<id>` or `link:<id>`)             subject_mismatch
+ *  11. `sub` is the expected subject (`instance:<id>` or `link:<id>`); a link
+ *      document names its own link (`ever.tenant_link_id`), an instance document
+ *      carries no link member                                                     subject_mismatch
  *  12. `iat <= now + 300`                                                         iat_in_future
  *  13. `nbf <= now + 300`                                                         nbf_in_future
  *  14. against the cached document: a lower `seq`, or the same `seq` without a
@@ -27,7 +32,7 @@ import { EntitlementError } from './errors';
 import { decodeJws, verifyEd25519 } from './jws';
 import { KeySet } from './keyset';
 import { originOf } from './local';
-import { CLOCK_SKEW_S, type VerifiedKeyManifest } from './manifest';
+import { CLOCK_SKEW_S } from './manifest';
 import { isObject, schemaViolations } from './schema';
 
 /** The last verified document of a subject, as the product stores it. */
@@ -38,10 +43,9 @@ export interface CachedEntitlement {
 
 /** Options of {@link verifyEntitlement}. */
 export interface VerifyEntitlementOptions {
-  /** The root-verified keys: a {@link KeySet} or a verified manifest. */
-  readonly keySet?: KeySet;
-  readonly manifest?: VerifiedKeyManifest;
-  /** The API origin (`EVER_PLATFORM_API_URL`); only its origin is compared. */
+  /** The root-verified keys, verified for `expectedIssuer` (`KeySet.verify` or `KeySet.restore`). */
+  readonly keySet: KeySet;
+  /** The API origin (`EVER_PLATFORM_API_URL`); only its origin is compared, with the key set's and the document's. */
   readonly expectedIssuer: string;
   /** This installation's Registry id (a ULID). */
   readonly expectedInstanceId: string;
@@ -82,10 +86,13 @@ const fail = (code: EntitlementError['code'], refreshSuggested = false, path?: s
  */
 export function verifyEntitlement(jws: string, o: VerifyEntitlementOptions): VerifiedEntitlement {
   const now = Math.floor(o.now ?? Date.now() / 1000);
-  const keySet = o.keySet ?? (o.manifest ? KeySet.fromManifest(o.manifest, now) : null);
-  if (!keySet) throw new TypeError('verifyEntitlement needs a keySet or a verified manifest');
+  const keySet = o?.keySet;
+  if (!KeySet.isKeySet(keySet)) throw new TypeError('verifyEntitlement needs a KeySet (KeySet.verify or KeySet.restore)');
+  const issuer = originOf(o.expectedIssuer);
 
-  // 1. Three canonical base64url parts with JSON objects.
+  // 0. The key set is the expected issuer's.
+  if (issuer === null || keySet.issuer !== issuer) return fail('issuer_mismatch');
+  // 1. A compact JWS.
   const decoded = decodeJws(jws);
   if (!decoded) return fail('malformed');
   const { header, payload } = decoded;
@@ -101,8 +108,7 @@ export function verifyEntitlement(jws: string, o: VerifyEntitlementOptions): Ver
   // 6-8. Schema id, issuer, audience.
   const ever = isObject(payload.ever) ? payload.ever : null;
   if (ever?.schema !== 'ever.entitlement.v1') return fail('schema_violation', false, '/ever/schema');
-  const issuer = originOf(o.expectedIssuer);
-  if (issuer === null || payload.iss !== issuer) return fail('issuer_mismatch');
+  if (payload.iss !== issuer) return fail('issuer_mismatch');
   if (payload.aud !== CONSTANTS.entitlement_aud) return fail('audience_mismatch');
   // 9. The closed schema.
   const violations = schemaViolations(ENTITLEMENT_SCHEMA, payload);
@@ -111,6 +117,8 @@ export function verifyEntitlement(jws: string, o: VerifyEntitlementOptions): Ver
   // 10-11. This installation, this subject.
   if (claims.ever.instance_id !== o.expectedInstanceId) return fail('instance_mismatch');
   if (claims.sub !== o.expectedSubject) return fail('subject_mismatch');
+  const linked = claims.ever.tenant_link_id !== undefined || claims.ever.tenant !== undefined;
+  if (claims.sub.startsWith('link:') ? claims.ever.tenant_link_id !== claims.sub.slice(5) : linked) return fail('subject_mismatch');
   // 12-13. Not from the future.
   if (claims.iat > now + CLOCK_SKEW_S) return fail('iat_in_future');
   if (claims.nbf > now + CLOCK_SKEW_S) return fail('nbf_in_future');

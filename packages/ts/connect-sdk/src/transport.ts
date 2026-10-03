@@ -9,8 +9,41 @@
  * - Every request has a deadline (`TimeoutError`).
  * - A non-2xx answer becomes a `ProblemError`; secrets of the request never appear in it.
  */
-import { EgressRefusedError, ProblemError, TimeoutError } from './errors';
+import { EgressRefusedError, ProblemError, ResponseTooLargeError, TimeoutError } from './errors';
 import { isLocalHost } from './local';
+
+/** The largest answer body read by default. */
+export const MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
+
+/** Reads an answer body, refusing it past `limit` bytes (the read stops there). */
+async function readLimited(response: Response, limit: number): Promise<Uint8Array> {
+  const declared = Number(response.headers.get('content-length'));
+  if (Number.isFinite(declared) && declared > limit) {
+    await response.body?.cancel().catch(() => undefined);
+    throw new ResponseTooLargeError(limit);
+  }
+  if (!response.body) return new Uint8Array(await response.arrayBuffer());
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.length;
+    if (size > limit) {
+      await reader.cancel().catch(() => undefined);
+      throw new ResponseTooLargeError(limit);
+    }
+    chunks.push(value);
+  }
+  const out = new Uint8Array(size);
+  let at = 0;
+  for (const c of chunks) {
+    out.set(c, at);
+    at += c.length;
+  }
+  return out;
+}
 
 /** What the transport needs from the client. */
 export interface TransportConfig {
@@ -27,6 +60,8 @@ export interface WireRequest {
   readonly headers: Record<string, string>;
   readonly body?: Uint8Array;
   readonly timeoutMs: number;
+  /** The largest answer body read (default 4 MiB). */
+  readonly maxResponseBytes?: number;
   readonly signal?: AbortSignal;
 }
 
@@ -95,7 +130,7 @@ export async function send(config: TransportConfig, req: WireRequest): Promise<W
       await response.body?.cancel().catch(() => undefined);
       throw new EgressRefusedError('redirect');
     }
-    const body = new Uint8Array(await response.arrayBuffer());
+    const body = await readLimited(response, req.maxResponseBytes ?? MAX_RESPONSE_BYTES);
     return { status: response.status, headers: response.headers, body };
   } catch (error) {
     if (timedOut) throw new TimeoutError(req.timeoutMs);

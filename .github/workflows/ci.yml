@@ -12,10 +12,13 @@ name: CI
 #                       corpus, redaction, the sample flow against the mock)
 #   rust                formatting, Clippy (every feature set), the crate tests (the sample flow
 #                       against the mock included), the lookup vectors without the client, no
-#                       HTTP client without the client feature, and cargo deny
+#                       HTTP client without the client feature, no schema validator in the
+#                       verifier-only build, and cargo deny
 #   fixtures-roundtrip  TypeScript (ajv) and Rust (jsonschema + generated types) agree on every fixture
 #   mock-rows           the mock answers every row and problem code; its image builds and starts
 #   tools               the egress harness unit tests and its self-test with the failing control
+#
+# Every action is pinned by commit SHA (Renovate keeps the pins current).
 #
 # Runners: GitHub-hosted `ubuntu-latest` for every job; no job runs on a self-hosted runner, so
 # the workflow is safe for a public repository. The token is read-only, no checkout keeps
@@ -43,11 +46,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           fetch-depth: 0
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
       - name: Self-test (every rule is proven able to fail)
@@ -63,11 +66,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
           cache: pnpm
@@ -80,7 +83,7 @@ jobs:
           fi
       - name: Toolchain (pinned by rust-toolchain.toml)
         run: rustup toolchain install && rustup show active-toolchain
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       - name: Install (frozen)
         run: pnpm install --frozen-lockfile
       - name: Generated files equal the contract (types, rows, docs regions, lock)
@@ -101,7 +104,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - id: token
@@ -116,7 +119,7 @@ jobs:
             echo "present=true" >> "$GITHUB_OUTPUT"
           fi
           echo "commit=$(node -p "require('./contracts/VENDOR.json').platform.commit")" >> "$GITHUB_OUTPUT"
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: steps.token.outputs.present == 'true'
         with:
           persist-credentials: false
@@ -129,9 +132,9 @@ jobs:
             docs/specs/api
             docs/specs/contracts
             docs/specs/seeds
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         if: steps.token.outputs.present == 'true'
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         if: steps.token.outputs.present == 'true'
         with:
           node-version: 24
@@ -152,11 +155,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
           cache: pnpm
@@ -182,7 +185,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Install rustup (when the runner image has no Rust)
@@ -194,9 +197,9 @@ jobs:
           fi
       - name: Toolchain (pinned by rust-toolchain.toml)
         run: rustup toolchain install && rustup show active-toolchain
-      - uses: Swatinem/rust-cache@v2
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
           cache: pnpm
@@ -206,15 +209,23 @@ jobs:
         run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
       - name: Clippy (each feature set without the default client)
         run: |
-          for features in "" entitlement lookup usage stats entitlement,lookup; do
+          for features in "" entitlement lookup usage stats entitlement,lookup managed; do
             echo "features: [${features}]"
             cargo clippy -p ever-connect-sdk --no-default-features ${features:+--features "$features"} --locked -- -D warnings
           done
-      - name: No HTTP client without the client feature
+      - name: No HTTP client without the client feature; the verifier alone pulls no schema validator
         run: |
           count=$(cargo tree -p ever-connect-sdk --no-default-features --features entitlement,lookup -e normal --locked | grep -c reqwest || true)
           echo "reqwest crates in the tree: ${count}"
           test "${count}" = 0
+          tree=$(cargo tree -p ever-connect-sdk --no-default-features --features entitlement -e normal --prefix none --locked)
+          echo "${tree}" | sort -u
+          for crate in reqwest jsonschema tokio; do
+            if echo "${tree}" | grep -q "^${crate} "; then
+              echo "::error::${crate} is in the tree of the entitlement feature"
+              exit 1
+            fi
+          done
       - name: Start the mock platform (TEST root, https issuer, real clock)
         run: |
           pnpm install --frozen-lockfile
@@ -230,7 +241,7 @@ jobs:
         run: cargo test --workspace --all-features --locked
       - name: Lookup vectors without the client (what the platform consumes)
         run: cargo test -p ever-connect-sdk --no-default-features --features lookup --test lookup_vectors --locked
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0 # v2.87.22
         with:
           tool: cargo-deny
       - name: Supply chain (licences, bans, sources, advisories)
@@ -241,11 +252,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
           cache: pnpm
@@ -258,7 +269,7 @@ jobs:
           fi
       - name: Toolchain (pinned by rust-toolchain.toml)
         run: rustup toolchain install && rustup show active-toolchain
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       - name: Install (frozen)
         run: pnpm install --frozen-lockfile
       - name: Rust verdicts (jsonschema and the generated types)
@@ -271,11 +282,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
           cache: pnpm
@@ -302,11 +313,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
           cache: pnpm
@@ -328,7 +339,7 @@ jobs:
         run: node tools/egress-audit/run.mjs --selftest --artifacts egress-audit-artifacts
       - name: Evidence (pcaps, DNS logs, report.json)
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: egress-audit-selftest
           path: egress-audit-artifacts

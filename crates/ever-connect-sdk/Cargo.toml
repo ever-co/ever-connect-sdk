@@ -15,9 +15,11 @@ workspace = true
 
 [features]
 default = ["client"]
-# The HTTP client (reqwest with rustls and the webpki roots; no OpenSSL), the client assertion and
-# the instance keys. Without it the crate pulls no HTTP client.
-client = ["entitlement", "stats", "lookup", "usage", "dep:reqwest", "dep:tokio", "dep:getrandom"]
+# The HTTP client (reqwest with rustls and the webpki roots; no OpenSSL), the client assertion,
+# the instance keys and the managed-operation runner. Without it the crate pulls no HTTP client.
+client = ["entitlement", "stats", "lookup", "usage", "managed", "dep:reqwest", "dep:tokio", "dep:getrandom"]
+# The managed-operation runner (the JSON Schema validator of the operation parameters).
+managed = ["dep:jsonschema"]
 # The key manifest and entitlement document verifier.
 entitlement = ["schema", "dep:base64", "dep:ed25519-dalek", "dep:sha2"]
 # The anonymous statistics checks, signer and answer classification.
@@ -33,7 +35,7 @@ schema = ["dep:fancy-regex"]
 ever-connect-contracts = { path = "../ever-connect-contracts", version = "1.0.0-rc.1" }
 serde = { workspace = true }
 serde_json = { workspace = true }
-jsonschema = { workspace = true }
+jsonschema = { workspace = true, optional = true }
 base64 = { workspace = true, optional = true }
 ed25519-dalek = { workspace = true, optional = true }
 getrandom = { workspace = true, optional = true }

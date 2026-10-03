@@ -49,7 +49,7 @@ services:
     depends_on: [mock-platform]
 ```
 
-The TEST root the product must trust is `root_keys` in `contracts/constants.json` (issuer `http://mock-platform:8080`); write it as `{"keys": [...]}` to the file `EVER_PLATFORM_ROOT_KEYS_FILE` names. The modules honour that file only for a local base URL (`docs/entitlements.md`).
+The SDK pins no TEST root, so the product must be given the mock's: write `{"keys": [testRootEntry(issuer)]}` (`testRootEntry` from `ever-mock-platform/keys`, with the mock's issuer, `http://mock-platform:8080` by default) to the file `EVER_PLATFORM_ROOT_KEYS_FILE` names. The modules honour that file only for a local base URL (`docs/entitlements.md`).
 
 ---
 

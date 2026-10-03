@@ -1,4 +1,5 @@
 //! The managed-operation runner against the feed fixtures.
+#![cfg(feature = "managed")]
 #![allow(clippy::unwrap_used, clippy::expect_used, missing_docs)]
 
 use std::path::Path;

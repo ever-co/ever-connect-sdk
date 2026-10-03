@@ -2774,7 +2774,7 @@ pub mod key_manifest_v1 {
             value.parse()
         }
     }
-    ///The body of GET /.well-known/ever-keys.json: the published signing keys and a compact JWS (header {alg: EdDSA, kid: <root kid>, typ: ever-key-manifest+jwt}) signed by a pinned root key whose payload is {iss, iat, exp, keys_sha256, root_kid}; keys_sha256 is the hex SHA-256 of the RFC 8785 canonical JSON of the served keys array. A verifier trusts a key only when the manifest verifies against a pinned root and keys_sha256 matches the served array. Authored in this repository until the platform publishes the schema; the field set follows the platform's KeyManifestBody.
+    ///The body of GET /.well-known/ever-keys.json: the published signing keys and a compact JWS (header {alg: EdDSA, kid: <root kid>, typ: ever-key-manifest+jwt}) signed by a pinned root key whose payload is {iss, iat, exp, keys_sha256, root_kid}; keys_sha256 is the hex SHA-256 of the RFC 8785 canonical JSON of the served keys array; key times are UTC (YYYY-MM-DDTHH:MM:SS[.fraction]Z) and name a day that exists. A verifier trusts a key only when the manifest verifies against a pinned root and keys_sha256 matches the served array. Authored in this repository until the platform publishes the schema; the field set follows the platform's KeyManifestBody.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct KeyManifestV1 {

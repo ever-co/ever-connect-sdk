@@ -330,6 +330,7 @@ async fn problems_are_mapped() {
                 headers: Vec::new(),
                 body: b"<html>bad gateway</html>".to_vec(),
                 delay_ms: 0,
+                streamed: false,
             }
         }
     });
@@ -395,4 +396,148 @@ async fn overrides_are_honoured_for_a_local_base_url_only() {
     let client = EverPlatformClient::new(o).unwrap();
     assert_eq!(client.issuer(), "https://mock-platform.test");
     assert!(client.root_keys().iter().any(|k| k.kid == "test-root-9"));
+}
+
+#[tokio::test]
+async fn an_answer_over_the_limit_is_refused_by_its_length_or_while_it_is_read() {
+    let limit = 4 * 1024 * 1024;
+    for streamed in [false, true] {
+        let server = platform(move |_| Reply::bytes(vec![b' '; limit + 1], streamed));
+        let client = EverPlatformClient::new(options(&server.url)).unwrap();
+        assert_eq!(
+            client.legal().await.unwrap_err(),
+            Error::ResponseTooLarge { limit_bytes: limit },
+            "streamed: {streamed}"
+        );
+    }
+    let server = platform(|_| Reply::json(200, &json!({"documents": []})));
+    let client = EverPlatformClient::new(options(&server.url)).unwrap();
+    assert!(client.legal().await.is_ok());
+}
+
+mod refreshing {
+    use std::path::PathBuf;
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicI64, Ordering};
+
+    use base64::Engine as _;
+    use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+    use ed25519_dalek::{Signer as _, SigningKey};
+    use ever_connect_sdk::client::{Error, EverPlatformClient};
+    use ever_connect_sdk::entitlement::EntitlementErrorCode;
+    use ever_connect_sdk::keyset::KeySet;
+    use ever_connect_sdk::manifest::{RootKey, VerifyKeyManifestOptions, keys_sha256};
+    use serde_json::{Value, json};
+    use sha2::{Digest as _, Sha256};
+
+    use super::{Reply, options, platform};
+
+    const ISSUER: &str = "https://mock-platform.test";
+
+    fn fixtures() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../contracts/fixtures")
+    }
+    fn fixture(p: &str) -> Value {
+        serde_json::from_slice(&std::fs::read(fixtures().join(p)).unwrap()).unwrap()
+    }
+
+    /// The fixture manifest without `test-entitlement-2`, signed by the TEST root 100 s earlier.
+    fn older_manifest_without_ent_2() -> Value {
+        let valid = fixture("keys/manifest.valid.json");
+        let keys = Value::Array(
+            valid["keys"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|k| k["kid"] != "test-entitlement-2")
+                .cloned()
+                .collect(),
+        );
+        let iat = 1_793_613_600 - 100;
+        let payload = json!({"iss": ISSUER, "iat": iat, "exp": iat + 2_592_000, "keys_sha256": keys_sha256(&keys).unwrap(), "root_kid": "test-root-1"});
+        let header = json!({"alg": "EdDSA", "kid": "test-root-1", "typ": "ever-key-manifest+jwt"});
+        let input = format!(
+            "{}.{}",
+            URL_SAFE_NO_PAD.encode(header.to_string()),
+            URL_SAFE_NO_PAD.encode(payload.to_string())
+        );
+        let seed: [u8; 32] = Sha256::digest("ever-connect-sdk/test-root/1").into();
+        let signature = SigningKey::from_bytes(&seed).sign(input.as_bytes());
+        json!({"manifest": format!("{input}.{}", URL_SAFE_NO_PAD.encode(signature.to_bytes())), "keys": keys})
+    }
+
+    fn case(name: &str) -> String {
+        fixture("entitlement/structured.json")["cases"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|c| c["name"] == name)
+            .unwrap()["jws"]
+            .as_str()
+            .unwrap()
+            .to_owned()
+    }
+
+    #[tokio::test]
+    async fn an_unknown_kid_refreshes_the_key_set_once_and_verifies_again() {
+        let now = Arc::new(AtomicI64::new(1_793_613_600));
+        let server = platform(|r| {
+            assert_eq!(r.path, "/.well-known/ever-keys.json");
+            Reply::json(200, &fixture("keys/manifest.valid.json"))
+        });
+        let mut o = options(&server.url);
+        o.issuer = Some(ISSUER.into());
+        o.root_keys_file = Some(fixtures().join("keys/roots.json"));
+        let clock = Arc::clone(&now);
+        o.clock = Some(Arc::new(move || clock.load(Ordering::SeqCst)));
+        let client = EverPlatformClient::new(o).unwrap();
+        let roots: Vec<RootKey> = fixture("keys/roots.json")["keys"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(RootKey::from_jwk)
+            .collect();
+        let before = KeySet::verify(
+            &older_manifest_without_ent_2(),
+            &VerifyKeyManifestOptions {
+                issuer: ISSUER,
+                unsafe_root_keys: Some(&roots),
+                now: Some(now.load(Ordering::SeqCst)),
+            },
+        )
+        .unwrap();
+        let document = case("baseline/re-signed-ent-2");
+
+        // Inside 10 minutes of the fetch the set is not fetched again: the unknown id is final.
+        now.fetch_add(60, Ordering::SeqCst);
+        let Err(Error::Entitlement(e)) = client
+            .verify_entitlement_refreshing(&document, &before, None, None)
+            .await
+        else {
+            panic!()
+        };
+        assert_eq!(e.code, EntitlementErrorCode::UnknownKid);
+        assert!(server.calls().is_empty());
+
+        now.fetch_add(541, Ordering::SeqCst);
+        let (verified, next) = client
+            .verify_entitlement_refreshing(&document, &before, None, None)
+            .await
+            .unwrap();
+        assert_eq!(verified.kid, "test-entitlement-2");
+        let next = next.unwrap();
+        assert!(next.has("test-entitlement-2"));
+        assert_eq!(server.calls().len(), 1);
+
+        // A key id the refreshed set does not list either: final, no second fetch.
+        now.fetch_add(60, Ordering::SeqCst);
+        let Err(Error::Entitlement(e)) = client
+            .verify_entitlement_refreshing(&case("keys/attacker-own-kid"), &next, None, None)
+            .await
+        else {
+            panic!()
+        };
+        assert_eq!(e.code, EntitlementErrorCode::UnknownKid);
+        assert_eq!(server.calls().len(), 1);
+    }
 }

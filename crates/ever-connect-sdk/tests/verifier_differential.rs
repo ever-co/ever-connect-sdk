@@ -1,6 +1,8 @@
 //! The seeded mutation corpus (the generator of `tools/fixtures/mutations.mjs`, written again
 //! here): every case flips one bit of a valid document. None may verify, and every answer must
-//! equal the committed one, which the TypeScript verifier reproduces too.
+//! equal the committed one, which the TypeScript verifier reproduces too. Then the structured
+//! corpus (`tools/fixtures/structured.mjs`): documents and manifests built on purpose, each answer
+//! equal to the reference verifier's.
 #![cfg(feature = "entitlement")]
 #![allow(clippy::unwrap_used, clippy::expect_used, missing_docs)]
 
@@ -8,7 +10,9 @@ use std::path::PathBuf;
 
 use base64::Engine as _;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
-use ever_connect_sdk::entitlement::{VerifyEntitlementOptions, verify_entitlement};
+use ever_connect_sdk::entitlement::{
+    CachedEntitlement, VerifyEntitlementOptions, verify_entitlement,
+};
 use ever_connect_sdk::keyset::KeySet;
 use ever_connect_sdk::manifest::{RootKey, VerifyKeyManifestOptions};
 use serde_json::Value;
@@ -93,8 +97,8 @@ fn no_mutated_document_verifies_and_every_answer_is_the_committed_one() {
     let set = KeySet::verify(
         &fixture("keys/manifest.valid.json"),
         &VerifyKeyManifestOptions {
-            root_keys: Some(&roots),
-            issuer: keys_ctx["issuer"].as_str(),
+            unsafe_root_keys: Some(&roots),
+            issuer: keys_ctx["issuer"].as_str().unwrap(),
             now: keys_ctx["now"].as_i64(),
         },
     )
@@ -128,4 +132,87 @@ fn no_mutated_document_verifies_and_every_answer_is_the_committed_one() {
             .unwrap();
         assert_eq!(letter, answers[i], "case {i}: {}", error.code.as_str());
     }
+}
+
+/// The answer of the SDK for one structured case (`entitlement/structured.json`), in the corpus's
+/// notation: `manifest:<code>`, `<code>` (`+refresh`), `ok:<status>`.
+fn structured_answer(defaults: &Value, case: &Value, fixture_roots: &[RootKey]) -> String {
+    let get = |k: &str| case.get(k).unwrap_or(&defaults[k]);
+    let body = case
+        .get("manifest")
+        .cloned()
+        .unwrap_or_else(|| fixture(defaults["manifest"].as_str().unwrap()));
+    let listed: Vec<RootKey>;
+    let unsafe_root_keys = match get("roots") {
+        Value::Array(list) => {
+            listed = list.iter().filter_map(RootKey::from_jwk).collect();
+            assert_eq!(
+                listed.len(),
+                list.len(),
+                "{}: every listed root reads",
+                case["name"]
+            );
+            Some(listed.as_slice())
+        }
+        Value::String(s) if s == "fixture" => Some(fixture_roots),
+        Value::String(s) if s == "pinned" => None,
+        other => panic!("roots {other}"),
+    };
+    let set = match KeySet::verify(
+        &body,
+        &VerifyKeyManifestOptions {
+            issuer: get("manifest_issuer").as_str().unwrap(),
+            unsafe_root_keys,
+            now: get("manifest_now").as_i64(),
+        },
+    ) {
+        Ok(set) => set,
+        Err(e) => return format!("manifest:{}", e.code()),
+    };
+    let cached = get("cached").as_object().map(|c| CachedEntitlement {
+        seq: c["seq"].as_i64().unwrap(),
+        iat: c["iat"].as_i64().unwrap(),
+    });
+    match verify_entitlement(
+        case["jws"].as_str().unwrap(),
+        &VerifyEntitlementOptions {
+            key_set: &set,
+            expected_issuer: get("expected_issuer").as_str().unwrap(),
+            expected_instance_id: get("expected_instance_id").as_str().unwrap(),
+            expected_subject: get("expected_subject").as_str().unwrap(),
+            cached,
+            now: get("now").as_i64(),
+        },
+    ) {
+        Ok(v) => format!("ok:{}", v.status.as_str()),
+        Err(e) => format!(
+            "{}{}",
+            e.code.as_str(),
+            if e.refresh_suggested { "+refresh" } else { "" }
+        ),
+    }
+}
+
+#[test]
+fn every_structured_case_answers_as_the_reference_verifier() {
+    let corpus = fixture("entitlement/structured.json");
+    let cases = corpus["cases"].as_array().unwrap();
+    assert!(cases.len() >= 118);
+    let roots: Vec<RootKey> = fixture("keys/roots.json")["keys"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(RootKey::from_jwk)
+        .collect();
+    let mut differences = Vec::new();
+    for case in cases {
+        let answer = structured_answer(&corpus["defaults"], case, &roots);
+        if answer != case["expect"].as_str().unwrap() {
+            differences.push(format!(
+                "{}: {answer} (reference {})",
+                case["name"], case["expect"]
+            ));
+        }
+    }
+    assert!(differences.is_empty(), "{differences:#?}");
 }
