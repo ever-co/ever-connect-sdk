@@ -1,9 +1,8 @@
 {
   "key": "usage_reporting",
   "name": "Usage reporting",
-  "description": "Sends daily counts of the meters you choose (for example active employees or seats) for plans that are priced by usage. On Ever Cloud the row starts on under the Ever Cloud terms, because cloud plans are billed on these counts (for example per employee for Ever Gauzy and Ever Teams, on the latest successful count). A self-hosted installation sends nothing unless an administrator turns it on.",
+  "description": "Sends daily counts of a plan's metered quantities (for example active employees or seats) for plans that are priced by usage. On Ever Cloud it will start on under the Ever Cloud terms once cloud plans are billed on these counts (for example per employee for Ever Gauzy and Ever Teams, on the latest successful count); until then it stays off. A self-hosted installation sends nothing unless an administrator turns it on.",
   "category": "entitlements",
-  "owner_module": "entitlements",
   "direction": "outbound",
   "defaults": {
     "cloud": true,
@@ -18,11 +17,10 @@
     "gauzy",
     "works"
   ],
-  "phase": 2,
   "status": "active",
   "scope_version": 1,
   "revoke_effect": "Reports stop.",
-  "notes": "Ever Cloud: starts on under the Ever Cloud terms (for example Ever Gauzy and Ever Teams per-employee plans; a missed count never raises the bill above the last known number). Self-hosted: off unless an administrator consents.",
+  "notes": "Ever Cloud: will start on under the Ever Cloud terms once per-usage cloud billing is available (for example Ever Gauzy and Ever Teams per-employee plans; a missed count never raises the bill above the last known number); off until then. Self-hosted: off unless an administrator consents.",
   "scope": [
     {
       "field_path": "meters.active_employees",

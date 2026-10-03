@@ -4,7 +4,7 @@
   "screen_version": "1",
   "blocks": {
     "title": "Enable Usage reporting for {organization}",
-    "purpose": "Sends daily counts of the meters you choose (for example active employees or seats) for plans that are priced by usage. On Ever Cloud the row starts on under the Ever Cloud terms, because cloud plans are billed on these counts (for example per employee for Ever Gauzy and Ever Teams, on the latest successful count). A self-hosted installation sends nothing unless an administrator turns it on.",
+    "purpose": "Sends daily counts of a plan's metered quantities (for example active employees or seats) for plans that are priced by usage. On Ever Cloud it will start on under the Ever Cloud terms once cloud plans are billed on these counts (for example per employee for Ever Gauzy and Ever Teams, on the latest successful count); until then it stays off. A self-hosted installation sends nothing unless an administrator turns it on.",
     "leaves_installation": [
       {
         "field": "meters.active_employees",

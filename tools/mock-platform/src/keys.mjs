@@ -93,10 +93,14 @@ export function signEntitlement(claims, key = testKey('entitlement'), header = {
   return signJws(key.privateKey, { kid: key.kid, typ: ENTITLEMENT_TYP, ...header }, claims);
 }
 
-/** The two-key statistics link statement, signed with the statistics key. */
-export function signStatsLinkStatement({ statsInstanceId, statsKey = testKey('stats'), iat }) {
+/**
+ * The two-key statistics link statement, signed with the statistics key. `sub` names the
+ * installation that sends it (its instance id): a statement another installation obtained links
+ * nothing.
+ */
+export function signStatsLinkStatement({ statsInstanceId, statsKey = testKey('stats'), sub, iat }) {
   const stats_public_jwk = { kty: 'OKP', crv: 'Ed25519', x: statsKey.x };
-  const payload = { stats_instance_id: statsInstanceId, stats_public_jwk, iat };
+  const payload = { stats_instance_id: statsInstanceId, stats_public_jwk, ...(sub === undefined ? {} : { sub }), iat };
   return {
     stats_instance_id: statsInstanceId,
     stats_public_jwk,

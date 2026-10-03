@@ -44,12 +44,15 @@
       "enum": [
         "owner",
         "superseded",
-        "instance_disconnected",
-        "org_deleted",
+        "instance",
+        "operator",
         "policy",
+        "instance_disconnected",
+        "link_unlinked",
+        "org_deleted",
         "staff"
       ],
-      "description": "= p_consent.consent.revoke_reason"
+      "description": "Why the consent was revoked."
     }
   }
 }

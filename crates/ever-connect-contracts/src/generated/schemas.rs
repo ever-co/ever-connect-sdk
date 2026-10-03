@@ -3095,7 +3095,7 @@ pub mod consent_consent_granted_v1 {
             value.parse()
         }
     }
-    ///= p_consent.integration.dpa_version (TEXT, e.g. 2026-10)
+    ///The version of the data-processing agreement, for example 2026-10.
     #[derive(
         ::serde::Deserialize, ::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
     )]
@@ -3293,7 +3293,7 @@ pub mod consent_consent_revoked_v1 {
             value.parse()
         }
     }
-    ///= p_consent.integration.dpa_version (TEXT, e.g. 2026-10)
+    ///The version of the data-processing agreement, for example 2026-10.
     #[derive(
         ::serde::Deserialize, ::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
     )]
@@ -3402,14 +3402,14 @@ pub mod consent_consent_revoked_v1 {
         pub instance_id: CommonUlid,
         pub integration_key: CommonIntegrationKey,
         pub org_id: CommonUlid,
-        ///= p_consent.consent.revoke_reason
+        ///Why the consent was revoked.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub revoke_reason: ::std::option::Option<EverConsentConsentRevokedV1RevokeReason>,
         pub scope_version: i64,
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub tenant_link_id: ::std::option::Option<CommonUlid>,
     }
-    ///= p_consent.consent.revoke_reason
+    ///Why the consent was revoked.
     #[derive(
         ::serde::Deserialize,
         ::serde::Serialize,
@@ -3427,12 +3427,18 @@ pub mod consent_consent_revoked_v1 {
         Owner,
         #[serde(rename = "superseded")]
         Superseded,
-        #[serde(rename = "instance_disconnected")]
-        InstanceDisconnected,
-        #[serde(rename = "org_deleted")]
-        OrgDeleted,
+        #[serde(rename = "instance")]
+        Instance,
+        #[serde(rename = "operator")]
+        Operator,
         #[serde(rename = "policy")]
         Policy,
+        #[serde(rename = "instance_disconnected")]
+        InstanceDisconnected,
+        #[serde(rename = "link_unlinked")]
+        LinkUnlinked,
+        #[serde(rename = "org_deleted")]
+        OrgDeleted,
         #[serde(rename = "staff")]
         Staff,
     }
@@ -3441,9 +3447,12 @@ pub mod consent_consent_revoked_v1 {
             match *self {
                 Self::Owner => f.write_str("owner"),
                 Self::Superseded => f.write_str("superseded"),
-                Self::InstanceDisconnected => f.write_str("instance_disconnected"),
-                Self::OrgDeleted => f.write_str("org_deleted"),
+                Self::Instance => f.write_str("instance"),
+                Self::Operator => f.write_str("operator"),
                 Self::Policy => f.write_str("policy"),
+                Self::InstanceDisconnected => f.write_str("instance_disconnected"),
+                Self::LinkUnlinked => f.write_str("link_unlinked"),
+                Self::OrgDeleted => f.write_str("org_deleted"),
                 Self::Staff => f.write_str("staff"),
             }
         }
@@ -3454,9 +3463,12 @@ pub mod consent_consent_revoked_v1 {
             match value {
                 "owner" => Ok(Self::Owner),
                 "superseded" => Ok(Self::Superseded),
-                "instance_disconnected" => Ok(Self::InstanceDisconnected),
-                "org_deleted" => Ok(Self::OrgDeleted),
+                "instance" => Ok(Self::Instance),
+                "operator" => Ok(Self::Operator),
                 "policy" => Ok(Self::Policy),
+                "instance_disconnected" => Ok(Self::InstanceDisconnected),
+                "link_unlinked" => Ok(Self::LinkUnlinked),
+                "org_deleted" => Ok(Self::OrgDeleted),
                 "staff" => Ok(Self::Staff),
                 _ => Err("invalid value".into()),
             }
@@ -3581,11 +3593,71 @@ pub mod consent_integration_disabled_v1 {
         pub enabled: bool,
         pub instance_id: CommonUlid,
         pub integration_key: CommonIntegrationKey,
+        ///installation-wide integrations of an installation a customer or a partner operates: pending until the operator accepts locally (enabled stays false), then accepted or declined
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub operator_accept: ::std::option::Option<EverConsentIntegrationDisabledV1OperatorAccept>,
         pub org_id: CommonUlid,
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub reason: ::std::option::Option<EverConsentIntegrationDisabledV1Reason>,
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub tenant_link_id: ::std::option::Option<CommonUlid>,
+    }
+    ///installation-wide integrations of an installation a customer or a partner operates: pending until the operator accepts locally (enabled stays false), then accepted or declined
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd,
+    )]
+    pub enum EverConsentIntegrationDisabledV1OperatorAccept {
+        #[serde(rename = "pending")]
+        Pending,
+        #[serde(rename = "accepted")]
+        Accepted,
+        #[serde(rename = "declined")]
+        Declined,
+    }
+    impl ::std::fmt::Display for EverConsentIntegrationDisabledV1OperatorAccept {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Pending => f.write_str("pending"),
+                Self::Accepted => f.write_str("accepted"),
+                Self::Declined => f.write_str("declined"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for EverConsentIntegrationDisabledV1OperatorAccept {
+        type Err = self::error::ConversionError;
+        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "pending" => Ok(Self::Pending),
+                "accepted" => Ok(Self::Accepted),
+                "declined" => Ok(Self::Declined),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for EverConsentIntegrationDisabledV1OperatorAccept {
+        type Error = self::error::ConversionError;
+        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+        for EverConsentIntegrationDisabledV1OperatorAccept
+    {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
     }
     ///`EverConsentIntegrationDisabledV1Reason`
     #[derive(
@@ -3759,11 +3831,71 @@ pub mod consent_integration_enabled_v1 {
         pub enabled: bool,
         pub instance_id: CommonUlid,
         pub integration_key: CommonIntegrationKey,
+        ///installation-wide integrations of an installation a customer or a partner operates: pending until the operator accepts locally (enabled stays false), then accepted or declined
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub operator_accept: ::std::option::Option<EverConsentIntegrationEnabledV1OperatorAccept>,
         pub org_id: CommonUlid,
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub reason: ::std::option::Option<EverConsentIntegrationEnabledV1Reason>,
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub tenant_link_id: ::std::option::Option<CommonUlid>,
+    }
+    ///installation-wide integrations of an installation a customer or a partner operates: pending until the operator accepts locally (enabled stays false), then accepted or declined
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd,
+    )]
+    pub enum EverConsentIntegrationEnabledV1OperatorAccept {
+        #[serde(rename = "pending")]
+        Pending,
+        #[serde(rename = "accepted")]
+        Accepted,
+        #[serde(rename = "declined")]
+        Declined,
+    }
+    impl ::std::fmt::Display for EverConsentIntegrationEnabledV1OperatorAccept {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Pending => f.write_str("pending"),
+                Self::Accepted => f.write_str("accepted"),
+                Self::Declined => f.write_str("declined"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for EverConsentIntegrationEnabledV1OperatorAccept {
+        type Err = self::error::ConversionError;
+        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "pending" => Ok(Self::Pending),
+                "accepted" => Ok(Self::Accepted),
+                "declined" => Ok(Self::Declined),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for EverConsentIntegrationEnabledV1OperatorAccept {
+        type Error = self::error::ConversionError;
+        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+        for EverConsentIntegrationEnabledV1OperatorAccept
+    {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
     }
     ///`EverConsentIntegrationEnabledV1Reason`
     #[derive(
@@ -6925,7 +7057,7 @@ pub mod registry_managed_operation_requested_v1 {
             Ok(Self(value.to_string()))
         }
     }
-    ///= p_registry.managed_operation.kind = API ManagedOperationKind
+    ///A managed operation's kind, as the API's ManagedOperationKind.
     #[derive(
         ::serde::Deserialize,
         ::serde::Serialize,
@@ -7193,7 +7325,7 @@ pub mod registry_managed_operation_state_changed_v1 {
             Ok(Self(value.to_string()))
         }
     }
-    ///= p_registry.managed_operation.kind = API ManagedOperationKind
+    ///A managed operation's kind, as the API's ManagedOperationKind.
     #[derive(
         ::serde::Deserialize,
         ::serde::Serialize,
@@ -7252,7 +7384,7 @@ pub mod registry_managed_operation_state_changed_v1 {
             value.parse()
         }
     }
-    ///= p_registry.managed_operation.state = API ManagedOperationState; cancelled = stopped before it started
+    ///A managed operation's state, as the API's ManagedOperationState; cancelled = stopped before it started.
     #[derive(
         ::serde::Deserialize,
         ::serde::Serialize,
@@ -8384,7 +8516,7 @@ pub mod registry_person_export_requested_v1 {
 
 /// Data of the `ever.registry.tenant_link.created` event (`contracts/schemas/events/ever.registry.tenant_link.created.v1.schema.json`).
 pub mod registry_tenant_link_created_v1 {
-    ///= p_registry.tenant_link.state = API TenantLink.state
+    ///A tenant link's state, as the API's TenantLink.state.
     #[derive(
         ::serde::Deserialize,
         ::serde::Serialize,
@@ -8680,7 +8812,7 @@ pub mod registry_tenant_link_created_v1 {
 
 /// Data of the `ever.registry.tenant_link.orphaned` event (`contracts/schemas/events/ever.registry.tenant_link.orphaned.v1.schema.json`).
 pub mod registry_tenant_link_orphaned_v1 {
-    ///= p_registry.tenant_link.state = API TenantLink.state
+    ///A tenant link's state, as the API's TenantLink.state.
     #[derive(
         ::serde::Deserialize,
         ::serde::Serialize,
@@ -8976,7 +9108,7 @@ pub mod registry_tenant_link_orphaned_v1 {
 
 /// Data of the `ever.registry.tenant_link.resumed` event (`contracts/schemas/events/ever.registry.tenant_link.resumed.v1.schema.json`).
 pub mod registry_tenant_link_resumed_v1 {
-    ///= p_registry.tenant_link.state = API TenantLink.state
+    ///A tenant link's state, as the API's TenantLink.state.
     #[derive(
         ::serde::Deserialize,
         ::serde::Serialize,
@@ -9272,7 +9404,7 @@ pub mod registry_tenant_link_resumed_v1 {
 
 /// Data of the `ever.registry.tenant_link.suspended` event (`contracts/schemas/events/ever.registry.tenant_link.suspended.v1.schema.json`).
 pub mod registry_tenant_link_suspended_v1 {
-    ///= p_registry.tenant_link.state = API TenantLink.state
+    ///A tenant link's state, as the API's TenantLink.state.
     #[derive(
         ::serde::Deserialize,
         ::serde::Serialize,
@@ -9570,7 +9702,7 @@ pub mod registry_tenant_link_suspended_v1 {
 
 /// Data of the `ever.registry.tenant_link.unlinked` event (`contracts/schemas/events/ever.registry.tenant_link.unlinked.v1.schema.json`).
 pub mod registry_tenant_link_unlinked_v1 {
-    ///= p_registry.tenant_link.state = API TenantLink.state
+    ///A tenant link's state, as the API's TenantLink.state.
     #[derive(
         ::serde::Deserialize,
         ::serde::Serialize,

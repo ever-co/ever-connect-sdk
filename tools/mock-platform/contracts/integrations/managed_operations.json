@@ -3,7 +3,6 @@
   "name": "Maintenance operations",
   "description": "Lets an owner or admin ask this self-hosted installation, from app.ever.co, to run a maintenance operation: an update, a backup, a restore check or a health report. Requests reach the installation through its own outbound connection; the operator also turns the feature on locally and sets when and what may run. Backups stay in your own storage, and Ever Platform sees only each operation's status and size. Ever never connects in.",
   "category": "entitlements",
-  "owner_module": "registry",
   "direction": "both",
   "defaults": {
     "cloud": false,
@@ -20,7 +19,6 @@
     "rec",
     "traduora"
   ],
-  "phase": 2,
   "status": "coming_soon",
   "scope_version": 1,
   "revoke_effect": "Queued operations are cancelled and nothing further runs.",

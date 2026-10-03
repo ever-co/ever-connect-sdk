@@ -27,23 +27,6 @@
       "responses": { "204": "the address is removed", "403": "integration_disabled, integration_revoked" }
     },
     {
-      "row": 31,
-      "operation_id": "instanceAcceptIntegration",
-      "method": "POST",
-      "path": "/v1/instances/me/integrations/{key}/accept",
-      "integration": null,
-      "request": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["consent_id", "accepted"],
-        "properties": {
-          "consent_id": { "type": "string", "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$" },
-          "accepted": { "type": "boolean" }
-        }
-      },
-      "responses": { "200": "the state is enabled (accepted) or the consent is revoked (declined)", "404": "not_found", "409": "illegal_transition" }
-    },
-    {
       "row": 32,
       "operation_id": "instanceGetProviderGrant",
       "method": "GET",
@@ -72,5 +55,11 @@
     }
   ],
   "problem_codes": [],
-  "schema_overrides": {}
+  "schema_overrides": {},
+  "security_overrides": {
+    "putIntegrationState": {
+      "why": "the in-product consent dialog sends the Ever ID token of a fresh sign-in (step-up) issued to the installation's own client; the platform contract accepts only an app.ever.co session or an Ever Platform token on this operation so far",
+      "security": [{ "everIdStepUpToken": [] }]
+    }
+  }
 }

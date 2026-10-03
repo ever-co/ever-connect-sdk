@@ -4,21 +4,7 @@
 // disappears once the platform publishes the file at `upstream`.
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import YAML from 'yaml';
 import { sha256 } from './common.mjs';
-
-export const CATALOG_PINS = {
-  description:
-    'What the platform catalog export applies to the seed before publishing it. `status`: the phase 2 statuses (lookup, discoverability and profile import ship as coming soon). `name`: the public name of a row whose seed still carries its working name; the catalog the platform publishes names the row the same way.',
-  status: {
-    counterparty_lookup: 'coming_soon',
-    counterparty_discoverable: 'coming_soon',
-    profile_import: 'coming_soon',
-  },
-  name: {
-    managed_operations: 'Maintenance operations',
-  },
-};
 
 /** Static entries; the event schemas are added from the catalog by `vendoredEntries`. */
 const STATIC = [
@@ -42,9 +28,9 @@ const STATIC = [
   },
   {
     path: 'contracts/integrations/catalog.v1.json',
-    source: 'docs/specs/seeds/integrations-catalog.yaml',
-    upstream: 'contracts/integrations/catalog.v1.json',
-    transform: 'catalog-yaml',
+    source: 'contracts/integrations/catalog.v1.json',
+    upstream: null,
+    transform: null,
   },
   {
     path: 'contracts/fixtures/lookup/test-vectors.json',
@@ -60,19 +46,6 @@ const TRANSFORMS = {
   'json-public-description': (text) => {
     const doc = JSON.parse(text);
     if (typeof doc.description === 'string') doc.description = doc.description.replace(/\s*\(contracts\/[^()]*\.md[^()]*\)/g, '');
-    return `${JSON.stringify(doc, null, 2)}\n`;
-  },
-  'catalog-yaml': (text) => {
-    const doc = YAML.parse(text);
-    for (const row of doc.integrations ?? []) {
-      const pinned = CATALOG_PINS.status[row.key];
-      if (pinned) row.status = pinned;
-      const name = CATALOG_PINS.name[row.key];
-      if (name) row.name = name;
-    }
-    // A `hidden` row is a reserved key whose phase has not started. The platform's public catalog
-    // view and its export list none, so neither does this copy: no row and none of its scope groups.
-    doc.integrations = (doc.integrations ?? []).filter((row) => row.status !== 'hidden');
     return `${JSON.stringify(doc, null, 2)}\n`;
   },
   'lookup-vectors': (text) => {

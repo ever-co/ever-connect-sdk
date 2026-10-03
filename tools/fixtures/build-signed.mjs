@@ -65,7 +65,7 @@ function requestCases() {
   const connect = testKey('connect');
   const jwk = { kty: 'OKP', crv: 'Ed25519', x: connect.x };
   const assertion = signClientAssertion({ instanceId: IDS.instance, audience: `${ISSUER}/v1/instances/token`, iat: NOW });
-  const statement = signStatsLinkStatement({ statsInstanceId: IDS.statsInstance, iat: NOW });
+  const statement = signStatsLinkStatement({ statsInstanceId: IDS.statsInstance, sub: IDS.instance, iat: NOW });
   const extra = (body, field = 'unexpected_field', value = 'x') => ({ ...body, [field]: value });
   const c = (schema, body, invalid) => ({ schema, body, invalid });
   return {
@@ -79,6 +79,7 @@ function requestCases() {
         kind: 'self_hosted',
         public_jwk: jwk,
         tenant: { product_tenant_id: 'tenant-1', product_org_id: 'org-1' },
+        return_origins: ['https://gauzy.example.com'],
       },
       {
         // The platform takes absent and null tenant fields alike; a missing key or an unknown field
@@ -86,6 +87,10 @@ function requestCases() {
         'missing-key': (b) => [Object.fromEntries(Object.entries(b).filter(([k]) => k !== 'public_jwk')), '/public_jwk'],
         'tenant-extra-field': (b) => [{ ...b, tenant: { ...b.tenant, email: 'jane@example.com' } }, '/tenant/email'],
         'extra-field': (b) => [extra(b, 'public_url', 'https://gauzy.example.com'), '/public_url'],
+        'five-return-origins': (b) => [
+          { ...b, return_origins: ['a', 'b', 'c', 'd', 'e'].map((h) => `https://${h}.example.com`) },
+          '/return_origins',
+        ],
       },
     ),
     token: c(
@@ -112,7 +117,7 @@ function requestCases() {
     ),
     heartbeat: c(
       'HeartbeatBody',
-      { version: '96.2.1', module_version: '1.0.0', serves_products: ['gauzy', 'teams'] },
+      { version: '96.2.1', module_version: '1.0.0', serves_products: ['gauzy', 'teams'], integrations_denied: ['counterparty_lookup'] },
       {
         'null-id': (b) => [{ ...b, version: null }, '/version'],
         'extra-field': (b) => [extra(b, 'hostname', 'gauzy.example.com'), '/hostname'],
@@ -122,7 +127,8 @@ function requestCases() {
     'set-integration': c(
       'InstanceIntegrationPut',
       { enabled: false, reason: 'instance' },
-      { 'enable-attempt': (b) => [{ ...b, enabled: true }, '/enabled'], 'extra-field': (b) => [extra(b), '/unexpected_field'] },
+      // Switching on (`enabled: true`) is refused by the platform's handler, not by the schema.
+      { 'missing-reason': () => [{ enabled: false }, '/reason'], 'extra-field': (b) => [extra(b), '/unexpected_field'] },
     ),
     'stats-link': c('StatsLinkCreate', statement, {
       'missing-statement': (b) => [{ stats_instance_id: b.stats_instance_id, stats_public_jwk: b.stats_public_jwk }, '/statement_sig'],
@@ -264,7 +270,11 @@ function requestCases() {
         consent: { scope_version: 1, dpa_version: '2026-10', accepted: true, screen_version: '1', ui_locale: 'en' },
       },
       {
-        'not-accepted': (b) => [{ ...b, consent: { ...b.consent, accepted: false } }, '/consent/accepted'],
+        // `accepted: false` is refused by the platform's handler, not by the schema.
+        'missing-scope-version': (b) => [
+          { ...b, consent: Object.fromEntries(Object.entries(b.consent).filter(([k]) => k !== 'scope_version')) },
+          '/consent/scope_version',
+        ],
         'extra-field': (b) => [{ ...b, consent: { ...b.consent, ip_address: '203.0.113.7' } }, '/consent/ip_address'],
       },
     ),
@@ -285,7 +295,7 @@ function requestCases() {
       },
     ),
     'integration-accept': c(
-      'pending:instanceAcceptIntegration',
+      'IntegrationAccept',
       { consent_id: IDS.consent, accepted: true },
       { 'extra-field': (b) => [extra(b), '/unexpected_field'] },
     ),

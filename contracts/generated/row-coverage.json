@@ -1223,6 +1223,11 @@
           "status": 409,
           "code": "illegal_transition",
           "documented": true
+        },
+        {
+          "status": 422,
+          "code": "validation_failed",
+          "documented": true
         }
       ]
     },

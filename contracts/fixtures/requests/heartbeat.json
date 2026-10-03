@@ -4,5 +4,8 @@
   "serves_products": [
     "gauzy",
     "teams"
+  ],
+  "integrations_denied": [
+    "counterparty_lookup"
   ]
 }

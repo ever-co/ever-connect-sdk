@@ -600,8 +600,7 @@
     {
       "row": 31,
       "title": "Operator accepts an installation-wide integration",
-      "operation_ids": [],
-      "pending_upstream": true,
+      "operation_ids": ["instanceAcceptIntegration"],
       "module": "connect",
       "group": "integration",
       "auth": "instance token",
@@ -613,7 +612,8 @@
       "phase": 2,
       "errors": [
         [404, "not_found"],
-        [409, "illegal_transition"]
+        [409, "illegal_transition"],
+        [422, "validation_failed"]
       ]
     },
     {

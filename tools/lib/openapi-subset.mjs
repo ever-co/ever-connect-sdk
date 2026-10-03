@@ -82,7 +82,7 @@ const securityNames = (op, doc) => (op.security ?? doc.security ?? []).flatMap((
  * Builds the subset. Answers {spec, selected, provisional, collisions, shapeDifferences, designFiles}.
  * `rows` maps operationId -> row number (x-ever-row).
  */
-export function buildSubset({ platform, config, rowsByOperation, version, title, description }) {
+export function buildSubset({ platform, config, rowsByOperation, version, title, description, securityOverrides = {} }) {
   const pinned = JSON.parse(readFileSync(join(platform, config.pinned), 'utf8'));
   const files = new DesignFiles();
   const designRoot = join(platform, config.design);
@@ -255,10 +255,21 @@ export function buildSubset({ platform, config, rowsByOperation, version, title,
     }
     op.operationId = operationId;
     const docForSecurity = source === 'pinned' ? pinned : design.doc;
-    const security = (src.security ?? docForSecurity.security ?? []).filter(
-      (req) => Object.keys(req).length === 0 || Object.keys(req).every((name) => keep.has(name)),
-    );
-    op.security = security.length > 0 ? security : [];
+    const declared = src.security ?? docForSecurity.security ?? [];
+    const security = declared.filter((req) => Object.keys(req).length === 0 || Object.keys(req).every((name) => keep.has(name)));
+    const override = securityOverrides[operationId];
+    if (override) {
+      // A credential a product uses that the platform does not accept on this operation yet.
+      const wanted = override.security.flatMap((req) => Object.keys(req));
+      if (wanted.every((name) => declared.some((req) => name in req)))
+        throw new Error(`security override ${operationId}: the contract accepts ${wanted.join(', ')} now; drop the override`);
+      op.security = clone(override.security);
+    } else if (declared.length > 0 && security.length === 0) {
+      // Every scheme dropped would turn a protected operation into a public one.
+      throw new Error(
+        `operation ${operationId}: none of its security schemes (${declared.flatMap((r) => Object.keys(r)).join(', ')}) is one a product uses; record a security override in pending-upstream.json`,
+      );
+    } else op.security = security;
     const itemParams = entry.item?.parameters ?? [];
     const params = [...itemParams, ...(src.parameters ?? [])].map((p) =>
       source === 'pinned' ? inlinePinned(p, 'parameter') : inlineDesign(p, entry.file, 'parameter'),

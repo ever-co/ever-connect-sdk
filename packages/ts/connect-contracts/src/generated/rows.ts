@@ -65,7 +65,7 @@ export const ROWS: readonly OutboundCallRow[] = [
         "method": "GET",
         "path": "/v1/connect/legal",
         "operation_id": "getConnectLegal",
-        "status": "provisional"
+        "status": "pinned"
       }
     ],
     "trigger": "connect or link",
@@ -291,13 +291,13 @@ export const ROWS: readonly OutboundCallRow[] = [
         "method": "GET",
         "path": "/v1/instances/me/integrations",
         "operation_id": "instanceGetIntegrations",
-        "status": "provisional"
+        "status": "pinned"
       },
       {
         "method": "GET",
         "path": "/v1/instances/me/consent-url",
         "operation_id": "instanceGetConsentUrl",
-        "status": "provisional"
+        "status": "pinned"
       }
     ],
     "trigger": "after a consent notice; on return from app.ever.co; when an admin opens the integrations tab",
@@ -325,7 +325,7 @@ export const ROWS: readonly OutboundCallRow[] = [
         "method": "PUT",
         "path": "/v1/instances/me/integrations/{key}",
         "operation_id": "instanceDisableIntegration",
-        "status": "provisional"
+        "status": "pinned"
       }
     ],
     "trigger": "an admin disables an integration locally; an operator policy denies it",
@@ -985,7 +985,7 @@ export const ROWS: readonly OutboundCallRow[] = [
         "method": "POST",
         "path": "/v1/instances/me/integrations/{key}/accept",
         "operation_id": "instanceAcceptIntegration",
-        "status": "pending_upstream"
+        "status": "pinned"
       }
     ],
     "trigger": "the operator accepts or declines an installation-wide integration that waits for the local accept",
@@ -1044,7 +1044,7 @@ export const ROWS: readonly OutboundCallRow[] = [
         "method": "PUT",
         "path": "/v1/orgs/{org}/instances/{instance}/integrations/{key}",
         "operation_id": "putIntegrationState",
-        "status": "provisional"
+        "status": "pinned"
       }
     ],
     "trigger": "an organization owner or admin confirms the in-product consent dialog after a fresh Ever ID sign-in",
@@ -2317,6 +2317,11 @@ export const ROW_COVERAGE: readonly RowCoverage[] = [
       {
         "status": 409,
         "code": "illegal_transition",
+        "documented": true
+      },
+      {
+        "status": 422,
+        "code": "validation_failed",
         "documented": true
       }
     ]

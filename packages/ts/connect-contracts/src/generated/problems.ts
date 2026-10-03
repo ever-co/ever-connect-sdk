@@ -14,6 +14,8 @@ export const PROBLEM_CODES = [
   "not_connection_owner",
   "integration_disabled",
   "integration_revoked",
+  "denied_by_policy",
+  "integration_not_available",
   "entitlement_required",
   "tier_required",
   "limit_exceeded",

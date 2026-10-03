@@ -16,12 +16,12 @@ fn rt<T: DeserializeOwned + Serialize>(value: &Value) -> Result<Value, String> {
 pub fn component(name: &str, value: &Value) -> Option<Result<Value, String>> {
     Some(match name {
         "AckRequest" => rt::<components::AckRequest>(value),
-        "Actor" => rt::<components::Actor>(value),
         "BillingLink" => rt::<components::BillingLink>(value),
         "BillingLinkCreate" => rt::<components::BillingLinkCreate>(value),
         "Compat" => rt::<components::Compat>(value),
         "ConnectCodeValue" => rt::<components::ConnectCodeValue>(value),
         "ConnectKind" => rt::<components::ConnectKind>(value),
+        "ConsentInput" => rt::<components::ConsentInput>(value),
         "ConsentUrl" => rt::<components::ConsentUrl>(value),
         "Context" => rt::<components::Context>(value),
         "ContextFiltered" => rt::<components::ContextFiltered>(value),
@@ -69,8 +69,8 @@ pub fn component(name: &str, value: &Value) -> Option<Result<Value, String>> {
         "InstanceIntegrations" => rt::<components::InstanceIntegrations>(value),
         "InstanceKey" => rt::<components::InstanceKey>(value),
         "InstanceSelf" => rt::<components::InstanceSelf>(value),
+        "IntegrationAccept" => rt::<components::IntegrationAccept>(value),
         "IntegrationPut" => rt::<components::IntegrationPut>(value),
-        "IntegrationScope" => rt::<components::IntegrationScope>(value),
         "IntegrationState" => rt::<components::IntegrationState>(value),
         "IntegrationStateBrief" => rt::<components::IntegrationStateBrief>(value),
         "IntentComplete" => rt::<components::IntentComplete>(value),

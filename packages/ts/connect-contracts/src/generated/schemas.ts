@@ -773,7 +773,7 @@ export interface UsageReportV1UnitCount {
 export type EverConsentConsentGrantedV1CommonUlid = string;
 export type EverConsentConsentGrantedV1CommonIntegrationKey = string;
 /**
- * = p_consent.integration.dpa_version (TEXT, e.g. 2026-10)
+ * The version of the data-processing agreement, for example 2026-10.
  */
 export type EverConsentConsentGrantedV1CommonDpaVersion = string;
 /**
@@ -798,7 +798,7 @@ export interface EverConsentConsentGrantedV1 {
 export type EverConsentConsentRevokedV1CommonUlid = string;
 export type EverConsentConsentRevokedV1CommonIntegrationKey = string;
 /**
- * = p_consent.integration.dpa_version (TEXT, e.g. 2026-10)
+ * The version of the data-processing agreement, for example 2026-10.
  */
 export type EverConsentConsentRevokedV1CommonDpaVersion = string;
 /**
@@ -819,10 +819,18 @@ export interface EverConsentConsentRevokedV1 {
   dpa_version: EverConsentConsentRevokedV1CommonDpaVersion;
   consent_source: EverConsentConsentRevokedV1CommonConsentSource;
   /**
-   * = p_consent.consent.revoke_reason
+   * Why the consent was revoked.
    */
   revoke_reason?:
-    'owner' | 'superseded' | 'instance_disconnected' | 'org_deleted' | 'policy' | 'staff';
+    | 'owner'
+    | 'superseded'
+    | 'instance'
+    | 'operator'
+    | 'policy'
+    | 'instance_disconnected'
+    | 'link_unlinked'
+    | 'org_deleted'
+    | 'staff';
 }
 
 export type EverConsentIntegrationDisabledV1CommonUlid = string;
@@ -839,6 +847,10 @@ export interface EverConsentIntegrationDisabledV1 {
   enabled: boolean;
   consent_id?: EverConsentIntegrationDisabledV1CommonUlid;
   reason?: 'consent' | 'revoked' | 'instance' | 'policy' | 'platform' | 'scope_bumped';
+  /**
+   * installation-wide integrations of an installation a customer or a partner operates: pending until the operator accepts locally (enabled stays false), then accepted or declined
+   */
+  operator_accept?: 'pending' | 'accepted' | 'declined';
 }
 
 export type EverConsentIntegrationEnabledV1CommonUlid = string;
@@ -855,6 +867,10 @@ export interface EverConsentIntegrationEnabledV1 {
   enabled: boolean;
   consent_id?: EverConsentIntegrationEnabledV1CommonUlid;
   reason?: 'consent' | 'revoked' | 'instance' | 'policy' | 'platform' | 'scope_bumped';
+  /**
+   * installation-wide integrations of an installation a customer or a partner operates: pending until the operator accepts locally (enabled stays false), then accepted or declined
+   */
+  operator_accept?: 'pending' | 'accepted' | 'declined';
 }
 
 export type EverConsentIntegrationScopeBumpedV1CommonUlid = string;
@@ -1194,18 +1210,18 @@ export type EverRegistryManagedOperationRequestedV1 = {
 };
 export type EverRegistryManagedOperationRequestedV1CommonUlid = string;
 /**
- * = p_registry.managed_operation.kind = API ManagedOperationKind
+ * A managed operation's kind, as the API's ManagedOperationKind.
  */
 export type EverRegistryManagedOperationRequestedV1CommonManagedOperationKind = 'update' | 'backup' | 'restore_check' | 'health_report';
 export type EverRegistryManagedOperationRequestedV1CommonDatetime = string;
 
 export type EverRegistryManagedOperationStateChangedV1CommonUlid = string;
 /**
- * = p_registry.managed_operation.kind = API ManagedOperationKind
+ * A managed operation's kind, as the API's ManagedOperationKind.
  */
 export type EverRegistryManagedOperationStateChangedV1CommonManagedOperationKind = 'update' | 'backup' | 'restore_check' | 'health_report';
 /**
- * = p_registry.managed_operation.state = API ManagedOperationState; cancelled = stopped before it started
+ * A managed operation's state, as the API's ManagedOperationState; cancelled = stopped before it started.
  */
 export type EverRegistryManagedOperationStateChangedV1CommonManagedOperationState =
   'requested' | 'accepted' | 'running' | 'succeeded' | 'failed' | 'expired' | 'cancelled';
@@ -1339,7 +1355,7 @@ export type EverRegistryTenantLinkCreatedV1CommonProductShipped = 'gauzy' | 'tea
  */
 export type EverRegistryTenantLinkCreatedV1CommonProductId = string;
 /**
- * = p_registry.tenant_link.state = API TenantLink.state
+ * A tenant link's state, as the API's TenantLink.state.
  */
 export type EverRegistryTenantLinkCreatedV1CommonLinkState = 'active' | 'suspended' | 'orphaned' | 'unlinked';
 
@@ -1364,7 +1380,7 @@ export type EverRegistryTenantLinkOrphanedV1CommonProductShipped = 'gauzy' | 'te
  */
 export type EverRegistryTenantLinkOrphanedV1CommonProductId = string;
 /**
- * = p_registry.tenant_link.state = API TenantLink.state
+ * A tenant link's state, as the API's TenantLink.state.
  */
 export type EverRegistryTenantLinkOrphanedV1CommonLinkState = 'active' | 'suspended' | 'orphaned' | 'unlinked';
 
@@ -1389,7 +1405,7 @@ export type EverRegistryTenantLinkResumedV1CommonProductShipped = 'gauzy' | 'tea
  */
 export type EverRegistryTenantLinkResumedV1CommonProductId = string;
 /**
- * = p_registry.tenant_link.state = API TenantLink.state
+ * A tenant link's state, as the API's TenantLink.state.
  */
 export type EverRegistryTenantLinkResumedV1CommonLinkState = 'active' | 'suspended' | 'orphaned' | 'unlinked';
 
@@ -1414,7 +1430,7 @@ export type EverRegistryTenantLinkSuspendedV1CommonProductShipped = 'gauzy' | 't
  */
 export type EverRegistryTenantLinkSuspendedV1CommonProductId = string;
 /**
- * = p_registry.tenant_link.state = API TenantLink.state
+ * A tenant link's state, as the API's TenantLink.state.
  */
 export type EverRegistryTenantLinkSuspendedV1CommonLinkState = 'active' | 'suspended' | 'orphaned' | 'unlinked';
 
@@ -1439,7 +1455,7 @@ export type EverRegistryTenantLinkUnlinkedV1CommonProductShipped = 'gauzy' | 'te
  */
 export type EverRegistryTenantLinkUnlinkedV1CommonProductId = string;
 /**
- * = p_registry.tenant_link.state = API TenantLink.state
+ * A tenant link's state, as the API's TenantLink.state.
  */
 export type EverRegistryTenantLinkUnlinkedV1CommonLinkState = 'active' | 'suspended' | 'orphaned' | 'unlinked';
 
@@ -3672,7 +3688,7 @@ export const EVENT_SCHEMAS = {
         "pattern": "^[a-z](?:[a-z0-9]|-(?=[a-z0-9]))*$",
         "minLength": 3,
         "maxLength": 30,
-        "description": "Same grammar as the API Handle and the p_registry handle_text domain: letter first, 3-30 characters, single hyphens only."
+        "description": "Same grammar as the API Handle: letter first, 3-30 characters, single hyphens only."
       },
       "product": {
         "enum": [
@@ -3914,7 +3930,7 @@ export const EVENT_SCHEMAS = {
           "orphaned",
           "unlinked"
         ],
-        "description": "= p_registry.tenant_link.state = API TenantLink.state"
+        "description": "A tenant link's state, as the API's TenantLink.state."
       },
       "app_status": {
         "enum": [
@@ -3926,7 +3942,7 @@ export const EVENT_SCHEMAS = {
           "archived",
           "deleted"
         ],
-        "description": "= p_registry.app.status = API App.status"
+        "description": "An app's status, as the API's App.status."
       },
       "deployment_status": {
         "enum": [
@@ -3937,7 +3953,7 @@ export const EVENT_SCHEMAS = {
           "timeout",
           "retired"
         ],
-        "description": "= p_registry.app_deployment.status"
+        "description": "An app deployment's status."
       },
       "listing_status": {
         "enum": [
@@ -3949,7 +3965,7 @@ export const EVENT_SCHEMAS = {
           "suspended",
           "archived"
         ],
-        "description": "= p_listings.listing_status domain = API ListingStatus; unpublishing stores `approved` (the verb event ever.listings.listing.unpublished carries status approved)"
+        "description": "A listing's status, as the API's ListingStatus; unpublishing a listing stores `approved`."
       },
       "install_mechanism": {
         "enum": [
@@ -3971,7 +3987,7 @@ export const EVENT_SCHEMAS = {
           "removed",
           "cancelled"
         ],
-        "description": "= p_listings.install.state = API Install.state; `cancelled` = stopped before it was installed, `removed` = removed after install"
+        "description": "An install's state, as the API's Install.state; `cancelled` = stopped before it was installed, `removed` = removed after install."
       },
       "provisioning_state": {
         "enum": [
@@ -3984,7 +4000,7 @@ export const EVENT_SCHEMAS = {
           "failed",
           "cancelled"
         ],
-        "description": "= p_provisioning.job.status = API Job.status"
+        "description": "A job's status, as the API's Job.status."
       },
       "identifier_kind": {
         "enum": [
@@ -4022,7 +4038,7 @@ export const EVENT_SCHEMAS = {
           "skipped",
           "abandoned"
         ],
-        "description": "= p_provisioning.step.status = API Step.status"
+        "description": "A step's status, as the API's Step.status."
       },
       "managed_operation_kind": {
         "enum": [
@@ -4031,7 +4047,7 @@ export const EVENT_SCHEMAS = {
           "restore_check",
           "health_report"
         ],
-        "description": "= p_registry.managed_operation.kind = API ManagedOperationKind"
+        "description": "A managed operation's kind, as the API's ManagedOperationKind."
       },
       "managed_operation_state": {
         "enum": [
@@ -4043,13 +4059,13 @@ export const EVENT_SCHEMAS = {
           "expired",
           "cancelled"
         ],
-        "description": "= p_registry.managed_operation.state = API ManagedOperationState; cancelled = stopped before it started"
+        "description": "A managed operation's state, as the API's ManagedOperationState; cancelled = stopped before it started."
       },
       "dpa_version": {
         "type": "string",
         "pattern": "^20[0-9]{2}-(0[1-9]|1[0-2])(\\.[0-9]{1,3})?$",
         "maxLength": 11,
-        "description": "= p_consent.integration.dpa_version (TEXT, e.g. 2026-10)"
+        "description": "The version of the data-processing agreement, for example 2026-10."
       },
       "consent_source": {
         "enum": [
@@ -4078,7 +4094,7 @@ export const EVENT_SCHEMAS = {
           "provisioning",
           "partner"
         ],
-        "description": "= p_entitlements.connect_code.origin = API ConnectCode.origin"
+        "description": "Where a connect code was made, as the API's ConnectCode.origin."
       }
     }
   } as JsonSchemaDocument,
@@ -4173,12 +4189,15 @@ export const EVENT_SCHEMAS = {
           "enum": [
             "owner",
             "superseded",
-            "instance_disconnected",
-            "org_deleted",
+            "instance",
+            "operator",
             "policy",
+            "instance_disconnected",
+            "link_unlinked",
+            "org_deleted",
             "staff"
           ],
-          "description": "= p_consent.consent.revoke_reason"
+          "description": "Why the consent was revoked."
         }
       }
     } as JsonSchemaDocument,
@@ -4223,6 +4242,14 @@ export const EVENT_SCHEMAS = {
             "platform",
             "scope_bumped"
           ]
+        },
+        "operator_accept": {
+          "enum": [
+            "pending",
+            "accepted",
+            "declined"
+          ],
+          "description": "installation-wide integrations of an installation a customer or a partner operates: pending until the operator accepts locally (enabled stays false), then accepted or declined"
         }
       }
     } as JsonSchemaDocument,
@@ -4267,6 +4294,14 @@ export const EVENT_SCHEMAS = {
             "platform",
             "scope_bumped"
           ]
+        },
+        "operator_accept": {
+          "enum": [
+            "pending",
+            "accepted",
+            "declined"
+          ],
+          "description": "installation-wide integrations of an installation a customer or a partner operates: pending until the operator accepts locally (enabled stays false), then accepted or declined"
         }
       }
     } as JsonSchemaDocument,

@@ -13,5 +13,8 @@
     "product_tenant_id": "tenant-1",
     "product_org_id": "org-1",
     "email": "jane@example.com"
-  }
+  },
+  "return_origins": [
+    "https://gauzy.example.com"
+  ]
 }

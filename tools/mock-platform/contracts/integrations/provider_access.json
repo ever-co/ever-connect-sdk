@@ -3,7 +3,6 @@
   "name": "Grant a provider access",
   "description": "Lets a service provider you choose on apps.ever.co (for example an accountant or payroll provider) work in your installation with a role and scope you pick. The grant shows in Integrations & data and you can revoke it at any time.",
   "category": "marketplace",
-  "owner_module": "registry",
   "direction": "both",
   "defaults": {
     "cloud": true,
@@ -18,11 +17,10 @@
     "gauzy",
     "works"
   ],
-  "phase": 4,
   "status": "coming_soon",
   "scope_version": 1,
   "revoke_effect": "The provider's access is removed from the installation.",
-  "notes": "The field list is provisional until the provider-access flow is specified (Phase 4).",
+  "notes": "The field list is provisional until the provider-access flow is specified.",
   "scope": [
     {
       "field_path": "grant.provider_organization_id",
