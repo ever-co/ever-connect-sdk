@@ -10,7 +10,7 @@ import { fixture, fixtureText } from './helpers';
 const ctx = fixture('entitlement/context.json');
 const keysCtx = fixture('keys/context.json');
 const roots = fixture<{ keys: RootKey[] }>('keys/roots.json').keys;
-const keySet = KeySet.verify(fixture('keys/manifest.valid.json'), { rootKeys: roots, issuer: keysCtx.issuer, now: keysCtx.now });
+const keySet = KeySet.verify(fixture('keys/manifest.valid.json'), { unsafeRootKeys: roots, issuer: keysCtx.issuer, now: keysCtx.now });
 const committed = fixture<{
   seed: number;
   count: number;
@@ -53,4 +53,79 @@ describe('verifier differential: the seeded mutation corpus', () => {
     const first = [...answers].findIndex((a, i) => a !== committed.answers[i]);
     expect(first, `case ${first}`).toBe(-1);
   });
+});
+
+// The structured corpus (tools/fixtures/structured.mjs): documents and manifests built on purpose,
+// each verified in its own context; every answer must equal the reference verifier's, which the
+// Rust verifier reproduces too.
+interface StructuredCase {
+  name: string;
+  jws: string;
+  expect: string;
+  manifest?: unknown;
+  manifest_issuer?: string;
+  manifest_now?: number;
+  roots?: 'fixture' | 'pinned' | RootKey[];
+  expected_issuer?: string;
+  expected_instance_id?: string;
+  expected_subject?: string;
+  cached?: { seq: number; iat: number } | null;
+  now?: number;
+}
+const structured = fixture<{
+  defaults: Required<Omit<StructuredCase, 'name' | 'jws' | 'expect' | 'manifest'>> & { manifest: string };
+  cases: StructuredCase[];
+}>('entitlement/structured.json');
+
+/** The answer of the SDK for one structured case, in the corpus's notation. */
+export function structuredAnswer(c: StructuredCase): string {
+  const o = { ...structured.defaults, ...c };
+  const body = c.manifest ?? fixture(structured.defaults.manifest);
+  const unsafeRootKeys = Array.isArray(o.roots) ? o.roots : o.roots === 'fixture' ? roots : undefined;
+  let set: KeySet;
+  try {
+    set = KeySet.verify(body, { issuer: o.manifest_issuer, now: o.manifest_now, ...(unsafeRootKeys ? { unsafeRootKeys } : {}) });
+  } catch (error) {
+    return `manifest:${(error as { code: string }).code}`;
+  }
+  try {
+    const r = verifyEntitlement(c.jws, {
+      keySet: set,
+      expectedIssuer: o.expected_issuer,
+      expectedInstanceId: o.expected_instance_id,
+      expectedSubject: o.expected_subject,
+      cached: o.cached,
+      now: o.now,
+    });
+    return `ok:${r.status}`;
+  } catch (error) {
+    if (!(error instanceof EntitlementError)) throw error;
+    return `${error.code}${error.refreshSuggested ? '+refresh' : ''}`;
+  }
+}
+
+describe('verifier differential: the structured corpus', () => {
+  it('has every group of the review and more than 118 cases', () => {
+    expect(structured.cases.length).toBeGreaterThanOrEqual(118);
+    const groups = new Set(structured.cases.map((c) => c.name.split('/')[0]));
+    for (const g of [
+      'baseline',
+      'swap',
+      'keys',
+      'window',
+      'time',
+      'weak-key',
+      'header',
+      'payload',
+      'number',
+      'rollback',
+      'compact',
+      'anchor',
+    ])
+      expect(groups.has(g as string), g).toBe(true);
+  });
+  for (const c of structured.cases)
+    it(`${c.name}: ${c.expect}`, () => {
+      expect(structuredAnswer(c)).toBe(c.expect);
+    });
 });

@@ -65,13 +65,19 @@ const redeemed = await client.connect.redeem(
 );
 store.registryInstanceId = redeemed.instance_id;
 
-// Keys and the entitlement document.
-const { keySet } = await client.keys.refresh(store.keySet); // a refused manifest keeps the previous set
+// Keys: a stored set is verified again after a restart, for this client's issuer only.
+const stored = store.keySet ? KeySet.restore(store.keySet, { issuer: client.issuer }) : undefined;
+let { keySet } = await client.keys.refresh(stored); // a refused manifest keeps the previous set
+
+// The entitlement document: on an unknown key id the set is refreshed once (at most every
+// 10 minutes) and the document verified again.
 const answer = await client.instances.entitlement(store.entitlement?.seq);
 if (!('notModified' in answer)) {
-  const verified = client.verifyEntitlement(answer.document, { keySet, cached: store.entitlement });
-  store.entitlement = { seq: verified.seq, iat: verified.claims.iat, jws: verified.jws };
+  const result = await client.verifyEntitlementRefreshing(answer.document, { keySet, cached: store.entitlement });
+  store.entitlement = { seq: result.verified.seq, iat: result.verified.claims.iat, jws: result.verified.jws };
+  keySet = result.keySet;
 }
+store.keySet = keySet.toJSON();
 ```
 
 Behaviour, for every call:
@@ -93,9 +99,15 @@ Behaviour, for every call:
 
 ## Roots for local runs
 
-The pinned roots are in `CONSTANTS.root_keys`, one per issuer. The `rootKeys` and `issuer`
-options and `EVER_PLATFORM_ROOT_KEYS_FILE` (a JWKS of extra roots) are honoured only when the base
-URL is a local host (CI against the mock platform); otherwise they are ignored with one warning.
+The pinned roots are in `CONSTANTS.root_keys`, one per issuer; no TEST root is pinned. The
+`rootKeys` and `issuer` options and `EVER_PLATFORM_ROOT_KEYS_FILE` (a JWKS of extra roots, each
+with its `iss`) are honoured only when the base URL is a local host (CI against the mock
+platform); otherwise they are ignored with one warning.
+
+`verifyKeyManifest` and `KeySet.verify` / `restore` / `update` require the `issuer` option;
+their `unsafeRootKeys` option replaces the pinned roots and is for tests and offline tools only.
+A `KeySet` comes only from those calls or `client.keys.refresh`; `verifyEntitlement` refuses any
+other object.
 
 ## Lookup, usage, statistics
 

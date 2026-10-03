@@ -9,7 +9,8 @@
  *   keys/        key manifests signed by the TEST root (valid, keys-sha256 mismatch, unknown root),
  *                the TEST root as a JWKS for EVER_PLATFORM_ROOT_KEYS_FILE, and the test context
  *   entitlement/ valid instance and link documents and the invalid set, each with its expected code,
- *                and the answers of the seeded mutation corpus (mutations.json)
+ *                the answers of the seeded mutation corpus (mutations.json) and the structured
+ *                corpus with its answers (structured.json)
  *   consent/     valid and invalid consent records; consent-screen/ the seven blocks per key
  *   usage/       valid and invalid usage reports (ever.usage.v1: counts and timestamps only)
  *   index.json   every schema-bound fixture with its schema and verdict, the vendored statistics
@@ -40,10 +41,76 @@ import {
   testRootEntry,
 } from '../mock-platform/src/keys.mjs';
 import { validateComponent, validateEnvelope, validateEventData, validatePending, validateSchema } from '../mock-platform/src/validate.mjs';
-import { verifyEntitlement as referenceVerify } from '../test/lib/reference-verify.mjs';
+import {
+  verifyManifest as referenceManifest,
+  verifyEntitlement as referenceVerify,
+  SMALL_ORDER_ENCODINGS,
+} from '../test/lib/reference-verify.mjs';
 import { example } from './example.mjs';
 import { hex64, iso, NOW, ulid, uuid } from './ids.mjs';
 import { CODE_LETTERS, corpusSha256, MUTATION_BASES, MUTATION_COUNT, MUTATION_SEED, mutationCorpus } from './mutations.mjs';
+import { structuredCases } from './structured.mjs';
+
+/** [url, origin]: the shared origin rule (keys/origins.json). */
+const ORIGIN_VECTORS = [
+  ['https://api.ever.co', 'https://api.ever.co'],
+  ['https://API.Ever.CO/v1/x?y#z', 'https://api.ever.co'],
+  ['HTTPS://api.ever.co', 'https://api.ever.co'],
+  ['https://api.ever.co:443', 'https://api.ever.co'],
+  ['https://api.ever.co:0443', 'https://api.ever.co'],
+  ['https://api.ever.co:', 'https://api.ever.co'],
+  ['http://api.ever.co:80/', 'http://api.ever.co'],
+  ['https://api.ever.co:8443', 'https://api.ever.co:8443'],
+  ['http://127.0.0.1:08080/', 'http://127.0.0.1:8080'],
+  ['http://localhost:3000', 'http://localhost:3000'],
+  ['http://mock-platform:8080', 'http://mock-platform:8080'],
+  ['https://mock-platform.test', 'https://mock-platform.test'],
+  ['https://api.ever.co.', 'https://api.ever.co.'],
+  ['https://my_host.example', 'https://my_host.example'],
+  ['http://[::1]:9/', 'http://[::1]:9'],
+  ['http://[0::1]/', null],
+  ['http://[::FFFF:7f00:1]/', 'http://[::ffff:7f00:1]'],
+  ['http://[::127.0.0.1]/', null],
+  ['http://[1:0:0:2:0:0:0:3]/', null],
+  ['http://[1:0:0:0:2:0:0:3]/', null],
+  ['http://[1:2:3:4:5:6:7:0]/', 'http://[1:2:3:4:5:6:7:0]'],
+  ['http://[1:0:3:4:5:6:7:8]/', 'http://[1:0:3:4:5:6:7:8]'],
+  ['https://user@api.ever.co', null],
+  ['https://user:pw@api.ever.co', null],
+  ['https://api.ever.co\\@evil.example', null],
+  ['https://api.ever.co\\x', null],
+  ['https://api%2Eever.co', null],
+  ['https://bücher.example', null],
+  ['https://xn--bcher-kva.example', 'https://xn--bcher-kva.example'],
+  [' https://api.ever.co', null],
+  ['https://api.ever.co /x', null],
+  ['https://api.ever\n.co', null],
+  ['https:api.ever.co', null],
+  ['https://', null],
+  ['https://:443', null],
+  ['https://api.ever.co:70000', null],
+  ['https://api.ever.co:65535', 'https://api.ever.co:65535'],
+  ['https://api.ever.co:0000000000443', 'https://api.ever.co'],
+  ['https://api.ever.co:099999999999', null],
+  ['https://api.ever.co:abc', null],
+  ['https://api.ever.co:+1', null],
+  ['http://127.1/', null],
+  ['http://0x7f.0.0.1/', null],
+  ['http://0177.0.0.1/', null],
+  ['http://1.2.3.04/', null],
+  ['http://2130706433/', null],
+  ['http://1.2.3.4./', null],
+  ['http://a.123/', null],
+  ['http://a.0x/', null],
+  ['http://a.0xzz/', 'http://a.0xzz'],
+  ['http://256.0.0.1/', null],
+  ['http://10.0.0.5:8080', 'http://10.0.0.5:8080'],
+  ['ftp://api.ever.co', null],
+  ['api.ever.co', null],
+  ['file:///etc/passwd', null],
+  ['https://a[b]', null],
+  ['http://[::1]x/', null],
+];
 
 // The entitlement schema accepts only https issuers, so the offline fixtures use an https issuer
 // (the running mock answers with its own configured issuer).
@@ -501,6 +568,16 @@ function keys() {
     },
   });
   files['keys/roots.json'] = json({ keys: [testRootEntry(ISSUER)] });
+  files['keys/small-order.json'] = json({
+    description:
+      'The 32-byte encodings (hex) of the eight Ed25519 points of small order: canonical, with the sign bit set on x = 0, and with y + p where it fits in 255 bits. A key or a signature R with any of them never verifies, and a manifest listing one is refused.',
+    encodings: SMALL_ORDER_ENCODINGS,
+  });
+  files['keys/origins.json'] = json({
+    description:
+      'The origin rule both SDKs apply to an issuer (the expected issuer, the iss of a root, the issuer of a key set): the authority holds only ASCII letters, digits and . _ - : [ ]; scheme and host lower case; the default port dropped and leading zeros of a port removed (past 65535 refused); a host the URL standard would rewrite (IPv4 not in dotted-decimal form, IPv6 not in its shortest form) refused. origin null means refused.',
+    vectors: ORIGIN_VECTORS.map(([url, origin]) => ({ url, origin })),
+  });
   files['keys/context.json'] = json({
     description:
       'Inputs a verifier uses with these fixtures: the issuer the manifest names, the time to verify at (seconds), and where the TEST keys come from.',
@@ -690,6 +767,7 @@ function entitlements() {
     .map(({ base, jws }) => {
       const r = referenceVerify(jws, {
         keys: manifestKeys(),
+        keysIssuer: ISSUER,
         issuer: ISSUER,
         instanceId: IDS.instance,
         subject: subjects[base],
@@ -715,6 +793,56 @@ function entitlements() {
     letters,
     counts,
     answers,
+  });
+  // The structured corpus: each case verified by the reference verifier in its own context.
+  const constants = readJson(join(REPO, 'contracts/constants.json'));
+  const platformDir = join(REPO, FIXTURES, 'keys-platform');
+  const platformExpected = readJson(join(platformDir, 'expected.json')).fixtures;
+  const platformManifests = Object.entries(platformExpected).map(([file, e]) => ({
+    name: file.replace(/^manifest\.|\.json$/g, ''),
+    body: readJson(join(platformDir, file)),
+    issuer: e.issuer,
+    at: e.verify_at,
+  }));
+  const validManifest = signManifest({ issuer: ISSUER, iat: NOW, keys: manifestKeys() });
+  const rootSets = { fixture: [testRootEntry(ISSUER)], pinned: constants.root_keys };
+  const defaults = {
+    manifest: 'keys/manifest.valid.json',
+    manifest_issuer: ISSUER,
+    manifest_now: NOW,
+    roots: 'fixture',
+    expected_issuer: ISSUER,
+    expected_instance_id: IDS.instance,
+    expected_subject: `instance:${IDS.instance}`,
+    cached: null,
+    now: NOW,
+  };
+  const structured = structuredCases({ issuer: ISSUER, ids: IDS, entitlementClaims, manifestKeys, platformManifests }).map((c) => {
+    const o = { ...defaults, ...c };
+    const body = c.manifest ?? validManifest;
+    const roots = Array.isArray(o.roots) ? o.roots : rootSets[o.roots];
+    const m = referenceManifest(body, roots, o.manifest_issuer, o.manifest_now);
+    let expect;
+    if (!m.ok) expect = `manifest:${m.code}`;
+    else {
+      const r = referenceVerify(c.jws, {
+        keys: m.keys,
+        keysIssuer: m.issuer,
+        issuer: o.expected_issuer,
+        instanceId: o.expected_instance_id,
+        subject: o.expected_subject,
+        cached: o.cached,
+        now: o.now,
+      });
+      expect = r.ok ? `ok:${r.status}` : `${r.code}${r.refreshSuggested ? '+refresh' : ''}`;
+    }
+    return { ...c, expect };
+  });
+  files['entitlement/structured.json'] = json({
+    description:
+      'The structured corpus of the entitlement verifiers (tools/fixtures/structured.mjs): each case is a document with the context it is verified in (fields left out take the value of defaults; manifest is the served body, roots one of "fixture" (keys/roots.json), "pinned" (contracts/constants.json root_keys) or a list of root keys). expect is the answer of the reference verifier, which the TypeScript and Rust verifiers must both reproduce: "manifest:<code>" when the key manifest is refused for the issuer, "<code>" (with "+refresh" when an unknown kid suggests one key-set refresh) when the document is refused, "ok:<status>" when it verifies.',
+    defaults,
+    cases: structured,
   });
   files['entitlement/expected.json'] = json({
     description:

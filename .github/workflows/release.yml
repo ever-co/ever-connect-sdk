@@ -1,18 +1,22 @@
 name: Release
 
 # Tags: contracts-v*, ts-v* and rust-v*. Every run builds, writes the SBOMs and packs the packages
-# and crates (the dry run); the publish jobs run only when the repository variable
-# SDK_PUBLISH_ENABLED is `true` (unset by default: they show as skipped).
+# and crates (the dry run); the publish jobs run only for a pushed tag and when the repository
+# variable SDK_PUBLISH_ENABLED is `true` (unset by default: they show as skipped). A manual run
+# (workflow_dispatch) never publishes, on any ref and whatever its dry_run input says.
 #
-#   guard     a tag refuses a TEST root (`test-` kid in contracts/constants.json), generated files
+#   guard     a tag refuses a commit that is not on main, a version that differs from the
+#             manifests, a TEST root (`test-` kid in contracts/constants.json), generated files
 #             that differ from the contract, vendored files that are not strictly the platform's,
 #             and anything the public-safe gate refuses
 #   build     build, type check, SBOMs (CycloneDX for the npm packages and the crates), npm pack
 #             and cargo package (the dry run), uploaded as workflow artifacts
 #   publish-* npm with provenance (trusted publishing, no long-lived token): contracts, then sdk,
-#             then tools; crates.io from the `crates-io` environment: contracts, then sdk
+#             then tools; crates.io with trusted publishing (a short-lived token from the
+#             workflow's identity, revoked when the job ends) from the `crates-io` environment:
+#             contracts, then sdk
 #
-# Runners: GitHub-hosted `ubuntu-latest` only.
+# Runners: GitHub-hosted `ubuntu-latest` only. Every action is pinned by commit SHA.
 on:
   push:
     tags:
@@ -22,7 +26,7 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: Build, SBOMs and packs only (the publish jobs need SDK_PUBLISH_ENABLED=true and a tag)
+        description: Build, SBOMs and packs only (a manual run never publishes; publishing needs a pushed tag and SDK_PUBLISH_ENABLED=true)
         type: boolean
         default: true
 
@@ -43,12 +47,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           fetch-depth: 0
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
           cache: pnpm
@@ -63,6 +67,32 @@ jobs:
         run: rustup toolchain install && rustup show active-toolchain
       - name: Install (frozen)
         run: pnpm install --frozen-lockfile
+      - name: A tag is on main and names the version of every manifest
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::the tag commit is not on main"
+            exit 1
+          fi
+          node -e '
+            const fs = require("node:fs");
+            const version = process.env.GITHUB_REF_NAME.replace(/^[a-z]+-v/, "");
+            const pkg = (p) => JSON.parse(fs.readFileSync("packages/ts/" + p + "/package.json", "utf8")).version;
+            const found = {
+              "contracts/VERSION": fs.readFileSync("contracts/VERSION", "utf8").trim(),
+              "connect-contracts": pkg("connect-contracts"),
+              "connect-sdk": pkg("connect-sdk"),
+              "connect-tools": pkg("connect-tools"),
+              "Cargo.toml (workspace)": (/^version = "([^"]+)"/m.exec(fs.readFileSync("Cargo.toml", "utf8")) ?? [])[1],
+            };
+            const wrong = Object.entries(found).filter(([, v]) => v !== version);
+            if (wrong.length > 0) {
+              console.error("::error::the tag names " + version + "; " + wrong.map(([k, v]) => k + " is " + v).join(", "));
+              process.exit(1);
+            }
+            console.log("version " + version + " in every manifest");
+          '
       - name: No TEST root in a release
         run: |
           node -e '
@@ -99,11 +129,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
           cache: pnpm
@@ -116,7 +146,7 @@ jobs:
           fi
       - name: Toolchain (pinned by rust-toolchain.toml)
         run: rustup toolchain install && rustup show active-toolchain
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       - name: Install (frozen) and build
         run: |
           pnpm install --frozen-lockfile
@@ -135,7 +165,7 @@ jobs:
           cargo package -p ever-connect-sdk --no-verify --exclude-lockfile
           mkdir -p release/crates && cp target/package/*.crate release/crates/
           ls -l release/crates
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0 # v2.87.22
         with:
           tool: cargo-cyclonedx
       - name: SBOMs (CycloneDX)
@@ -145,7 +175,7 @@ jobs:
           find crates -name '*.cdx.json' -exec cp {} release/sbom/ \;
           npx --yes @cyclonedx/cdxgen@11 -t pnpm -o release/sbom/npm.cdx.json --no-install-deps .
           ls -l release/sbom
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: release-${{ github.run_id }}
           path: release
@@ -154,18 +184,18 @@ jobs:
   publish-npm:
     name: publish-npm
     needs: build
-    if: vars.SDK_PUBLISH_ENABLED == 'true' && startsWith(github.ref, 'refs/tags/ts-v')
+    if: vars.SDK_PUBLISH_ENABLED == 'true' && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/ts-v')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
           cache: pnpm
@@ -183,12 +213,15 @@ jobs:
   publish-crates:
     name: publish-crates
     needs: build
-    if: vars.SDK_PUBLISH_ENABLED == 'true' && startsWith(github.ref, 'refs/tags/rust-v')
+    if: vars.SDK_PUBLISH_ENABLED == 'true' && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/rust-v')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: crates-io
+    permissions:
+      contents: read
+      id-token: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Install rustup (when the runner image has no Rust)
@@ -200,9 +233,12 @@ jobs:
           fi
       - name: Toolchain (pinned by rust-toolchain.toml)
         run: rustup toolchain install && rustup show active-toolchain
+      - name: A short-lived crates.io token (trusted publishing)
+        id: crates-io
+        uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18 # v1.0.5
       - name: Publish (contracts, then sdk)
         env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          CARGO_REGISTRY_TOKEN: ${{ steps.crates-io.outputs.token }}
         run: |
           cargo publish -p ever-connect-contracts --locked
           cargo publish -p ever-connect-sdk --locked

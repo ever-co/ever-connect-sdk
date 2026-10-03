@@ -1,18 +1,23 @@
 //! The entitlement document verifier (`ever.entitlement.v1`), the one implementation every product
 //! uses. The checks run in this order and fail closed at the first one that does not pass:
 //!
-//! 1. a compact JWS: exactly three canonical base64url parts with JSON objects: `malformed`
+//! 0. the key set was verified for the expected issuer (a key set of one issuer never vouches for
+//!    a document of another): `issuer_mismatch`
+//! 1. a compact JWS (the decoding rule of the JWS module: 64 KiB, canonical parts, safe integers
+//!    only, well-formed strings, 127 levels): `malformed`
 //! 2. header `typ` is `ever-entitlement+jwt`: `bad_typ`
 //! 3. header `alg` is `EdDSA` and there is no `crit` (before any key lookup): `bad_alg`
 //! 4. header `kid` is in the root-verified key set, purpose `entitlement`, state `active` or
 //!    `previous`, inside its validity window: `unknown_kid`
-//! 5. the Ed25519 signature over `header.payload`: `bad_signature`
+//! 5. the Ed25519 signature over `header.payload` (strict: no small-order point): `bad_signature`
 //! 6. `ever.schema` is `ever.entitlement.v1`: `schema_violation`
 //! 7. `iss` is the origin of the expected issuer: `issuer_mismatch`
 //! 8. `aud` is `ever-connect`: `audience_mismatch`
 //! 9. the closed schema of the whole payload: `schema_violation`
 //! 10. `ever.instance_id` is this installation's Registry id: `instance_mismatch`
-//! 11. `sub` is the expected subject (`instance:<id>` or `link:<id>`): `subject_mismatch`
+//! 11. `sub` is the expected subject (`instance:<id>` or `link:<id>`); a link document names
+//!     its own link (`ever.tenant_link_id`), an instance document carries no link member:
+//!     `subject_mismatch`
 //! 12. `iat <= now + 300`: `iat_in_future`
 //! 13. `nbf <= now + 300`: `nbf_in_future`
 //! 14. against the cached document: a lower `seq`, or the same `seq` without a later `iat`:
@@ -197,8 +202,13 @@ pub fn verify_entitlement(
 ) -> Result<VerifiedEntitlement, EntitlementError> {
     use EntitlementErrorCode as C;
     let now = o.now.unwrap_or_else(now_s);
+    let issuer = origin_of(o.expected_issuer);
 
-    // 1. Three canonical base64url parts with JSON objects.
+    // 0. The key set is the expected issuer's.
+    if issuer.as_deref() != Some(o.key_set.issuer()) {
+        return Err(fail(C::IssuerMismatch));
+    }
+    // 1. A compact JWS.
     let decoded = decode(jws).ok_or(fail(C::Malformed))?;
     // 2-3. Type, then algorithm, before any key is looked up.
     if str_of(&decoded.header, "typ") != Some("ever-entitlement+jwt") {
@@ -217,7 +227,11 @@ pub fn verify_entitlement(
         });
     };
     // 5. Its signature.
-    if !verify_ed25519(&key.x, decoded.signing_input.as_bytes(), &decoded.signature) {
+    if !verify_ed25519(
+        key.x(),
+        decoded.signing_input.as_bytes(),
+        &decoded.signature,
+    ) {
         return Err(fail(C::BadSignature));
     }
     // 6-8. Schema id, issuer, audience.
@@ -230,8 +244,7 @@ pub fn verify_entitlement(
             ..fail(C::SchemaViolation)
         });
     }
-    let issuer = origin_of(o.expected_issuer);
-    if issuer.is_none() || payload.get("iss").and_then(Value::as_str) != issuer.as_deref() {
+    if payload.get("iss").and_then(Value::as_str) != issuer.as_deref() {
         return Err(fail(C::IssuerMismatch));
     }
     if payload.get("aud").and_then(Value::as_str) != Some("ever-connect") {
@@ -250,21 +263,37 @@ pub fn verify_entitlement(
     {
         return Err(fail(C::InstanceMismatch));
     }
-    if payload.get("sub").and_then(Value::as_str) != Some(o.expected_subject) {
+    let sub = payload.get("sub").and_then(Value::as_str);
+    if sub != Some(o.expected_subject) {
         return Err(fail(C::SubjectMismatch));
     }
-    // 12-13. Not from the future (the schema made these integers).
+    let link_id = payload
+        .pointer("/ever/tenant_link_id")
+        .and_then(Value::as_str);
+    let linked = link_id.is_some() || payload.pointer("/ever/tenant").is_some();
+    let consistent = match o.expected_subject.strip_prefix("link:") {
+        Some(id) => link_id == Some(id),
+        None => !linked,
+    };
+    if !consistent {
+        return Err(fail(C::SubjectMismatch));
+    }
+    // 12-13. Not from the future. The decoder admits safe integers only and the schema made these
+    // integers, so a value that is not one is a schema violation, never a sentinel.
     let int = |pointer: &str| {
         payload
             .pointer(pointer)
             .and_then(Value::as_i64)
-            .unwrap_or(i64::MAX)
+            .ok_or(EntitlementError {
+                path: Some(pointer.to_owned()),
+                ..fail(C::SchemaViolation)
+            })
     };
-    let (iat, nbf, seq) = (int("/iat"), int("/nbf"), int("/ever/seq"));
-    if iat > now + CLOCK_SKEW_S {
+    let (iat, nbf, seq) = (int("/iat")?, int("/nbf")?, int("/ever/seq")?);
+    if iat > now.saturating_add(CLOCK_SKEW_S) {
         return Err(fail(C::IatInFuture));
     }
-    if nbf > now + CLOCK_SKEW_S {
+    if nbf > now.saturating_add(CLOCK_SKEW_S) {
         return Err(fail(C::NbfInFuture));
     }
     // 14. Never older than the cached document.
@@ -276,7 +305,7 @@ pub fn verify_entitlement(
     let status = entitlement_status(Some(&payload), now, None);
     Ok(VerifiedEntitlement {
         claims: payload,
-        kid: key.kid.clone(),
+        kid: key.kid().to_owned(),
         seq,
         jws: jws.to_owned(),
         status,

@@ -164,3 +164,43 @@ describe('sample flow against the mock, through the SDK client', () => {
     }
   });
 });
+
+describe('verifyEntitlementRefreshing against the mock', () => {
+  it('refreshes the key set once on an unknown key id and verifies again; a second unknown id is final', async () => {
+    const mock = createMockPlatform({ config: { issuer: ISSUER } });
+    const { url } = await mock.listen(0, '127.0.0.1');
+    close = () => mock.close();
+    const now = () => mock.state.now() as number;
+    const admin = (path: string, body: unknown) =>
+      fetch(`${url}/__mock/${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    const pair = generateInstanceKeyPair();
+    let registryId: string | null = null;
+    const c = createEverPlatformClient({
+      baseUrl: url,
+      issuer: ISSUER,
+      env: { EVER_PLATFORM_ROOT_KEYS_FILE: ROOTS_FILE },
+      userAgentProduct: { product: 'gauzy', version: '96.2.1' },
+      signer: makeNodeSigner(pair.privateKeyPkcs8Der),
+      registryInstanceId: () => registryId,
+      now,
+    });
+    const before = (await c.keys.refresh()).keySet;
+    const redeemed = await c.connect.redeem(
+      { code: 'EVC-TEST-0000-0001', product: 'gauzy', version: '96.2.1', install_source: 'self-hosted', public_jwk: pair.publicJwk },
+      idem('redeem', 'refreshing'),
+    );
+    registryId = redeemed.instance_id;
+    // The platform rotates its entitlement key and re-issues: the cached set does not list the new key.
+    await admin('keys/rotate', {});
+    await admin('entitlement/reissue', { instance_id: registryId });
+    const answer = await c.instances.entitlement();
+    if ('notModified' in answer) throw new Error('no document');
+    // Inside 10 minutes of the fetch the set is not fetched again: the unknown id is final for now.
+    await expect(c.verifyEntitlementRefreshing(answer.document, { keySet: before })).rejects.toMatchObject({ code: 'unknown_kid' });
+    await admin('clock', { advance: 601 });
+    const { verified, keySet } = await c.verifyEntitlementRefreshing(answer.document, { keySet: before });
+    expect(verified.kid).toBe('test-entitlement-2');
+    expect(keySet).not.toBe(before);
+    expect(keySet.has('test-entitlement-2')).toBe(true);
+  });
+});

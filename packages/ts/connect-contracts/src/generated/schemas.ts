@@ -590,7 +590,7 @@ export type ConsentV1Ulid = string;
 export type ConsentV1Timestamp = string;
 
 /**
- * The body of GET /.well-known/ever-keys.json: the published signing keys and a compact JWS (header {alg: EdDSA, kid: <root kid>, typ: ever-key-manifest+jwt}) signed by a pinned root key whose payload is {iss, iat, exp, keys_sha256, root_kid}; keys_sha256 is the hex SHA-256 of the RFC 8785 canonical JSON of the served keys array. A verifier trusts a key only when the manifest verifies against a pinned root and keys_sha256 matches the served array. Authored in this repository until the platform publishes the schema; the field set follows the platform's KeyManifestBody.
+ * The body of GET /.well-known/ever-keys.json: the published signing keys and a compact JWS (header {alg: EdDSA, kid: <root kid>, typ: ever-key-manifest+jwt}) signed by a pinned root key whose payload is {iss, iat, exp, keys_sha256, root_kid}; keys_sha256 is the hex SHA-256 of the RFC 8785 canonical JSON of the served keys array; key times are UTC (YYYY-MM-DDTHH:MM:SS[.fraction]Z) and name a day that exists. A verifier trusts a key only when the manifest verifies against a pinned root and keys_sha256 matches the served array. Authored in this repository until the platform publishes the schema; the field set follows the platform's KeyManifestBody.
  */
 export interface KeyManifestV1 {
   manifest: string;
@@ -3402,7 +3402,7 @@ export const SCHEMAS = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://api.ever.co/v1/entitlements/schema/ever.key-manifest.v1",
     "title": "Ever Platform key manifest v1",
-    "description": "The body of GET /.well-known/ever-keys.json: the published signing keys and a compact JWS (header {alg: EdDSA, kid: <root kid>, typ: ever-key-manifest+jwt}) signed by a pinned root key whose payload is {iss, iat, exp, keys_sha256, root_kid}; keys_sha256 is the hex SHA-256 of the RFC 8785 canonical JSON of the served keys array. A verifier trusts a key only when the manifest verifies against a pinned root and keys_sha256 matches the served array. Authored in this repository until the platform publishes the schema; the field set follows the platform's KeyManifestBody.",
+    "description": "The body of GET /.well-known/ever-keys.json: the published signing keys and a compact JWS (header {alg: EdDSA, kid: <root kid>, typ: ever-key-manifest+jwt}) signed by a pinned root key whose payload is {iss, iat, exp, keys_sha256, root_kid}; keys_sha256 is the hex SHA-256 of the RFC 8785 canonical JSON of the served keys array; key times are UTC (YYYY-MM-DDTHH:MM:SS[.fraction]Z) and name a day that exists. A verifier trusts a key only when the manifest verifies against a pinned root and keys_sha256 matches the served array. Authored in this repository until the platform publishes the schema; the field set follows the platform's KeyManifestBody.",
     "type": "object",
     "additionalProperties": false,
     "required": [
@@ -3476,13 +3476,17 @@ export const SCHEMAS = {
           },
           "not_before": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]{1,9})?Z$",
+            "maxLength": 30
           },
           "not_after": {
             "oneOf": [
               {
                 "type": "string",
-                "format": "date-time"
+                "format": "date-time",
+                "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]{1,9})?Z$",
+                "maxLength": 30
               },
               {
                 "type": "null"

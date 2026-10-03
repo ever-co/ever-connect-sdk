@@ -39,6 +39,14 @@ export class NotConnectedError extends Error {
   }
 }
 
+/** An answer larger than the client reads (the read stopped at the limit). */
+export class ResponseTooLargeError extends Error {
+  override readonly name = 'ResponseTooLargeError';
+  constructor(readonly limitBytes: number) {
+    super(`answer larger than ${limitBytes} bytes`);
+  }
+}
+
 /** A request that did not finish in time. */
 export class TimeoutError extends Error {
   override readonly name = 'TimeoutError';

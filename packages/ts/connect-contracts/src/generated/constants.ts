@@ -135,15 +135,6 @@ export const CONSTANTS = {
   "user_agent_pattern": "ever-connect-sdk/<sdk version> (<product>/<product version>)",
   "root_keys": [
     {
-      "kid": "test-root-1",
-      "iss": "http://mock-platform:8080",
-      "kty": "OKP",
-      "crv": "Ed25519",
-      "x": "slsZoNmmvLZONnDVCJ_lF6TV46dFWyDmWR9svtaZzMk",
-      "use": "sig",
-      "alg": "EdDSA"
-    },
-    {
       "kid": "ever-202610-0d77",
       "iss": "https://api-dev.ever.co",
       "kty": "OKP",

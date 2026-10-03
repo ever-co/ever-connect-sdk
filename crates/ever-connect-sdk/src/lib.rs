@@ -9,13 +9,14 @@
 //! * `stats`: the anonymous statistics checks and signer ([`stats`]).
 //! * `lookup`: identifier normalisation (version 1) and the salted hash ([`lookup`]).
 //! * `usage`: the `ever.usage.v1` reading validator ([`usage`]).
+//! * `managed` (with `client`): the managed-operation runner ([`managed`]).
 //!
-//! The managed-operation runner ([`managed`]) and the connect-code helpers ([`codes`]) are always
-//! there. Nothing runs at load time; no error, `Debug` or `Display` output carries a token, an
-//! assertion, a key or a document.
+//! The connect-code helpers ([`codes`]) are always there. Nothing runs at load time; no error,
+//! `Debug` or `Display` output carries a token, an assertion, a key or a document.
 #![forbid(unsafe_code)]
 
 pub mod codes;
+#[cfg(feature = "managed")]
 pub mod managed;
 
 #[cfg(any(feature = "entitlement", feature = "stats", feature = "lookup"))]

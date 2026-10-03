@@ -4,6 +4,8 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSyn
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import Ajv2020 from 'ajv/dist/2020.js';
+import { testRootEntry } from '../../mock-platform/src/keys.mjs';
+import { DEFAULT_CONFIG } from '../../mock-platform/src/state.mjs';
 import { evaluate } from '../assert.mjs';
 import { generatedRows, loadModes } from '../assert-call-log.mjs';
 import { composeRunner, docker, poll } from './docker.mjs';
@@ -212,10 +214,10 @@ export async function runAudit({
     // 2. The product: created, given the TEST root file (positive modes), then started.
     const rootsFile = productEnv[`${prefix}PLATFORM_ROOT_KEYS_FILE`];
     if (rootsFile) {
-      const constants = JSON.parse(readFileSync(join(MOCK_CONTRACTS, 'constants.json'), 'utf8'));
       const rootsDir = join(out, 'roots');
       mkdirSync(rootsDir, { recursive: true });
-      writeJson(join(rootsDir, rootsFile.split('/').pop()), { keys: constants.root_keys });
+      // The mock's TEST root, pinned for the mock's issuer: the SDK honours it for a local base URL only.
+      writeJson(join(rootsDir, rootsFile.split('/').pop()), { keys: [testRootEntry(DEFAULT_CONFIG.issuer)] });
       full(['create', ...(config.build ? ['--build'] : []), ...config.process_services]);
       for (const svc of config.process_services) {
         const id = full(['ps', '-a', '-q', svc]).stdout.trim().split('\n')[0];

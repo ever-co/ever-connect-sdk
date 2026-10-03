@@ -11,6 +11,7 @@ import {
   type RootKey,
   verifyEntitlement,
 } from '../src/index';
+import { redact } from '../src/transport';
 import { fixture, fixtureText } from './helpers';
 
 const INSTANCE = '01JNE7V9J03J6XQ2WN8H0Z88R5';
@@ -59,6 +60,10 @@ const safeJson = (v: unknown) => {
 };
 
 describe('redaction', () => {
+  it('a token glued to the start of something that looks like a document is still redacted', () => {
+    expect(redact('x eyJab_evit_SECRET y')).toBe('x eyJab_[redacted] y');
+    expect(redact('evit_a.eyJh.eyJp.c evit_b')).not.toMatch(/evit_[ab]/);
+  });
   it('a problem that echoes the token, the assertion or a client secret keeps none of them', async () => {
     let echoed = '';
     const { client, assertions } = run(() => {
@@ -99,7 +104,7 @@ describe('redaction', () => {
   it('a refused document names the code, never a claim value', () => {
     const roots = fixture<{ keys: RootKey[] }>('keys/roots.json').keys;
     const ctx = fixture('entitlement/context.json');
-    const keySet = KeySet.verify(fixture('keys/manifest.valid.json'), { rootKeys: roots, issuer: ctx.expected_issuer, now: ctx.now });
+    const keySet = KeySet.verify(fixture('keys/manifest.valid.json'), { unsafeRootKeys: roots, issuer: ctx.expected_issuer, now: ctx.now });
     for (const file of ['wrong-instance', 'wrong-subject', 'extra-claim', 'stale-seq', 'wrong-issuer']) {
       const jws = fixtureText(`entitlement/invalid/${file}.jws`).trim();
       const error = (() => {
