@@ -144,11 +144,91 @@
       "expect": { "status": 401, "code": "unauthorized" }
     },
     {
+      "id": "redeem-five-return-origins",
+      "row": 3,
+      "module": "connect",
+      "request": {
+        "method": "POST",
+        "path": "/v1/connect/redeem",
+        "idempotent": true,
+        "body": {
+          "code": "EVC-AAAA-BBBB-CCCC",
+          "product": "gauzy",
+          "version": "1.0.0",
+          "install_source": "self-hosted",
+          "public_jwk": { "kty": "OKP", "crv": "Ed25519", "x": "$conformance_key_x" },
+          "return_origins": ["https://a.example.com","https://b.example.com","https://c.example.com","https://d.example.com","https://e.example.com"]
+        }
+      },
+      "expect": { "status": 422, "code": "validation_failed" },
+      "expect_issuance_off": { "status": 404, "code": "not_found" }
+    },
+    {
+      "id": "redeem-plain-http-origin",
+      "row": 3,
+      "module": "connect",
+      "request": {
+        "method": "POST",
+        "path": "/v1/connect/redeem",
+        "idempotent": true,
+        "body": {
+          "code": "EVC-AAAA-BBBB-CCCC",
+          "product": "gauzy",
+          "version": "1.0.0",
+          "install_source": "self-hosted",
+          "public_jwk": { "kty": "OKP", "crv": "Ed25519", "x": "$conformance_key_x" },
+          "return_origins": ["http://gauzy.example.com"]
+        }
+      },
+      "expect": { "status": 422, "code": "validation_failed" },
+      "expect_issuance_off": { "status": 404, "code": "not_found" }
+    },
+    {
+      "id": "integrations-without-token",
+      "row": 9,
+      "module": "consent",
+      "request": { "method": "GET", "path": "/v1/instances/me/integrations" },
+      "expect": { "status": 401, "code": "unauthorized" }
+    },
+    {
+      "id": "consent-url-unknown-token",
+      "row": 9,
+      "module": "consent",
+      "request": { "method": "GET", "path": "/v1/instances/me/consent-url?integration=stats_link", "bearer": "$unknown_instance_token" },
+      "expect": { "status": 401, "code": "unauthorized" }
+    },
+    {
+      "id": "disable-without-token",
+      "row": 10,
+      "module": "consent",
+      "request": { "method": "PUT", "path": "/v1/instances/me/integrations/stats_link", "body": { "enabled": false, "reason": "instance" } },
+      "expect": { "status": 401, "code": "unauthorized" }
+    },
+    {
+      "id": "accept-without-token",
+      "row": 31,
+      "module": "consent",
+      "request": {
+        "method": "POST",
+        "path": "/v1/instances/me/integrations/stats_link/accept",
+        "idempotent": true,
+        "body": { "consent_id": "01JMQCK0RG000000000000000N", "accepted": true }
+      },
+      "expect": { "status": 401, "code": "unauthorized" }
+    },
+    {
       "id": "stats-accepted",
       "row": 17,
       "module": "stats",
       "stats": { "fixture": "stats/valid/gauzy.json" },
       "expect": { "status": 202, "required": ["accepted"] }
+    },
+    {
+      "id": "stats-same-report-again",
+      "row": 17,
+      "module": "stats",
+      "stats": { "fixture": "stats/valid/gauzy.json" },
+      "expect": { "status": 202, "required": ["accepted"], "absent": ["superseded"] }
     },
     {
       "id": "stats-bad-signature",

@@ -178,7 +178,10 @@ export const connectHandlers = {
   connectRedeem: Object.assign(
     (ctx) => {
       const { state, body, validation, issuer } = ctx;
-      if (!validation.ok) fail(422, 'validation_failed', undefined, { errors: validation.errors });
+      // The body's shape (unknown fields, types, required keys) comes first; the number of return
+      // origins is checked with the other body rules, after issuance.
+      const shape = validation.errors.filter((e) => !(e.path === '/return_origins' && e.code === 'too_long'));
+      if (shape.length > 0) fail(422, 'validation_failed', undefined, { errors: shape });
       issuance(state);
       const origins = checkRedeemBody(body);
       windowOpen(state, ctx);

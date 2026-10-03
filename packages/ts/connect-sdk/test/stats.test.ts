@@ -192,6 +192,9 @@ describe('strict JSON on the bytes', () => {
       ['{"a":1,}', '', 'type'],
       ['﻿{}', '', 'type'],
       ['"\\ud800"', '', 'type'],
+      // Four hex digits exactly, never a sign.
+      ['"\\u+041"', '', 'type'],
+      ['"\\ud83d\\u+e00"', '', 'type'],
       [`${'['.repeat(18)}1${']'.repeat(18)}`, '/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0', 'type'],
     ];
     for (const [text, path, code] of cases) {
