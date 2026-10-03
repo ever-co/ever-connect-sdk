@@ -19,12 +19,29 @@ Nothing runs at import. Node 20 or later; ESM and CommonJS. One runtime dependen
 
 ## Install
 
-Until the first release on npm, depend on the repository at a commit:
+Until the first release on npm, build the packages of a commit and depend on their tarballs (the
+package depends on `@ever-co/connect-contracts` of the same commit, so a plain git dependency does
+not resolve):
+
+```sh
+git clone https://github.com/ever-co/ever-connect-sdk && cd ever-connect-sdk && git checkout <commit>
+pnpm install --frozen-lockfile && pnpm run build
+(cd packages/ts/connect-contracts && pnpm pack) && (cd packages/ts/connect-sdk && pnpm pack)
+```
 
 ```jsonc
-// package.json
-"@ever-co/connect-sdk": "github:ever-co/ever-connect-sdk#<commit>&path:packages/ts/connect-sdk"
+// package.json of the product (pnpm; npm and yarn have the same `overrides`/`resolutions`)
+"dependencies": {
+  "@ever-co/connect-contracts": "file:vendor/ever-co-connect-contracts-<version>.tgz",
+  "@ever-co/connect-sdk": "file:vendor/ever-co-connect-sdk-<version>.tgz"
+},
+"pnpm": {
+  // the SDK's own dependency on the contracts resolves to the same tarball
+  "overrides": { "@ever-co/connect-contracts": "file:vendor/ever-co-connect-contracts-<version>.tgz" }
+}
 ```
+
+The release workflow's dry run produces the same tarballs as build artifacts.
 
 ## The client
 
