@@ -2,7 +2,7 @@
   "description": "Where every contract file of this repository comes from. Written by tools/sync-contract.mjs; checked by tools/check-schema-drift.mjs. `provisional` sources are drafts the platform has not published yet: tools/check-schema-drift.mjs --strict refuses them.",
   "platform": {
     "repository": "ever-co/platform",
-    "commit": "1294254638dca96ed8b1d7b7fd7289dd488578f0"
+    "commit": "6c7b960b29a591e40b85cbd28ce38e510d11187f"
   },
   "openapi": {
     "target": "contracts/openapi/ever-platform.v1.yaml",
@@ -142,7 +142,7 @@
       "path": "contracts/fixtures/lookup/test-vectors.json",
       "source": "docs/specs/contracts/lookup.md",
       "source_sha256": "d4c284fb451c3026a5d4ff50f038676febc21b2b6708867bdb269d1c4149dcb5",
-      "sha256": "488cab5744e535def182c0bcca029e72c5b0dd4909cfc1a7ff6e81229fa0371b",
+      "sha256": "6d47d4a9991fa971859ece0fe95a77acc742b8f1b9a6cae88e0f7dfb4c1fbf51",
       "transform": "lookup-vectors",
       "provisional": true,
       "upstream": "contracts/lookup/test-vectors.json"

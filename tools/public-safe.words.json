@@ -168,7 +168,9 @@
       "api.ever.co",
       "app.ever.co",
       "auth.ever.co",
-      "apps.ever.co"
+      "apps.ever.co",
+      "api-dev.ever.co",
+      "api-stage.ever.co"
     ]
   },
   "paths": [

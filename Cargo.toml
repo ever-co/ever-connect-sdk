@@ -10,7 +10,7 @@ resolver = "3"
 members = ["crates/*"]
 
 [workspace.package]
-version = "0.1.0"
+version = "1.0.0-rc.1"
 edition = "2024"
 rust-version = "1.98"
 license = "Apache-2.0"
@@ -41,9 +41,27 @@ prettyplease = "0.2"
 # the managed-operation runner and the tests
 jsonschema = { version = "0.58", default-features = false }
 
-# the statistics signer
+# the signers and verifiers
 base64 = "0.22"
 ed25519-dalek = { version = "2", default-features = false, features = ["std", "zeroize"] }
 getrandom = "0.3"
-regex = { version = "1", default-features = false, features = ["std", "unicode-perl"] }
+# patterns of the contract schemas (one uses a lookahead)
+fancy-regex = { version = "0.19", default-features = false, features = ["std", "unicode"] }
 sha2 = "0.10"
+# lookup normalisation
+idna = "1"
+unicode-normalization = "0.1"
+# the client (feature `client`): rustls with the webpki roots, no OpenSSL
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls-webpki-roots"] }
+tokio = { version = "1", default-features = false, features = ["sync", "time"] }
+
+# The signature checks run thousands of times in the tests: build the curve arithmetic optimised
+# even in test builds.
+[profile.dev.package.curve25519-dalek]
+opt-level = 3
+
+[profile.dev.package.ed25519-dalek]
+opt-level = 3
+
+[profile.dev.package.sha2]
+opt-level = 3

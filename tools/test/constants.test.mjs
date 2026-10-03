@@ -1,6 +1,7 @@
 // contracts/constants.json agrees with the contract: header names, code patterns, products, the
 // event feed types, integration keys and the TEST root.
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -70,12 +71,27 @@ test('integration keys are the non-hidden catalog keys and requires_feature name
   }
 });
 
-test('root_keys holds only the TEST root, derived from its public seed', () => {
-  assert.equal(constants.root_keys.length, 1);
-  const [root] = constants.root_keys;
+test('root_keys: the TEST root first, then the Ever Platform roots, each pinned to one issuer', () => {
+  const [root, ...pinned] = constants.root_keys;
   assert.ok(root.kid.startsWith('test-'), 'a release refuses test- roots');
   assert.equal(root.x, testKey('root').x);
   assert.equal(constants.root_keys_file_env, 'EVER_PLATFORM_ROOT_KEYS_FILE');
+  const kids = new Set();
+  for (const key of pinned) {
+    // ever-<yyyymm>-<4 hex of sha256 of x>: the platform's key id form, the root included.
+    assert.match(key.kid, /^ever-[0-9]{6}-[0-9a-f]{4}$/);
+    assert.equal(key.kid.slice(-4), createHash('sha256').update(key.x).digest('hex').slice(0, 4), key.kid);
+    assert.equal(Buffer.from(key.x, 'base64url').length, 32, key.kid);
+    assert.match(key.iss, /^https:\/\/[a-z0-9.-]+$/, key.kid);
+    assert.deepEqual([key.kty, key.crv, key.use, key.alg], ['OKP', 'Ed25519', 'sig', 'EdDSA']);
+    assert.ok(!kids.has(key.kid), key.kid);
+    kids.add(key.kid);
+  }
+  assert.deepEqual(
+    pinned.map((k) => k.iss),
+    ['https://api-dev.ever.co', 'https://api-stage.ever.co'],
+    'the development and staging roots (the production root comes with its own reviewed change)',
+  );
 });
 
 test('the configurable numbers keep their documented defaults', () => {

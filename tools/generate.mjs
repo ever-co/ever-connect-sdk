@@ -7,7 +7,8 @@
  *   2. TypeScript types of paths, components and operations (openapi-typescript)
  *   3. TypeScript types of the JSON Schemas and the schema documents (json-schema-to-typescript)
  *   4. Rust types of the components and the JSON Schemas (typify, `cargo run -p xtask -- typify`)
- *   5. typed integrations, constants, rows and problem codes (TypeScript and Rust)
+ *   5. typed integrations, constants, rows and problem codes (TypeScript and Rust), and the
+ *      client operation table with the request-body schemas (TypeScript and Rust)
  *   6. the outbound-call table and the statistics example inside the docs pages
  *   7. contracts/generated/outbound-calls.json and contracts/generated/row-coverage.json
  *   8. generated.lock: the sha256 of every generated file
@@ -26,6 +27,7 @@ import { join } from 'node:path';
 import { compile } from 'json-schema-to-typescript';
 import openapiTS, { astToString } from 'openapi-typescript';
 import YAML from 'yaml';
+import { clientOperations, operationsRs, operationsTs, requestSchemas } from './lib/client-ops.mjs';
 import { diffOutputs, REPO, readJson, sha256, stableJson, writeText } from './lib/common.mjs';
 import { forRust, inlineCommon, typeName } from './lib/schema-prep.mjs';
 import { checkRows } from './sync-contract.mjs';
@@ -115,6 +117,11 @@ function lint(ctx) {
       if (op.op['x-ever-row'] !== r.row)
         problems.push(`${op.op.operationId}: x-ever-row ${op.op['x-ever-row']} but rows.json says ${r.row}`);
   }
+  // Every feature an integration requires is a feature key of the pinned entitlement document.
+  const features = new Set(Object.keys(ctx.schemas.entitlement.properties.ever.properties.features.properties));
+  for (const [key, def] of Object.entries(ctx.integrations))
+    if (def.requires_feature !== null && def.requires_feature !== undefined && !features.has(def.requires_feature))
+      problems.push(`integration ${key}: requires_feature ${def.requires_feature} is not a feature of ever.entitlement.v1`);
   // Hidden catalog keys never reach the generated output, and the vendored catalog lists none.
   const hidden = ctx.catalog.integrations.filter((i) => i.status === 'hidden').map((i) => i.key);
   for (const key of hidden) {
@@ -672,6 +679,14 @@ export async function generateAll() {
   files['contracts/generated/ever-platform.v1.json'] = stableJson(ctx.spec, { sort: false });
   files['contracts/generated/outbound-calls.json'] = stableJson(calls, { sort: false });
   files['contracts/generated/row-coverage.json'] = stableJson(coverage, { sort: false });
+
+  // The client's operation table (both languages) and the schemas its request bodies are checked against.
+  const ops = clientOperations(ctx.spec, calls);
+  const bodySchemas = requestSchemas(ctx.spec, ops);
+  const sdkVersion = readJson(join(REPO, 'packages/ts/connect-sdk/package.json')).version;
+  files['packages/ts/connect-sdk/src/generated/operations.ts'] = operationsTs(ops, bodySchemas, sdkVersion, TS_HEADER);
+  files['crates/ever-connect-sdk/src/client/generated.rs'] = operationsRs(ops, RS_HEADER);
+  files['crates/ever-connect-sdk/src/client/request-schemas.json'] = stableJson(bodySchemas, { sort: false });
 
   // The crate carries its own copy of the contract files, so it builds on its own.
   const dataFiles = [];

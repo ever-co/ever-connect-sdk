@@ -66,7 +66,7 @@ const TRANSFORMS = {
       // Inputs keep their spaces: the raw cell is read between the backticks of the source line.
       const rawInput = /\|\s*(?:vat|registration|email)\s*\|\s*`([^`]*)`/.exec(line)?.[1] ?? unquote(cells[1]);
       const vector = { kind: cells[0], input: rawInput };
-      if (cells[2] !== '') vector.country = cells[2];
+      if (cells[2] !== '') vector.country = unquote(cells[2]);
       vector.normalized = unquote(cells[3]);
       vector.salt_version = 0;
       vector.hash = unquote(cells[4]);

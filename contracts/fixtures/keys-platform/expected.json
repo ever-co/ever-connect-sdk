@@ -1,0 +1,27 @@
+{
+  "description": "Key manifests served by Ever Platform (development and staging), signed by their roots, which contracts/constants.json pins per issuer. Each verifies with the pinned roots for its own issuer at verify_at (inside its 30-day life), fails as expired from expired_at on, and never verifies for another issuer.",
+  "fixtures": {
+    "manifest.dev.json": {
+      "issuer": "https://api-dev.ever.co",
+      "root_kid": "ever-202610-0d77",
+      "verify_at": 1790903386,
+      "expired_at": 1793408986,
+      "trusted_kids": [
+        "ever-202610-2a13",
+        "ever-202610-e62c",
+        "ever-202610-52dc"
+      ]
+    },
+    "manifest.stage.json": {
+      "issuer": "https://api-stage.ever.co",
+      "root_kid": "ever-202610-8704",
+      "verify_at": 1790903424,
+      "expired_at": 1793409024,
+      "trusted_kids": [
+        "ever-202610-c64d",
+        "ever-202610-cd41",
+        "ever-202610-2d93"
+      ]
+    }
+  }
+}
