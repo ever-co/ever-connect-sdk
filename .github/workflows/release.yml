@@ -269,16 +269,27 @@ jobs:
             (cd "packages/ts/$p" && pnpm publish --provenance --access public --tag "$dist_tag" --no-git-checks)
           done
       - name: Published (the version and its dist-tag are visible on npm)
+        timeout-minutes: 20
         run: |
+          # The registry takes minutes to serve a new version (the package document of a new
+          # package answers 404 meanwhile): wait for it, up to 15 minutes per package.
           version="${GITHUB_REF_NAME#ts-v}"
           for p in connect-contracts connect-sdk connect-tools; do
             name="$(node -p "require('./packages/ts/$p/package.json').name")"
-            for i in $(seq 1 30); do
-              [ "$(curl -s -o /dev/null -w '%{http_code}' "https://registry.npmjs.org/$name/$version")" = 200 ] && break
+            for i in $(seq 1 90); do
+              if curl -fsS "https://registry.npmjs.org/$name" -o "$RUNNER_TEMP/packument.json" 2>/dev/null \
+                && node -e '
+                  const d = JSON.parse(require("node:fs").readFileSync(process.env.RUNNER_TEMP + "/packument.json", "utf8"));
+                  const v = process.argv[1];
+                  if (!d.versions?.[v]) process.exit(1);
+                  console.log(d.name + "@" + v + " dist-tags " + JSON.stringify(d["dist-tags"]));
+                ' "$version"; then
+                continue 2
+              fi
               sleep 10
             done
-            curl -fsS "https://registry.npmjs.org/$name" \
-              | node -e 'let s="";process.stdin.on("data",(d)=>s+=d).on("end",()=>{const d=JSON.parse(s);const v=process.argv[1];if(!d.versions?.[v]){console.error("::error::"+d.name+"@"+v+" is not on npm");process.exit(1);}console.log(d.name+"@"+v+" dist-tags "+JSON.stringify(d["dist-tags"]));})' "$version"
+            echo "::error::$name@$version is not visible on npm after 15 minutes"
+            exit 1
           done
 
   publish-crates:
