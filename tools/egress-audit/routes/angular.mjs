@@ -76,7 +76,7 @@ export function makeResolver(config) {
         rest = specifier.slice(star, specifier.length - (pattern.length - star - 1));
       if (rest === null) continue;
       for (const t of targets) {
-        const f = fileFor(resolve(config.baseDir, t.replace('*', rest)));
+        const f = fileFor(resolve(config.baseDir, t.split('*').join(rest)));
         if (f) return f;
       }
     }

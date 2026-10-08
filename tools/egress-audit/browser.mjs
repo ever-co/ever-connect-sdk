@@ -24,6 +24,15 @@ import { redactUrl, sanitizeHar } from './lib/har.mjs';
 
 const PARAM = /:(\w+)([+*?]?)/g;
 
+/** The path of a page's URL (no query or fragment), the label of what the sign-in pages render. */
+const pathOf = (url) => {
+  try {
+    return new URL(url).pathname;
+  } catch {
+    return '(unknown)';
+  }
+};
+
 /** The parameter values for one route: the plain {name: value} entries, then the route's own {path: {name: value}}. */
 export function routeParamsFor(path, ...sources) {
   const out = {};
@@ -139,6 +148,11 @@ export async function walk({ chromium, plan, adapter = {}, outDir, log = () => {
     };
 
     if (typeof adapter.uiLogin === 'function') {
+      // Every page the sign-in goes through is dumped when it loads, and the page it ends on after
+      // it, each under its own path (the sign-in page, then the landing page).
+      const pending = [];
+      const onLoad = () => pending.push(pageRefs(page, pathOf(page.url()), redactUrl).then((r) => refs.push(...r)));
+      page.on('load', onLoad);
       try {
         await adapter.uiLogin(page, ctx);
       } catch (error) {
@@ -147,8 +161,11 @@ export async function walk({ chromium, plan, adapter = {}, outDir, log = () => {
             .split('\n')[0]
             .slice(0, 200)}`,
         );
+      } finally {
+        page.off('load', onLoad);
+        await Promise.allSettled(pending);
       }
-      refs.push(...(await pageRefs(page, '(sign-in)', redactUrl)));
+      refs.push(...(await pageRefs(page, pathOf(page.url()), redactUrl)));
     }
     let params = {};
     if (typeof adapter.routeParams === 'function') {

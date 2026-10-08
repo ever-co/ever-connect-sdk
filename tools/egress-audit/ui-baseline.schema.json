@@ -16,7 +16,7 @@
         "additionalProperties": false,
         "required": ["route", "attribute", "url", "reason"],
         "properties": {
-          "route": { "description": "The route of ui-routes.json the reference was found on, or (sign-in).", "type": "string", "minLength": 1 },
+          "route": { "description": "The route of ui-routes.json the reference was found on, or, for a page the sign-in goes through, its path.", "type": "string", "minLength": 1 },
           "attribute": { "enum": ["href", "src", "srcset", "imagesrcset", "action", "formaction", "poster", "ping", "data", "xlink:href", "content", "style"] },
           "url": { "description": "As dom-refs.json writes it (query values dropped).", "type": "string", "minLength": 1 },
           "reason": { "type": "string", "minLength": 1 }

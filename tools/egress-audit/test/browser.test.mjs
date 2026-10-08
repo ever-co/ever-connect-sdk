@@ -38,7 +38,9 @@ function site() {
     if (url.pathname === '/sign-in' && req.method === 'GET')
       return html(
         200,
-        page('<form method="post" action="/sign-in"><input name="email"><input name="password" type="password"><button>Go</button></form>'),
+        page(
+          '<form method="post" action="/sign-in"><input name="email"><input name="password" type="password"><button>Go</button></form><a href="https://planted-signin.invalid/terms">terms</a>',
+        ),
       );
     if (url.pathname === '/sign-in') {
       let body = '';
@@ -115,6 +117,10 @@ test('the walk: sign-in, every route, the idle route held, every frame and shado
     const refs = JSON.parse(readFileSync(join(outDir, 'dom-refs.json'), 'utf8'));
     const found = (attribute, url) => refs.some((x) => x.route === '/' && x.attribute === attribute && x.url === url);
     assert.ok(found('href', 'https://planted.invalid/x?token='), 'the planted href, without its query value or fragment');
+    assert.ok(
+      refs.some((x) => x.route === '/sign-in' && x.url === 'https://planted-signin.invalid/terms'),
+      'what the sign-in page renders, under its own path',
+    );
     assert.ok(found('srcset', 'https://planted-set.invalid/a.png'), 'the planted srcset');
     assert.ok(found('href', 'https://planted-shadow.invalid/'), 'the link in the shadow root');
     assert.ok(

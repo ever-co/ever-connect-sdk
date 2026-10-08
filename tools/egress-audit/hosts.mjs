@@ -19,8 +19,15 @@ export function normaliseHost(name) {
   let h = String(name ?? '')
     .trim()
     .toLowerCase();
-  if (h.startsWith('[')) return h.replace(/^\[|\].*$/g, '');
-  h = h.replace(/:\d+$/, '').replace(/\.+$/, '');
+  if (h.startsWith('[')) {
+    const close = h.indexOf(']');
+    return close < 0 ? h.slice(1) : h.slice(1, close);
+  }
+  const colon = h.lastIndexOf(':');
+  if (colon >= 0 && colon < h.length - 1 && [...h.slice(colon + 1)].every((c) => c >= '0' && c <= '9')) h = h.slice(0, colon);
+  let end = h.length;
+  while (end > 0 && h[end - 1] === '.') end -= 1;
+  h = h.slice(0, end);
   if (/[^\x00-\x7f]/.test(h)) {
     const ascii = domainToASCII(h);
     if (ascii) h = ascii;
