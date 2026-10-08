@@ -12,7 +12,10 @@ The Ever Platform client of an Ever product installation, and the pieces it is b
 - lookup normalisation and hashing: `normalizeIdentifier`, `lookupHash`, `checkTestVectors`;
 - `ever.usage.v1` readings: `validateUsageReading`;
 - the anonymous statistics signer and sender (`signStatsReport`, `sendStatsReport`) and the
-  managed-operation runner.
+  managed-operation runner;
+- the compact JWS helpers for what a product signs or reads back itself: `signCompactJws`
+  (EdDSA over Ed25519 only) and `claimsOfVerifiedJws` (the claims of a document you already
+  verified; it never verifies).
 
 Nothing runs at import. Node 20 or later; ESM and CommonJS. One runtime dependency besides
 `@ever-co/connect-contracts`.
@@ -88,11 +91,47 @@ Behaviour, for every call:
   10 minutes; a 429's `Retry-After`): a read the platform would refuse is held back without being
   sent (`RateLimitedError` with `retryAfterS`);
 - a non-2xx answer is a `ProblemError` (`status`, `code`, `detail`, `instance`, `errors`,
-  `retryAfterS`); a 304 is `{ notModified: true }`; deadlines are 6 s for reads, 10 s for writes
-  and `waitS + 5` s for the event long poll (`TimeoutError`);
+  `retryAfterS`, and `lastId` for `410 resync_required`); a 304 is `{ notModified: true }`;
+  deadlines are 6 s for reads, 10 s for writes and `waitS + 5` s for the event long poll
+  (`TimeoutError`);
 - no error, `JSON.stringify` or `inspect` output carries a token, an assertion or a key.
 
 `client.call(operationId, input)` reaches every operation of the table the namespaces do not name.
+
+The event feed answers `410 resync_required` when the cursor is older than what Ever Platform keeps;
+the error carries where to continue (`lastId`):
+
+```ts
+import { ProblemError } from '@ever-co/connect-sdk';
+
+try {
+  const page = await client.instances.events(store.feedCursor, { waitS: 25 });
+  // ... handle page.events, then ack page.last_id and store it
+} catch (error) {
+  if (!(error instanceof ProblemError && error.status === 410 && error.code === 'resync_required')) throw error;
+  await rereadState(); // the integration states and the entitlement documents, through REST
+  if (error.lastId) await client.instances.ackEvents(error.lastId);
+  store.feedCursor = error.lastId ?? null; // no position named: read the feed again from its start
+}
+```
+
+## Compact JWS helpers
+
+```ts
+import { CONSTANTS, claimsOfVerifiedJws, signCompactJws } from '@ever-co/connect-sdk';
+
+// The stats_link statement, signed with the statistics key (a StatsSigner, an InstanceSigner, or
+// any function that answers the 64-byte Ed25519 signature of the bytes it is given).
+const statement = await signCompactJws(statsSigner, { typ: CONSTANTS.stats_link_typ }, claims);
+
+// The claims of an entitlement document stored after verifyEntitlement accepted it, to show them.
+const shown = claimsOfVerifiedJws(store.entitlement.jws);
+```
+
+`signCompactJws` always writes `alg: EdDSA` first and refuses a header that names another `alg` or
+`crit`, a signature that is not 64 bytes, and anything the verifiers would not decode.
+`claimsOfVerifiedJws` **never verifies**: it is for documents the verifier accepted before they were
+stored, never for a document just received (verify that one; the verifier answers its claims).
 
 ## Roots for local runs
 

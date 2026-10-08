@@ -1,11 +1,13 @@
 // In-memory, deterministic state of the mock platform, with a simulated clock.
 import { randomBytes } from 'node:crypto';
 import { b64url, sha256 } from './crypto.mjs';
+import { MOCK_ISSUER } from './keys.mjs';
 
 const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 
 export const DEFAULT_CONFIG = {
-  issuer: 'http://mock-platform:8080',
+  // An https name served over plain HTTP (see MOCK_ISSUER): documents with an http issuer never verify.
+  issuer: MOCK_ISSUER,
   clock: { start: Date.UTC(2026, 10, 2, 10, 0, 0) / 1000 },
   codes: [
     {

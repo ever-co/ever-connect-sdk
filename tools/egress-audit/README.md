@@ -32,6 +32,19 @@ adapter and workflow.
 its own: a config that redefines one of the modes above is refused. Every mode also asserts the DNS
 and connection rules below.
 
+In a mode's environment (and an adapter's `env`), `__MOCK_URL__` is the mock platform's address and
+`__MOCK_ISSUER__` the issuer its documents name. The positive modes give the product:
+
+| Variable | Value | Why |
+|---|---|---|
+| `EVER_PLATFORM_API_URL`, `EVER_STATS_API_URL` | `__MOCK_URL__`: `http://<subnet>.252:8080`, the mock's fixed address on the sealed network | the SDK accepts plain http only from a local address (a private range), never from a bare name such as `mock-platform` |
+| `EVER_PLATFORM_ISSUER` | `__MOCK_ISSUER__`: `https://mock-platform.test` (or the `issuer` of `mock_config`) | the documents name an https issuer; the product passes it to the SDK client (`issuer`), which honours it for a local base URL only |
+| `EVER_PLATFORM_ROOT_KEYS_FILE` | `/ever-audit/roots.json` | the harness copies the mock's TEST root, for that issuer, to this path before the product starts |
+
+The mock keeps its compose name `mock-platform` as an alias for the driver. A product's own `subnet`
+must be a /24 of a private range (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`) for the mock's
+address to count as local (see [docs/mock-platform.md](../../docs/mock-platform.md)).
+
 ## What is checked
 
 `assert.mjs` reads the evidence and writes `report.json`:
@@ -74,7 +87,8 @@ files:
   (so an attempt leaves a SYN to see instead of failing silently), and starts `tcpdump` before the
   product process starts. The product joins the same namespace (`network_mode: service:<holder>`).
 - **The mock platform** runs only in positive modes, built from the bundled mock (or `mock_image`),
-  with a real-time clock so products sign with their own clock.
+  with a real-time clock so products sign with their own clock, at the fixed address `<subnet>.252`
+  of the sealed default network (the products reach it there; the driver by its alias).
 - **The driver.** A small container on the sealed Docker network waits for `health_url`, runs the
   adapter's hooks, requests the managed operation (`positive_managed`), probes the module routes
   and reads the mock's record. Its own traffic never passes through a sniffed namespace.

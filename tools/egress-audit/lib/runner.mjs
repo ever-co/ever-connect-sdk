@@ -9,7 +9,7 @@ import { DEFAULT_CONFIG } from '../../mock-platform/src/state.mjs';
 import { evaluate } from '../assert.mjs';
 import { generatedRows, loadModes } from '../assert-call-log.mjs';
 import { composeRunner, docker, poll } from './docker.mjs';
-import { addressing, buildOverlay, composeNames, corefile, modeEnv, productModel } from './overlay.mjs';
+import { addressing, buildOverlay, composeNames, corefile, MOCK_PORT, modeEnv, productModel } from './overlay.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 export const HARNESS_DIR = resolve(here, '..');
@@ -104,7 +104,12 @@ export async function runAudit({
   const useMock = Boolean(mode.mock) && !noMock;
   const prefix = config.env_prefix ?? 'EVER_';
   const subnet = config.subnet ?? defaultSubnet(project);
-  const { dnsIp } = addressing(subnet);
+  const { dnsIp, mockIp } = addressing(subnet);
+  // The mock's configuration and where the products find it: its fixed address (a local address,
+  // which the SDK accepts over plain http) and the https issuer its documents name. Both are known
+  // in a run without the mock too, so a product is configured the same way and simply gets no answer.
+  const mockConfig = mergeDeep({ clock: { real: true } }, config.mock_config, mode.mock_config);
+  const mockAt = { url: `http://${mockIp}:${MOCK_PORT}`, issuer: mockConfig.issuer ?? DEFAULT_CONFIG.issuer };
   const holders = config.process_services.map((s) => `ever-audit-ns-${s}`);
   const sniffers = config.process_services.map((s) => `ever-audit-sniffer-${s}`);
   const dnsImage = `ever-audit-dns:${project}`;
@@ -140,12 +145,12 @@ export async function runAudit({
       const adapter = (await import(pathToFileURL(resolve(configDir, config.adapter)).href)).default ?? {};
       adapterEnv = adapter.env?.[modeName] ?? {};
     }
-    const productEnv = modeEnv({ ...mode.env, ...adapterEnv }, prefix);
+    const productEnv = modeEnv({ ...mode.env, ...adapterEnv }, prefix, mockAt);
 
     let mock = null;
     if (useMock) {
       const image = config.mock_image ?? buildMockImage(log);
-      mock = { image, config: mergeDeep({ clock: { real: true } }, config.mock_config, mode.mock_config) };
+      mock = { image, config: mockConfig };
     }
 
     // CoreDNS: the compose names forwarded to Docker's resolver, NXDOMAIN for everything else.
@@ -217,7 +222,7 @@ export async function runAudit({
       const rootsDir = join(out, 'roots');
       mkdirSync(rootsDir, { recursive: true });
       // The mock's TEST root, pinned for the mock's issuer: the SDK honours it for a local base URL only.
-      writeJson(join(rootsDir, rootsFile.split('/').pop()), { keys: [testRootEntry(DEFAULT_CONFIG.issuer)] });
+      writeJson(join(rootsDir, rootsFile.split('/').pop()), { keys: [testRootEntry(mockAt.issuer)] });
       full(['create', ...(config.build ? ['--build'] : []), ...config.process_services]);
       for (const svc of config.process_services) {
         const id = full(['ps', '-a', '-q', svc]).stdout.trim().split('\n')[0];

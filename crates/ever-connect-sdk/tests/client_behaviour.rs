@@ -358,6 +358,67 @@ async fn problems_are_mapped() {
         panic!()
     };
     assert_eq!((p.status, p.code.as_str()), (502, "unknown"));
+    assert_eq!(p.last_id, None);
+}
+
+#[tokio::test]
+async fn resync_required_keeps_the_cursor_to_continue_from() {
+    const CURSOR: &str = "01JNE7V9J03J6XQ2WN8H0Z88R9.17";
+    // The answer of the feed read, chosen by the `after` cursor the test sends.
+    let server = platform(|r| {
+        let problem = |status: u16, extra: serde_json::Value| {
+            let mut body = json!({"type": "about:blank", "title": "Gone", "status": status});
+            body.as_object_mut()
+                .unwrap()
+                .extend(extra.as_object().unwrap().clone());
+            Reply::json(status, &body)
+        };
+        let after = r
+            .path
+            .split("after=")
+            .nth(1)
+            .unwrap_or("")
+            .split('&')
+            .next()
+            .unwrap_or("");
+        match after {
+            "with" => problem(410, json!({"code": "resync_required", "last_id": CURSOR})),
+            "missing" => problem(410, json!({"code": "resync_required"})),
+            "empty" => problem(410, json!({"code": "resync_required", "last_id": ""})),
+            "number" => problem(410, json!({"code": "resync_required", "last_id": 17})),
+            "other" => problem(410, json!({"code": "gone", "last_id": CURSOR})),
+            _ => problem(404, json!({"code": "resync_required", "last_id": CURSOR})),
+        }
+    });
+    let client = EverPlatformClient::new(options(&server.url)).unwrap();
+    let read = |after: &'static str| {
+        let client = &client;
+        async move {
+            match client.events(Some(after), Some(0)).await.unwrap_err() {
+                Error::Problem(p) => p,
+                other => panic!("{other:?}"),
+            }
+        }
+    };
+    let p = read("with").await;
+    assert_eq!(
+        (p.status, p.code.as_str(), p.last_id.as_deref()),
+        (410, "resync_required", Some(CURSOR))
+    );
+    // No position named, an empty one, or one that is not a string: read the feed from its start.
+    for after in ["missing", "empty", "number"] {
+        let p = read(after).await;
+        assert_eq!(
+            (p.code.as_str(), p.last_id),
+            ("resync_required", None),
+            "{after}"
+        );
+    }
+    // Only `410 resync_required` carries a cursor, even when another problem's body has the member.
+    let p = read("other").await;
+    assert_eq!((p.status, p.code.as_str(), p.last_id), (410, "gone", None));
+    let p = read("elsewhere").await;
+    assert_eq!((p.status, p.last_id), (404, None));
 }
 
 #[tokio::test]

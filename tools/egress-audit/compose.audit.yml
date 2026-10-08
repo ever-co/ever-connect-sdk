@@ -12,7 +12,7 @@
 #   product joins the same namespace (network_mode: service:<holder>).
 # - The driver (scenario.mjs and the product adapter) runs one step at a time with
 #   `docker compose run`, on the sealed network but outside every sniffed namespace.
-# - The mock platform runs only in positive modes.
+# - The mock platform runs only in positive modes, at a fixed address of the sealed network.
 services:
   ever-audit-dns:
     image: __DNS_IMAGE__
@@ -56,6 +56,9 @@ services:
     image: __MOCK_IMAGE__
     networks:
       default:
+        # A fixed, private address: the products reach the mock at http://__MOCK_IP__:8080, which
+        # the SDK accepts over plain http (a local address); the driver uses the alias.
+        ipv4_address: __MOCK_IP__
         aliases: [mock-platform]
     environment:
       EVER_MOCK_CONFIG_JSON: __MOCK_CONFIG__

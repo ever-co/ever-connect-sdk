@@ -6,7 +6,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { CONSTANTS } from '@ever-co/connect-contracts';
 import { b64url, sha256Hex, ULID } from './encoding';
 import { AssertionError, NotConnectedError } from './errors';
-import { signJws } from './jws';
+import { signCompactJws } from './jws';
 import type { InstanceSigner } from './keys';
 
 /** Options of {@link signClientAssertion}. */
@@ -37,7 +37,7 @@ export async function signClientAssertion(o: ClientAssertionOptions): Promise<st
   if (!ULID.test(id)) throw new AssertionError('not_a_registry_id');
   const iat = Math.floor(o.now ?? Date.now() / 1000);
   const ttl = Math.min(Math.max(1, Math.floor(o.ttlS ?? CONSTANTS.assertion_max_ttl_s)), CONSTANTS.assertion_max_ttl_s);
-  return signJws(
+  return signCompactJws(
     (bytes) => o.signer.sign(bytes),
     { kid: o.signer.kid, typ: CONSTANTS.client_assertion_typ },
     { aud: o.audience, exp: iat + ttl, iat, iss: id, jti: o.jti ?? b64url(randomBytes(16)), sub: id },
@@ -82,7 +82,7 @@ export async function signKeyRotation(o: KeyRotationOptions) {
   const iat = Math.floor(o.now ?? Date.now() / 1000);
   const aud = `${new URL(o.issuer).origin}/v1/instances/me/keys`;
   const proof = (signer: InstanceSigner) =>
-    signJws(
+    signCompactJws(
       (bytes) => signer.sign(bytes),
       { kid: signer.kid, typ: CONSTANTS.client_assertion_typ },
       {

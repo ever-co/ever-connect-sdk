@@ -2,7 +2,7 @@
 // config schema (Ever hosts can never be allowed) and the CLI help.
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -83,6 +83,8 @@ test('the mock platform joins only when asked, with its configuration in the env
   );
   assert.equal(doc.services['mock-platform'].image, 'ever-mock-platform:audit-local');
   assert.deepEqual(doc.services['mock-platform'].networks.default.aliases, ['mock-platform']);
+  // A fixed private address: the SDK accepts plain http from a local address only, never from a bare name.
+  assert.equal(doc.services['mock-platform'].networks.default.ipv4_address, '10.231.41.252');
   assert.deepEqual(JSON.parse(doc.services['mock-platform'].environment.EVER_MOCK_CONFIG_JSON), { clock: { real: true } });
 });
 
@@ -116,7 +118,12 @@ test('CoreDNS answers the compose names and NXDOMAIN for everything else', () =>
 });
 
 test('addressing and the per-project subnet', () => {
-  assert.deepEqual(addressing('10.231.7.0/24'), { subnet: '10.231.7.0/24', ipRange: '10.231.7.0/25', dnsIp: '10.231.7.253' });
+  assert.deepEqual(addressing('10.231.7.0/24'), {
+    subnet: '10.231.7.0/24',
+    ipRange: '10.231.7.0/25',
+    dnsIp: '10.231.7.253',
+    mockIp: '10.231.7.252',
+  });
   assert.throws(() => addressing('10.0.0.0/16'), /must be a \/24/);
   assert.match(defaultSubnet('ever-audit-gauzy-off'), /^10\.231\.\d{1,3}\.0\/24$/);
   assert.notEqual(defaultSubnet('ever-audit-gauzy-off'), defaultSubnet('ever-audit-gauzy-positive_stats'));
@@ -129,6 +136,30 @@ test('mode environment: the product prefix replaces EVER_, null is set empty', (
     OTHER: '1',
   });
   assert.deepEqual(modeEnv({ EVER_CONNECT_ENABLED: 'true' }, 'TR_EVER_'), { TR_EVER_CONNECT_ENABLED: 'true' });
+});
+
+test('mode environment: the mock address and issuer placeholders, for every mode that uses the mock', () => {
+  const mock = { url: 'http://10.231.7.252:8080', issuer: 'https://mock-platform.test' };
+  assert.deepEqual(
+    modeEnv({ EVER_PLATFORM_API_URL: '__MOCK_URL__', EVER_PLATFORM_ISSUER: '__MOCK_ISSUER__', OTHER: '__MOCK_URL__/v1' }, 'TR_EVER_', mock),
+    {
+      TR_EVER_PLATFORM_API_URL: 'http://10.231.7.252:8080',
+      TR_EVER_PLATFORM_ISSUER: 'https://mock-platform.test',
+      OTHER: 'http://10.231.7.252:8080/v1',
+    },
+  );
+  const modes = JSON.parse(readFileSync(join(HARNESS_DIR, 'modes.json'), 'utf8')).modes;
+  for (const [name, mode] of Object.entries(modes)) {
+    const env = modeEnv(mode.env, 'EVER_', mock);
+    // No mode names the mock by its compose name: the SDK would refuse http to a name that is not local.
+    assert.ok(!JSON.stringify(env).includes('mock-platform:'), name);
+    if (env.EVER_PLATFORM_API_URL) {
+      assert.equal(env.EVER_PLATFORM_API_URL, mock.url, name);
+      assert.equal(env.EVER_PLATFORM_ISSUER, mock.issuer, name);
+      assert.equal(env.EVER_PLATFORM_ROOT_KEYS_FILE, '/ever-audit/roots.json', name);
+    }
+    if (env.EVER_STATS_API_URL) assert.equal(env.EVER_STATS_API_URL, mock.url, name);
+  }
 });
 
 test('the config schema refuses Ever hosts in the allow-list; the self-test config is valid', () => {

@@ -1,15 +1,16 @@
 // Test helpers: a mock on a free port, plain fetch calls, and an installation connected with the
 // TEST connect key.
 import { createHash } from 'node:crypto';
-import { signClientAssertion, signRotationProof, testKey } from '../src/keys.mjs';
+import { MOCK_ISSUER, signClientAssertion, signRotationProof, testKey } from '../src/keys.mjs';
 import { createMockPlatform } from '../src/server.mjs';
 import { validateResponse } from '../src/validate.mjs';
 
-export const ISSUER = 'http://mock.test';
+/** The mock's default issuer: an https name served over plain HTTP. */
+export const ISSUER = MOCK_ISSUER;
 let jtiCounter = 0;
 
 export async function startMock(config = {}) {
-  const mock = createMockPlatform({ config: { issuer: ISSUER, ...config } });
+  const mock = createMockPlatform({ config });
   const { url } = await mock.listen(0, '127.0.0.1');
   const api = {
     url,

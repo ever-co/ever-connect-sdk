@@ -76,8 +76,8 @@ describe('sample flow', () => {
       cached: null,
       now: e.now(),
     });
-    // Every rule passes up to the closed schema, which allows only https issuers (the mock runs over http).
-    expect(verified.code ?? 'ok').toMatch(/^(ok|schema_violation)$/);
+    // Every rule passes, the closed schema included: the mock's issuer is https (served over plain HTTP).
+    expect(verified.code ?? 'ok').toBe('ok');
 
     const states = (await e.call('GET', '/v1/instances/me/integrations', { token, headers: ua }))
       .body as components['schemas']['InstanceIntegrations'];

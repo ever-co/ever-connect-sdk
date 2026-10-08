@@ -32,6 +32,8 @@ export {
 } from './errors';
 export type { HeaderRule, OperationAuth, OperationId, OperationSpec } from './generated/operations';
 export { OPERATIONS, SDK_VERSION } from './generated/operations';
+export type { CompactJwsSigner, Ed25519SignFunction } from './jws';
+export { claimsOfVerifiedJws, MAX_JWS_LENGTH, signCompactJws } from './jws';
 export type { Ed25519PublicJwk, InstanceSigner } from './keys';
 export { generateInstanceKeyPair, keyIdFromPublicJwk, makeNodeSigner, publicJwkOf } from './keys';
 export type { KeySetUpdate, StoredKeySet } from './keyset';

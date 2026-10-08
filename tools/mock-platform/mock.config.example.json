@@ -1,5 +1,5 @@
 {
-  "issuer": "http://mock-platform:8080",
+  "issuer": "https://mock-platform.test",
   "clock": { "start": 1793613600 },
   "codes": [
     { "code": "EVC-TEST-0000-0001", "kind": "connect", "product": "gauzy", "org": { "id": "01JMQCK0RG000000000000000A", "handle": "acme" }, "expires_in_s": 900, "pending_approval": false },

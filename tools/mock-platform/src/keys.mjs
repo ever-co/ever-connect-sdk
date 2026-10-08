@@ -10,6 +10,17 @@ export const INTENT_TYP = 'ever-intent+jwt';
 export const STATS_LINK_TYP = 'ever-stats-link+jwt';
 export const MANIFEST_LIFETIME_S = 30 * 24 * 3600;
 
+/**
+ * The mock's default issuer: the origin its tokens, key manifests, entitlement documents and
+ * assertion audiences name. Ever Platform's documents always name an https issuer (the entitlement
+ * schema accepts nothing else), so the mock names one too, while it serves plain HTTP: `.test` is
+ * a reserved name that never resolves, and nothing connects to the issuer. A product points the
+ * SDK at the mock's local address and passes this issuer (the client's `issuer` option, honoured
+ * for a local base URL only). The offline fixtures and the TEST root in
+ * `contracts/fixtures/keys/roots.json` name the same issuer.
+ */
+export const MOCK_ISSUER = 'https://mock-platform.test';
+
 const DEFS = {
   root: { kid: 'test-root-1', label: 'test-root/1' },
   unknownRoot: { kid: 'test-root-9', label: 'test-root/9' },
@@ -51,8 +62,11 @@ export function testKey(name) {
 
 export const testKeyNames = () => Object.keys(DEFS);
 
-/** The TEST root as a JWKS entry for EVER_PLATFORM_ROOT_KEYS_FILE (local runs; the SDK pins no TEST root). */
-export function testRootEntry(issuer) {
+/**
+ * The TEST root as a JWKS entry for EVER_PLATFORM_ROOT_KEYS_FILE (local runs; the SDK pins no TEST
+ * root), for the mock's issuer ({@link MOCK_ISSUER} unless the mock was configured with another).
+ */
+export function testRootEntry(issuer = MOCK_ISSUER) {
   const root = testKey('root');
   return { kid: root.kid, iss: issuer, kty: 'OKP', crv: 'Ed25519', x: root.x, use: 'sig', alg: 'EdDSA' };
 }
