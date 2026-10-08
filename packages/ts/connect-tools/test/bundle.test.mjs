@@ -35,8 +35,24 @@ test('the harness finds the bundled mock and its contract files', () => {
     'egress-audit/selftest/stats-sender/report.json',
     'egress-audit/compose.audit.yml',
     'egress-audit/Corefile',
+    'egress-audit/ever-hosts.json',
+    'egress-audit/browser.mjs',
+    'egress-audit/lib/dom-refs.mjs',
+    'egress-audit/routes/angular.mjs',
+    'egress-audit/presets/signin-only.json',
+    'egress-audit/selftest/ui-leaky/index.html',
   ])
     assert.ok(existsSync(join(DIST, f)), f);
+});
+
+test('the browser leg runs from the bundle: --legs in the help, playwright-core found next to the harness', async () => {
+  const r = run(join(DIST, 'egress-audit', 'run.mjs'), '--help');
+  assert.match(r.stdout, /--legs api,browser/);
+  const { playwrightCoreDir } = await import('@ever-co/connect-tools/egress-audit/runner');
+  const pkg = JSON.parse(readFileSync(join(playwrightCoreDir(), 'package.json'), 'utf8'));
+  assert.equal(pkg.name, 'playwright-core');
+  const { isNeverAllowed } = await import('@ever-co/connect-tools/egress-audit/hosts');
+  assert.ok(isNeverAllowed('app.ever.co'));
 });
 
 test('no tests, samples or node_modules are shipped', () => {

@@ -6,7 +6,15 @@
   "type": "object",
   "properties": {
     "login": { "description": "Signs in as the seeded admin and answers the headers later hooks send." },
-    "createFixtures": { "description": "Creates what a user would create (a tenant, an organization, a project, a Work...)." },
+    "createFixtures": {
+      "description": "Creates what a user would create (a tenant, an organization, a project, a Work...). What it answers (ids and slugs, never a token) reaches the browser leg's hooks as ctx.fixtures."
+    },
+    "uiLogin": {
+      "description": "Browser leg: async uiLogin(page, ctx) signs in through the product's real sign-in page with the Playwright page (ctx: {baseUrl (web_url), apiUrl, mode, env, fixtures, fetch, log}). It runs in the browser container, in the browser's sniffed namespace."
+    },
+    "routeParams": {
+      "description": "Browser leg: async routeParams(ctx) answers the route parameter values only a run knows, {name: value} or {\"/path/:name\": {name: value}}, merged over route-params.json."
+    },
     "openSettings": { "description": "Opens the settings pages that would render the module UI." },
     "prepareLoadedOff": { "description": "Persists the operator's statistics toggle off and leaves the connection module unconnected." },
     "triggerAll": { "description": "Exercises every trigger of the outbound-call table the product supports (every_trigger mode)." },

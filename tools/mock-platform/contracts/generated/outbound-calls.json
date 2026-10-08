@@ -1,6 +1,6 @@
 {
   "description": "Every outbound call the Ever Platform modules of a product can make, generated from contracts/openapi/rows.json and contracts/openapi/ever-platform.v1.yaml. Products render their outbound-call page from this file.",
-  "contracts_version": "1.0.0-rc.2",
+  "contracts_version": "1.0.0-rc.3",
   "rows": [
     {
       "row": 1,

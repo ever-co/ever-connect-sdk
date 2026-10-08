@@ -18,7 +18,8 @@
       "!packages/ts/connect-contracts/integrations",
       "!packages/ts/connect-tools/contracts",
       "!tools/fixtures/public-safe",
-      "!tools/mock-platform/contracts"
+      "!tools/mock-platform/contracts",
+      "!tools/egress-audit/test/fixtures/routers"
     ]
   },
   "formatter": {

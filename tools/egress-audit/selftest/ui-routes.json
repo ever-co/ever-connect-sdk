@@ -1,0 +1,10 @@
+{
+  "$schema": "../ui-routes.schema.json",
+  "framework": "manual",
+  "routes": [
+    { "path": "/", "source": "manual" },
+    { "path": "/about", "source": "manual" },
+    { "path": "/items/:id", "source": "manual" },
+    { "path": "/settings", "source": "manual" }
+  ]
+}

@@ -51,8 +51,16 @@ export function addressing(subnet = '10.231.7.0/24') {
   const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.0\/24$/.exec(subnet);
   if (!m) throw new Error(`the audit subnet must be a /24 (got ${subnet})`);
   const prefix = `${m[1]}.${m[2]}.${m[3]}`;
-  return { subnet, ipRange: `${prefix}.0/25`, dnsIp: `${prefix}.253`, mockIp: `${prefix}.252` };
+  return { subnet, ipRange: `${prefix}.0/25`, dnsIp: `${prefix}.253`, mockIp: `${prefix}.252`, browserIp: `${prefix}.251` };
 }
+
+/** The services of the browser leg: the namespace holder, its sniffer and the browser. */
+export const BROWSER = {
+  holder: 'ever-audit-browser-ns',
+  sniffer: 'ever-audit-browser-sniffer',
+  service: 'ever-audit-browser',
+  capture: 'browser',
+};
 
 /** The port the mock platform listens on in its image. */
 export const MOCK_PORT = 8080;
@@ -119,12 +127,12 @@ function dependsOn(svc) {
 /**
  * The overlay as YAML text.
  * opts: {project, subnet, dnsImage, driverImage?, product{services, networks}, processServices[], env{},
- *        mock{image, config}|null}
+ *        mock{image, config}|null, browser{image, webService}|null}
  */
 export function buildOverlay(opts) {
   checkSealable(opts.product);
   const t = template();
-  const { subnet, ipRange, dnsIp, mockIp } = addressing(opts.subnet);
+  const { subnet, ipRange, dnsIp, mockIp, browserIp } = addressing(opts.subnet);
   const values = {
     PROJECT: opts.project,
     SUBNET: subnet,
@@ -159,6 +167,23 @@ export function buildOverlay(opts) {
   }
   if (opts.driverImage)
     services['ever-audit-driver'] = fill(t.services['ever-audit-driver'], { ...values, DRIVER_IMAGE: opts.driverImage });
+  if (opts.browser) {
+    const web = opts.product.services[opts.browser.webService];
+    if (!web) throw new Error(`web_service ${opts.browser.webService} is not in the compose files`);
+    const v = { ...values, SERVICE: BROWSER.capture, HOLDER: BROWSER.holder, SNIFFER: BROWSER.sniffer };
+    // The browser's holder: a fixed address on the sealed default network (the CoreDNS log names
+    // its queries by that address) and every other sealed network the web service is on.
+    const holder = fill(t.services.__HOLDER__, v);
+    const nets = Object.fromEntries(
+      serviceNetworks(web)
+        .filter((n) => n !== 'default')
+        .map((n) => [n, {}]),
+    );
+    holder.networks = { default: { ipv4_address: browserIp }, ...nets };
+    services[BROWSER.holder] = holder;
+    services[BROWSER.sniffer] = { ...fill(t.services.__SNIFFER__, v), depends_on: [BROWSER.holder] };
+    services[BROWSER.service] = fill(t.services[BROWSER.service], { ...values, BROWSER_IMAGE: opts.browser.image });
+  }
   if (opts.mock)
     services['mock-platform'] = fill(t.services['mock-platform'], {
       ...values,

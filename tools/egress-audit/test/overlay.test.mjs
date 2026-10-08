@@ -123,6 +123,7 @@ test('addressing and the per-project subnet', () => {
     ipRange: '10.231.7.0/25',
     dnsIp: '10.231.7.253',
     mockIp: '10.231.7.252',
+    browserIp: '10.231.7.251',
   });
   assert.throws(() => addressing('10.0.0.0/16'), /must be a \/24/);
   assert.match(defaultSubnet('ever-audit-gauzy-off'), /^10\.231\.\d{1,3}\.0\/24$/);
@@ -197,6 +198,8 @@ test('--help lists the five modes (and the managed-operation control)', () => {
   assert.equal(r.status, 0);
   for (const mode of ['off', 'loaded_off', 'positive_stats', 'positive_connect', 'every_trigger', 'positive_managed'])
     assert.match(r.stdout, new RegExp(`^ {2}${mode} `, 'm'));
+  assert.match(r.stdout, /--legs api,browser/);
+  assert.match(r.stdout, /ui-routes --framework angular\|next-app\|solidstart/);
   const bad = spawnSync(process.execPath, [run, '--config', join(HARNESS_DIR, 'selftest', 'egress-audit.config.json'), '--mode', 'nope'], {
     encoding: 'utf8',
   });

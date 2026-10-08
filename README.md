@@ -12,8 +12,9 @@ place, in TypeScript and Rust:
   entitlement and key formats ([docs/entitlements.md](docs/entitlements.md));
 - fixtures every implementation must agree on, signed with TEST keys;
 - a mock of the Ever Platform API for product CI ([docs/mock-platform.md](docs/mock-platform.md));
-- an egress audit that proves a product makes no outbound call it should not
-  ([tools/egress-audit/README.md](tools/egress-audit/README.md)).
+- an egress audit that proves a product makes no outbound call it should not, from its server
+  processes and, with its browser leg, from its UI in a real browser
+  ([tools/egress-audit/README.md](tools/egress-audit/README.md), [docs/egress-audit.md](docs/egress-audit.md)).
 
 ## Install
 

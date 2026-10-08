@@ -1,0 +1,4 @@
+.:53
+CoreDNS-1.12.1
+[INFO] 10.231.50.7:51000 - 11 "A IN app. udp 22 false 512" NOERROR qr,rd,ra 46 0.0002s
+[INFO] 10.231.50.251:40000 - 1 "A IN app. udp 22 false 512" NOERROR qr,rd,ra 46 0.0002s

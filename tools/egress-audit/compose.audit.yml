@@ -13,6 +13,10 @@
 # - The driver (scenario.mjs and the product adapter) runs one step at a time with
 #   `docker compose run`, on the sealed network but outside every sniffed namespace.
 # - The mock platform runs only in positive modes, at a fixed address of the sealed network.
+# - The browser leg (a product config that names a web_service): a namespace holder with a fixed
+#   address on the sealed network (so the CoreDNS log names the browser's queries by address), its
+#   own sniffer (the __SNIFFER__ template, capturing browser.pcap) and the browser, a Playwright
+#   image run one walk at a time with `docker compose run` in the holder's namespace.
 services:
   ever-audit-dns:
     image: __DNS_IMAGE__
@@ -52,6 +56,13 @@ services:
     dns_opt: ["ndots:0"]
     networks:
       default: {}
+  ever-audit-browser:
+    # Built FROM the pinned Playwright image with browser.mjs, the adapter and playwright-core.
+    image: __BROWSER_IMAGE__
+    profiles: [ever-audit-browser]
+    network_mode: service:ever-audit-browser-ns
+    init: true
+    shm_size: 1gb
   mock-platform:
     image: __MOCK_IMAGE__
     networks:

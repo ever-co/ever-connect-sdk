@@ -116,6 +116,8 @@ async function scenario() {
   }
   const ctx = { baseUrl: new URL(plan.health_url).origin, mode: plan.mode, env: plan.env ?? {}, fetch, log, headers: {} };
   const steps = [];
+  // What createFixtures answers (ids, slugs: never a token) is handed to the browser leg as ctx.fixtures.
+  let fixtures = null;
   const hooks = ['login', 'createFixtures', 'openSettings'];
   if (plan.prepare) hooks.push(plan.prepare);
   if (plan.trigger && plan.trigger !== 'managed_request') hooks.push(plan.trigger);
@@ -127,12 +129,13 @@ async function scenario() {
     try {
       const out = await adapter[hook](ctx);
       if (hook === 'login' && out && typeof out === 'object') ctx.headers = out;
+      if (hook === 'createFixtures' && out && typeof out === 'object') fixtures = JSON.parse(JSON.stringify(out));
       steps.push({ hook, ok: true });
     } catch (error) {
       return result({ ok: false, fault: `adapter ${hook} failed: ${error.message}`, steps });
     }
   }
-  return result({ ok: true, steps });
+  return result({ ok: true, steps, fixtures });
 }
 
 async function managed() {

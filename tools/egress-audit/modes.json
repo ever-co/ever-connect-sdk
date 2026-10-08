@@ -1,11 +1,12 @@
 {
-  "description": "The modes of the egress audit. env values are set on every product service (with the product's env prefix); null means unset; __MOCK_URL__ is the mock platform's address (http on a fixed private address of the sealed network, which the SDK accepts as local) and __MOCK_ISSUER__ the https issuer its documents name, which the product passes to the SDK as its issuer. A positive mode starts the mock platform and lists the outbound-call rows the product must make (required_rows) and may make (allowed_rows); \"generated\" means every row of the outbound-call table that applies to the product.",
+  "description": "The modes of the egress audit. browser turns the browser leg on for a product that names a web_service: negative (no DNS query, connection attempt, HAR entry or DOM reference to a never-allowed host from the browser) or positive (the same, and the browser must make the product's ui_expected_requests of the mode).env values are set on every product service (with the product's env prefix); null means unset; __MOCK_URL__ is the mock platform's address (http on a fixed private address of the sealed network, which the SDK accepts as local) and __MOCK_ISSUER__ the https issuer its documents name, which the product passes to the SDK as its issuer. A positive mode starts the mock platform and lists the outbound-call rows the product must make (required_rows) and may make (allowed_rows); \"generated\" means every row of the outbound-call table that applies to the product.",
   "modes": {
     "off": {
       "description": "Both modules switched off: no module route, no call, no DNS query for any Ever host.",
       "env": { "EVER_CONNECT_ENABLED": null, "EVER_STATS_ENABLED": "false", "EVER_STATS_SEND_INTERVAL_S": "5" },
       "mock": false,
       "module_routes": "404",
+      "browser": "negative",
       "allowed_rows": [],
       "required_rows": []
     },
@@ -15,6 +16,7 @@
       "mock": false,
       "prepare": "prepareLoadedOff",
       "module_routes": "any",
+      "browser": "negative",
       "allowed_rows": [],
       "required_rows": []
     },
@@ -23,6 +25,7 @@
       "env": { "EVER_STATS_ENABLED": "true", "EVER_STATS_API_URL": "__MOCK_URL__", "EVER_STATS_SEND_INTERVAL_S": "5", "EVER_CONNECT_ENABLED": null, "EVER_PLATFORM_ROOT_KEYS_FILE": "/ever-audit/roots.json" },
       "mock": true,
       "module_routes": "any",
+      "browser": "positive",
       "allowed_rows": [17],
       "required_rows": [17]
     },

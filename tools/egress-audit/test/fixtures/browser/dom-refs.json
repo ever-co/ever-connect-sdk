@@ -1,0 +1,6 @@
+[
+  { "route": "/", "frame": "main", "tag": "a", "attribute": "href", "url": "http://app:8080/settings" },
+  { "route": "/", "frame": "main", "tag": "a", "attribute": "href", "url": "https://app.ever.co/" },
+  { "route": "/settings", "frame": "main", "tag": "img", "attribute": "srcset", "url": "https://cdn.gauzy.co/logo-2x.png" },
+  { "route": "/settings", "frame": "main", "tag": "a", "attribute": "href", "url": "https://github.com/ever-co" }
+]

@@ -8,14 +8,22 @@
  * mock platform's record.
  *
  * Fails (exit 1) when:
- *   (a) a DNS name outside the compose services and allowed_external_hosts was queried; any name
- *       under an Ever domain always fails, whatever the allow-list says;
+ *   (a) a DNS name outside the compose services and allowed_external_hosts was queried; a name of
+ *       the never-allowed list (ever-hosts.json) always fails, whatever the allow-list says;
  *   (b) a connection attempt left the sealed networks (loopback excepted), a DNS query sent to a
  *       resolver outside them included;
  *   (c) a product log shows a resolver or connection error (ENOTFOUND, ECONNREFUSED, EAI_AGAIN,
  *       ENETUNREACH, EHOSTUNREACH) for a host outside the compose services and the sealed networks;
  *   (d) in an off mode, a module route answered anything but 404;
- *   (e) in a positive mode, the recorded calls differ from the mode's rows (assert-call-log).
+ *   in a positive mode, the recorded calls differ from the mode's rows (assert-call-log);
+ * and, for the browser leg (a product UI walked by browser.mjs):
+ *   (e) the browser's DNS queries (the CoreDNS log lines from its address and its sniffer) follow
+ *       (a), and its capture follows (b);
+ *   (f) no HAR entry (nor any request or WebSocket the browser opened) goes to a never-allowed
+ *       host, whatever allowed_external_hosts or the product's opt-in list says;
+ *   (g) no DOM reference (href, src, srcset, action, ...) points at a never-allowed host, unless
+ *       ui-baseline.json lists the same {route, attribute, url};
+ *   in a positive browser mode, every request of the product's ui_expected_requests was made.
  * A harness fault (no evidence where some was expected) is exit 2 when nothing was violated: an
  * unproven run proves nothing.
  *
@@ -23,7 +31,10 @@
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { checkCallLog } from './assert-call-log.mjs';
+import { hostOfUrl, matchNeverAllowed } from './hosts.mjs';
+import { harEntries, redactUrl } from './lib/har.mjs';
 
+/** The Ever domains of the first version, kept for importers; the checks read ever-hosts.json (hosts.mjs). */
 export const EVER_DOMAINS = /(^|\.)(ever\.co|ever\.team|gauzy\.co|ever\.works|rec\.so|traduora\.co)$/i;
 // ENETUNREACH and EHOSTUNREACH: an attempt that failed inside the namespace without a packet to
 // capture, such as a connection to an IPv6 address (the sealed networks have no IPv6 route).
@@ -31,12 +42,14 @@ const RESOLVER_ERRORS = /\b(ENOTFOUND|ECONNREFUSED|EAI_AGAIN|ENETUNREACH|EHOSTUN
 
 const normalise = (name) => name.toLowerCase().replace(/\.$/, '');
 
-/** DNS names from a CoreDNS `log` plugin output. */
+/** DNS names from a CoreDNS `log` plugin output, each with the client address that asked. */
 export function corednsQueries(text) {
   const out = [];
   for (const line of text.split('\n')) {
     const m = /"(\w+) IN (\S+?) (udp|tcp) /.exec(line);
-    if (m) out.push({ name: normalise(m[2]), type: m[1], source: 'coredns' });
+    if (!m) continue;
+    const client = /\]\s+\[?([0-9a-f.:]+?)\]?:\d+ - /i.exec(line)?.[1] ?? null;
+    out.push({ name: normalise(m[2]), type: m[1], source: 'coredns', client });
   }
   return out;
 }
@@ -108,18 +121,139 @@ export function reverseAddress(name) {
   return m ? `${m[4]}.${m[3]}.${m[2]}.${m[1]}` : null;
 }
 
+/** A list match as a violation field: {list: category, entry}. */
+const listOf = (match) => ({ list: match.category, entry: match.entry });
+
+/** The {route, attribute, url} key of a DOM reference or a baseline entry (URLs compared without their secrets). */
+const refKey = (r) => `${r.route}|${r.attribute}|${redactUrl(r.url)}`;
+
+/**
+ * The browser leg: (e) its DNS queries and capture, (f) HAR entries and requests, (g) DOM
+ * references, and the positive control. Pushes onto violations and faults; answers the summary.
+ * browser: {enabled, required, positive, ips[], sniffer, har, requests[], domRefs[], visits[],
+ *           skipped[], baseline[], expected[], faults[]}
+ */
+function evaluateBrowser(browser, { violations, faults, known, subnets, corednsLines, composeNames }) {
+  if (!browser) return null;
+  if (!browser.enabled) {
+    if (browser.required) faults.push(browser.reason ?? 'the browser leg did not run');
+    return { leg: 'not run' };
+  }
+  for (const f of browser.faults ?? []) faults.push(`browser: ${f}`);
+  const ips = new Set(browser.ips ?? []);
+  // (e) DNS: the CoreDNS lines from the browser's address and the questions its sniffer saw.
+  const queries = corednsLines.filter((q) => q.client && ips.has(q.client)).map((q) => ({ ...q, source: 'coredns:browser' }));
+  const sniffed = snifferEvents(browser.sniffer ?? '', 'browser');
+  queries.push(...sniffed.queries);
+  if (!/listening on/.test(browser.sniffer ?? '')) faults.push('no sniffer output from the browser: its capture did not run');
+  const seen = new Set();
+  let outside = 0;
+  for (const q of queries) {
+    const key = `${q.name}|${q.source}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const match = matchNeverAllowed(q.name);
+    if (match) violations.push({ rule: 'browser_dns_never_allowed', check: 'e', name: q.name, source: q.source, ...listOf(match) });
+    else if (!known(q.name)) violations.push({ rule: 'browser_dns_unexpected', check: 'e', name: q.name, source: q.source });
+    if (match || !known(q.name)) outside += 1;
+  }
+  let attempts = 0;
+  for (const c of sniffed.connections)
+    if (!isInside(c.dst, subnets)) {
+      attempts += 1;
+      violations.push({ rule: 'browser_egress_attempt', check: 'e', proto: c.proto, dst: c.dst, port: c.dport });
+    }
+  // (f) every HAR entry, request and WebSocket: never a listed host, whatever the configuration says.
+  const rows = [
+    ...harEntries(browser.har).map((e) => ({ ...e, from: 'har' })),
+    ...(browser.requests ?? []).map((r) => ({ method: r.method, url: r.url, host: hostOfUrl(r.url) ?? '', from: 'requests' })),
+  ];
+  const flagged = new Set();
+  for (const r of rows) {
+    const match = r.host ? matchNeverAllowed(r.host) : null;
+    if (!match) continue;
+    const key = `${r.method} ${r.url}`;
+    if (flagged.has(key)) continue;
+    flagged.add(key);
+    violations.push({ rule: 'har_never_allowed', check: 'f', method: r.method, url: r.url, host: r.host, ...listOf(match) });
+  }
+  // (g) DOM references, minus the product's baseline of references that pre-date the modules.
+  const baseline = new Set((browser.baseline ?? []).map(refKey));
+  const used = new Set();
+  let domHits = 0;
+  let baselined = 0;
+  const domSeen = new Set();
+  for (const r of browser.domRefs ?? []) {
+    const host = hostOfUrl(r.url);
+    const match = host ? matchNeverAllowed(host) : null;
+    if (!match) continue;
+    const key = refKey(r);
+    if (domSeen.has(key)) continue;
+    domSeen.add(key);
+    if (baseline.has(key)) {
+      baselined += 1;
+      used.add(key);
+      continue;
+    }
+    domHits += 1;
+    violations.push({ rule: 'dom_never_allowed', check: 'g', route: r.route, attribute: r.attribute, url: r.url, host, ...listOf(match) });
+  }
+  // The positive control: the requests the product's UI must make to a compose service.
+  const inside = (host) => composeNames.has(normalise(host)) || isInside(host, subnets);
+  const expected = (browser.expected ?? []).map((spec) => {
+    const [method, path] = spec.split(' ');
+    const hit = rows.some(
+      (r) =>
+        r.method === method &&
+        r.host &&
+        inside(r.host) &&
+        (() => {
+          try {
+            return new URL(r.url).pathname === path;
+          } catch {
+            return false;
+          }
+        })(),
+    );
+    if (!hit) violations.push({ rule: 'browser_expected_missing', request: spec });
+    return { request: spec, seen: hit };
+  });
+  if (browser.positive && expected.length === 0) faults.push('the browser leg is positive in this mode but no request is expected of it');
+  const visits = browser.visits ?? [];
+  return {
+    leg: 'ran',
+    visits: visits.length,
+    loaded: visits.filter((v) => v.ok).length,
+    status_4xx: visits.filter((v) => v.ok && v.status >= 400).map((v) => `${v.route} ${v.status}`),
+    skipped: browser.skipped ?? [],
+    checks: {
+      e: { dns_queries: queries.length, outside, attempts },
+      f: { entries: rows.length, never_allowed: flagged.size },
+      g: { refs: (browser.domRefs ?? []).length, never_allowed: domHits, baselined },
+    },
+    expected,
+    stale_baseline: (browser.baseline ?? [])
+      .filter((b) => !used.has(refKey(b)))
+      .map((b) => ({ route: b.route, attribute: b.attribute, url: b.url })),
+  };
+}
+
 /**
  * Evaluates the evidence; answers {exit, mode, violations, faults, summary}.
  * evidence: {mode, modeName, subnets[], composeNames[], allowedHosts[], searchDomains[], coredns,
  *            sniffers{svc: text}, logs{svc: text}, routes[{path, status}], expectRoutes,
- *            mockRecord[]|null, mockExpected, mark, generated[], faults[]}
+ *            mockRecord[]|null, mockExpected, mark, generated[], faults[], browser?}
  */
 export function evaluate(evidence) {
   const violations = [];
   const faults = [...(evidence.faults ?? [])];
   const subnets = evidence.subnets ?? [evidence.subnet].filter(Boolean);
+  const composeNames = new Set([...(evidence.composeNames ?? []), 'localhost'].map(normalise));
   const names = new Set([...(evidence.composeNames ?? []), ...(evidence.allowedHosts ?? []), 'localhost'].map(normalise));
-  const queries = [...corednsQueries(evidence.coredns ?? '')];
+  const browserIps = new Set(evidence.browser?.enabled ? (evidence.browser.ips ?? []) : []);
+  const corednsLines = corednsQueries(evidence.coredns ?? '');
+  // The browser's lines are its own leg (e); every other line is the product processes'.
+  const queries = corednsLines.filter((q) => !(q.client && browserIps.has(q.client)));
   const connections = [];
   for (const [svc, text] of Object.entries(evidence.sniffers ?? {})) {
     const e = snifferEvents(text, svc);
@@ -140,7 +274,8 @@ export function evaluate(evidence) {
     const key = `${q.name}|${q.source}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    if (EVER_DOMAINS.test(q.name)) violations.push({ rule: 'dns_ever_host', name: q.name, source: q.source });
+    const match = matchNeverAllowed(q.name);
+    if (match) violations.push({ rule: 'dns_ever_host', name: q.name, source: q.source, ...listOf(match) });
     else if (!known(q.name)) violations.push({ rule: 'dns_unexpected', name: q.name, source: q.source });
   }
   for (const c of connections)
@@ -170,6 +305,7 @@ export function evaluate(evidence) {
   }
   if (Object.keys(evidence.sniffers ?? {}).length === 0 || Object.values(evidence.sniffers).every((t) => !/listening on/.test(t)))
     faults.push('no sniffer output: the capture did not run');
+  const browser = evaluateBrowser(evidence.browser, { violations, faults, known, subnets, corednsLines, composeNames });
   // A proven violation fails the run even when part of it faulted; a run with neither a violation
   // nor its full evidence proves nothing (2).
   const exit = violations.length > 0 ? 1 : faults.length > 0 ? 2 : 0;
@@ -184,6 +320,7 @@ export function evaluate(evidence) {
       connection_attempts: connections.length,
       routes: evidence.routes ?? [],
       calls: calls ? calls.rows : null,
+      ...(browser ? { browser } : {}),
     },
   };
 }

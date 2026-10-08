@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Statistics fixture</title></head>
+<body>
+<!-- The positive control: the statistics card reads the product's own status route. -->
+<nav><a href="/">Home</a> <a href="/about">About</a> <a href="/settings">Settings</a></nav>
+<h1>__ROUTE__</h1>
+<section id="stats">loading</section>
+<script>
+  fetch('/api/ever-stats/status')
+    .then((r) => r.json())
+    .then((s) => { document.getElementById('stats').textContent = s.enabled ? 'statistics on' : 'statistics off'; })
+    .catch(() => { document.getElementById('stats').textContent = 'statistics unavailable'; });
+</script>
+</body>
+</html>
