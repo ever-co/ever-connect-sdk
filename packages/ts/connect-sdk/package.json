@@ -3,7 +3,7 @@
   "version": "1.0.0-rc.1",
   "description": "Ever Platform connection SDK: the client over the generated operation table, the key manifest and entitlement verifier, the client assertion, lookup hashing, usage readings, the anonymous statistics signer and the managed-operation runner.",
   "license": "Apache-2.0",
-  "private": true,
+  "private": false,
   "type": "module",
   "sideEffects": false,
   "engines": {
@@ -13,6 +13,10 @@
     "type": "git",
     "url": "https://github.com/ever-co/ever-connect-sdk.git",
     "directory": "packages/ts/connect-sdk"
+  },
+  "homepage": "https://github.com/ever-co/ever-connect-sdk/tree/main/packages/ts/connect-sdk#readme",
+  "bugs": {
+    "url": "https://github.com/ever-co/ever-connect-sdk/issues"
   },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -33,6 +37,11 @@
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "tag": "next"
+  },
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit -p tsconfig.json",

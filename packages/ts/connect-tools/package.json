@@ -3,7 +3,7 @@
   "version": "1.0.0-rc.1",
   "description": "Dev-only tools for products that host the Ever Platform modules: the mock platform (ever-mock-platform) and the egress audit (ever-egress-audit). Products depend on it instead of copying either tool.",
   "license": "Apache-2.0",
-  "private": true,
+  "private": false,
   "type": "module",
   "engines": {
     "node": ">=20"
@@ -13,13 +13,36 @@
     "url": "https://github.com/ever-co/ever-connect-sdk.git",
     "directory": "packages/ts/connect-tools"
   },
+  "homepage": "https://github.com/ever-co/ever-connect-sdk/tree/main/packages/ts/connect-tools#readme",
+  "bugs": {
+    "url": "https://github.com/ever-co/ever-connect-sdk/issues"
+  },
   "bin": {
     "ever-mock-platform": "./dist/mock-platform/bin/ever-mock-platform.mjs",
     "ever-egress-audit": "./dist/egress-audit/run.mjs"
   },
+  "exports": {
+    "./mock-platform": "./dist/mock-platform/src/server.mjs",
+    "./mock-platform/keys": "./dist/mock-platform/src/keys.mjs",
+    "./mock-platform/crypto": "./dist/mock-platform/src/crypto.mjs",
+    "./mock-platform/validate": "./dist/mock-platform/src/validate.mjs",
+    "./egress-audit/assert": "./dist/egress-audit/assert.mjs",
+    "./egress-audit/assert-call-log": "./dist/egress-audit/assert-call-log.mjs",
+    "./egress-audit/static-hostnames": "./dist/egress-audit/static-hostnames.mjs",
+    "./egress-audit/cloud-inference": "./dist/egress-audit/cloud-inference.mjs",
+    "./egress-audit/overlay": "./dist/egress-audit/lib/overlay.mjs",
+    "./egress-audit/runner": "./dist/egress-audit/lib/runner.mjs",
+    "./dist/*": "./dist/*",
+    "./package.json": "./package.json"
+  },
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "tag": "next"
+  },
   "scripts": {
     "build": "node scripts/bundle.mjs",
     "test": "node --test \"test/*.test.mjs\""

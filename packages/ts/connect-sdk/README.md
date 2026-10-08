@@ -19,29 +19,23 @@ Nothing runs at import. Node 20 or later; ESM and CommonJS. One runtime dependen
 
 ## Install
 
-Until the first release on npm, build the packages of a commit and depend on their tarballs (the
-package depends on `@ever-co/connect-contracts` of the same commit, so a plain git dependency does
-not resolve):
-
 ```sh
-git clone https://github.com/ever-co/ever-connect-sdk && cd ever-connect-sdk && git checkout <commit>
-pnpm install --frozen-lockfile && pnpm run build
-(cd packages/ts/connect-contracts && pnpm pack) && (cd packages/ts/connect-sdk && pnpm pack)
+npm install @ever-co/connect-sdk@next                     # pnpm add / yarn add work the same way
+npm install --save-dev @ever-co/connect-tools@next        # the mock platform and the egress audit, for tests
 ```
+
+`1.0.0-rc.1` is a release candidate, published under the `next` dist-tag with npm provenance. Pin
+the exact version; the SDK depends on `@ever-co/connect-contracts` at the same version, so there is
+nothing else to add:
 
 ```jsonc
-// package.json of the product (pnpm; npm and yarn have the same `overrides`/`resolutions`)
-"dependencies": {
-  "@ever-co/connect-contracts": "file:vendor/ever-co-connect-contracts-<version>.tgz",
-  "@ever-co/connect-sdk": "file:vendor/ever-co-connect-sdk-<version>.tgz"
-},
-"pnpm": {
-  // the SDK's own dependency on the contracts resolves to the same tarball
-  "overrides": { "@ever-co/connect-contracts": "file:vendor/ever-co-connect-contracts-<version>.tgz" }
-}
+// package.json of the product
+"dependencies": { "@ever-co/connect-sdk": "1.0.0-rc.1" },
+"devDependencies": { "@ever-co/connect-tools": "1.0.0-rc.1" }
 ```
 
-The release workflow's dry run produces the same tarballs as build artifacts.
+Do not copy the sources into a product: depend on the package, so every product verifies with the
+same code and picks up fixes by bumping one version.
 
 ## The client
 

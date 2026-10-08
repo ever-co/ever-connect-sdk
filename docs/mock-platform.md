@@ -49,7 +49,7 @@ services:
     depends_on: [mock-platform]
 ```
 
-The SDK pins no TEST root, so the product must be given the mock's: write `{"keys": [testRootEntry(issuer)]}` (`testRootEntry` from `ever-mock-platform/keys`, with the mock's issuer, `http://mock-platform:8080` by default) to the file `EVER_PLATFORM_ROOT_KEYS_FILE` names. The modules honour that file only for a local base URL (`docs/entitlements.md`).
+The SDK pins no TEST root, so the product must be given the mock's: write `{"keys": [testRootEntry(issuer)]}` (`testRootEntry` from `ever-mock-platform/keys`, which a product imports as `@ever-co/connect-tools/mock-platform/keys`, with the mock's issuer, `http://mock-platform:8080` by default) to the file `EVER_PLATFORM_ROOT_KEYS_FILE` names. The modules honour that file only for a local base URL (`docs/entitlements.md`).
 
 ---
 
@@ -124,7 +124,7 @@ Every key is optional; `tools/mock-platform/mock.config.example.json` shows the 
 | `POST /__mock/faults` | `{keys_unavailable?, webhooks_module_disabled?, revoke_credential_at_call?, connect_issuance_off?}` | switches faults on and off |
 | `POST /__mock/person-request` | `{kind: deletion \| export, …}` | a deletion or export request for a person on the feed |
 
-The connect key rotates as on the platform. `POST /v1/instances/me/keys` takes the new public key and two proofs: `current_key_proof`, signed with the current connect key, and `new_key_proof`, signed with the new key. Both carry the claims of a client assertion with `aud` = `<issuer>/v1/instances/me/keys` and `cnf.jkt` = the RFC 7638 thumbprint of the new key, each with its own `jti`. Any proof that fails answers `401 invalid_client`; the current key, or a key an installation holds or held, answers `422 public_jwk_invalid`. `signRotationProof` (from `ever-mock-platform/keys`) builds a proof with the TEST keys. Tokens minted with the replaced key work until its 7-day overlap ends; rotating again inside the overlap stops them at once (`401 unauthorized`: mint a new token). The token endpoint mints at most 60 tokens an hour per installation, then answers `429 rate_limited` with `Retry-After`: keep a token for its hour.
+The connect key rotates as on the platform. `POST /v1/instances/me/keys` takes the new public key and two proofs: `current_key_proof`, signed with the current connect key, and `new_key_proof`, signed with the new key. Both carry the claims of a client assertion with `aud` = `<issuer>/v1/instances/me/keys` and `cnf.jkt` = the RFC 7638 thumbprint of the new key, each with its own `jti`. Any proof that fails answers `401 invalid_client`; the current key, or a key an installation holds or held, answers `422 public_jwk_invalid`. `signRotationProof` (from `ever-mock-platform/keys`; in a product, `@ever-co/connect-tools/mock-platform/keys`) builds a proof with the TEST keys. Tokens minted with the replaced key work until its 7-day overlap ends; rotating again inside the overlap stops them at once (`401 unauthorized`: mint a new token). The token endpoint mints at most 60 tokens an hour per installation, then answers `429 rate_limited` with `Retry-After`: keep a token for its hour.
 
 ---
 
