@@ -2,34 +2,40 @@
   "description": "Where every contract file of this repository comes from. Written by tools/sync-contract.mjs; checked by tools/check-schema-drift.mjs. `provisional` sources are drafts the platform has not published yet: tools/check-schema-drift.mjs --strict refuses them.",
   "platform": {
     "repository": "ever-co/platform",
-    "commit": "106a7235c835578a7b8d5f6d592d0ea1f59444a0"
+    "commit": "8bffb00658ec9d503d42976085b1f595628b3e5a"
   },
   "openapi": {
     "target": "contracts/openapi/ever-platform.v1.yaml",
-    "sha256": "c9cf6debd3445a7ba9d28312ece0273f794f5339c478ab47c1b73add71d795b7",
+    "sha256": "57cbcb4336780b9e9f54102056a37b4cf689a3735ace9e82728f2de21a5fe29b",
     "pinned": {
       "source": "contracts/openapi/ever-api.v1.json",
-      "sha256": "d6d3d0935c48833e2123f3da98f7bff0161f3ffa226f9a98051984f754690098"
+      "sha256": "84c3666da6a1aea510ed75a3ede91c0f6ed71d17ee991adc2146bc7dcd063a65"
     },
     "design": {
       "source": "docs/specs/api",
-      "sha256": "6ba721413052a29368a66a7ac19795adb0653c9467680d8f2587702b6b2f3175",
+      "sha256": "740c8492b15be95265d23a69b92085d84bc4dcc20bb8407a4615b33f93c3ec5c",
       "files": 21
     },
-    "operations": 54,
-    "provisional_operations": [
+    "operations": 58,
+    "scope": {
+      "source": "contracts/openapi/v1-scope.json",
+      "sha256": "273451c5d5e605a05e8d77fc31f148eb2ea8479be0d5994ac1d9dc45b8a62dee",
+      "version": "1.0.0"
+    },
+    "provisional_operations": [],
+    "not_in_v1_operations": [
       "completeProvisionIntent",
       "connectDevice",
       "connectDeviceToken",
       "discoverSso",
       "getLookupSalt",
-      "getLookupTestVectors",
       "instanceAckRequest",
       "instanceCreateBillingLink",
       "instanceCreatePersonLink",
       "instanceDeleteLinkIdentifiers",
       "instanceDeletePersonLink",
       "instanceGetOidcClient",
+      "instanceGetProviderGrant",
       "instanceListMirroredApps",
       "instanceMirrorApps",
       "instancePushOrgProfile",
@@ -37,15 +43,18 @@
       "instanceRekeyTenantLink",
       "instanceReportInstallStatus",
       "instanceReportManagedOperationResult",
+      "instanceReportProviderGrantStatus",
       "instanceReportUsage",
       "instanceReportUsageReadings",
       "instanceRequestOidcClient",
       "lookupCounterparties",
+      "putIntegrationState",
       "resolveIdentity"
     ],
     "shape_differences": [
       "Context",
       "Identifier",
+      "Money",
       "Problem",
       "TenantLink",
       "TokenResponse"
@@ -58,18 +67,13 @@
       }
     ],
     "schema_overrides": [],
-    "security_overrides": [
-      "putIntegrationState"
-    ],
-    "pending_upstream_rows": [
-      18,
-      32
-    ]
+    "security_overrides": [],
+    "pending_upstream_rows": []
   },
   "events": {
     "source": "contracts/events/catalog.json",
-    "version": "1.3",
-    "sha256": "fceaec79bcf4a1f7a5099c1aff3fed18b6867e3417b8bb1ad9efb59e869bd2ed",
+    "version": "1.4",
+    "sha256": "bd8d2a923d495930739a137ec2abe1ea20d49ca6fa3793c1a1c795fb2c7e4154",
     "instance_types": [
       "ever.consent.consent.granted",
       "ever.consent.consent.revoked",
@@ -138,12 +142,39 @@
     },
     {
       "path": "contracts/fixtures/lookup/test-vectors.json",
-      "source": "docs/specs/contracts/lookup.md",
-      "source_sha256": "d4c284fb451c3026a5d4ff50f038676febc21b2b6708867bdb269d1c4149dcb5",
-      "sha256": "6d47d4a9991fa971859ece0fe95a77acc742b8f1b9a6cae88e0f7dfb4c1fbf51",
-      "transform": "lookup-vectors",
-      "provisional": true,
-      "upstream": "contracts/lookup/test-vectors.json"
+      "source": "contracts/lookup/test-vectors.json",
+      "source_sha256": "d76355ba62f3e18bf1d6b1a0b5dc5265c108cb9c104c0e45050594a589144b69",
+      "sha256": "d76355ba62f3e18bf1d6b1a0b5dc5265c108cb9c104c0e45050594a589144b69",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/schemas/ever.consent.v1.json",
+      "source": "contracts/consent/ever.consent.v1.schema.json",
+      "source_sha256": "e4b9ba12f1de4a3075a04105143bc194ba54fd15474f849037cb9769a11a4922",
+      "sha256": "e4b9ba12f1de4a3075a04105143bc194ba54fd15474f849037cb9769a11a4922",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/schemas/ever.key-manifest.v1.json",
+      "source": "contracts/keys/ever-keys.v1.schema.json",
+      "source_sha256": "2704b43ece543387f1b0cc400fcfbf8148647a7eff91da5e4916d7b2460e7974",
+      "sha256": "2704b43ece543387f1b0cc400fcfbf8148647a7eff91da5e4916d7b2460e7974",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/openapi/v1-scope.json",
+      "source": "contracts/openapi/v1-scope.json",
+      "source_sha256": "273451c5d5e605a05e8d77fc31f148eb2ea8479be0d5994ac1d9dc45b8a62dee",
+      "sha256": "273451c5d5e605a05e8d77fc31f148eb2ea8479be0d5994ac1d9dc45b8a62dee",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
     },
     {
       "path": "contracts/schemas/events/common.schema.json",
@@ -769,8 +800,8 @@
     {
       "path": "contracts/fixtures/entitlement-platform/context.json",
       "source": "contracts/fixtures/entitlement/context.json",
-      "source_sha256": "7bc832afef62a650287506291674b7635093a26b1fcf52638d92c62d228977c1",
-      "sha256": "7bc832afef62a650287506291674b7635093a26b1fcf52638d92c62d228977c1",
+      "source_sha256": "511557fa7a3a92375fdbe5d7abe760e5e08d49579d66605d674055e54e67cf56",
+      "sha256": "511557fa7a3a92375fdbe5d7abe760e5e08d49579d66605d674055e54e67cf56",
       "transform": null,
       "provisional": false,
       "upstream": null
@@ -778,8 +809,8 @@
     {
       "path": "contracts/fixtures/entitlement-platform/expected.json",
       "source": "contracts/fixtures/entitlement/expected.json",
-      "source_sha256": "75e04cae4a2611274a7dd60162d987cfb10a85dd743ff348dd9c978a60ade535",
-      "sha256": "75e04cae4a2611274a7dd60162d987cfb10a85dd743ff348dd9c978a60ade535",
+      "source_sha256": "440819cd562f6604fc635f19ea5850d9e30a113e903d44f07498ad99d992fdec",
+      "sha256": "440819cd562f6604fc635f19ea5850d9e30a113e903d44f07498ad99d992fdec",
       "transform": null,
       "provisional": false,
       "upstream": null
@@ -830,6 +861,42 @@
       "upstream": null
     },
     {
+      "path": "contracts/fixtures/entitlement-platform/invalid/signature-empty.jws",
+      "source": "contracts/fixtures/entitlement/invalid/signature-empty.jws",
+      "source_sha256": "71b6dc15c8af2a3474aa2a922788953da365ee50ac15a8be7b13f14b747fe81c",
+      "sha256": "71b6dc15c8af2a3474aa2a922788953da365ee50ac15a8be7b13f14b747fe81c",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/entitlement-platform/invalid/signature-padded.jws",
+      "source": "contracts/fixtures/entitlement/invalid/signature-padded.jws",
+      "source_sha256": "e18c932e8fae782a372d7c0205eef928382658c3ede85dfdc4f8ea1a09709e0c",
+      "sha256": "e18c932e8fae782a372d7c0205eef928382658c3ede85dfdc4f8ea1a09709e0c",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/entitlement-platform/invalid/signature-standard-alphabet.jws",
+      "source": "contracts/fixtures/entitlement/invalid/signature-standard-alphabet.jws",
+      "source_sha256": "1ef305d87d719cee78e46af28d11cec88c10162e03f02cc267a1bc7227127d98",
+      "sha256": "1ef305d87d719cee78e46af28d11cec88c10162e03f02cc267a1bc7227127d98",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/entitlement-platform/invalid/signature-stray-bits.jws",
+      "source": "contracts/fixtures/entitlement/invalid/signature-stray-bits.jws",
+      "source_sha256": "98fba1c360d18555f633bd8cbf19d065c0663de60afb52c952284c36f69fb2c9",
+      "sha256": "98fba1c360d18555f633bd8cbf19d065c0663de60afb52c952284c36f69fb2c9",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
       "path": "contracts/fixtures/entitlement-platform/invalid/stale-seq.jws",
       "source": "contracts/fixtures/entitlement/invalid/stale-seq.jws",
       "source_sha256": "6763c47e44cf6e273d9e3eaa4d1527b4ac8e51d6de078f065214bd6469fdca74",
@@ -870,6 +937,105 @@
       "source": "contracts/fixtures/entitlement/invalid/wrong-typ.jws",
       "source_sha256": "67bb140d96a1cf0658615652af90602f7766710fbec837c013301b804b836fb7",
       "sha256": "67bb140d96a1cf0658615652af90602f7766710fbec837c013301b804b836fb7",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/entitlement-platform/keys/invalid/roots.weak.json",
+      "source": "contracts/fixtures/entitlement/keys/invalid/roots.weak.json",
+      "source_sha256": "0aa4988d530ad6a8d23171eefc6750cd84f13343313d66d59d9995bd5882f168",
+      "sha256": "0aa4988d530ad6a8d23171eefc6750cd84f13343313d66d59d9995bd5882f168",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/entitlement-platform/keys/invalid/time-date-only.json",
+      "source": "contracts/fixtures/entitlement/keys/invalid/time-date-only.json",
+      "source_sha256": "2835bf29f5a49f5d7abe47a305d38417bdd5d6df1b8d9ed57e6dcff2662166bd",
+      "sha256": "2835bf29f5a49f5d7abe47a305d38417bdd5d6df1b8d9ed57e6dcff2662166bd",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/entitlement-platform/keys/invalid/time-expanded-year.json",
+      "source": "contracts/fixtures/entitlement/keys/invalid/time-expanded-year.json",
+      "source_sha256": "51fe5fcb44f4277acfbc4838c65cf989594a8e87e83edfbccff8c7d199f94f37",
+      "sha256": "51fe5fcb44f4277acfbc4838c65cf989594a8e87e83edfbccff8c7d199f94f37",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/entitlement-platform/keys/invalid/time-february-31.json",
+      "source": "contracts/fixtures/entitlement/keys/invalid/time-february-31.json",
+      "source_sha256": "3d5565e9ea4bf284d75bc418936d5f9ced60ffed653f543cdac967842650994d",
+      "sha256": "3d5565e9ea4bf284d75bc418936d5f9ced60ffed653f543cdac967842650994d",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/entitlement-platform/keys/invalid/time-garbage-not-after.json",
+      "source": "contracts/fixtures/entitlement/keys/invalid/time-garbage-not-after.json",
+      "source_sha256": "a4f7ec0388171866e2e4085bbc5fd4f345349c4783d06333c7950ee28c0e2cec",
+      "sha256": "a4f7ec0388171866e2e4085bbc5fd4f345349c4783d06333c7950ee28c0e2cec",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/entitlement-platform/keys/invalid/time-leap-second.json",
+      "source": "contracts/fixtures/entitlement/keys/invalid/time-leap-second.json",
+      "source_sha256": "7b4301884af236708bb00fd0deaa9793f857e4fa451745d922b8ffb85909776c",
+      "sha256": "7b4301884af236708bb00fd0deaa9793f857e4fa451745d922b8ffb85909776c",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/entitlement-platform/keys/invalid/time-lower-case-z.json",
+      "source": "contracts/fixtures/entitlement/keys/invalid/time-lower-case-z.json",
+      "source_sha256": "7528fee30094f5cb46ac1cee2615ddb763c6275a214fc817e026bdbe63b94be2",
+      "sha256": "7528fee30094f5cb46ac1cee2615ddb763c6275a214fc817e026bdbe63b94be2",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/entitlement-platform/keys/invalid/time-offset.json",
+      "source": "contracts/fixtures/entitlement/keys/invalid/time-offset.json",
+      "source_sha256": "9d093df568abe7d8967445b8b22d1e2275930317691ed0459e5ec9cdf878de89",
+      "sha256": "9d093df568abe7d8967445b8b22d1e2275930317691ed0459e5ec9cdf878de89",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/entitlement-platform/keys/invalid/time-space.json",
+      "source": "contracts/fixtures/entitlement/keys/invalid/time-space.json",
+      "source_sha256": "a072ebe9a8f56e5da483afc1c61a2b3599ceccfa8515a19db01f42574298737e",
+      "sha256": "a072ebe9a8f56e5da483afc1c61a2b3599ceccfa8515a19db01f42574298737e",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/entitlement-platform/keys/invalid/weak-key.json",
+      "source": "contracts/fixtures/entitlement/keys/invalid/weak-key.json",
+      "source_sha256": "8cbac8729418ac1e9ca52ea47510618fb16365fd6876bafe7462a57b94edc4d8",
+      "sha256": "8cbac8729418ac1e9ca52ea47510618fb16365fd6876bafe7462a57b94edc4d8",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/entitlement-platform/keys/invalid/weak-root.json",
+      "source": "contracts/fixtures/entitlement/keys/invalid/weak-root.json",
+      "source_sha256": "3db476412c650d3688b07bc58ab4235df1d6beec68cb1d1286f815637b00bfde",
+      "sha256": "3db476412c650d3688b07bc58ab4235df1d6beec68cb1d1286f815637b00bfde",
       "transform": null,
       "provisional": false,
       "upstream": null
@@ -947,14 +1113,5 @@
       "upstream": null
     }
   ],
-  "authored": [
-    {
-      "path": "contracts/schemas/ever.consent.v1.json",
-      "until": "the platform publishes the consent record schema"
-    },
-    {
-      "path": "contracts/schemas/ever.key-manifest.v1.json",
-      "until": "the platform publishes the key manifest schema"
-    }
-  ]
+  "authored": []
 }

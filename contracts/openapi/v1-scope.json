@@ -1,0 +1,435 @@
+{
+  "description": "The scope of contract v1 for installations of Ever products: which operations of the Ever Platform API an installation calls (the instance-facing set an SDK pins), which of them contract v1 serves (pinned in ever-api.v1.json) and which it does not serve yet (not_in_v1: designed, never answered by a v1 deployment; a later minor version of the contract adds them without changing anything pinned). An SDK release for contract v1 carries only pinned operations; a not_in_v1 operation is neither generated nor documented as callable, and its outbound-call row says it is not available yet. Checked by tools/check-contract-scope.mjs against the pinned contract and the design; `pinned` is written by its --write.",
+  "contract": "contracts/openapi/ever-api.v1.json",
+  "version": "1.0.0",
+  "selection": {
+    "description": "An operation is instance-facing when it accepts instanceToken, or it is one of `also` (the public calls an installation makes and the two reads it makes with a signed-in person's token). Paths under never_path_prefixes and operations that accept never_security are never instance-facing; `exclude` names the ones left out on purpose.",
+    "select_security": [
+      "instanceToken"
+    ],
+    "also": [
+      "get_key_manifest",
+      "getConnectLegal",
+      "connectRedeem",
+      "instanceToken",
+      "connectDevice",
+      "connectDeviceToken",
+      "ingestStatsReport",
+      "getLookupSalt",
+      "getLookupTestVectors",
+      "discoverSso",
+      "getMyContext",
+      "listMyMemberships"
+    ],
+    "never_path_prefixes": [
+      "/internal",
+      "/v1/staff"
+    ],
+    "never_security": [
+      "staffSession"
+    ],
+    "exclude": {
+      "subscribeRealtime": "the server-sent event stream serves the app.ever.co browser; installations read the instance feed"
+    },
+    "design_aliases": {
+      "getKeyManifest": "get_key_manifest"
+    }
+  },
+  "pinned": [
+    {
+      "operation_id": "connectRedeem",
+      "method": "POST",
+      "path": "/v1/connect/redeem"
+    },
+    {
+      "operation_id": "deleteWebhook",
+      "method": "DELETE",
+      "path": "/v1/webhooks/{webhook}"
+    },
+    {
+      "operation_id": "get_key_manifest",
+      "method": "GET",
+      "path": "/.well-known/ever-keys.json"
+    },
+    {
+      "operation_id": "getConnectLegal",
+      "method": "GET",
+      "path": "/v1/connect/legal"
+    },
+    {
+      "operation_id": "getInstanceSelf",
+      "method": "GET",
+      "path": "/v1/instances/me"
+    },
+    {
+      "operation_id": "getLookupTestVectors",
+      "method": "GET",
+      "path": "/v1/lookup/test-vectors"
+    },
+    {
+      "operation_id": "getMyContext",
+      "method": "GET",
+      "path": "/v1/me/context"
+    },
+    {
+      "operation_id": "ingestStatsReport",
+      "method": "POST",
+      "path": "/v1/stats/reports"
+    },
+    {
+      "operation_id": "instanceAcceptIntegration",
+      "method": "POST",
+      "path": "/v1/instances/me/integrations/{key}/accept"
+    },
+    {
+      "operation_id": "instanceAckEvents",
+      "method": "POST",
+      "path": "/v1/instances/me/events/ack"
+    },
+    {
+      "operation_id": "instanceCreateTenantLink",
+      "method": "POST",
+      "path": "/v1/instances/me/tenant-links"
+    },
+    {
+      "operation_id": "instanceCreateWebhook",
+      "method": "POST",
+      "path": "/v1/instances/me/webhooks"
+    },
+    {
+      "operation_id": "instanceDeletePublicUrl",
+      "method": "DELETE",
+      "path": "/v1/instances/me/public-url"
+    },
+    {
+      "operation_id": "instanceDisableIntegration",
+      "method": "PUT",
+      "path": "/v1/instances/me/integrations/{key}"
+    },
+    {
+      "operation_id": "instanceDisconnect",
+      "method": "POST",
+      "path": "/v1/instances/me/disconnect"
+    },
+    {
+      "operation_id": "instanceGetConsentUrl",
+      "method": "GET",
+      "path": "/v1/instances/me/consent-url"
+    },
+    {
+      "operation_id": "instanceGetEntitlement",
+      "method": "GET",
+      "path": "/v1/instances/me/entitlement"
+    },
+    {
+      "operation_id": "instanceGetIntegrations",
+      "method": "GET",
+      "path": "/v1/instances/me/integrations"
+    },
+    {
+      "operation_id": "instanceGetLinkEntitlement",
+      "method": "GET",
+      "path": "/v1/instances/me/tenant-links/{link}/entitlement"
+    },
+    {
+      "operation_id": "instanceHeartbeat",
+      "method": "POST",
+      "path": "/v1/instances/me/heartbeat"
+    },
+    {
+      "operation_id": "instanceLinkStats",
+      "method": "POST",
+      "path": "/v1/instances/me/stats-link"
+    },
+    {
+      "operation_id": "instancePollEvents",
+      "method": "GET",
+      "path": "/v1/instances/me/events"
+    },
+    {
+      "operation_id": "instancePutPublicUrl",
+      "method": "PUT",
+      "path": "/v1/instances/me/public-url"
+    },
+    {
+      "operation_id": "instanceRotateKey",
+      "method": "POST",
+      "path": "/v1/instances/me/keys"
+    },
+    {
+      "operation_id": "instanceToken",
+      "method": "POST",
+      "path": "/v1/instances/token"
+    },
+    {
+      "operation_id": "instanceUnlinkTenantLink",
+      "method": "DELETE",
+      "path": "/v1/instances/me/tenant-links/{link}"
+    },
+    {
+      "operation_id": "listMyMemberships",
+      "method": "GET",
+      "path": "/v1/me/memberships"
+    },
+    {
+      "operation_id": "listWebhookDeliveries",
+      "method": "GET",
+      "path": "/v1/webhooks/{webhook}/deliveries"
+    },
+    {
+      "operation_id": "redeliverWebhook",
+      "method": "POST",
+      "path": "/v1/deliveries/{delivery}/redeliver"
+    },
+    {
+      "operation_id": "rotateWebhookSecret",
+      "method": "POST",
+      "path": "/v1/webhooks/{webhook}/rotate-secret"
+    },
+    {
+      "operation_id": "testWebhook",
+      "method": "POST",
+      "path": "/v1/webhooks/{webhook}/test"
+    },
+    {
+      "operation_id": "updateWebhook",
+      "method": "PATCH",
+      "path": "/v1/webhooks/{webhook}"
+    }
+  ],
+  "not_in_v1": [
+    {
+      "operation_id": "instanceRekeyTenantLink",
+      "method": "PATCH",
+      "path": "/v1/instances/me/tenant-links/{link}",
+      "row": 5,
+      "why": "Re-keying an installation-wide tenant link to one product organization is not offered yet."
+    },
+    {
+      "operation_id": "instancePutLinkIdentifiers",
+      "method": "PUT",
+      "path": "/v1/instances/me/tenant-links/{link}/identifiers",
+      "row": 12,
+      "integration": "counterparty_discoverable",
+      "why": "Being discoverable to other installations is not offered yet."
+    },
+    {
+      "operation_id": "instanceDeleteLinkIdentifiers",
+      "method": "DELETE",
+      "path": "/v1/instances/me/tenant-links/{link}/identifiers",
+      "row": 12,
+      "integration": "counterparty_discoverable",
+      "why": "Being discoverable to other installations is not offered yet."
+    },
+    {
+      "operation_id": "getLookupSalt",
+      "method": "GET",
+      "path": "/v1/lookup/salt",
+      "row": 13,
+      "integration": "counterparty_lookup",
+      "why": "The counterparty lookup is not offered yet. Its normalisation and test vectors are published already: getLookupTestVectors and contracts/lookup/test-vectors.json."
+    },
+    {
+      "operation_id": "lookupCounterparties",
+      "method": "POST",
+      "path": "/v1/lookup",
+      "row": 13,
+      "integration": "counterparty_lookup",
+      "why": "The counterparty lookup is not offered yet."
+    },
+    {
+      "operation_id": "instanceRequestOidcClient",
+      "method": "POST",
+      "path": "/v1/instances/me/oidc-client",
+      "row": 14,
+      "integration": "ever_id_login",
+      "why": "Ever ID sign-in clients for installations are not offered yet."
+    },
+    {
+      "operation_id": "instanceGetOidcClient",
+      "method": "GET",
+      "path": "/v1/instances/me/oidc-client",
+      "row": 14,
+      "integration": "ever_id_login",
+      "why": "Ever ID sign-in clients for installations are not offered yet."
+    },
+    {
+      "operation_id": "instanceMirrorApps",
+      "method": "POST",
+      "path": "/v1/instances/me/mirror/apps",
+      "row": 15,
+      "integration": "app_sync",
+      "why": "The app mirror is not served yet."
+    },
+    {
+      "operation_id": "instanceListMirroredApps",
+      "method": "GET",
+      "path": "/v1/instances/me/mirror/apps",
+      "row": 15,
+      "integration": "app_sync",
+      "why": "The app mirror is not served yet."
+    },
+    {
+      "operation_id": "instanceCreatePersonLink",
+      "method": "POST",
+      "path": "/v1/instances/me/person-links",
+      "row": 19,
+      "integration": "ever_id_login",
+      "why": "Person links come with Ever ID sign-in for installations, which is not offered yet."
+    },
+    {
+      "operation_id": "instanceDeletePersonLink",
+      "method": "DELETE",
+      "path": "/v1/instances/me/person-links/{ref}",
+      "row": 19,
+      "integration": "ever_id_login",
+      "why": "Person links come with Ever ID sign-in for installations, which is not offered yet."
+    },
+    {
+      "operation_id": "instanceAckRequest",
+      "method": "POST",
+      "path": "/v1/instances/me/ack",
+      "row": 20,
+      "why": "Installations do not acknowledge deletion and export requests through the API yet."
+    },
+    {
+      "operation_id": "instancePushOrgProfile",
+      "method": "POST",
+      "path": "/v1/instances/me/org-profile",
+      "row": 21,
+      "integration": "profile_import",
+      "why": "Importing an organization profile is not offered yet."
+    },
+    {
+      "operation_id": "resolveIdentity",
+      "method": "POST",
+      "path": "/v1/identity/resolve",
+      "row": 22,
+      "integration": "ever_id_login",
+      "why": "Identity resolution comes with Ever ID sign-in for installations, which is not offered yet."
+    },
+    {
+      "operation_id": "discoverSso",
+      "method": "GET",
+      "path": "/v1/sso/discover",
+      "row": 24,
+      "why": "Company sign-in discovery is not offered yet."
+    },
+    {
+      "operation_id": "instanceCreateBillingLink",
+      "method": "POST",
+      "path": "/v1/instances/me/billing-links",
+      "row": 25,
+      "integration": "billing_link",
+      "why": "Cloud billing links are not served yet."
+    },
+    {
+      "operation_id": "completeProvisionIntent",
+      "method": "POST",
+      "path": "/v1/provision-intents/{jti}/complete",
+      "row": 26,
+      "why": "Provisioning hand-offs are not offered yet."
+    },
+    {
+      "operation_id": "instanceReportUsage",
+      "method": "POST",
+      "path": "/v1/instances/me/usage",
+      "row": 27,
+      "integration": "usage_reporting",
+      "why": "Usage reports are not served yet."
+    },
+    {
+      "operation_id": "instanceReportUsageReadings",
+      "method": "POST",
+      "path": "/v1/instances/me/usage-readings",
+      "row": 27,
+      "integration": "usage_reporting",
+      "why": "Usage reports are not served yet."
+    },
+    {
+      "operation_id": "instanceReportInstallStatus",
+      "method": "POST",
+      "path": "/v1/installs/{install}/status",
+      "row": 28,
+      "integration": "marketplace_installs",
+      "why": "Marketplace installs are not offered yet."
+    },
+    {
+      "operation_id": "connectDevice",
+      "method": "POST",
+      "path": "/v1/connect/device",
+      "row": 29,
+      "why": "The device-first connect is not offered yet: installations connect with a connect code (connectRedeem)."
+    },
+    {
+      "operation_id": "connectDeviceToken",
+      "method": "POST",
+      "path": "/v1/connect/token",
+      "row": 29,
+      "why": "The device-first connect is not offered yet: installations connect with a connect code (connectRedeem)."
+    },
+    {
+      "operation_id": "instanceGetProviderGrant",
+      "method": "GET",
+      "path": "/v1/instances/me/provider-grants/{grant}",
+      "row": 32,
+      "integration": "provider_access",
+      "why": "Provider access grants are not offered yet. When they are, the invitee's e-mail address and name travel only in this answer and only after the provider person accepted the grant (409 grant_not_accepted before)."
+    },
+    {
+      "operation_id": "instanceReportProviderGrantStatus",
+      "method": "POST",
+      "path": "/v1/instances/me/provider-grants/{grant}/status",
+      "row": 32,
+      "integration": "provider_access",
+      "why": "Provider access grants are not offered yet."
+    },
+    {
+      "operation_id": "instanceReportManagedOperationResult",
+      "method": "POST",
+      "path": "/v1/instances/me/managed-operations/{operation}/result",
+      "row": 34,
+      "integration": "managed_operations",
+      "why": "Maintenance operations are not offered yet."
+    }
+  ],
+  "security": {
+    "putIntegrationState": {
+      "row": 33,
+      "instance_facing": false,
+      "accepted": [
+        "personSession",
+        "everIdToken"
+      ],
+      "not_in_v1": [
+        "everIdStepUpToken"
+      ],
+      "why": "Contract v1 accepts a person's app.ever.co session or an Ever ID token of the Ever Platform project from a sign-in at most 300 s old; a token a product, an installation or an App obtained is refused with 403 session_required. Consenting from a product's own dialog with a product step-up token is not part of v1, so no installation calls this operation in v1: a product sends its admin to app.ever.co with the signed link of instanceGetConsentUrl. The operation's limits (Idempotency-Key, the person rate class, a 16 KiB body, the closed body, current scope and agreement versions) are stated in the pinned contract."
+    }
+  },
+  "rows": {
+    "18": {
+      "status": "pinned",
+      "operations": [
+        "instancePutPublicUrl",
+        "instanceDeletePublicUrl"
+      ],
+      "note": "The installation's public address, under the instance_url integration."
+    },
+    "32": {
+      "status": "not_in_v1",
+      "operations": [
+        "instanceGetProviderGrant",
+        "instanceReportProviderGrantStatus"
+      ],
+      "note": "Provider access grants; designed, not served by contract v1."
+    },
+    "33": {
+      "status": "app_ever_co_only",
+      "operations": [
+        "putIntegrationState"
+      ],
+      "note": "Served for app.ever.co; not called by an installation in contract v1 (see security.putIntegrationState)."
+    }
+  }
+}

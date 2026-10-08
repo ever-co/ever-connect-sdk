@@ -82,8 +82,21 @@ const securityNames = (op, doc) => (op.security ?? doc.security ?? []).flatMap((
  * Builds the subset. Answers {spec, selected, provisional, collisions, shapeDifferences, designFiles}.
  * `rows` maps operationId -> row number (x-ever-row).
  */
-export function buildSubset({ platform, config, rowsByOperation, version, title, description, securityOverrides = {} }) {
+/**
+ * What contract v1 does not serve (the platform's v1 scope): {operationId: why} for the
+ * operations it lists under not_in_v1, and for those its security section says no installation
+ * calls in v1 (instance_facing false).
+ */
+export function notInV1(scope) {
+  const out = {};
+  for (const n of scope?.not_in_v1 ?? []) out[n.operation_id] = n.why;
+  for (const [id, s] of Object.entries(scope?.security ?? {})) if (s.instance_facing === false) out[id] = s.why;
+  return out;
+}
+
+export function buildSubset({ platform, config, rowsByOperation, version, title, description, securityOverrides = {}, scope = null }) {
   const pinned = JSON.parse(readFileSync(join(platform, config.pinned), 'utf8'));
+  const unavailable = notInV1(scope);
   const files = new DesignFiles();
   const designRoot = join(platform, config.design);
   const design = designOperations(files, designRoot);
@@ -240,6 +253,7 @@ export function buildSubset({ platform, config, rowsByOperation, version, title,
   // 3. Operations.
   const paths = {};
   const provisional = [];
+  const notInV1List = [];
   const selectedList = [];
   const keep = new Set(config.keep_security);
   for (const key of [...selected.keys()].sort()) {
@@ -286,10 +300,24 @@ export function buildSubset({ platform, config, rowsByOperation, version, title,
     );
     const row = rowsByOperation.get(operationId);
     if (row !== undefined) op['x-ever-row'] = row;
+    // Designed, but not served by contract v1: kept for the SDK and the mock, never documented as callable.
+    if (unavailable[operationId] !== undefined) {
+      op['x-ever-availability'] = 'not_in_v1';
+      op['x-ever-availability-note'] = unavailable[operationId];
+    }
     paths[path] ??= {};
     paths[path][method] = op;
     selectedList.push({ method: method.toUpperCase(), path, operationId, source, security: op.security.flatMap((s) => Object.keys(s)) });
-    if (source === 'design') provisional.push(operationId);
+    if (unavailable[operationId] !== undefined) notInV1List.push(operationId);
+    else if (source === 'design') provisional.push(operationId);
+  }
+  // The selection agrees with the platform's: every operation it pins for installations is pinned here.
+  if (scope) {
+    const pinnedHere = new Set(selectedList.filter((o) => o.source === 'pinned').map((o) => o.operationId));
+    const missing = (scope.pinned ?? []).map((p) => p.operation_id).filter((id) => !pinnedHere.has(id));
+    if (missing.length > 0) throw new Error(`v1 scope: the platform pins ${missing.join(', ')} for installations; this contract does not`);
+    const unknown = Object.keys(unavailable).filter((id) => !selectedList.some((o) => o.operationId === id));
+    if (unknown.length > 0) throw new Error(`v1 scope: ${unknown.join(', ')} not in v1 but not selected here`);
   }
 
   // 4. Shape differences between a design schema and the pinned schema of the same name.
@@ -340,6 +368,7 @@ export function buildSubset({ platform, config, rowsByOperation, version, title,
     spec,
     selected: selectedList,
     provisional: provisional.sort(),
+    notInV1: notInV1List.sort(),
     collisions,
     shapeDifferences: [...shapeDifferences].sort(),
     designFiles: files.files(),

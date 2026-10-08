@@ -559,57 +559,131 @@ export interface EntitlementV1Meter {
 }
 
 /**
- * The consent record Ever Platform keeps for one integration of one installation (and tenant link), and that a product mirrors next to its local integration state. A record is immutable; a revocation sets revoked_at. Evidence never holds an IP address or a user agent. consent_source product_ui is a consent given in the product's own dialog after a fresh Ever ID sign-in; it never applies to counterparty_discoverable or instance_url, which are enabled in app.ever.co only. Authored in this repository until the platform publishes the schema.
+ * One consent Ever Platform keeps for one integration of one installation (and, for a per-link integration, one tenant link), as GET /v1/orgs/{org}/consents and POST /v1/consents/{consent}/revoke answer it; a product mirrors the same record next to its local integration state. A record is immutable but for its revocation (revoked_at, revoked_by_person_id, revoke_reason, revoke_source, set together). Every member is present; an absent value is null. A person id is shown only to that person (null for another member, a deleted person or a consent under the cloud terms). Evidence never holds an IP address or a user agent.
  */
 export type ConsentV1 = {
+  [k: string]: unknown | undefined;
+} & {
   id: ConsentV1Ulid;
-  org_id: ConsentV1Ulid;
-  instance_id: ConsentV1Ulid;
-  tenant_link_id?: ConsentV1Ulid | null;
+  /**
+   * The organization that consented.
+   */
+  org_id: string;
+  /**
+   * The installation.
+   */
+  instance_id: string;
+  /**
+   * The tenant link; null for an installation-wide integration (instance_url, stats_link, ever_id_login, webhooks).
+   */
+  tenant_link_id: ConsentV1Ulid | null;
+  /**
+   * A key of the published integration catalog, or partner:<slug>.
+   */
   integration_key: string;
+  /**
+   * The scope version consented to.
+   */
   scope_version: number;
+  /**
+   * The version of the one generic data-processing agreement accepted.
+   */
   dpa_version: string;
-  terms_version?: string | null;
+  /**
+   * The terms version that disclosed the integration (consents under the cloud terms); null otherwise.
+   */
+  terms_version: ConsentV1Token64 | null;
+  /**
+   * Who granted it: the caller's own id when it was the caller, else null.
+   */
   granted_by_person_id: ConsentV1Ulid | null;
   granted_at: ConsentV1Timestamp;
-  evidence?: {
+  /**
+   * Where and how it was given; no personal data.
+   */
+  evidence: {
+    /**
+     * app.ever.co; cloud_terms (an Ever Cloud link under the terms); staff (an installation Ever operates, set by Ever staff under the terms); product:<product> (a product's own dialog).
+     */
     ui?: string;
     screen_version?: string;
-    request_id?: string;
     ui_locale?: string;
+    request_id?: string;
   };
+  /**
+   * app_ever_co: an owner or admin in app.ever.co; cloud_terms: an installation Ever operates, under its terms; product_ui: the product's own consent dialog (not accepted by contract v1).
+   */
   consent_source: 'app_ever_co' | 'cloud_terms' | 'product_ui';
-  revoked_at?: ConsentV1Timestamp | null;
-  revoked_by_person_id?: ConsentV1Ulid | null;
-  revoke_reason?:
-    'owner' | 'superseded' | 'instance_disconnected' | 'org_deleted' | 'policy' | 'staff' | null;
-  revoke_source?: 'platform' | 'instance' | 'policy' | null;
-  supersedes_id?: ConsentV1Ulid | null;
+  revoked_at: ConsentV1Timestamp | null;
+  /**
+   * Who revoked it: the caller's own id when it was the caller, else null.
+   */
+  revoked_by_person_id: ConsentV1Ulid | null;
+  revoke_reason:
+    | 'owner'
+    | 'superseded'
+    | 'instance'
+    | 'operator'
+    | 'policy'
+    | 'instance_disconnected'
+    | 'link_unlinked'
+    | 'org_deleted'
+    | 'staff'
+    | null;
+  /**
+   * Where the revocation came from: owner, superseded, org_deleted and staff are platform; instance, instance_disconnected and link_unlinked are instance; operator; policy.
+   */
+  revoke_source: 'platform' | 'instance' | 'operator' | 'policy' | null;
+  /**
+   * The consent this one replaced (a new scope or agreement version).
+   */
+  supersedes_id: ConsentV1Ulid | null;
 };
 export type ConsentV1Ulid = string;
+export type ConsentV1Token64 = string;
+/**
+ * An RFC 3339 time in UTC with an optional fraction.
+ */
 export type ConsentV1Timestamp = string;
 
 /**
- * The body of GET /.well-known/ever-keys.json: the published signing keys and a compact JWS (header {alg: EdDSA, kid: <root kid>, typ: ever-key-manifest+jwt}) signed by a pinned root key whose payload is {iss, iat, exp, keys_sha256, root_kid}; keys_sha256 is the hex SHA-256 of the RFC 8785 canonical JSON of the served keys array; key times are UTC (YYYY-MM-DDTHH:MM:SS[.fraction]Z) and name a day that exists. A verifier trusts a key only when the manifest verifies against a pinned root and keys_sha256 matches the served array. Authored in this repository until the platform publishes the schema; the field set follows the platform's KeyManifestBody.
+ * A UTC time: YYYY-MM-DDTHH:MM:SS, an optional fraction of one to nine digits, Z; no offset, no leap second.
+ */
+export type KeyManifestV1Time = string;
+
+/**
+ * The body of GET /.well-known/ever-keys.json: the published signing keys and a compact JWS (header {alg: EdDSA, kid: <root kid>, typ: ever-key-manifest+jwt}) signed by a root key the verifier pins for the issuer, whose payload is {iss, iat, exp, keys_sha256, root_kid} ($defs.payload); keys_sha256 is the hex SHA-256 of the RFC 8785 canonical JSON of the served keys array. A verifier trusts a key only when the manifest verifies against a root pinned for the expected issuer and keys_sha256 matches the served array. Beyond this schema a verifier refuses the manifest as a whole when a key time names a day that does not exist (2026-02-31) or when a key's x is not a point of the curve or is of small order. KeyManifestV1Key times are UTC and spelled one way: YYYY-MM-DDTHH:MM:SS with an optional fraction of one to nine digits and a final Z; the fraction is dropped when windows are compared.
  */
 export interface KeyManifestV1 {
+  /**
+   * The compact JWS: three unpadded base64url parts.
+   */
   manifest: string;
   /**
    * @maxItems 64
    */
   keys: KeyManifestV1Key[];
 }
+/**
+ * One published key (an OKP JWK with its purpose, state and validity window).
+ */
 export interface KeyManifestV1Key {
   kty: 'OKP';
   crv: 'Ed25519';
   kid: string;
+  /**
+   * The public key, unpadded base64url of 32 bytes.
+   */
   x: string;
   use: 'sig';
   alg: 'EdDSA';
   ever_purpose: 'assertion' | 'intent' | 'entitlement';
+  /**
+   * active signs; previous only verifies, until not_after.
+   */
   state: 'active' | 'previous';
-  not_before: string;
-  not_after?: string | null;
+  not_before: KeyManifestV1Time;
+  not_after?: KeyManifestV1Time | null;
 }
 
 /**
@@ -3226,31 +3300,42 @@ export const SCHEMAS = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://api.ever.co/v1/consent/schema/ever.consent.v1",
     "title": "Ever Platform consent record v1",
-    "description": "The consent record Ever Platform keeps for one integration of one installation (and tenant link), and that a product mirrors next to its local integration state. A record is immutable; a revocation sets revoked_at. Evidence never holds an IP address or a user agent. consent_source product_ui is a consent given in the product's own dialog after a fresh Ever ID sign-in; it never applies to counterparty_discoverable or instance_url, which are enabled in app.ever.co only. Authored in this repository until the platform publishes the schema.",
+    "description": "One consent Ever Platform keeps for one integration of one installation (and, for a per-link integration, one tenant link), as GET /v1/orgs/{org}/consents and POST /v1/consents/{consent}/revoke answer it; a product mirrors the same record next to its local integration state. A record is immutable but for its revocation (revoked_at, revoked_by_person_id, revoke_reason, revoke_source, set together). Every member is present; an absent value is null. A person id is shown only to that person (null for another member, a deleted person or a consent under the cloud terms). Evidence never holds an IP address or a user agent.",
     "type": "object",
     "additionalProperties": false,
     "required": [
       "id",
       "org_id",
       "instance_id",
+      "tenant_link_id",
       "integration_key",
       "scope_version",
       "dpa_version",
+      "terms_version",
       "granted_by_person_id",
       "granted_at",
-      "consent_source"
+      "evidence",
+      "consent_source",
+      "revoked_at",
+      "revoked_by_person_id",
+      "revoke_reason",
+      "revoke_source",
+      "supersedes_id"
     ],
     "properties": {
       "id": {
         "$ref": "#/$defs/ulid"
       },
       "org_id": {
+        "description": "The organization that consented.",
         "$ref": "#/$defs/ulid"
       },
       "instance_id": {
+        "description": "The installation.",
         "$ref": "#/$defs/ulid"
       },
       "tenant_link_id": {
+        "description": "The tenant link; null for an installation-wide integration (instance_url, stats_link, ever_id_login, webhooks).",
         "oneOf": [
           {
             "$ref": "#/$defs/ulid"
@@ -3261,25 +3346,28 @@ export const SCHEMAS = {
         ]
       },
       "integration_key": {
+        "description": "A key of the published integration catalog, or partner:<slug>.",
         "type": "string",
-        "pattern": "^[a-z][a-z0-9_]{1,40}$",
-        "maxLength": 41
+        "maxLength": 74,
+        "pattern": "^[a-z][a-z0-9_]{1,40}(:[a-z0-9-]{2,32})?$"
       },
       "scope_version": {
+        "description": "The scope version consented to.",
         "type": "integer",
-        "minimum": 1
+        "minimum": 1,
+        "maximum": 2147483647
       },
       "dpa_version": {
+        "description": "The version of the one generic data-processing agreement accepted.",
         "type": "string",
-        "pattern": "^[0-9]{4}-[0-9]{2}(-[0-9]{2})?$",
-        "maxLength": 10
+        "maxLength": 11,
+        "pattern": "^20[0-9]{2}-(0[1-9]|1[0-2])(\\.[0-9]{1,3})?$"
       },
       "terms_version": {
+        "description": "The terms version that disclosed the integration (consents under the cloud terms); null otherwise.",
         "oneOf": [
           {
-            "type": "string",
-            "pattern": "^[0-9]{4}-[0-9]{2}(-[0-9]{2})?$",
-            "maxLength": 10
+            "$ref": "#/$defs/token64"
           },
           {
             "type": "null"
@@ -3287,6 +3375,7 @@ export const SCHEMAS = {
         ]
       },
       "granted_by_person_id": {
+        "description": "Who granted it: the caller's own id when it was the caller, else null.",
         "oneOf": [
           {
             "$ref": "#/$defs/ulid"
@@ -3300,32 +3389,35 @@ export const SCHEMAS = {
         "$ref": "#/$defs/timestamp"
       },
       "evidence": {
+        "description": "Where and how it was given; no personal data.",
         "type": "object",
         "additionalProperties": false,
         "properties": {
           "ui": {
+            "description": "app.ever.co; cloud_terms (an Ever Cloud link under the terms); staff (an installation Ever operates, set by Ever staff under the terms); product:<product> (a product's own dialog).",
             "type": "string",
-            "pattern": "^(app\\.ever\\.co|product:(gauzy|teams|works|rec|traduora))$",
-            "maxLength": 16
+            "maxLength": 16,
+            "pattern": "^(app\\.ever\\.co|cloud_terms|staff|product:(gauzy|teams|works|rec|traduora|demand))$"
           },
           "screen_version": {
             "type": "string",
-            "pattern": "^[A-Za-z0-9._-]{1,32}$",
-            "maxLength": 32
-          },
-          "request_id": {
-            "type": "string",
-            "pattern": "^[A-Za-z0-9._:-]{1,64}$",
-            "maxLength": 64
+            "maxLength": 32,
+            "pattern": "^[A-Za-z0-9.:_-]{1,32}$"
           },
           "ui_locale": {
             "type": "string",
-            "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$",
-            "maxLength": 35
+            "maxLength": 16,
+            "pattern": "^[A-Za-z0-9.:_-]{1,16}$"
+          },
+          "request_id": {
+            "type": "string",
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9.:_-]{1,128}$"
           }
         }
       },
       "consent_source": {
+        "description": "app_ever_co: an owner or admin in app.ever.co; cloud_terms: an installation Ever operates, under its terms; product_ui: the product's own consent dialog (not accepted by contract v1).",
         "enum": [
           "app_ever_co",
           "cloud_terms",
@@ -3343,6 +3435,7 @@ export const SCHEMAS = {
         ]
       },
       "revoked_by_person_id": {
+        "description": "Who revoked it: the caller's own id when it was the caller, else null.",
         "oneOf": [
           {
             "$ref": "#/$defs/ulid"
@@ -3356,22 +3449,28 @@ export const SCHEMAS = {
         "enum": [
           "owner",
           "superseded",
-          "instance_disconnected",
-          "org_deleted",
+          "instance",
+          "operator",
           "policy",
+          "instance_disconnected",
+          "link_unlinked",
+          "org_deleted",
           "staff",
           null
         ]
       },
       "revoke_source": {
+        "description": "Where the revocation came from: owner, superseded, org_deleted and staff are platform; instance, instance_disconnected and link_unlinked are instance; operator; policy.",
         "enum": [
           "platform",
           "instance",
+          "operator",
           "policy",
           null
         ]
       },
       "supersedes_id": {
+        "description": "The consent this one replaced (a new scope or agreement version).",
         "oneOf": [
           {
             "$ref": "#/$defs/ulid"
@@ -3384,10 +3483,45 @@ export const SCHEMAS = {
     },
     "allOf": [
       {
+        "description": "A revocation sets revoked_at, revoke_reason and revoke_source together.",
         "if": {
-          "required": [
-            "consent_source"
-          ],
+          "type": "object",
+          "properties": {
+            "revoked_at": {
+              "type": "null"
+            }
+          }
+        },
+        "then": {
+          "type": "object",
+          "properties": {
+            "revoke_reason": {
+              "const": null
+            },
+            "revoke_source": {
+              "const": null
+            },
+            "revoked_by_person_id": {
+              "type": "null"
+            }
+          }
+        },
+        "else": {
+          "type": "object",
+          "properties": {
+            "revoke_reason": {
+              "type": "string"
+            },
+            "revoke_source": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      {
+        "description": "Under the cloud terms nobody granted it in person, a terms version is recorded, and the evidence says whether a link was materialised under them (cloud_terms) or Ever staff set an installation Ever operates (staff).",
+        "if": {
+          "type": "object",
           "properties": {
             "consent_source": {
               "const": "cloud_terms"
@@ -3395,44 +3529,28 @@ export const SCHEMAS = {
           }
         },
         "then": {
-          "properties": {
-            "granted_by_person_id": {
-              "type": "null"
-            }
-          }
-        }
-      },
-      {
-        "if": {
-          "required": [
-            "consent_source"
-          ],
-          "properties": {
-            "consent_source": {
-              "const": "product_ui"
-            }
-          }
-        },
-        "then": {
+          "type": "object",
           "required": [
             "evidence"
           ],
           "properties": {
-            "integration_key": {
-              "not": {
-                "enum": [
-                  "counterparty_discoverable",
-                  "instance_url"
-                ]
-              }
+            "granted_by_person_id": {
+              "type": "null"
+            },
+            "terms_version": {
+              "type": "string"
             },
             "evidence": {
+              "type": "object",
               "required": [
                 "ui"
               ],
               "properties": {
                 "ui": {
-                  "pattern": "^product:(gauzy|teams|works|rec|traduora)$"
+                  "enum": [
+                    "cloud_terms",
+                    "staff"
+                  ]
                 }
               }
             }
@@ -3441,9 +3559,7 @@ export const SCHEMAS = {
       },
       {
         "if": {
-          "required": [
-            "consent_source"
-          ],
+          "type": "object",
           "properties": {
             "consent_source": {
               "const": "app_ever_co"
@@ -3451,11 +3567,48 @@ export const SCHEMAS = {
           }
         },
         "then": {
+          "type": "object",
           "properties": {
             "evidence": {
+              "type": "object",
+              "required": [
+                "ui"
+              ],
               "properties": {
                 "ui": {
                   "const": "app.ever.co"
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "description": "A product's own dialog never enables counterparty_discoverable or instance_url, which are enabled in app.ever.co only.",
+        "if": {
+          "type": "object",
+          "properties": {
+            "consent_source": {
+              "const": "product_ui"
+            }
+          }
+        },
+        "then": {
+          "type": "object",
+          "properties": {
+            "integration_key": {
+              "type": "string",
+              "pattern": "^(?!(?:counterparty_discoverable|instance_url)$)"
+            },
+            "evidence": {
+              "type": "object",
+              "required": [
+                "ui"
+              ],
+              "properties": {
+                "ui": {
+                  "type": "string",
+                  "pattern": "^product:"
                 }
               }
             }
@@ -3466,13 +3619,19 @@ export const SCHEMAS = {
     "$defs": {
       "ulid": {
         "type": "string",
-        "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
-        "maxLength": 26
+        "maxLength": 26,
+        "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
       },
       "timestamp": {
+        "description": "An RFC 3339 time in UTC with an optional fraction.",
         "type": "string",
-        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?Z$",
-        "maxLength": 27
+        "maxLength": 30,
+        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$"
+      },
+      "token64": {
+        "type": "string",
+        "maxLength": 64,
+        "pattern": "^[A-Za-z0-9._-]{1,64}$"
       }
     }
   } as JsonSchemaDocument,
@@ -3480,7 +3639,7 @@ export const SCHEMAS = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://api.ever.co/v1/entitlements/schema/ever.key-manifest.v1",
     "title": "Ever Platform key manifest v1",
-    "description": "The body of GET /.well-known/ever-keys.json: the published signing keys and a compact JWS (header {alg: EdDSA, kid: <root kid>, typ: ever-key-manifest+jwt}) signed by a pinned root key whose payload is {iss, iat, exp, keys_sha256, root_kid}; keys_sha256 is the hex SHA-256 of the RFC 8785 canonical JSON of the served keys array; key times are UTC (YYYY-MM-DDTHH:MM:SS[.fraction]Z) and name a day that exists. A verifier trusts a key only when the manifest verifies against a pinned root and keys_sha256 matches the served array. Authored in this repository until the platform publishes the schema; the field set follows the platform's KeyManifestBody.",
+    "description": "The body of GET /.well-known/ever-keys.json: the published signing keys and a compact JWS (header {alg: EdDSA, kid: <root kid>, typ: ever-key-manifest+jwt}) signed by a root key the verifier pins for the issuer, whose payload is {iss, iat, exp, keys_sha256, root_kid} ($defs.payload); keys_sha256 is the hex SHA-256 of the RFC 8785 canonical JSON of the served keys array. A verifier trusts a key only when the manifest verifies against a root pinned for the expected issuer and keys_sha256 matches the served array. Beyond this schema a verifier refuses the manifest as a whole when a key time names a day that does not exist (2026-02-31) or when a key's x is not a point of the curve or is of small order. Key times are UTC and spelled one way: YYYY-MM-DDTHH:MM:SS with an optional fraction of one to nine digits and a final Z; the fraction is dropped when windows are compared.",
     "type": "object",
     "additionalProperties": false,
     "required": [
@@ -3489,6 +3648,7 @@ export const SCHEMAS = {
     ],
     "properties": {
       "manifest": {
+        "description": "The compact JWS: three unpadded base64url parts.",
         "type": "string",
         "maxLength": 65536,
         "pattern": "^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$"
@@ -3502,7 +3662,14 @@ export const SCHEMAS = {
       }
     },
     "$defs": {
+      "time": {
+        "description": "A UTC time: YYYY-MM-DDTHH:MM:SS, an optional fraction of one to nine digits, Z; no offset, no leap second.",
+        "type": "string",
+        "maxLength": 30,
+        "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]{1,9})?Z$"
+      },
       "key": {
+        "description": "One published key (an OKP JWK with its purpose, state and validity window).",
         "type": "object",
         "additionalProperties": false,
         "required": [
@@ -3525,13 +3692,14 @@ export const SCHEMAS = {
           },
           "kid": {
             "type": "string",
-            "pattern": "^[A-Za-z0-9._-]{1,64}$",
-            "maxLength": 64
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9._-]{1,64}$"
           },
           "x": {
+            "description": "The public key, unpadded base64url of 32 bytes.",
             "type": "string",
-            "pattern": "^[A-Za-z0-9_-]{43}$",
-            "maxLength": 43
+            "maxLength": 43,
+            "pattern": "^[A-Za-z0-9_-]{43}$"
           },
           "use": {
             "const": "sig"
@@ -3547,24 +3715,19 @@ export const SCHEMAS = {
             ]
           },
           "state": {
+            "description": "active signs; previous only verifies, until not_after.",
             "enum": [
               "active",
               "previous"
             ]
           },
           "not_before": {
-            "type": "string",
-            "format": "date-time",
-            "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]{1,9})?Z$",
-            "maxLength": 30
+            "$ref": "#/$defs/time"
           },
           "not_after": {
             "oneOf": [
               {
-                "type": "string",
-                "format": "date-time",
-                "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]{1,9})?Z$",
-                "maxLength": 30
+                "$ref": "#/$defs/time"
               },
               {
                 "type": "null"
@@ -3574,7 +3737,7 @@ export const SCHEMAS = {
         }
       },
       "payload": {
-        "description": "The manifest JWS payload (not part of the served body; used by verifiers and fixtures).",
+        "description": "The manifest JWS payload (not part of the served body; for verifiers and fixtures).",
         "type": "object",
         "additionalProperties": false,
         "required": [
@@ -3586,16 +3749,20 @@ export const SCHEMAS = {
         ],
         "properties": {
           "iss": {
+            "description": "The issuer's origin.",
             "type": "string",
             "maxLength": 256
           },
           "iat": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "exp": {
+            "description": "iat + 30 days.",
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "keys_sha256": {
             "type": "string",
@@ -3603,6 +3770,7 @@ export const SCHEMAS = {
           },
           "root_kid": {
             "type": "string",
+            "maxLength": 64,
             "pattern": "^[A-Za-z0-9._-]{1,64}$"
           }
         }

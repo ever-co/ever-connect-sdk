@@ -12,6 +12,10 @@
     "invalid/link-names-another-link.jws": "01JB0000EVERC10VDGAVZY0001",
     "invalid/manifest-expired.jws": "01JC5M2R4T6V8X0Z2B4D6F8H0J",
     "invalid/seq-beyond-i-json.jws": "01JC5M2R4T6V8X0Z2B4D6F8H0J",
+    "invalid/signature-empty.jws": "01JC5M2R4T6V8X0Z2B4D6F8H0J",
+    "invalid/signature-padded.jws": "01JC5M2R4T6V8X0Z2B4D6F8H0J",
+    "invalid/signature-standard-alphabet.jws": "01JC5M2R4T6V8X0Z2B4D6F8H0J",
+    "invalid/signature-stray-bits.jws": "01JC5M2R4T6V8X0Z2B4D6F8H0J",
     "invalid/stale-seq.jws": "01JC5M2R4T6V8X0Z2B4D6F8H0J",
     "invalid/tampered-kid.jws": "01JC5M2R4T6V8X0Z2B4D6F8H0J",
     "invalid/wrong-issuer.jws": "01JC5M2R4T6V8X0Z2B4D6F8H0J",
@@ -28,6 +32,10 @@
     "invalid/link-names-another-link.jws": "link:01JC7Q0V3A8M2K9R4T6Y8B1D3F",
     "invalid/manifest-expired.jws": "instance:01JC5M2R4T6V8X0Z2B4D6F8H0J",
     "invalid/seq-beyond-i-json.jws": "instance:01JC5M2R4T6V8X0Z2B4D6F8H0J",
+    "invalid/signature-empty.jws": "instance:01JC5M2R4T6V8X0Z2B4D6F8H0J",
+    "invalid/signature-padded.jws": "instance:01JC5M2R4T6V8X0Z2B4D6F8H0J",
+    "invalid/signature-standard-alphabet.jws": "instance:01JC5M2R4T6V8X0Z2B4D6F8H0J",
+    "invalid/signature-stray-bits.jws": "instance:01JC5M2R4T6V8X0Z2B4D6F8H0J",
     "invalid/stale-seq.jws": "instance:01JC5M2R4T6V8X0Z2B4D6F8H0J",
     "invalid/tampered-kid.jws": "instance:01JC5M2R4T6V8X0Z2B4D6F8H0J",
     "invalid/wrong-issuer.jws": "instance:01JC5M2R4T6V8X0Z2B4D6F8H0J",
@@ -38,6 +46,15 @@
     "valid/link-included.jws": "link:01JC7Q0V3A8M2K9R4T6Y8B1D3F"
   },
   "manifest": "keys/manifest.json",
+  "manifests": {
+    "$comment": "Verify each manifest body of expected.json `manifests` at `now` for `issuer`, against the roots of keys/roots.json unless `roots_file_by_file` names others.",
+    "issuer": "https://mock-platform.test",
+    "now": 1793613600,
+    "roots_file": "keys/roots.json",
+    "roots_file_by_file": {
+      "keys/invalid/weak-root.json": "keys/invalid/roots.weak.json"
+    }
+  },
   "now": 1793613600,
   "now_by_file": {
     "invalid/manifest-expired.jws": 1796119200

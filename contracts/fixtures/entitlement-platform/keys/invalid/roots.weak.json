@@ -1,0 +1,7 @@
+[
+  {
+    "issuer": "https://mock-platform.test",
+    "kid": "root-test-1",
+    "x": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  }
+]

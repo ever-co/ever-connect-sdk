@@ -414,7 +414,11 @@ function outboundCalls(ctx) {
               method: o.method.toUpperCase(),
               path: o.path,
               operation_id: id,
-              status: ctx.vendorDoc.openapi.provisional_operations.includes(id) ? 'provisional' : 'pinned',
+              status: (ctx.vendorDoc.openapi.not_in_v1_operations ?? []).includes(id)
+                ? 'not_in_v1'
+                : ctx.vendorDoc.openapi.provisional_operations.includes(id)
+                  ? 'provisional'
+                  : 'pinned',
             };
           });
       const products = r.integration ? (ctx.integrations[r.integration]?.products ?? []) : r.products === 'all' ? productsAll : r.products;
@@ -425,6 +429,7 @@ function outboundCalls(ctx) {
         group: r.group,
         integration: r.integration ?? null,
         auth: r.auth,
+        availability: r.availability ?? 'v1',
         endpoints,
         trigger: r.trigger,
         payload: r.payload,
@@ -493,7 +498,7 @@ function problemsTs(ctx) {
 }
 
 function rowsTs(calls, coverage) {
-  return `${TS_HEADER}// The outbound-call table (contracts/generated/outbound-calls.json) and its row coverage.\n\nexport interface OutboundCallEndpoint {\n  readonly method: string;\n  readonly path: string;\n  readonly operation_id: string;\n  readonly status: 'pinned' | 'provisional' | 'pending_upstream';\n}\n\nexport interface OutboundCallRow {\n  readonly row: number;\n  readonly title: string;\n  readonly module: 'connect' | 'stats';\n  readonly group: string;\n  readonly integration: string | null;\n  readonly auth: string;\n  readonly endpoints: readonly OutboundCallEndpoint[];\n  readonly trigger: string;\n  readonly payload: string;\n  readonly cadence: string;\n  readonly disable: string;\n  readonly products: readonly string[];\n  readonly phase: number;\n}\n\nexport const ROWS: readonly OutboundCallRow[] = ${literal(calls.rows)};\n\nexport interface RowCoverage {\n  readonly row: number;\n  readonly operations: readonly { readonly operation_id: string; readonly method: string; readonly path: string; readonly success: readonly number[] }[];\n  readonly errors: readonly { readonly status: number; readonly code: string; readonly documented: boolean }[];\n}\n\nexport const ROW_COVERAGE: readonly RowCoverage[] = ${literal(coverage.rows)};\n`;
+  return `${TS_HEADER}// The outbound-call table (contracts/generated/outbound-calls.json) and its row coverage.\n\nexport interface OutboundCallEndpoint {\n  readonly method: string;\n  readonly path: string;\n  readonly operation_id: string;\n  readonly status: 'pinned' | 'provisional' | 'pending_upstream' | 'not_in_v1';\n}\n\nexport interface OutboundCallRow {\n  readonly row: number;\n  readonly title: string;\n  readonly module: 'connect' | 'stats';\n  readonly group: string;\n  readonly integration: string | null;\n  readonly auth: string;\n  /** \`not_in_v1\`: designed, but contract v1 of the Ever Platform API does not serve it, so no product calls it against a v1 deployment. */\n  readonly availability: 'v1' | 'not_in_v1';\n  readonly endpoints: readonly OutboundCallEndpoint[];\n  readonly trigger: string;\n  readonly payload: string;\n  readonly cadence: string;\n  readonly disable: string;\n  readonly products: readonly string[];\n  readonly phase: number;\n}\n\nexport const ROWS: readonly OutboundCallRow[] = ${literal(calls.rows)};\n\nexport interface RowCoverage {\n  readonly row: number;\n  readonly operations: readonly { readonly operation_id: string; readonly method: string; readonly path: string; readonly success: readonly number[] }[];\n  readonly errors: readonly { readonly status: number; readonly code: string; readonly documented: boolean }[];\n}\n\nexport const ROW_COVERAGE: readonly RowCoverage[] = ${literal(coverage.rows)};\n`;
 }
 
 function rustConstants(ctx, dataFiles) {
@@ -561,7 +566,10 @@ function renderTable(calls) {
   const lines = ['| # | Endpoint | Trigger | Payload | Cadence | How to disable | Products |', '|---|---|---|---|---|---|---|'];
   for (const r of calls.rows) {
     const endpoints = r.endpoints
-      .map((e) => `\`${e.method} ${e.path}\`${e.status === 'pending_upstream' ? ' (pending upstream)' : ''}`)
+      .map(
+        (e) =>
+          `\`${e.method} ${e.path}\`${e.status === 'pending_upstream' ? ' (pending upstream)' : e.status === 'not_in_v1' ? ' (not available in v1)' : ''}`,
+      )
       .join('<br>');
     const products = r.products.length === 5 ? 'all' : r.products.map((p) => productNames[p] ?? p).join(', ');
     const integration = r.integration ? ` Integration \`${r.integration}\`.` : '';
@@ -613,7 +621,13 @@ function renderIntro(ctx) {
   // The connect calls themselves are the rows a "do not connect" disables; every other connection
   // row needs a connection.
   const connecting = ctx.rowsDoc.rows.filter((r) => r.module === 'connect' && r.disable === 'do not connect').map((r) => r.row);
-  return `Rows ${ranges(connect)} belong to the connection module and row ${ranges(stats)} to the statistics module. Each row runs only on the trigger it names: the connect calls (rows ${connecting.join(', ')}) when an operator starts a connection, every other connection-module row only while connected. Rows ${ranges(consented)} also need an active consent for the named integration, recorded by Ever Platform. The table holds ${ctx.rowsDoc.rows.length} rows; a row marked *pending upstream* is answered by the mock platform and documented here before the Ever Platform API publishes it.`;
+  return `Rows ${ranges(connect)} belong to the connection module and row ${ranges(stats)} to the statistics module. Each row runs only on the trigger it names: the connect calls (rows ${connecting.join(', ')}) when an operator starts a connection, every other connection-module row only while connected. Rows ${ranges(consented)} also need an active consent for the named integration, recorded by Ever Platform. The table holds ${ctx.rowsDoc.rows.length} rows; a row marked *pending upstream* is answered by the mock platform and documented here before the Ever Platform API publishes it. An endpoint marked *not available in v1* is designed but not served by version 1 of the Ever Platform API, so no product calls it against a version 1 deployment${notInV1Rows(ctx)}.`;
+}
+
+/** ` (rows a, b, ... are not available in v1 at all)`, or nothing. */
+function notInV1Rows(ctx) {
+  const rows = ctx.rowsDoc.rows.filter((r) => r.availability === 'not_in_v1').map((r) => r.row);
+  return rows.length === 0 ? '' : ` (rows ${rows.join(', ')} are not available in v1 at all)`;
 }
 
 /** Every problem code an outbound call can receive, from the rows' documented error pairs. */

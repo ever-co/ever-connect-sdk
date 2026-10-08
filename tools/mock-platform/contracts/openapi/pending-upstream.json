@@ -1,65 +1,7 @@
 {
   "description": "Calls and contract details the products need that the Ever Platform API contract does not carry yet. Each entry is answered by the mock platform and documented in the outbound-call table as pending upstream; it moves into contracts/openapi/ever-platform.v1.yaml when the platform contract publishes it. Request schemas here are closed and follow the outbound-call table.",
-  "operations": [
-    {
-      "row": 18,
-      "operation_id": "instancePutPublicUrl",
-      "method": "PUT",
-      "path": "/v1/instances/me/public-url",
-      "integration": "instance_url",
-      "request": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["base_url"],
-        "properties": {
-          "base_url": { "type": "string", "maxLength": 2048, "pattern": "^https://[^\\s/?#]+(/[^\\s?#]*)?$", "description": "The installation's public address (https)." }
-        }
-      },
-      "responses": { "200": "the address is stored", "403": "integration_disabled, integration_revoked", "422": "validation_failed" }
-    },
-    {
-      "row": 18,
-      "operation_id": "instanceDeletePublicUrl",
-      "method": "DELETE",
-      "path": "/v1/instances/me/public-url",
-      "integration": "instance_url",
-      "request": null,
-      "responses": { "204": "the address is removed", "403": "integration_disabled, integration_revoked" }
-    },
-    {
-      "row": 32,
-      "operation_id": "instanceGetProviderGrant",
-      "method": "GET",
-      "path": "/v1/instances/me/provider-grants/{grant}",
-      "integration": "provider_access",
-      "request": null,
-      "responses": { "200": "the grant, with the invitee's name and e-mail only after the provider person accepted it", "403": "integration_disabled, integration_revoked", "409": "illegal_transition (the grant is not accepted yet)" }
-    },
-    {
-      "row": 32,
-      "operation_id": "instanceReportProviderGrantStatus",
-      "method": "POST",
-      "path": "/v1/instances/me/provider-grants/{grant}/status",
-      "integration": "provider_access",
-      "request": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["grant_id", "status"],
-        "properties": {
-          "grant_id": { "type": "string", "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$" },
-          "status": { "enum": ["accepted", "declined", "revoked", "expired"] },
-          "product_user_ref": { "type": "string", "maxLength": 128, "pattern": "^[A-Za-z0-9._:-]{1,128}$" }
-        }
-      },
-      "responses": { "200": "recorded", "403": "integration_disabled, integration_revoked", "409": "illegal_transition" }
-    }
-  ],
+  "operations": [],
   "problem_codes": [],
   "schema_overrides": {},
-  "security_overrides": {
-    "putIntegrationState": {
-      "why": "the in-product consent dialog sends the Ever ID token of a fresh sign-in (step-up) issued to the installation's own client; the platform contract accepts only an app.ever.co session or an Ever Platform token on this operation so far",
-      "security": [{ "everIdStepUpToken": [] }]
-    }
-  }
+  "security_overrides": {}
 }

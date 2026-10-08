@@ -1,0 +1,29 @@
+{
+  "keys": [
+    {
+      "alg": "EdDSA",
+      "crv": "Ed25519",
+      "ever_purpose": "entitlement",
+      "kid": "ent-test-1",
+      "kty": "OKP",
+      "not_after": null,
+      "not_before": "2026-10-03T10:00:00Z",
+      "state": "active",
+      "use": "sig",
+      "x": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    },
+    {
+      "alg": "EdDSA",
+      "crv": "Ed25519",
+      "ever_purpose": "entitlement",
+      "kid": "ent-test-2",
+      "kty": "OKP",
+      "not_after": "2026-11-22T10:00:00Z",
+      "not_before": "2026-07-05T10:00:00Z",
+      "state": "previous",
+      "use": "sig",
+      "x": "Sr9grbHzUvjqv_LXh-Acb3HZYfC6pSX5cwcPBrL0QZc"
+    }
+  ],
+  "manifest": "eyJhbGciOiJFZERTQSIsImtpZCI6InJvb3QtdGVzdC0xIiwidHlwIjoiZXZlci1rZXktbWFuaWZlc3Qrand0In0.eyJleHAiOjE3OTYxMTkyMDAsImlhdCI6MTc5MzUyNzIwMCwiaXNzIjoiaHR0cHM6Ly9tb2NrLXBsYXRmb3JtLnRlc3QiLCJrZXlzX3NoYTI1NiI6ImFiMTlkMGNjMmU4NWY2N2NjODkyZmZjZTJkYTdjMGIwN2E5NjY2ZjI3ZGQ5MzI3OGVmN2ExZDVjNThhY2FiY2MiLCJyb290X2tpZCI6InJvb3QtdGVzdC0xIn0.mOOG-b2tZvNBM_Pcal_5QruCW3CY7nZoFk7pmAjTmuT4OFrNzwyoGbhTz9-a8Ldd9yoiYTyF89EvUIemAicIBA"
+}

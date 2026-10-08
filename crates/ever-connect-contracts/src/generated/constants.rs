@@ -315,6 +315,7 @@ pub const PROBLEM_CODES: &[&str] = &[
     "already_connected",
     "already_linked",
     "already_claimed",
+    "claim_locked",
     "invalid_client",
     "public_jwk_invalid",
     "identifier_claimed",

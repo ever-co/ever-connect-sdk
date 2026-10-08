@@ -23,7 +23,7 @@
   },
   "never_path_prefixes": ["/internal", "/v1/staff"],
   "never_security": ["staffSession"],
-  "keep_security": ["instanceToken", "everIdTokenRead", "everIdStepUpToken"],
+  "keep_security": ["instanceToken", "everIdTokenRead", "everIdStepUpToken", "everIdToken"],
   "drop_extensions": ["x-ever-key-scopes"],
   "design_operation_aliases": {
     "getKeyManifest": "get_key_manifest"

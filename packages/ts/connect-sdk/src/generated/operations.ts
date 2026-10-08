@@ -24,7 +24,7 @@ export interface OperationSpec {
   readonly integration: string | null;
   /** The platform's rate-limit class (`x-ever-rate-limit`), when the contract names one. */
   readonly rateLimit: string | null;
-  readonly status: 'pinned' | 'provisional' | 'pending_upstream';
+  readonly status: 'pinned' | 'provisional' | 'pending_upstream' | 'not_in_v1';
 }
 
 export const OPERATIONS = {
@@ -69,7 +69,7 @@ export const OPERATIONS = {
     "row": 29,
     "integration": null,
     "rateLimit": "connect",
-    "status": "provisional"
+    "status": "not_in_v1"
   },
   "getConnectLegal": {
     "id": "getConnectLegal",
@@ -136,7 +136,7 @@ export const OPERATIONS = {
     "row": 29,
     "integration": null,
     "rateLimit": "connect",
-    "status": "provisional"
+    "status": "not_in_v1"
   },
   "redeliverWebhook": {
     "id": "redeliverWebhook",
@@ -181,7 +181,7 @@ export const OPERATIONS = {
     "row": 22,
     "integration": "ever_id_login",
     "rateLimit": "instance",
-    "status": "provisional"
+    "status": "not_in_v1"
   },
   "instanceReportInstallStatus": {
     "id": "instanceReportInstallStatus",
@@ -207,7 +207,7 @@ export const OPERATIONS = {
     "row": 28,
     "integration": "marketplace_installs",
     "rateLimit": "instance",
-    "status": "provisional"
+    "status": "not_in_v1"
   },
   "getInstanceSelf": {
     "id": "getInstanceSelf",
@@ -250,7 +250,7 @@ export const OPERATIONS = {
     "row": 20,
     "integration": null,
     "rateLimit": "instance",
-    "status": "provisional"
+    "status": "not_in_v1"
   },
   "instanceCreateBillingLink": {
     "id": "instanceCreateBillingLink",
@@ -274,7 +274,7 @@ export const OPERATIONS = {
     "row": 25,
     "integration": "billing_link",
     "rateLimit": "instance",
-    "status": "provisional"
+    "status": "not_in_v1"
   },
   "instanceGetConsentUrl": {
     "id": "instanceGetConsentUrl",
@@ -528,7 +528,7 @@ export const OPERATIONS = {
     "row": 34,
     "integration": "managed_operations",
     "rateLimit": "instance",
-    "status": "provisional"
+    "status": "not_in_v1"
   },
   "instanceListMirroredApps": {
     "id": "instanceListMirroredApps",
@@ -550,7 +550,7 @@ export const OPERATIONS = {
     "row": 15,
     "integration": "app_sync",
     "rateLimit": "instance",
-    "status": "provisional"
+    "status": "not_in_v1"
   },
   "instanceMirrorApps": {
     "id": "instanceMirrorApps",
@@ -574,7 +574,7 @@ export const OPERATIONS = {
     "row": 15,
     "integration": "app_sync",
     "rateLimit": "instance",
-    "status": "provisional"
+    "status": "not_in_v1"
   },
   "instanceGetOidcClient": {
     "id": "instanceGetOidcClient",
@@ -593,7 +593,7 @@ export const OPERATIONS = {
     "row": 14,
     "integration": "ever_id_login",
     "rateLimit": "instance",
-    "status": "provisional"
+    "status": "not_in_v1"
   },
   "instanceRequestOidcClient": {
     "id": "instanceRequestOidcClient",
@@ -617,7 +617,7 @@ export const OPERATIONS = {
     "row": 14,
     "integration": "ever_id_login",
     "rateLimit": "instance",
-    "status": "provisional"
+    "status": "not_in_v1"
   },
   "instancePushOrgProfile": {
     "id": "instancePushOrgProfile",
@@ -641,7 +641,7 @@ export const OPERATIONS = {
     "row": 21,
     "integration": "profile_import",
     "rateLimit": "instance",
-    "status": "provisional"
+    "status": "not_in_v1"
   },
   "instanceCreatePersonLink": {
     "id": "instanceCreatePersonLink",
@@ -665,7 +665,7 @@ export const OPERATIONS = {
     "row": 19,
     "integration": "ever_id_login",
     "rateLimit": "instance",
-    "status": "provisional"
+    "status": "not_in_v1"
   },
   "instanceDeletePersonLink": {
     "id": "instanceDeletePersonLink",
@@ -686,7 +686,97 @@ export const OPERATIONS = {
     "row": 19,
     "integration": "ever_id_login",
     "rateLimit": "instance",
-    "status": "provisional"
+    "status": "not_in_v1"
+  },
+  "instanceGetProviderGrant": {
+    "id": "instanceGetProviderGrant",
+    "method": "GET",
+    "path": "/v1/instances/me/provider-grants/{grant}",
+    "pathParams": [
+      "grant"
+    ],
+    "query": [],
+    "auth": "instance",
+    "idempotencyKey": "none",
+    "linkHeader": "none",
+    "conditional": false,
+    "body": null,
+    "success": [
+      200
+    ],
+    "row": 32,
+    "integration": "provider_access",
+    "rateLimit": "instance",
+    "status": "not_in_v1"
+  },
+  "instanceReportProviderGrantStatus": {
+    "id": "instanceReportProviderGrantStatus",
+    "method": "POST",
+    "path": "/v1/instances/me/provider-grants/{grant}/status",
+    "pathParams": [
+      "grant"
+    ],
+    "query": [],
+    "auth": "instance",
+    "idempotencyKey": "none",
+    "linkHeader": "none",
+    "conditional": false,
+    "body": {
+      "schema": {
+        "$ref": "#/components/schemas/ProviderGrantStatus"
+      },
+      "required": true
+    },
+    "success": [
+      200
+    ],
+    "row": 32,
+    "integration": "provider_access",
+    "rateLimit": "instance",
+    "status": "not_in_v1"
+  },
+  "instancePutPublicUrl": {
+    "id": "instancePutPublicUrl",
+    "method": "PUT",
+    "path": "/v1/instances/me/public-url",
+    "pathParams": [],
+    "query": [],
+    "auth": "instance",
+    "idempotencyKey": "required",
+    "linkHeader": "none",
+    "conditional": false,
+    "body": {
+      "schema": {
+        "$ref": "#/components/schemas/PublicUrlPut"
+      },
+      "required": true
+    },
+    "success": [
+      200
+    ],
+    "row": 18,
+    "integration": "instance_url",
+    "rateLimit": "instance",
+    "status": "pinned"
+  },
+  "instanceDeletePublicUrl": {
+    "id": "instanceDeletePublicUrl",
+    "method": "DELETE",
+    "path": "/v1/instances/me/public-url",
+    "pathParams": [],
+    "query": [],
+    "auth": "instance",
+    "idempotencyKey": "none",
+    "linkHeader": "none",
+    "conditional": false,
+    "body": null,
+    "success": [
+      204
+    ],
+    "row": 18,
+    "integration": "instance_url",
+    "rateLimit": "instance",
+    "status": "pinned"
   },
   "instanceLinkStats": {
     "id": "instanceLinkStats",
@@ -781,7 +871,7 @@ export const OPERATIONS = {
     "row": 5,
     "integration": null,
     "rateLimit": "instance",
-    "status": "provisional"
+    "status": "not_in_v1"
   },
   "instanceGetLinkEntitlement": {
     "id": "instanceGetLinkEntitlement",
@@ -829,7 +919,7 @@ export const OPERATIONS = {
     "row": 12,
     "integration": "counterparty_discoverable",
     "rateLimit": "instance",
-    "status": "provisional"
+    "status": "not_in_v1"
   },
   "instanceDeleteLinkIdentifiers": {
     "id": "instanceDeleteLinkIdentifiers",
@@ -850,7 +940,7 @@ export const OPERATIONS = {
     "row": 12,
     "integration": "counterparty_discoverable",
     "rateLimit": "instance",
-    "status": "provisional"
+    "status": "not_in_v1"
   },
   "instanceReportUsage": {
     "id": "instanceReportUsage",
@@ -874,7 +964,7 @@ export const OPERATIONS = {
     "row": 27,
     "integration": "usage_reporting",
     "rateLimit": "instance",
-    "status": "provisional"
+    "status": "not_in_v1"
   },
   "instanceReportUsageReadings": {
     "id": "instanceReportUsageReadings",
@@ -898,7 +988,7 @@ export const OPERATIONS = {
     "row": 27,
     "integration": "usage_reporting",
     "rateLimit": "instance",
-    "status": "provisional"
+    "status": "not_in_v1"
   },
   "instanceCreateWebhook": {
     "id": "instanceCreateWebhook",
@@ -970,7 +1060,7 @@ export const OPERATIONS = {
     "row": 13,
     "integration": "counterparty_lookup",
     "rateLimit": "lookup",
-    "status": "provisional"
+    "status": "not_in_v1"
   },
   "getLookupSalt": {
     "id": "getLookupSalt",
@@ -989,7 +1079,7 @@ export const OPERATIONS = {
     "row": 13,
     "integration": null,
     "rateLimit": "public-read",
-    "status": "provisional"
+    "status": "not_in_v1"
   },
   "getLookupTestVectors": {
     "id": "getLookupTestVectors",
@@ -1008,7 +1098,7 @@ export const OPERATIONS = {
     "row": 13,
     "integration": null,
     "rateLimit": "public-read",
-    "status": "provisional"
+    "status": "pinned"
   },
   "getMyContext": {
     "id": "getMyContext",
@@ -1074,7 +1164,7 @@ export const OPERATIONS = {
     "row": 33,
     "integration": null,
     "rateLimit": "person",
-    "status": "pinned"
+    "status": "not_in_v1"
   },
   "completeProvisionIntent": {
     "id": "completeProvisionIntent",
@@ -1100,7 +1190,7 @@ export const OPERATIONS = {
     "row": 26,
     "integration": null,
     "rateLimit": "instance",
-    "status": "provisional"
+    "status": "not_in_v1"
   },
   "discoverSso": {
     "id": "discoverSso",
@@ -1121,7 +1211,7 @@ export const OPERATIONS = {
     "row": 24,
     "integration": null,
     "rateLimit": "public-availability",
-    "status": "provisional"
+    "status": "not_in_v1"
   },
   "ingestStatsReport": {
     "id": "ingestStatsReport",
@@ -2216,6 +2306,47 @@ export const REQUEST_SCHEMAS: { readonly [key: string]: unknown } = {
           "traduora",
           "demand"
         ]
+      },
+      "ProviderGrantStatus": {
+        "type": "object",
+        "required": [
+          "grant_id",
+          "status"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "grant_id": {
+            "$ref": "#/components/schemas/Ulid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "accepted",
+              "declined",
+              "revoked",
+              "expired"
+            ]
+          },
+          "product_user_ref": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+          }
+        }
+      },
+      "PublicUrlPut": {
+        "additionalProperties": false,
+        "description": "`PUT /v1/instances/me/public-url`.",
+        "properties": {
+          "base_url": {
+            "description": "The installation's public address: an absolute `https` URL with a host, no credentials,\nno query, no fragment, at most 2 048 characters.",
+            "maxLength": 2048,
+            "type": "string"
+          }
+        },
+        "required": [
+          "base_url"
+        ],
+        "type": "object"
       },
       "RedeemRequest": {
         "additionalProperties": false,
