@@ -5,10 +5,13 @@ compose files with every Docker network sealed, watches every DNS query and ever
 attempt of each product process from before the process starts, drives the product from inside the
 sealed Docker network, and fails the run when the product looks up an Ever host, tries to reach anything
 outside the compose services, answers a module route while the modules are off, or makes an Ever
-Platform call its mode does not allow.
+Platform call its mode does not allow. Its browser leg does the same for the product's UI: a real
+browser in its own sniffed namespace signs in, opens every route of the product's router and fails
+the run when the UI looks up, requests or links a never-allowed host (see
+[Browser leg](#browser-leg) and [docs/egress-audit.md](../../docs/egress-audit.md)).
 
 ```sh
-ever-egress-audit --config egress-audit.config.json --mode off
+ever-egress-audit --config egress-audit.config.json --mode off [--legs api,browser]
 ever-egress-audit --selftest
 ```
 
@@ -50,10 +53,11 @@ address to count as local (see [docs/mock-platform.md](../../docs/mock-platform.
 `assert.mjs` reads the evidence and writes `report.json`:
 
 1. **DNS.** Every name queried, of any record type, must be a compose service name (or alias, or
-   container name), or in `allowed_external_hosts`. Any name under `ever.co`, `ever.team`,
-   `gauzy.co`, `ever.works`, `rec.so` or `traduora.co` fails, whatever the allow-list says (the
-   config schema refuses them). Reverse lookups of addresses inside the sealed Docker networks are
-   allowed.
+   container name), or in `allowed_external_hosts`. Any name of the never-allowed list
+   (`ever-hosts.json`: the Ever-owned names `ever.co`, `ever.team`, `gauzy.co`, `ever.works`,
+   `rec.so`, `traduora.co`, `everdemand.co`, `ever.sh`, `githands.com` and the analytics sinks, each
+   with every name under it) fails, whatever the allow-list says (the config schema refuses them).
+   Reverse lookups of addresses inside the sealed Docker networks are allowed.
 2. **Connection attempts.** No TCP SYN and no UDP datagram to an address outside the
    sealed Docker networks; loopback is inside. A DNS question counts too: one sent to the audit
    resolver stays inside, one sent straight to any other resolver fails, whatever its type.
@@ -63,6 +67,11 @@ address to count as local (see [docs/mock-platform.md](../../docs/mock-platform.
 4. **Module routes.** In `off`, every route in `module_routes` (at least one) answers 404.
 5. **Call record.** In positive modes, the mock platform's record matches the mode's rows
    (`assert-call-log.mjs`).
+
+The browser leg adds (e) the browser's DNS queries and capture under rules 1 and 2, (f) no HAR
+entry, request or WebSocket to a never-allowed host, (g) no rendered reference to one outside the
+product's `ui-baseline.json`, and the positive control of `ui_expected_requests` (see
+[Browser leg](#browser-leg)).
 
 Exit codes: `0` pass, `1` a violation, `2` a harness fault or a usage error. A run with a fault and
 no violation proves nothing and exits 2, naming the fault (for example `CAP_NET_RAW was refused, so
@@ -123,7 +132,9 @@ evidence.json` reproduces the verdict.
 --build`), `health_timeout_s`, `allowed_external_hosts`, `env_prefix` (replaces the leading `EVER_`
 of every mode variable, for example `TR_EVER_`), `subnet`, `phase` (the highest phase whose
 outbound-call rows apply), `every_trigger_exclude_rows`, `mock_image`, `mock_config`, `modes` and
-`artifacts_dir`.
+`artifacts_dir`. The browser leg's keys (`web_service`, `web_url`, `ui_routes`, `route_params`,
+`ui_baseline`, `idle_pages`, `idle_s`, `ui_page_timeout_s`, `ui_skip_routes`,
+`ui_expected_requests`, `optin_hosts`, `browser_image`) are in [Browser leg](#browser-leg).
 
 ## Adapter
 
@@ -131,7 +142,10 @@ An ES module whose default export may define `login`, `createFixtures`, `openSet
 `prepareLoadedOff` and `triggerAll` (async, each receiving `{baseUrl, mode, env, fetch, log,
 headers}`) and `env` (extra environment per mode). See `adapter.schema.json` and
 `selftest/adapter.mjs`. The adapter runs in the driver container, so it reaches the product by its
-compose service name.
+compose service name. What `createFixtures` answers (ids, never a token) reaches the browser leg's
+hooks as `ctx.fixtures`: `uiLogin(page, ctx)` signs in through the product's sign-in page with the
+Playwright page, and `routeParams(ctx)` answers the route parameter values only a run knows. The
+browser hooks run in the browser container (the adapter is copied there too).
 
 ## Self-test
 
@@ -144,13 +158,77 @@ compose service name.
 | `positive_stats/stats-sender` | posts one signed golden report | pass (0) |
 | `positive_stats/no-mock` | the same without the mock platform | not pass |
 | `positive_managed/managed-executor` | connects, runs a requested backup, posts one result | pass (0) |
+| `off/ui-quiet` | a toy web app: sign-in form, four pages (one with a parameter from the adapter), one idle page | pass (0), every route opened, the browser looks up nothing but the compose names |
+| `off/ui-leaky` | the same app with `<img src="https://api.ever.co/pixel.png">` and a request to `203.0.113.10` after load | fail (1), with (e) the browser's DNS query and SYN, (f) the HAR entry and (g) the DOM `src` seen |
+| `off/ui-link(no baseline)` | the same app with `<a href="https://app.ever.co">` | fail (1) at (g) alone |
+| `off/ui-link(baseline)` | the same, with the link in `selftest/ui-baseline.link.json` | pass (0) |
+| `positive_stats/ui-stats` | the page reads `GET /api/ever-stats/status`; the server posts the golden report | pass (0), the status call seen from the browser |
+| `positive_stats/ui-stats(no mock)` | the same without the mock platform | not pass, with the status call still seen from the browser |
+| `off/ui-quiet(--legs api)` | the web config run without its browser leg | fault (2): never a pass |
 
-The summary prints one line per run (`off/leaky=1`, `positive_stats/no-mock=1`, ...).
+The summary prints one line per run (`off/leaky=1`, `positive_stats/no-mock=1`, ...). Every browser
+run also checks that its `browser.har` holds no cookie, header value, body or the fixture's password.
+`--legs api` runs the API runs only.
+
+## Browser leg
+
+A config that names a `web_service` gets a browser in the run (`--legs api,browser`, the default
+then), in the modes `off`, `loaded_off` and `positive_stats`. The browser (the Playwright image
+`mcr.microsoft.com/playwright:v1.62.1`, pinned by digest, with `browser.mjs`, `playwright-core`
+1.62.1 and the adapter built in) runs in the namespace of its own holder, at the fixed address
+`<subnet>.251` of the sealed default network, with CoreDNS as its only resolver and its own
+sniffer (`browser.pcap`). It signs in with the adapter's `uiLogin`, opens every route of
+`ui-routes.json` (a page that fails to load is retried once, then faults the run), holds the
+`idle_pages` open for `idle_s` (30) seconds, and writes `browser/browser.har` (no bodies, cookies,
+header values, form or query values), `browser/requests.json`, `browser/dom-refs.json` (every
+`href`, `src`, `srcset`, `action`, `formaction`, `poster`, `ping`, `data`, `xlink:href`, meta
+refresh and style `url()` of every frame and open shadow root) and `browser/visits.json`.
+
+| Check | Fails when |
+|---|---|
+| (e) | a CoreDNS line from the browser's address or a question its sniffer saw names something outside the compose services and `allowed_external_hosts` (a never-allowed name always), or a connection attempt leaves the sealed Docker networks |
+| (f) | a HAR entry, request or WebSocket goes to a never-allowed host, whatever `allowed_external_hosts` or `optin-hosts.json` says |
+| (g) | a DOM reference points at a never-allowed host and `ui-baseline.json` has no entry with the same route, attribute and URL |
+| positive control | a request of `ui_expected_requests[mode]` was not made to a compose service (required in `positive_stats`) |
+
+A run of a config with a `web_service` that leaves the browser out (`--legs api`) faults (exit 2),
+so it never passes. Config keys:
+
+| Key | Default | Meaning |
+|---|---|---|
+| `web_service`, `web_url` | none | the compose service of the UI and its address by service name |
+| `ui_routes` | `ui-routes.json` | the routes to open (`ui-routes.schema.json`) |
+| `route_params` | `route-params.json` when present | `{name: value}` or `{"/path/:name": {name: value}}` |
+| `ui_baseline` | `ui-baseline.json` when present | `{entries: [{route, attribute, url, reason}]}`, may only shrink |
+| `idle_pages`, `idle_s` | none, `30` | the settings, integrations and catalog routes held open, and for how long |
+| `ui_page_timeout_s` | `60` | load timeout per page, before its one retry |
+| `ui_skip_routes` | none | `[{path, reason}]`, for example a sign-out route |
+| `ui_expected_requests` | none | `{mode: ["GET /api/ever-stats/status"]}` |
+| `optin_hosts` | `optin-hosts.json` | operator opt-ins, read by `static-hostnames` only |
+| `browser_image` | the pinned image | another image with the same browser build |
+
+`ever-hosts.json` is the never-allowed list of every leg and of `static-hostnames`; each entry
+matches the name and every name under it. `EVER_EGRESS_EXTRA_HOSTS` (comma-separated) adds names
+for a run; nothing removes one. [docs/egress-audit.md](../../docs/egress-audit.md) has the
+product-side steps.
 
 ## Static helpers
 
-- `ever-egress-audit static-hostnames --allow-dirs <dirs>`: no Ever host and no Ever Platform base
-  URL outside the directories that may name them.
+- `ever-egress-audit static-hostnames --allow-dirs <dirs> [--optin-hosts <file> | --config <file>]
+  [--baseline <ui-baseline.json>] [--all-files]`: no Ever-owned host (`ever_owned` of
+  `ever-hosts.json`, with every name under it) and no Ever Platform base URL variable outside the
+  directories that may name them. The product's `optin-hosts.json` (`{hosts: [{host, setting,
+  reason}]}`, each host under an Ever-owned name) lists the hosts of older features that stay off
+  until an operator turns them on: the scan accepts exactly those, and no capture check ever reads
+  the file. `--baseline` accepts the hosts of the DOM baseline; `--all-files` scans built output
+  (for example `.next/static`) instead of the files git tracks.
+- `ever-egress-audit ui-routes --framework angular|next-app|solidstart --entry <path> --out
+  ui-routes.json [--check]`: writes the route list from the router (entries with `"source":
+  "manual"` are kept), or, with `--check`, exits 1 naming each router route missing from the
+  committed list and each listed router route the router no longer has. What only the running app
+  knows (a route list built by a service, a matcher) is printed as a note to add by hand.
+- `ever-egress-audit check-baseline-shrink --base <git ref> [--file ui-baseline.json]`: exits 1
+  when the baseline gained an entry since the base commit.
 - `ever-egress-audit cloud-inference --dirs <module dirs>`: no module reads a payment secret, a demo
   flag, a cloud-provider variable, a deployment path, a desktop flag or the host name to guess where
   it runs.
@@ -174,6 +252,7 @@ steps:
 
 ## Limits
 
+- The browser image is about 3.5 GB; a run that cannot pull it faults. Only Chromium is walked.
 - Only the services in `process_services` are sniffed; databases and other third-party services in
   the compose files are sealed but not watched, and they keep Docker's resolver, so their DNS
   queries are not in the log. List every service that runs product code.

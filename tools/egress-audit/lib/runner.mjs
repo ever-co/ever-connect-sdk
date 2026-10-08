@@ -1,6 +1,7 @@
 // One audit run: the product's compose files plus the audit overlay, a scenario driven from inside
 // the sealed network, the evidence collected, assert.mjs's verdict written to report.json.
-import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import Ajv2020 from 'ajv/dist/2020.js';
@@ -8,8 +9,9 @@ import { testRootEntry } from '../../mock-platform/src/keys.mjs';
 import { DEFAULT_CONFIG } from '../../mock-platform/src/state.mjs';
 import { evaluate } from '../assert.mjs';
 import { generatedRows, loadModes } from '../assert-call-log.mjs';
+import { matchNeverAllowed } from '../hosts.mjs';
 import { composeRunner, docker, poll } from './docker.mjs';
-import { addressing, buildOverlay, composeNames, corefile, MOCK_PORT, modeEnv, productModel } from './overlay.mjs';
+import { addressing, BROWSER, buildOverlay, composeNames, corefile, MOCK_PORT, modeEnv, productModel } from './overlay.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 export const HARNESS_DIR = resolve(here, '..');
@@ -18,8 +20,14 @@ const MOCK_CONTRACTS = join(MOCK_DIR, 'contracts');
 export const LOCAL_MOCK_IMAGE = 'ever-mock-platform:audit-local';
 const COREDNS_IMAGE = 'coredns/coredns:1.12.1';
 const DRIVER_BASE_IMAGE = 'node:24-alpine';
+/** The browser leg's image: Playwright 1.62.1 (its Chromium matches the bundled playwright-core), pinned by digest. */
+export const BROWSER_BASE_IMAGE =
+  'mcr.microsoft.com/playwright:v1.62.1@sha256:dcc5531e97840b9b5e794f2814476b21571c5124a3fca2267d73041f56e7580e';
 /** Seconds the product is watched after the scenario when the config sets no wait_s. */
 export const DEFAULT_WAIT_S = 120;
+/** Seconds an idle page stays open when the config sets no idle_s. */
+export const DEFAULT_IDLE_S = 30;
+export const LEGS = ['api', 'browser'];
 
 /** A refusal before anything runs (bad config, unknown mode): exit 2 with the message. */
 export class UsageError extends Error {}
@@ -37,6 +45,14 @@ export function loadConfig(path) {
     );
   if (!config.process_services.includes(config.api_service))
     throw new UsageError(`api_service ${config.api_service} must be one of process_services`);
+  // The schema refuses the listed names; this also covers names added for the run (EVER_EGRESS_EXTRA_HOSTS).
+  for (const host of config.allowed_external_hosts ?? []) {
+    const match = matchNeverAllowed(host);
+    if (match)
+      throw new UsageError(`allowed_external_hosts: ${host} is on the never-allowed list (${match.category}) and can never be allowed`);
+  }
+  if (config.web_service && !config.web_url) throw new UsageError('web_service needs web_url (the UI address inside the sealed network)');
+  if (config.web_url && !config.web_service) throw new UsageError('web_url needs web_service (the compose service that serves the UI)');
   // A product adds modes; it never redefines one of the harness's, so `off` means the same everywhere.
   const builtIn = Object.keys(JSON.parse(readFileSync(join(HARNESS_DIR, 'modes.json'), 'utf8')).modes);
   for (const name of Object.keys(config.modes ?? {}))
@@ -51,6 +67,107 @@ function mergeDeep(...objects) {
       out[k] = v && typeof v === 'object' && !Array.isArray(v) && out[k] && typeof out[k] === 'object' ? mergeDeep(out[k], v) : v;
   return out;
 }
+
+/**
+ * The legs of a run: `api` always (the product processes are the base of every run), `browser` on
+ * top of it. Default: both when the config names a web_service, else the API leg alone.
+ */
+export function resolveLegs(config, legs) {
+  const list = legs ? [...new Set(legs)] : config.web_service ? ['api', 'browser'] : ['api'];
+  for (const l of list) if (!LEGS.includes(l)) throw new UsageError(`unknown leg ${l} (legs: ${LEGS.join(', ')})`);
+  if (!list.includes('api')) throw new UsageError('the browser leg runs on top of the API leg: use --legs api,browser');
+  if (list.includes('browser') && !config.web_service) throw new UsageError('--legs browser needs web_service and web_url in the config');
+  return list;
+}
+
+function readValid(file, schemaFile, what) {
+  let data;
+  try {
+    data = JSON.parse(readFileSync(file, 'utf8'));
+  } catch (error) {
+    throw new UsageError(`${what} ${file} could not be read: ${error.message}`);
+  }
+  const schema = JSON.parse(readFileSync(join(HARNESS_DIR, schemaFile), 'utf8'));
+  const validate = new Ajv2020({ allErrors: true, strict: false }).compile(schema);
+  if (!validate(data))
+    throw new UsageError(
+      `${file} is not a valid ${what}:\n  ${validate.errors.map((e) => `${e.instancePath || '/'} ${e.message}`).join('\n  ')}`,
+    );
+  return data;
+}
+
+/**
+ * What the browser walks and judges: the route list, the static parameters, the baseline, the idle
+ * pages, the skipped routes and the positive control of the mode. Refuses a config whose idle or
+ * skipped routes are not in the list, or a positive mode without an expected request.
+ */
+export function loadBrowserInputs(config, configDir, modeName, mode) {
+  const at = (p) => resolve(configDir, p);
+  const routesFile = at(config.ui_routes ?? 'ui-routes.json');
+  if (!existsSync(routesFile))
+    throw new UsageError(`the browser leg needs a route list: ${routesFile} is missing (ever-egress-audit ui-routes)`);
+  const routes = readValid(routesFile, 'ui-routes.schema.json', 'route list').routes;
+  if (routes.length === 0) throw new UsageError(`${routesFile} lists no route`);
+  const paramsFile = at(config.route_params ?? 'route-params.json');
+  let params = {};
+  if (existsSync(paramsFile)) params = JSON.parse(readFileSync(paramsFile, 'utf8'));
+  else if (config.route_params) throw new UsageError(`route_params ${paramsFile} is missing`);
+  const baselineFile = at(config.ui_baseline ?? 'ui-baseline.json');
+  let baseline = [];
+  if (existsSync(baselineFile)) baseline = readValid(baselineFile, 'ui-baseline.schema.json', 'baseline').entries;
+  else if (config.ui_baseline) throw new UsageError(`ui_baseline ${baselineFile} is missing`);
+  const paths = new Set(routes.map((r) => r.path));
+  for (const p of config.idle_pages ?? []) if (!paths.has(p)) throw new UsageError(`idle page ${p} is not in ${routesFile}`);
+  for (const s of config.ui_skip_routes ?? [])
+    if (!paths.has(s.path)) throw new UsageError(`skipped route ${s.path} is not in ${routesFile}`);
+  const expected = config.ui_expected_requests?.[modeName] ?? [];
+  if (mode.browser === 'positive' && expected.length === 0)
+    throw new UsageError(
+      `mode ${modeName} runs the browser leg's positive control: set ui_expected_requests.${modeName} (for example ["GET /api/ever-stats/status"])`,
+    );
+  return {
+    routes: routes.map((r) => ({ path: r.path })),
+    params,
+    baseline,
+    expected,
+    idlePages: config.idle_pages ?? [],
+    skip: config.ui_skip_routes ?? [],
+  };
+}
+
+/** The directory of the playwright-core the harness depends on (copied into the browser image). */
+export function playwrightCoreDir() {
+  try {
+    return dirname(createRequire(join(HARNESS_DIR, 'package.json')).resolve('playwright-core/package.json'));
+  } catch {
+    throw new HarnessFault('playwright-core is not installed next to the harness; the browser leg cannot run');
+  }
+}
+
+/**
+ * The browser image of a run: the pinned Playwright image with browser.mjs, its helpers, the
+ * adapter, playwright-core and the walk's plan (nothing is mounted).
+ */
+function buildBrowserImage({ dir, tag, base, adapterFile, plan, log }) {
+  rmSync(dir, { recursive: true, force: true });
+  mkdirSync(join(dir, 'lib'), { recursive: true });
+  copyFileSync(join(HARNESS_DIR, 'browser.mjs'), join(dir, 'browser.mjs'));
+  for (const f of ['dom-refs.mjs', 'har.mjs']) copyFileSync(join(HARNESS_DIR, 'lib', f), join(dir, 'lib', f));
+  if (adapterFile) copyFileSync(adapterFile, join(dir, 'adapter.mjs'));
+  cpSync(playwrightCoreDir(), join(dir, 'node_modules', 'playwright-core'), { recursive: true, dereference: true });
+  writeFileSync(join(dir, 'package.json'), '{"type":"module","private":true}\n');
+  writeFileSync(join(dir, 'plan.json'), `${JSON.stringify(plan)}\n`);
+  writeFileSync(join(dir, 'Dockerfile'), `FROM ${base}\nWORKDIR /browser\nCOPY . .\nENTRYPOINT ["node", "/browser/browser.mjs"]\n`);
+  docker(['build', '-q', '-t', tag, dir], { log, timeoutS: 1800 });
+}
+
+const readJson = (file, fallback) => {
+  try {
+    return JSON.parse(readFileSync(file, 'utf8'));
+  } catch {
+    return fallback;
+  }
+};
 
 /** A /24 per project, so a leftover docker network of another run never overlaps. */
 export function defaultSubnet(project) {
@@ -88,11 +205,18 @@ export async function runAudit({
   artifactsDir,
   keep = false,
   composeEnv = {},
+  legs,
   log = () => {},
 }) {
   const modes = loadModes(config.modes ?? {});
   const mode = modes[modeName];
   if (!mode) throw new UsageError(`unknown mode ${modeName} (modes: ${Object.keys(modes).join(', ')})`);
+  const runLegs = resolveLegs(config, legs);
+  // The browser leg runs when the product has a UI (web_service) and the mode asks for it. A run
+  // that leaves it out (--legs api) proves the API side only: it faults, so it never passes.
+  const browserWanted = Boolean(config.web_service && mode.browser);
+  const browserOn = browserWanted && runLegs.includes('browser');
+  const browserInputs = browserOn ? loadBrowserInputs(config, configDir, modeName, mode) : null;
   const label = `${modeName}${noMock ? '-nomock' : ''}`;
   const project = `${config.project ?? `ever-audit-${config.product}`}-${label}`.toLowerCase().replace(/[^a-z0-9_-]/g, '-');
   const out = resolve(artifactsDir, label);
@@ -104,7 +228,7 @@ export async function runAudit({
   const useMock = Boolean(mode.mock) && !noMock;
   const prefix = config.env_prefix ?? 'EVER_';
   const subnet = config.subnet ?? defaultSubnet(project);
-  const { dnsIp, mockIp } = addressing(subnet);
+  const { dnsIp, mockIp, browserIp } = addressing(subnet);
   // The mock's configuration and where the products find it: its fixed address (a local address,
   // which the SDK accepts over plain http) and the https issuer its documents name. Both are known
   // in a run without the mock too, so a product is configured the same way and simply gets no answer.
@@ -114,6 +238,8 @@ export async function runAudit({
   const sniffers = config.process_services.map((s) => `ever-audit-sniffer-${s}`);
   const dnsImage = `ever-audit-dns:${project}`;
   const driverImage = `ever-audit-driver:${project}`;
+  const browserImage = `ever-audit-browser:${project}`;
+  const browserBase = config.browser_image ?? BROWSER_BASE_IMAGE;
   const faults = [];
   const evidence = {
     mode,
@@ -132,13 +258,50 @@ export async function runAudit({
     mark: null,
     generated: [],
     faults,
+    legs: runLegs,
+    browser: browserWanted
+      ? browserOn
+        ? {
+            enabled: true,
+            required: true,
+            positive: mode.browser === 'positive',
+            ips: [browserIp],
+            sniffer: '',
+            har: null,
+            requests: [],
+            domRefs: [],
+            visits: [],
+            skipped: [],
+            baseline: browserInputs.baseline,
+            expected: browserInputs.expected,
+            faults: [],
+          }
+        : {
+            enabled: false,
+            required: true,
+            reason: `the browser leg was left out (--legs ${runLegs.join(',')}): this run proves the API side only`,
+          }
+      : null,
   };
   let full = null;
   try {
     const product = composeRunner({ project, files, projectDirectory, env, log });
     const model = productModel(JSON.parse(product(['config', '--format', 'json']).stdout));
-    for (const s of [config.api_service, ...config.process_services, ...(config.services ?? [])])
+    for (const s of [
+      config.api_service,
+      ...config.process_services,
+      ...(config.services ?? []),
+      ...(config.web_service ? [config.web_service] : []),
+    ])
       if (!model.services[s]) throw new UsageError(`service ${s} is not in ${config.compose.join(', ')}`);
+    // The browser image is large: pull it before anything starts, so a pull that fails is a
+    // fault of the run and not a page that never loads.
+    if (browserOn && docker(['image', 'inspect', browserBase], { allowFail: true }).status !== 0)
+      try {
+        docker(['pull', '-q', browserBase], { log, timeoutS: 1800 });
+      } catch (error) {
+        throw new HarnessFault(`the browser image ${browserBase} could not be pulled: ${error.message.split('\n').slice(-1)[0]}`);
+      }
 
     let adapterEnv = {};
     if (config.adapter) {
@@ -182,6 +345,7 @@ export async function runAudit({
       processServices: config.process_services,
       env: productEnv,
       mock,
+      browser: browserOn ? { image: browserImage, webService: config.web_service } : null,
     });
     const overlayPath = join(out, 'compose.audit.generated.yml');
     writeFileSync(overlayPath, overlay);
@@ -189,8 +353,10 @@ export async function runAudit({
     full(['down', '-v', '--remove-orphans', '--timeout', '5'], { allowFail: true });
 
     // 1. The resolver, the namespace holders, the sniffers (and the mock) start first.
-    full(['up', '-d', 'ever-audit-dns', ...holders, ...sniffers, ...(useMock ? ['mock-platform'] : [])]);
-    for (const [i, sniffer] of sniffers.entries()) {
+    const watched = config.process_services.map((s, i) => ({ svc: s, holder: holders[i], sniffer: sniffers[i] }));
+    if (browserOn) watched.push({ svc: 'browser', holder: BROWSER.holder, sniffer: BROWSER.sniffer });
+    full(['up', '-d', 'ever-audit-dns', ...watched.flatMap((w) => [w.holder, w.sniffer]), ...(useMock ? ['mock-platform'] : [])]);
+    for (const { svc, holder, sniffer } of watched) {
       const status = await poll(
         () => {
           const text = full(['logs', '--no-color', '--no-log-prefix', sniffer], { allowFail: true }).stdout;
@@ -206,14 +372,14 @@ export async function runAudit({
           ? 'NET_ADMIN was refused, so connection attempts cannot be routed to the sink'
           : /permission|not permitted|Operation not permitted/i.test(status ?? '')
             ? 'CAP_NET_RAW was refused, so tcpdump cannot capture'
-            : `the sniffer of ${config.process_services[i]} never started capturing (${status ?? 'timeout'})`;
+            : `the sniffer of ${svc} never started capturing (${status ?? 'timeout'})`;
         throw new HarnessFault(reason);
       }
-      const resolv = full(['exec', '-T', holders[i], 'cat', '/etc/resolv.conf']).stdout;
-      evidence.resolv[config.process_services[i]] = resolv;
+      const resolv = full(['exec', '-T', holder, 'cat', '/etc/resolv.conf']).stdout;
+      evidence.resolv[svc] = resolv;
       const servers = resolv.split('\n').filter((l) => /^\s*nameserver\s/.test(l));
       if (servers.length !== 1 || servers[0].trim().split(/\s+/)[1] !== dnsIp)
-        throw new HarnessFault(`the resolver of ${config.process_services[i]} is not the audit resolver (${servers.join('; ') || 'none'})`);
+        throw new HarnessFault(`the resolver of ${svc} is not the audit resolver (${servers.join('; ') || 'none'})`);
     }
 
     // 2. The product: created, given the TEST root file (positive modes), then started.
@@ -268,6 +434,35 @@ export async function runAudit({
       if (m.ok) evidence.mark = m.mark;
       else faults.push(m.fault);
     }
+    // 4. The browser leg: the product UI walked from the browser's own sniffed namespace.
+    if (browserOn) {
+      if (scenario.ok)
+        runBrowser({
+          full,
+          out,
+          evidence,
+          plan: {
+            web_url: config.web_url,
+            api_url: new URL(config.health_url).origin,
+            mode: modeName,
+            env: productEnv,
+            fixtures: scenario.fixtures ?? null,
+            routes: browserInputs.routes,
+            params: browserInputs.params,
+            idle_pages: browserInputs.idlePages,
+            idle_s: config.idle_s ?? DEFAULT_IDLE_S,
+            page_timeout_s: config.ui_page_timeout_s ?? 60,
+            skip: browserInputs.skip,
+            out: '/out',
+          },
+          image: browserImage,
+          base: browserBase,
+          adapterFile: config.adapter ? resolve(configDir, config.adapter) : null,
+          project,
+          log,
+        });
+      else evidence.browser.faults.push('the browser leg did not run: the product never became ready');
+    }
     driver('wait', { mark: evidence.mark });
     if (evidence.expectRoutes) evidence.routes = driver('probe').routes ?? [];
     if (useMock) {
@@ -280,12 +475,54 @@ export async function runAudit({
     if (error instanceof UsageError) throw error;
   } finally {
     if (full) collect({ full, evidence, config, sniffers, project, out, keep, log });
-    for (const image of [dnsImage, driverImage]) docker(['image', 'rm', '-f', image], { allowFail: true, log });
+    for (const image of [dnsImage, driverImage, ...(browserOn ? [browserImage] : [])])
+      docker(['image', 'rm', '-f', image], { allowFail: true, log });
   }
   const report = evaluate(evidence);
   writeJson(join(out, 'evidence.json'), evidence);
   writeJson(join(out, 'report.json'), report);
   return report;
+}
+
+/**
+ * The browser leg's walk: the image built with the plan, one `docker compose run` in the
+ * browser holder's namespace, then its evidence copied out of the stopped container into
+ * <out>/browser (browser.har, requests.json, dom-refs.json, visits.json) and read into evidence.browser.
+ */
+function runBrowser({ full, out, evidence, plan, image, base, adapterFile, project, log }) {
+  const b = evidence.browser;
+  const dir = join(out, 'browser');
+  const name = `${project}-browser-walk`;
+  const context = join(out, 'browser-image');
+  try {
+    buildBrowserImage({ dir: context, tag: image, base, adapterFile, plan, log });
+  } catch (error) {
+    b.faults.push(`the browser image could not be built: ${error.message.split('\n').slice(-1)[0]}`);
+    return;
+  } finally {
+    // The plan stays with the evidence; the build context (playwright-core included) does not.
+    writeJson(join(out, 'browser-plan.json'), plan);
+    rmSync(context, { recursive: true, force: true });
+  }
+  docker(['rm', '-f', name], { allowFail: true, log });
+  const pageS = plan.page_timeout_s * 2 + 20;
+  const timeoutS = Math.max(900, 300 + plan.routes.length * pageS + plan.idle_pages.length * plan.idle_s);
+  const r = full(['run', '-T', '--no-deps', '--name', name, BROWSER.service], { allowFail: true, timeoutS });
+  writeFileSync(join(out, 'browser-walk.log'), `${r.stdout}${r.stderr}`);
+  const res = r.stdout.includes('EVER_AUDIT_RESULT ')
+    ? parseResult(r.stdout)
+    : { ok: false, fault: `the browser answered nothing (exit ${r.status ?? 'timeout'}; see browser-walk.log)` };
+  for (const f of res.faults ?? (res.fault ? [res.fault] : [])) b.faults.push(f);
+  mkdirSync(dir, { recursive: true });
+  docker(['cp', `${name}:/out/.`, dir], { allowFail: true, log });
+  docker(['rm', '-f', name], { allowFail: true, log });
+  b.har = readJson(join(dir, 'browser.har'), null);
+  if (!b.har) b.faults.push('no HAR came out of the browser');
+  b.requests = readJson(join(dir, 'requests.json'), []);
+  b.domRefs = readJson(join(dir, 'dom-refs.json'), []);
+  const visits = readJson(join(dir, 'visits.json'), { visits: [], skipped: [] });
+  b.visits = visits.visits;
+  b.skipped = visits.skipped;
 }
 
 /** Logs, network subnets and pcaps; then the project is removed (unless keep). */
@@ -300,6 +537,14 @@ function collect({ full, evidence, config, sniffers, project, out, keep, log }) 
     writeFileSync(join(out, `product-${svc}.log`), evidence.logs[svc]);
   }
   if (evidence.mockRecord) writeJson(join(out, 'requests.json'), evidence.mockRecord);
+  const browserOn = Boolean(evidence.browser?.enabled);
+  if (browserOn) {
+    evidence.browser.sniffer = logsOf(BROWSER.sniffer);
+    writeFileSync(join(out, 'sniffer-browser.log'), evidence.browser.sniffer);
+    const state = full(['ps', '-a', '--format', '{{.State}}', BROWSER.sniffer], { allowFail: true }).stdout.trim();
+    if (state !== 'running')
+      evidence.browser.faults.push(`the browser's sniffer was not running at the end of the run (${state || 'gone'})`);
+  }
   // A sniffer that stopped during the run saw only part of it: the run proves nothing.
   for (const [i, svc] of config.process_services.entries()) {
     const state = full(['ps', '-a', '--format', '{{.State}}', sniffers[i]], { allowFail: true }).stdout.trim();
@@ -323,6 +568,10 @@ function collect({ full, evidence, config, sniffers, project, out, keep, log }) 
   for (const [i, svc] of config.process_services.entries()) {
     const id = full(['ps', '-a', '-q', sniffers[i]], { allowFail: true }).stdout.trim().split('\n')[0];
     if (id) docker(['cp', `${id}:/captures/${svc}.pcap`, join(out, 'pcap', `${svc}.pcap`)], { allowFail: true, log });
+  }
+  if (browserOn) {
+    const id = full(['ps', '-a', '-q', BROWSER.sniffer], { allowFail: true }).stdout.trim().split('\n')[0];
+    if (id) docker(['cp', `${id}:/captures/${BROWSER.capture}.pcap`, join(out, 'pcap', 'browser.pcap')], { allowFail: true, log });
   }
   if (!keep) full(['down', '-v', '--remove-orphans', '--timeout', '5'], { allowFail: true });
 }

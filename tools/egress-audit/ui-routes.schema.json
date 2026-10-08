@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ever-connect-sdk.invalid/egress-audit/ui-routes.schema.json",
+  "title": "ui-routes.json",
+  "description": "The routes the browser leg opens, generated from the product's router with `ever-egress-audit ui-routes --framework <angular|next-app|solidstart> --entry <path> --out ui-routes.json` and checked with --check (a router route missing from the list fails). Parameters are written `:name` (one segment), `:name?` (optional), `:name+` and `:name*` (catch-all); their values come from route-params.json and the adapter's routeParams hook. Entries with source manual are added by hand (a route the router builds at run time) and are kept when the list is generated again.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["routes"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "framework": { "enum": ["angular", "next-app", "solidstart", "manual"] },
+    "entry": { "description": "The router entry the list was generated from, relative to the product root.", "type": "string" },
+    "routes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path"],
+        "properties": {
+          "path": { "type": "string", "pattern": "^/" },
+          "source": { "enum": ["router", "manual"] },
+          "file": { "description": "Where the router declares the route.", "type": "string" },
+          "redirect_to": { "type": "string" },
+          "guards": { "type": "array", "items": { "type": "string" } },
+          "note": { "type": "string" }
+        }
+      }
+    },
+    "notes": {
+      "description": "What the generator could not follow (a route list built at run time, a matcher function, a parallel or intercepting route), so a reviewer can add those routes as manual entries.",
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

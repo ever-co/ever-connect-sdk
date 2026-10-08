@@ -1,0 +1,5 @@
+{
+  "$schema": "../../optin-hosts.schema.json",
+  "description": "A test product's documented operator opt-in: an update check that predates the modules, off by default.",
+  "hosts": [{ "host": "updates.gauzy.co", "setting": "UPDATE_CHECK_ENABLED=true", "reason": "the release check of the desktop app, documented as an operator opt-in" }]
+}

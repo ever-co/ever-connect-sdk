@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ever-connect-sdk.invalid/egress-audit/config.schema.json",
   "title": "egress-audit.config.json",
-  "description": "A product's egress audit configuration. Paths are relative to this file. Ever hosts can never be allowed: any name under ever.co, ever.team, gauzy.co, ever.works, rec.so or traduora.co fails the audit, and this schema refuses them in allowed_external_hosts.",
+  "description": "A product's egress audit configuration. Paths are relative to this file. No name of the never-allowed list (ever-hosts.json: the Ever-owned names, the analytics sinks and every name under them) can be allowed: this schema refuses them in allowed_external_hosts, and the capture checks fail on them whatever the configuration says.",
   "type": "object",
   "additionalProperties": false,
   "required": ["product", "compose", "api_service", "process_services", "health_url", "module_routes"],
@@ -37,13 +37,64 @@
       "items": { "type": "string", "pattern": "^/" }
     },
     "allowed_external_hosts": {
-      "description": "Names outside the compose services the product may look up (it still reaches nothing).",
+      "description": "Names outside the compose services the product and the browser may look up (they still reach nothing). A name of the never-allowed list is refused: the pattern below is generated from ever-hosts.json, and a test keeps the two equal.",
       "type": "array",
       "items": {
         "type": "string",
         "pattern": "^[a-z0-9.-]+$",
-        "not": { "pattern": "(^|\\.)(ever\\.co|ever\\.team|gauzy\\.co|ever\\.works|rec\\.so|traduora\\.co)\\.?$" }
+        "not": {
+          "pattern": "(^|\\.)(ever\\.co|ever\\.team|gauzy\\.co|ever\\.works|rec\\.so|traduora\\.co|everdemand\\.co|ever\\.sh|githands\\.com|posthog\\.com|i\\.posthog\\.com|sentry\\.io|jitsu\\.com|google-analytics\\.com|googletagmanager\\.com|chatwoot\\.com)\\.?$"
+        }
       }
+    },
+    "web_service": {
+      "description": "The compose service that serves the product UI. Naming it turns the browser leg on (--legs api,browser becomes the default).",
+      "type": "string",
+      "minLength": 1
+    },
+    "web_url": {
+      "description": "The UI's address from inside the sealed network, by service name (for example http://webapp:4200).",
+      "type": "string",
+      "pattern": "^http://[^\\s/]+(/\\S*)?$"
+    },
+    "ui_routes": { "description": "The route list the browser walks (default ui-routes.json; see ui-routes.schema.json and ever-egress-audit ui-routes).", "type": "string" },
+    "route_params": {
+      "description": "Static route parameter values, {name: value} or {\"/path/:name\": {name: value}} (default route-params.json when present); the adapter's routeParams hook adds the values only a run knows.",
+      "type": "string"
+    },
+    "ui_baseline": {
+      "description": "DOM references that pre-date the modules, {route, attribute, url, reason} (default ui-baseline.json when present; see ui-baseline.schema.json). It may only shrink, and it never excuses a DNS query, a connection attempt or a HAR entry.",
+      "type": "string"
+    },
+    "idle_pages": {
+      "description": "Routes of the route list held open for idle_s after they load (settings, integrations, catalog).",
+      "type": "array",
+      "items": { "type": "string", "pattern": "^/" }
+    },
+    "idle_s": { "description": "Seconds each idle page is held open (default 30).", "type": "integer", "minimum": 0, "maximum": 600 },
+    "ui_page_timeout_s": { "description": "Seconds a page may take to load before its one retry (default 60).", "type": "integer", "minimum": 5, "maximum": 600 },
+    "ui_skip_routes": {
+      "description": "Routes of the route list the browser does not open, each with its reason. A route with a parameter that has no value must be listed here, or the run faults.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "reason"],
+        "properties": { "path": { "type": "string", "pattern": "^/" }, "reason": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "ui_expected_requests": {
+      "description": "The browser leg's positive control, per mode: the requests (\"METHOD /path\") the browser must make to a compose service, for example {\"positive_stats\": [\"GET /api/ever-stats/status\"]}. Required for a mode whose browser leg is positive.",
+      "type": "object",
+      "additionalProperties": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^[A-Z]+ /\\S*$" } }
+    },
+    "optin_hosts": {
+      "description": "The product's documented operator opt-ins (default optin-hosts.json; see optin-hosts.schema.json). Only static-hostnames reads it; the capture checks never do.",
+      "type": "string"
+    },
+    "browser_image": {
+      "description": "The browser image (default: the harness's pinned Playwright image); it must carry the browser build of the bundled playwright-core.",
+      "type": "string"
     },
     "artifacts_dir": { "description": "Where evidence and report.json go (default ./egress-audit-artifacts).", "type": "string" },
     "wait_s": { "description": "Seconds to watch the product after the scenario (default 120).", "type": "integer", "minimum": 0, "maximum": 3600 },

@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ever-connect-sdk.invalid/egress-audit/ui-baseline.schema.json",
+  "title": "ui-baseline.json",
+  "description": "DOM references to a never-allowed host that the product's UI rendered before the Ever Platform modules existed (a footer link, a documentation link), written once and allowed to shrink only (check-baseline-shrink). An entry excuses the same {route, attribute, url} in the DOM check and nothing else: never a DNS query, a connection attempt, a HAR entry or a request.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["entries"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "description": { "type": "string" },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["route", "attribute", "url", "reason"],
+        "properties": {
+          "route": { "description": "The route of ui-routes.json the reference was found on, or (sign-in).", "type": "string", "minLength": 1 },
+          "attribute": { "enum": ["href", "src", "srcset", "imagesrcset", "action", "formaction", "poster", "ping", "data", "xlink:href", "content", "style"] },
+          "url": { "description": "As dom-refs.json writes it (query values dropped).", "type": "string", "minLength": 1 },
+          "reason": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

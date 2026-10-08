@@ -8,8 +8,12 @@ copying either tool:
   every outbound call of the modules with the platform's statuses, problem codes and response
   shapes, signs with TEST keys derived from public seeds, records every call, and makes no
   outbound request ([docs/mock-platform.md](https://github.com/ever-co/ever-connect-sdk/blob/main/docs/mock-platform.md));
-- `ever-egress-audit`: proves a product makes no outbound call it should not
-  ([tools/egress-audit/README.md](https://github.com/ever-co/ever-connect-sdk/blob/main/tools/egress-audit/README.md)).
+- `ever-egress-audit`: proves a product makes no outbound call it should not, from its server
+  processes and, with the browser leg, from its UI in a real browser
+  ([tools/egress-audit/README.md](https://github.com/ever-co/ever-connect-sdk/blob/main/tools/egress-audit/README.md),
+  [docs/egress-audit.md](https://github.com/ever-co/ever-connect-sdk/blob/main/docs/egress-audit.md)).
+  Its `ui-routes` command writes and checks the route list from an Angular, Next.js or SolidStart
+  router (the Angular one uses the product's own `typescript`, an optional peer dependency).
 
 ## Install
 
@@ -35,6 +39,7 @@ The modules are ESM (`.mjs`); the subpath exports reach them from a test:
 | `@ever-co/connect-tools/mock-platform/keys` | the TEST keys: `testRootEntry`, `signManifest`, `signEntitlement`, `signRotationProof`, ..., and `MOCK_ISSUER` |
 | `@ever-co/connect-tools/mock-platform/crypto`, `.../validate` | the mock's signing and validation helpers |
 | `@ever-co/connect-tools/egress-audit/assert`, `.../assert-call-log`, `.../static-hostnames`, `.../cloud-inference`, `.../overlay`, `.../runner` | the egress audit's building blocks |
+| `@ever-co/connect-tools/egress-audit/hosts`, `.../browser`, `.../har`, `.../ui-routes`, `.../check-baseline-shrink` | the never-allowed list and its matcher, the browser walk, the HAR helpers, the route-list generators and the baseline check |
 
 The mock image builds from the installed package:
 `docker build node_modules/@ever-co/connect-tools/dist/mock-platform`.

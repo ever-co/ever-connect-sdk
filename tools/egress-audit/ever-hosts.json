@@ -1,0 +1,7 @@
+{
+  "$schema": "./hosts.schema.json",
+  "description": "The never-allowed list of the egress audit, shared by the API leg, the browser leg and static-hostnames. Every entry matches the name itself and every name under it (api., app., auth., data., analytics. ...). No product setting can allow a listed name: allowed_external_hosts refuses it and the capture checks fail on it whatever a product configures. static-hostnames reads ever_owned only, because analytics clients that products already ship stay in their code (switched off by default).",
+  "ever_owned": ["ever.co", "ever.team", "gauzy.co", "ever.works", "rec.so", "traduora.co", "everdemand.co", "ever.sh", "githands.com"],
+  "analytics_sinks": ["posthog.com", "i.posthog.com", "sentry.io", "jitsu.com", "google-analytics.com", "googletagmanager.com", "chatwoot.com"],
+  "reference": []
+}

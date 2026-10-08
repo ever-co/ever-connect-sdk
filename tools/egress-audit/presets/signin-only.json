@@ -1,0 +1,11 @@
+{
+  "$schema": "../ui-routes.schema.json",
+  "framework": "manual",
+  "routes": [
+    {
+      "path": "/",
+      "source": "manual",
+      "note": "Opened signed out (an adapter without uiLogin): the product's own redirect lands on its sign-in page, the page a person sees before an account exists. Use it as ui_routes for a product whose sign-in page is the only page in scope."
+    }
+  ]
+}

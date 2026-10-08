@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Leaky fixture</title></head>
+<body>
+<!-- The browser leg's failing control: an Ever host loaded from the page (a DNS query from the
+     browser, a HAR entry and a DOM src) and a request to a documentation address after load (a
+     connection attempt the browser's sniffer must see). -->
+<nav><a href="/">Home</a> <a href="/about">About</a> <a href="/settings">Settings</a></nav>
+<h1>__ROUTE__</h1>
+<img src="https://api.ever.co/pixel.png" alt="" width="1" height="1">
+<script>
+  window.addEventListener('load', () => {
+    fetch('https://203.0.113.10/beacon', { mode: 'no-cors' }).catch(() => {});
+  });
+</script>
+</body>
+</html>

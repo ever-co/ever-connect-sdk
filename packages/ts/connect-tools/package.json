@@ -32,6 +32,11 @@
     "./egress-audit/cloud-inference": "./dist/egress-audit/cloud-inference.mjs",
     "./egress-audit/overlay": "./dist/egress-audit/lib/overlay.mjs",
     "./egress-audit/runner": "./dist/egress-audit/lib/runner.mjs",
+    "./egress-audit/hosts": "./dist/egress-audit/hosts.mjs",
+    "./egress-audit/browser": "./dist/egress-audit/browser.mjs",
+    "./egress-audit/har": "./dist/egress-audit/lib/har.mjs",
+    "./egress-audit/ui-routes": "./dist/egress-audit/routes/cli.mjs",
+    "./egress-audit/check-baseline-shrink": "./dist/egress-audit/check-baseline-shrink.mjs",
     "./dist/*": "./dist/*",
     "./package.json": "./package.json"
   },
@@ -50,7 +55,16 @@
   "dependencies": {
     "ajv": "8.20.0",
     "ajv-formats": "3.0.1",
+    "playwright-core": "1.62.1",
     "yaml": "2.9.1"
+  },
+  "peerDependencies": {
+    "typescript": ">=5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "typescript": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "ever-egress-audit": "workspace:*",

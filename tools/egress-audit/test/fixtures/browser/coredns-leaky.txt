@@ -1,0 +1,6 @@
+.:53
+CoreDNS-1.12.1
+[INFO] 10.231.50.7:51000 - 11 "A IN app. udp 22 false 512" NOERROR qr,rd,ra 46 0.0002s
+[INFO] 10.231.50.251:40000 - 1 "A IN app. udp 22 false 512" NOERROR qr,rd,ra 46 0.0002s
+[INFO] 10.231.50.251:40002 - 2 "A IN app.ever.co. udp 29 false 512" NXDOMAIN qr,aa,rd 29 0.0002s
+[INFO] 10.231.50.251:40004 - 3 "A IN fonts.example.net. udp 35 false 512" NXDOMAIN qr,aa,rd 35 0.0002s

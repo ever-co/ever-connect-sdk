@@ -1,0 +1,6 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": { "@fixture/lazy": ["lib/lazy/index.ts"] }
+  }
+}

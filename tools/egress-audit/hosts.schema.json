@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ever-connect-sdk.invalid/egress-audit/hosts.schema.json",
+  "title": "ever-hosts.json",
+  "description": "The never-allowed list: names (lower case, no trailing dot, ASCII) that each match themselves and every name under them.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["ever_owned", "analytics_sinks", "reference"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "description": { "type": "string" },
+    "ever_owned": { "$ref": "#/$defs/names", "minItems": 1 },
+    "analytics_sinks": { "$ref": "#/$defs/names" },
+    "reference": { "$ref": "#/$defs/names" }
+  },
+  "$defs": {
+    "names": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^([a-z0-9]([a-z0-9-]*[a-z0-9])?\\.)+[a-z]{2,}$" }
+    }
+  }
+}

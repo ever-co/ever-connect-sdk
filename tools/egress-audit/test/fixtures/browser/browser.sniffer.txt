@@ -1,0 +1,4 @@
+tcpdump: data link type LINUX_SLL2
+listening on any, link-type LINUX_SLL2 (Linux cooked v2), snapshot length 262144 bytes
+10:00:00.000001 eth0  Out IP 10.231.50.251.40000 > 10.231.50.253.53: 1+ A? app. (22)
+10:00:00.000101 eth0  Out IP 10.231.50.251.40001 > 10.231.50.7.8080: Flags [S], seq 1, win 64240, length 0

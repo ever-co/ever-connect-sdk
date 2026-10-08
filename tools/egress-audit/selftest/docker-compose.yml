@@ -1,5 +1,6 @@
 # The self-test's fixture product: one service running the fixture named by EVER_SELFTEST_FIXTURE
-# (quiet, leaky, stats-sender or managed-executor). Built from this directory; nothing is mounted.
+# (quiet, leaky, stats-sender, managed-executor, or a web fixture of the browser leg: ui-quiet,
+# ui-leaky, ui-link, ui-stats). Built from this directory; nothing is mounted.
 services:
   app:
     image: ever-audit-selftest-${EVER_SELFTEST_FIXTURE:-quiet}:local

@@ -5,9 +5,23 @@
   "internalChecksFilter": "strict",
   "rangeStrategy": "pin",
   "labels": ["dependencies"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "The egress audit's browser image, pinned by version and digest in the harness and in CI",
+      "managerFilePatterns": ["/^tools/egress-audit/lib/runner\\.mjs$/", "/^\\.github/workflows/ci\\.yml$/"],
+      "matchStrings": ["(?<depName>mcr\\.microsoft\\.com/playwright):(?<currentValue>v[0-9]+\\.[0-9]+\\.[0-9]+)@(?<currentDigest>sha256:[a-f0-9]{64})"],
+      "datasourceTemplate": "docker"
+    }
+  ],
   "packageRules": [
     { "matchManagers": ["github-actions"], "groupName": "GitHub Actions" },
     { "matchManagers": ["cargo"], "matchPackageNames": ["typify", "schemars"], "groupName": "Rust type generation" },
-    { "matchPackageNames": ["openapi-typescript", "json-schema-to-typescript", "typescript"], "groupName": "TypeScript type generation" }
+    { "matchPackageNames": ["openapi-typescript", "json-schema-to-typescript", "typescript"], "groupName": "TypeScript type generation" },
+    {
+      "description": "playwright-core drives the browser of the pinned image: they move together",
+      "matchPackageNames": ["playwright-core", "mcr.microsoft.com/playwright"],
+      "groupName": "Playwright"
+    }
   ]
 }

@@ -1,7 +1,7 @@
 {
   "name": "ever-egress-audit",
   "version": "0.1.0",
-  "description": "The egress audit of a product that hosts the Ever Platform modules: sealed compose networks, CoreDNS as the only resolver, a sniffer per product process, the mock platform's call record, and a self-test with a failing control.",
+  "description": "The egress audit of a product that hosts the Ever Platform modules: sealed compose networks, CoreDNS as the only resolver, a sniffer per product process and for the browser that walks the product UI, the never-allowed host list, the mock platform's call record, and a self-test with failing controls.",
   "license": "Apache-2.0",
   "private": true,
   "type": "module",
@@ -17,7 +17,12 @@
     "./static-hostnames": "./static-hostnames.mjs",
     "./cloud-inference": "./cloud-inference.mjs",
     "./overlay": "./lib/overlay.mjs",
-    "./runner": "./lib/runner.mjs"
+    "./runner": "./lib/runner.mjs",
+    "./hosts": "./hosts.mjs",
+    "./browser": "./browser.mjs",
+    "./har": "./lib/har.mjs",
+    "./ui-routes": "./routes/cli.mjs",
+    "./check-baseline-shrink": "./check-baseline-shrink.mjs"
   },
   "scripts": {
     "test": "node --test \"test/*.test.mjs\"",
@@ -25,6 +30,7 @@
   },
   "dependencies": {
     "ajv": "8.20.0",
+    "playwright-core": "1.62.1",
     "yaml": "2.9.1"
   }
 }

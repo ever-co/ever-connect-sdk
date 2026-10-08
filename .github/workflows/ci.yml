@@ -16,7 +16,8 @@ name: CI
 #                       verifier-only build, and cargo deny
 #   fixtures-roundtrip  TypeScript (ajv) and Rust (jsonschema + generated types) agree on every fixture
 #   mock-rows           the mock answers every row and problem code; its image builds and starts
-#   tools               the egress harness unit tests and its self-test with the failing control
+#   tools               the egress harness unit tests, the browser walk test inside the pinned
+#                       Playwright image, and the self-test of both legs with their failing controls
 #
 # Every action is pinned by commit SHA (Renovate keeps the pins current).
 #
@@ -311,7 +312,10 @@ jobs:
     name: tools
     # The self-test needs Docker with NET_RAW and NET_ADMIN for the sniffers.
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 60
+    env:
+      # The browser leg's image (the harness pins the same digest; Renovate moves both with playwright-core).
+      PLAYWRIGHT_IMAGE: mcr.microsoft.com/playwright:v1.62.1@sha256:dcc5531e97840b9b5e794f2814476b21571c5124a3fca2267d73041f56e7580e
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -335,9 +339,15 @@ jobs:
             chmod +x "$HOME/.docker/cli-plugins/docker-compose"
           fi
           docker compose version
-      - name: Self-test (off/leaky must fail, positive_stats without the mock must not pass)
-        run: node tools/egress-audit/run.mjs --selftest --artifacts egress-audit-artifacts
-      - name: Evidence (pcaps, DNS logs, report.json)
+      - name: The browser image (pinned by digest)
+        run: |
+          for i in 1 2 3; do docker pull -q "$PLAYWRIGHT_IMAGE" && break; echo "pull attempt $i failed"; sleep 10; done
+          docker image inspect "$PLAYWRIGHT_IMAGE" --format 'browser image {{.Id}} {{.Size}}'
+      - name: Browser walk test (inside the pinned Playwright image)
+        run: docker run --rm -v "$PWD:/w" -w /w "$PLAYWRIGHT_IMAGE" node --test tools/egress-audit/test/browser.test.mjs
+      - name: Self-test of both legs (off/leaky, off/ui-leaky and off/ui-link must fail, positive_stats without the mock must not pass)
+        run: node tools/egress-audit/run.mjs --selftest --legs api,browser --artifacts egress-audit-artifacts
+      - name: Evidence (pcaps, DNS logs, HARs, DOM references, report.json)
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
