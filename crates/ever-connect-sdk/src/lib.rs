@@ -7,6 +7,9 @@
 //! * `entitlement`: the key manifest verifier ([`manifest`], [`keyset`]) and the entitlement
 //!   document verifier ([`entitlement`]), the one implementation every product uses.
 //! * `stats`: the anonymous statistics checks and signer ([`stats`]).
+//! * `entitlement` or `stats`: the compact JWS helpers a product uses outside the client
+//!   ([`jws`]): a signer pinned to EdDSA over Ed25519, and the claims of a document already
+//!   verified.
 //! * `lookup`: identifier normalisation (version 1) and the salted hash ([`lookup`]).
 //! * `usage`: the `ever.usage.v1` reading validator ([`usage`]).
 //! * `managed` (with `client`): the managed-operation runner ([`managed`]).
@@ -32,8 +35,8 @@ pub mod client;
 pub mod entitlement;
 #[cfg(feature = "entitlement")]
 pub mod jcs;
-#[cfg(feature = "entitlement")]
-mod jws;
+#[cfg(any(feature = "entitlement", feature = "stats"))]
+pub mod jws;
 #[cfg(feature = "client")]
 pub mod keys;
 #[cfg(feature = "entitlement")]

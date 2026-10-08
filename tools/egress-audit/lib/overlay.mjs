@@ -41,13 +41,21 @@ function fill(node, values) {
   return node;
 }
 
-/** Addressing of the sealed default network: dynamic addresses in the lower half. */
+/**
+ * Addressing of the sealed default network: dynamic addresses in the lower half, fixed ones for
+ * CoreDNS and the mock platform. The mock has a fixed address because the SDK takes plain http,
+ * extra root keys and another issuer from a local address only (an address of a private range),
+ * never from a bare name such as `mock-platform`: the products are pointed at `http://<mockIp>:8080`.
+ */
 export function addressing(subnet = '10.231.7.0/24') {
   const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.0\/24$/.exec(subnet);
   if (!m) throw new Error(`the audit subnet must be a /24 (got ${subnet})`);
   const prefix = `${m[1]}.${m[2]}.${m[3]}`;
-  return { subnet, ipRange: `${prefix}.0/25`, dnsIp: `${prefix}.253` };
+  return { subnet, ipRange: `${prefix}.0/25`, dnsIp: `${prefix}.253`, mockIp: `${prefix}.252` };
 }
+
+/** The port the mock platform listens on in its image. */
+export const MOCK_PORT = 8080;
 
 /**
  * The product model from `docker compose config --format json` (or an equivalent object):
@@ -116,12 +124,13 @@ function dependsOn(svc) {
 export function buildOverlay(opts) {
   checkSealable(opts.product);
   const t = template();
-  const { subnet, ipRange, dnsIp } = addressing(opts.subnet);
+  const { subnet, ipRange, dnsIp, mockIp } = addressing(opts.subnet);
   const values = {
     PROJECT: opts.project,
     SUBNET: subnet,
     IP_RANGE: ipRange,
     DNS_IP: dnsIp,
+    MOCK_IP: mockIp,
     DNS_IMAGE: opts.dnsImage,
     FILTER: SNIFFER_FILTER,
   };
@@ -167,13 +176,17 @@ export function buildOverlay(opts) {
 
 /**
  * The environment of a mode: the leading EVER_ of each name becomes the product prefix; null
- * values are set empty, which the modules read as unset.
+ * values are set empty, which the modules read as unset. In every value, `__MOCK_URL__` becomes the
+ * mock platform's address (`mock.url`, a local address the SDK accepts over plain http) and
+ * `__MOCK_ISSUER__` the issuer its documents name (`mock.issuer`, https).
  */
-export function modeEnv(values, prefix = 'EVER_') {
+export function modeEnv(values, prefix = 'EVER_', mock = null) {
   const out = {};
   for (const [k, v] of Object.entries(values)) {
     const name = k.startsWith('EVER_') ? `${prefix}${k.slice('EVER_'.length)}` : k;
-    out[name] = v === null || v === undefined ? '' : String(v);
+    let value = v === null || v === undefined ? '' : String(v);
+    if (mock) value = value.split('__MOCK_URL__').join(mock.url).split('__MOCK_ISSUER__').join(mock.issuer);
+    out[name] = value;
   }
   return out;
 }

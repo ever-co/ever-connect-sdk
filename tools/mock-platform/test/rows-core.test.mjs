@@ -434,8 +434,9 @@ describe('rows 6-10 and 16', () => {
       cached: null,
       now: env.now(),
     });
-    // The mock answers over http in CI; the closed schema allows only https issuers.
-    expect(['schema_violation', undefined]).toContain(v.code);
+    // The default issuer is https (served over plain HTTP), so the closed schema takes the document.
+    expect(ISSUER).toMatch(/^https:\/\//);
+    expect(v.code).toBeUndefined();
     expect((await env.call('GET', '/v1/instances/me/entitlement', { token, headers: { 'if-none-match': `"${r.body.seq}"` } })).status).toBe(
       304,
     );

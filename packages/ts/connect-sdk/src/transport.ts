@@ -183,5 +183,8 @@ export function problemFrom(res: WireResponse): ProblemError {
         }))
         .filter((e) => !/client_assertion|client_secret/.test(e.path))
     : undefined;
-  return new ProblemError(res.status, code, detail, instance, errors, retryAfter(res.headers, doc));
+  // `410 resync_required` names where the feed continues: kept as written (a cursor is opaque).
+  const lastId =
+    res.status === 410 && code === 'resync_required' && typeof doc?.last_id === 'string' && doc.last_id !== '' ? doc.last_id : undefined;
+  return new ProblemError(res.status, code, detail, instance, errors, retryAfter(res.headers, doc), lastId);
 }

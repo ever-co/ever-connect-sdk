@@ -1,5 +1,5 @@
 {
-  "description": "The modes of the egress audit. env values are set on every product service (with the product's env prefix); null means unset. A positive mode starts the mock platform and lists the outbound-call rows the product must make (required_rows) and may make (allowed_rows); \"generated\" means every row of the outbound-call table that applies to the product.",
+  "description": "The modes of the egress audit. env values are set on every product service (with the product's env prefix); null means unset; __MOCK_URL__ is the mock platform's address (http on a fixed private address of the sealed network, which the SDK accepts as local) and __MOCK_ISSUER__ the https issuer its documents name, which the product passes to the SDK as its issuer. A positive mode starts the mock platform and lists the outbound-call rows the product must make (required_rows) and may make (allowed_rows); \"generated\" means every row of the outbound-call table that applies to the product.",
   "modes": {
     "off": {
       "description": "Both modules switched off: no module route, no call, no DNS query for any Ever host.",
@@ -20,7 +20,7 @@
     },
     "positive_stats": {
       "description": "Statistics on against the mock platform: at least one signed, schema-valid report, nothing else.",
-      "env": { "EVER_STATS_ENABLED": "true", "EVER_STATS_API_URL": "http://mock-platform:8080", "EVER_STATS_SEND_INTERVAL_S": "5", "EVER_CONNECT_ENABLED": null, "EVER_PLATFORM_ROOT_KEYS_FILE": "/ever-audit/roots.json" },
+      "env": { "EVER_STATS_ENABLED": "true", "EVER_STATS_API_URL": "__MOCK_URL__", "EVER_STATS_SEND_INTERVAL_S": "5", "EVER_CONNECT_ENABLED": null, "EVER_PLATFORM_ROOT_KEYS_FILE": "/ever-audit/roots.json" },
       "mock": true,
       "module_routes": "any",
       "allowed_rows": [17],
@@ -28,7 +28,7 @@
     },
     "positive_connect": {
       "description": "The connection module on with a mock connect code: exactly the key manifest, redeem, token, heartbeat, events, entitlement and integration states.",
-      "env": { "EVER_CONNECT_ENABLED": "true", "EVER_CONNECT_CODE": "EVC-TEST-0000-0001", "EVER_PLATFORM_API_URL": "http://mock-platform:8080", "EVER_STATS_ENABLED": "false", "EVER_PLATFORM_ROOT_KEYS_FILE": "/ever-audit/roots.json" },
+      "env": { "EVER_CONNECT_ENABLED": "true", "EVER_CONNECT_CODE": "EVC-TEST-0000-0001", "EVER_PLATFORM_API_URL": "__MOCK_URL__", "EVER_PLATFORM_ISSUER": "__MOCK_ISSUER__", "EVER_STATS_ENABLED": "false", "EVER_PLATFORM_ROOT_KEYS_FILE": "/ever-audit/roots.json" },
       "mock": true,
       "module_routes": "any",
       "allowed_rows": [1, 3, 4, 6, 7, 8, 9],
@@ -37,7 +37,7 @@
     },
     "every_trigger": {
       "description": "Both modules on and every trigger exercised by the adapter: the call log must equal the generated outbound-call list of the product, row for row.",
-      "env": { "EVER_CONNECT_ENABLED": "true", "EVER_CONNECT_CODE": "EVC-TEST-0000-0001", "EVER_PLATFORM_API_URL": "http://mock-platform:8080", "EVER_STATS_ENABLED": "true", "EVER_STATS_API_URL": "http://mock-platform:8080", "EVER_STATS_SEND_INTERVAL_S": "5", "EVER_PLATFORM_ROOT_KEYS_FILE": "/ever-audit/roots.json" },
+      "env": { "EVER_CONNECT_ENABLED": "true", "EVER_CONNECT_CODE": "EVC-TEST-0000-0001", "EVER_PLATFORM_API_URL": "__MOCK_URL__", "EVER_PLATFORM_ISSUER": "__MOCK_ISSUER__", "EVER_STATS_ENABLED": "true", "EVER_STATS_API_URL": "__MOCK_URL__", "EVER_STATS_SEND_INTERVAL_S": "5", "EVER_PLATFORM_ROOT_KEYS_FILE": "/ever-audit/roots.json" },
       "mock": true,
       "trigger": "triggerAll",
       "module_routes": "any",
@@ -47,7 +47,7 @@
     },
     "positive_managed": {
       "description": "A managed operation requested on the feed: after the request, only the feed read and the result call.",
-      "env": { "EVER_CONNECT_ENABLED": "true", "EVER_CONNECT_CODE": "EVC-TEST-0000-0001", "EVER_PLATFORM_API_URL": "http://mock-platform:8080", "EVER_STATS_ENABLED": "false", "EVER_PLATFORM_ROOT_KEYS_FILE": "/ever-audit/roots.json" },
+      "env": { "EVER_CONNECT_ENABLED": "true", "EVER_CONNECT_CODE": "EVC-TEST-0000-0001", "EVER_PLATFORM_API_URL": "__MOCK_URL__", "EVER_PLATFORM_ISSUER": "__MOCK_ISSUER__", "EVER_STATS_ENABLED": "false", "EVER_PLATFORM_ROOT_KEYS_FILE": "/ever-audit/roots.json" },
       "mock": true,
       "mock_config": { "integrations": { "enabled": ["managed_operations"] } },
       "trigger": "managed_request",

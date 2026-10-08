@@ -194,15 +194,69 @@ export function verifyEd25519(x: string, message: string | Uint8Array, signature
   }
 }
 
-/** Signs a compact JWS (`alg: EdDSA`) with a signer of raw bytes. */
-export async function signJws(
-  sign: (bytes: Uint8Array) => Promise<Uint8Array> | Uint8Array,
+/** The function form of a {@link CompactJwsSigner}: the 64-byte Ed25519 signature over exactly `bytes`. */
+export type Ed25519SignFunction = (bytes: Uint8Array) => Promise<Uint8Array> | Uint8Array;
+
+/**
+ * What signs a compact JWS: an Ed25519 key, as an object with `sign(bytes)` (an `InstanceSigner`
+ * from `makeNodeSigner`, a `StatsSigner` from `statsSignerFromSeed`, a key held in a secret store)
+ * or as a function. Either answers the 64-byte Ed25519 signature over exactly the bytes given.
+ */
+export type CompactJwsSigner = Ed25519SignFunction | { sign(bytes: Uint8Array): Promise<Uint8Array> | Uint8Array };
+
+/**
+ * Signs a compact JWS (RFC 7515) with EdDSA over Ed25519 (RFC 8037), the only algorithm Ever
+ * Platform reads. For the statements a product signs itself, such as the `stats_link` statement
+ * (header `{typ: CONSTANTS.stats_link_typ}`, signed with the statistics key); the client assertion
+ * and the key rotation proofs have their own functions (`signClientAssertion`, `signKeyRotation`).
+ *
+ * - The header always starts with `alg: EdDSA`. A header that names another `alg` is refused
+ *   (`TypeError`), never relabelled: the algorithm is not a parameter. So is a header with `crit`
+ *   (no extension is understood on the other side).
+ * - The header and the payload are JSON objects, written with `JSON.stringify` (members in the
+ *   order given). A string with a lone surrogate or a number that is not finite (`NaN` would be
+ *   written as `null`) is refused, as is a result the verifiers would not decode (over 64 KiB, or
+ *   nested deeper than 127 levels).
+ * - The signer must answer the 64-byte signature over exactly
+ *   `base64url(header) "." base64url(payload)`; any other length is refused.
+ *
+ * Nothing about the result is verified: the signer is trusted to hold the key it claims.
+ */
+export async function signCompactJws(
+  signer: CompactJwsSigner,
   header: Record<string, unknown>,
   payload: Record<string, unknown>,
 ): Promise<string> {
-  const input = `${b64url(JSON.stringify({ alg: 'EdDSA', ...header }))}.${b64url(JSON.stringify(payload))}`;
-  const signature = await sign(new TextEncoder().encode(input));
-  return `${input}.${b64url(signature)}`;
+  if (!isRecord(header) || !isRecord(payload)) throw new TypeError('a compact JWS has a JSON object header and payload');
+  const { alg, ...rest } = header;
+  if (alg !== undefined && alg !== 'EdDSA') throw new TypeError('a compact JWS of the SDK is signed with alg EdDSA only');
+  if ('crit' in rest) throw new TypeError('a compact JWS of the SDK names no critical header extension (crit)');
+  if (!wellFormed(rest) || !wellFormed(payload))
+    throw new TypeError('a compact JWS holds no lone surrogate and no number that is not finite');
+  const input = `${b64url(JSON.stringify({ alg: 'EdDSA', ...rest }))}.${b64url(JSON.stringify(payload))}`;
+  const bytes = new TextEncoder().encode(input);
+  const signature = await (typeof signer === 'function' ? signer(bytes) : signer.sign(bytes));
+  if (!(signature instanceof Uint8Array) || signature.length !== 64) throw new TypeError('an Ed25519 signature is 64 bytes');
+  const jws = `${input}.${b64url(signature)}`;
+  if (decodeJws(jws) === null) throw new TypeError('the compact JWS would not decode by the verifiers rule (64 KiB, 127 levels)');
+  return jws;
+}
+
+/**
+ * The claims (the payload) of a compact JWS **you already verified**, to show them or to read a
+ * value back from a document you stored. It **never verifies anything**: not the signature, not
+ * the key, the issuer, the audience, the installation or the times. Call it only on a document
+ * the SDK's verifier accepted before it was stored (`verifyEntitlement`,
+ * `client.verifyEntitlementRefreshing`); for a document just received, call the verifier, which
+ * answers the claims itself. Never base a decision about access on what it answers for a document
+ * that was not verified.
+ *
+ * The document is read by the decoding rule of the verifiers (at most 64 KiB, three canonical
+ * base64url parts, a header and a payload that are JSON objects in UTF-8); anything else answers
+ * null. Each call answers a new object.
+ */
+export function claimsOfVerifiedJws(jws: unknown): Record<string, unknown> | null {
+  return decodeJws(jws)?.payload ?? null;
 }
 
 /** UTF-16 code unit order of two strings (RFC 8785 sorts member names this way). */

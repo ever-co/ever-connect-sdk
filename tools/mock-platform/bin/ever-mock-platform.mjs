@@ -37,6 +37,10 @@ const port = Number(arg('port', process.env.PORT ?? 8080));
 const host = arg('host', process.env.HOST ?? '0.0.0.0');
 const { url } = await mock.listen(port, host);
 process.stdout.write(`ever-mock-platform: listening on ${url} (issuer ${mock.config.issuer})\n`);
+if (!String(mock.config.issuer).startsWith('https://'))
+  process.stderr.write(
+    `ever-mock-platform: the issuer ${mock.config.issuer} is not https: no entitlement document it signs verifies (the schema takes https issuers only)\n`,
+  );
 const stateOut = arg('state-out', null);
 const stop = async () => {
   if (stateOut) {

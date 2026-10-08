@@ -252,6 +252,28 @@ describe('5. problems', () => {
       retryAfterS: 12,
     });
   });
+  it('410 resync_required keeps the cursor to continue from (lastId); no other problem has one', async () => {
+    const cursor = '01JNE7V9J03J6XQ2WN8H0Z88R9.17';
+    const resync = (body: Record<string, unknown>) =>
+      client(platform(() => json(410, { type: 'about:blank', title: 'Gone', status: 410, code: 'resync_required', ...body })))
+        .instances.events('01JNE7V9J03J6XQ2WN8H0Z0000', { waitS: 0 })
+        .catch((e) => e);
+    const error = await resync({ last_id: cursor });
+    expect(error).toBeInstanceOf(ProblemError);
+    expect(error).toMatchObject({ status: 410, code: 'resync_required', lastId: cursor });
+    // No position named, an empty one, or one that is not a string: read the feed from its start.
+    for (const body of [{}, { last_id: '' }, { last_id: 17 }, { last_id: null }]) expect((await resync(body)).lastId).toBeUndefined();
+    // Only resync_required carries a cursor, even when another problem's body has the member.
+    const other = await client(platform(() => json(410, { code: 'gone', last_id: cursor })))
+      .instances.events(null, { waitS: 0 })
+      .catch((e) => e);
+    expect(other).toMatchObject({ status: 410, code: 'gone' });
+    expect(other.lastId).toBeUndefined();
+    const notFound = await client(platform(() => json(404, { code: 'resync_required', last_id: cursor })))
+      .instances.events(null, { waitS: 0 })
+      .catch((e) => e);
+    expect(notFound.lastId).toBeUndefined();
+  });
   it('an unparsable body is code unknown', async () => {
     const f = fake(() => new Response('<html>bad gateway</html>', { status: 502 }));
     await expect(client(f).connect.legal()).rejects.toMatchObject({ status: 502, code: 'unknown' });

@@ -9,6 +9,9 @@ import { call, log, serve, sleep } from '../lib/fixture.mjs';
 serve();
 
 const base = process.env.EVER_PLATFORM_API_URL;
+// The issuer the mock's documents name (https), which differs from the address it serves at: the
+// assertion's audience is the issuer's token endpoint, as the SDK signs it.
+const issuer = process.env.EVER_PLATFORM_ISSUER || base;
 const code = process.env.EVER_CONNECT_CODE;
 
 const b64url = (v) => Buffer.from(typeof v === 'string' ? v : JSON.stringify(v)).toString('base64url');
@@ -19,7 +22,7 @@ function clientAssertion(instanceId, privateKey) {
   const claims = {
     iss: instanceId,
     sub: instanceId,
-    aud: `${base}/v1/instances/token`,
+    aud: `${issuer}/v1/instances/token`,
     jti: randomBytes(16).toString('base64url'),
     iat,
     exp: iat + 300,

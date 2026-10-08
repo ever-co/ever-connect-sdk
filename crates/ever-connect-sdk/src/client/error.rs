@@ -33,6 +33,11 @@ pub struct ProblemError {
     pub errors: Vec<ProblemFieldError>,
     /// Seconds the platform asks to wait (`Retry-After`).
     pub retry_after_s: Option<u64>,
+    /// For `410 resync_required` (the event feed's cursor is past retention): the feed position
+    /// to continue from (`last_id` of the answer). Re-read the state through REST, then
+    /// acknowledge this cursor and read the feed after it. `None` for every other problem, and
+    /// when the answer names no position (then read the feed again from its start).
+    pub last_id: Option<String>,
 }
 
 impl fmt::Display for ProblemError {
@@ -47,8 +52,9 @@ impl std::error::Error for ProblemError {}
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum Error {
-    /// A non-2xx answer.
-    Problem(ProblemError),
+    /// A non-2xx answer (boxed: the problem is the largest answer, and an error stays small to
+    /// move around).
+    Problem(Box<ProblemError>),
     /// Refused before any I/O, or a redirect that was not followed: `absolute_url`,
     /// `insecure_base_url` or `redirect`.
     EgressRefused {

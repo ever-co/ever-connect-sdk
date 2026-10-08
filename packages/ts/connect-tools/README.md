@@ -17,7 +17,7 @@ copying either tool:
 npm install --save-dev @ever-co/connect-tools@next   # pnpm add -D / yarn add -D work the same way
 ```
 
-`1.0.0-rc.1` is a release candidate, published under the `next` dist-tag; pin the exact version,
+`1.0.0-rc.2` is a release candidate, published under the `next` dist-tag; pin the exact version,
 the same as `@ever-co/connect-sdk`.
 
 ## Use
@@ -32,12 +32,18 @@ The modules are ESM (`.mjs`); the subpath exports reach them from a test:
 | Import | Module |
 |---|---|
 | `@ever-co/connect-tools/mock-platform` | `createMockPlatform` and the rest of the mock server |
-| `@ever-co/connect-tools/mock-platform/keys` | the TEST keys: `testRootEntry`, `signManifest`, `signEntitlement`, `signRotationProof`, ... |
+| `@ever-co/connect-tools/mock-platform/keys` | the TEST keys: `testRootEntry`, `signManifest`, `signEntitlement`, `signRotationProof`, ..., and `MOCK_ISSUER` |
 | `@ever-co/connect-tools/mock-platform/crypto`, `.../validate` | the mock's signing and validation helpers |
 | `@ever-co/connect-tools/egress-audit/assert`, `.../assert-call-log`, `.../static-hostnames`, `.../cloud-inference`, `.../overlay`, `.../runner` | the egress audit's building blocks |
 
 The mock image builds from the installed package:
 `docker build node_modules/@ever-co/connect-tools/dist/mock-platform`.
+
+The mock serves plain HTTP and its documents name the https issuer `https://mock-platform.test`
+(`MOCK_ISSUER`). Point the SDK at the mock's local address and pass that issuer (the client's
+`issuer` option) and its TEST root (`testRootEntry()` in the file `EVER_PLATFORM_ROOT_KEYS_FILE`
+names); the SDK honours all three for a local base URL only
+([docs/mock-platform.md](https://github.com/ever-co/ever-connect-sdk/blob/main/docs/mock-platform.md)).
 
 ## Licence
 

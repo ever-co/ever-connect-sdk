@@ -11,6 +11,7 @@ from. Each part is a feature:
 | `stats` | the anonymous statistics checks and signer | `ed25519-dalek`, `sha2`, `base64` |
 | `lookup` | `lookup::normalize_identifier`, `lookup_hash`, `check_test_vectors` | `sha2`, `idna`, `unicode-normalization` |
 | `usage` | `usage::validate_usage_reading` | |
+| `entitlement` or `stats` | `jws::sign_compact_jws` (EdDSA over Ed25519 only, for the statements a product signs itself) and `jws::claims_of_verified_jws` (the claims of a document already verified; it never verifies) | |
 
 `default-features = false, features = ["entitlement", "lookup"]` pulls no HTTP client and no
 schema validator crate (CI checks both). The connect-code helpers (`codes`) are always there.
@@ -70,3 +71,23 @@ let integrations = client.integrations().await?;
 
 The extra roots (`root_keys`, `EVER_PLATFORM_ROOT_KEYS_FILE`) and another `issuer` are honoured
 only when the base URL is a local host; otherwise they are ignored with one warning.
+
+A non-2xx answer is `Error::Problem` (a boxed `ProblemError`). For `410 resync_required` from the
+event feed, `last_id` is where to continue: re-read the state through REST, acknowledge that cursor
+and read the feed after it (`None`: read it again from its start).
+
+## Compact JWS helpers
+
+```rust
+use std::convert::Infallible;
+use ever_connect_sdk::jws::{claims_of_verified_jws, sign_compact_jws};
+use serde_json::json;
+
+// The stats_link statement, signed with the statistics key (`alg: EdDSA` is always written; a
+// header naming another `alg` or `crit` is refused).
+let statement = sign_compact_jws(&json!({"typ": "ever-stats-link+jwt"}), &claims, |bytes| {
+    Ok::<_, Infallible>(stats_key.sign(bytes))
+})?;
+// The claims of a document stored after verify_entitlement accepted it. It never verifies.
+let shown = claims_of_verified_jws(&stored.jws);
+```

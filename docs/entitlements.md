@@ -67,7 +67,7 @@ No TEST root is pinned. The TEST root (`test-root-1`) is derived from a public s
 
 ### Test roots for local runs
 
-`EVER_PLATFORM_ROOT_KEYS_FILE` names a JWKS file (`{"keys": [...]}`) of extra roots, each with the `iss` it vouches for, and the client's `rootKeys` option (`root_keys` in Rust) adds roots in code. Both are honoured **only when the API base URL is a local address** (`root_keys_file_hosts` in `contracts/constants.json`: `localhost`, loopback, the private ranges and `*.localhost`); on any other base URL they are ignored with one warning. The same rule holds for the client's `issuer` option, which lets a local run name another issuer (the mock signs as `https://mock-platform.test` in the SDK's own tests). They exist for continuous integration against the mock platform.
+`EVER_PLATFORM_ROOT_KEYS_FILE` names a JWKS file (`{"keys": [...]}`) of extra roots, each with the `iss` it vouches for, and the client's `rootKeys` option (`root_keys` in Rust) adds roots in code. Both are honoured **only when the API base URL is a local address** (`root_keys_file_hosts` in `contracts/constants.json`: `localhost`, loopback, the private ranges and `*.localhost`); on any other base URL they are ignored with one warning. The same rule holds for the client's `issuer` option, which lets a local run name another issuer (the mock platform signs as `https://mock-platform.test` by default, `MOCK_ISSUER` in `ever-mock-platform/keys`; see `docs/mock-platform.md`). They exist for continuous integration against the mock platform.
 
 Below the client, `unsafeRootKeys` (`unsafe_root_keys` in Rust) on `verifyKeyManifest` and `KeySet` **replaces** the pinned roots on any base URL; it is named for what it does and is meant for tests and offline tools only. Product code leaves it out.
 
@@ -126,6 +126,10 @@ On `manifest_expired` the product refreshes the key set and verifies again. On `
 | before `exp` | `valid` | as `ever.features` say | unaffected |
 | from `exp` until `exp + ever.grace_s` | `stale` | as `ever.features` say, with an admin notice that entitlements could not be refreshed | unaffected |
 | after `exp + ever.grace_s`, or no document | `paused` | paused until a fresh document verifies | unaffected |
+
+### Reading a stored document back
+
+A product stores the document exactly as it was verified (`verified.jws`) and may show its claims later (the plan, the features, the times). `claimsOfVerifiedJws(jws)` (Rust: `jws::claims_of_verified_jws`) answers the payload of a stored document by the decoding rule above, and **verifies nothing**: it is for a document the verifier accepted before it was stored, never for one just received, and never the basis of a decision about access (`entitlementStatus` reads the cached document for that).
 
 ### Offline import
 

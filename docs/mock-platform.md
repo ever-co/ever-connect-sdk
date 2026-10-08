@@ -31,25 +31,64 @@ docker run --rm -p 8080:8080 ever-mock-platform:local
 
 The clock follows real time from start, so a product signs assertions with its own clock. A configuration with a `clock` entry, or `--fixed-clock`, keeps the deterministic clock the SDK's own tests use (`2026-11-02T10:00:00Z` until `POST /__mock/clock` moves it).
 
-In Compose, next to the product:
+### 1.1 The address and the issuer
+
+The mock serves plain HTTP, and its documents name the issuer `https://mock-platform.test`
+(`MOCK_ISSUER` in `ever-mock-platform/keys`). Ever Platform's documents always name an https
+issuer, and the entitlement schema accepts no other, so a mock that named an `http://` issuer would
+sign documents no verifier accepts. `.test` is a reserved name that never resolves, and nothing
+connects to the issuer: it is only the name the documents carry. The offline fixtures and the TEST
+root in `contracts/fixtures/keys/roots.json` name the same issuer. Another issuer can be configured
+(`issuer`, below), but it must be `https://` for the documents to verify; the command warns when it
+is not.
+
+A product reaches the mock with three settings, all honoured by the SDK only when the base URL is a
+local address (loopback, a private IPv4 range or `*.localhost`; see `docs/entitlements.md`):
+
+| Setting | Value | Why |
+|---|---|---|
+| base URL (`EVER_PLATFORM_API_URL`) | the mock's local address, such as `http://127.0.0.1:8080` | the SDK refuses plain http to any other host, a bare Compose name such as `mock-platform` included |
+| issuer (the client's `issuer` option; `EVER_PLATFORM_ISSUER` in the products) | `https://mock-platform.test` | the documents name it; without the option the SDK expects the base URL's own origin (`issuer_mismatch`) |
+| TEST root (`EVER_PLATFORM_ROOT_KEYS_FILE`) | `{"keys": [testRootEntry()]}` | the SDK pins no TEST root; `testRootEntry(issuer = MOCK_ISSUER)` is the root for the mock's issuer |
+
+```ts
+import { createEverPlatformClient } from '@ever-co/connect-sdk';
+import { MOCK_ISSUER } from '@ever-co/connect-tools/mock-platform/keys';
+
+const client = createEverPlatformClient({
+  baseUrl: 'http://127.0.0.1:8080',
+  issuer: MOCK_ISSUER, // honoured for a local base URL only
+  userAgentProduct: { product: 'gauzy', version: '96.2.1' },
+  signer,
+  registryInstanceId,
+  env: { EVER_PLATFORM_ROOT_KEYS_FILE: rootsFile }, // {"keys": [testRootEntry()]}
+});
+```
+
+In Rust, set `ClientOptions::issuer` to `Some("https://mock-platform.test".into())` the same way.
+
+In Compose, next to the product, the mock can share the product's namespace, so the product reaches
+it on its own loopback (set `PORT` on the mock when the product already listens on 8080):
 
 ```yaml
 services:
-  mock-platform:
-    build: ./node_modules/@ever-co/connect-tools/dist/mock-platform
-    environment:
-      EVER_MOCK_CONFIG_JSON: '{"integrations":{"enabled":["stats_link"]}}'
   api:
     environment:
-      EVER_PLATFORM_API_URL: http://mock-platform:8080
-      EVER_STATS_API_URL: http://mock-platform:8080
+      EVER_PLATFORM_API_URL: http://127.0.0.1:8080
+      EVER_PLATFORM_ISSUER: https://mock-platform.test
+      EVER_STATS_API_URL: http://127.0.0.1:8080
       EVER_CONNECT_ENABLED: "true"
       EVER_CONNECT_CODE: EVC-TEST-0000-0001
       EVER_PLATFORM_ROOT_KEYS_FILE: /ever-audit/roots.json
-    depends_on: [mock-platform]
+  mock-platform:
+    build: ./node_modules/@ever-co/connect-tools/dist/mock-platform
+    network_mode: service:api
+    environment:
+      EVER_MOCK_CONFIG_JSON: '{"integrations":{"enabled":["stats_link"]}}'
 ```
 
-The SDK pins no TEST root, so the product must be given the mock's: write `{"keys": [testRootEntry(issuer)]}` (`testRootEntry` from `ever-mock-platform/keys`, which a product imports as `@ever-co/connect-tools/mock-platform/keys`, with the mock's issuer, `http://mock-platform:8080` by default) to the file `EVER_PLATFORM_ROOT_KEYS_FILE` names. The modules honour that file only for a local base URL (`docs/entitlements.md`).
+A fixed address on a private subnet works the same way (Compose `ipv4_address`); the egress audit
+gives the mock one (`tools/egress-audit/README.md`).
 
 ---
 
@@ -59,7 +98,7 @@ Every key is optional; `tools/mock-platform/mock.config.example.json` shows the 
 
 | Key | Default | Meaning |
 |---|---|---|
-| `issuer` | `http://mock-platform:8080` | the origin in tokens, manifests, entitlements and assertion audiences |
+| `issuer` | `https://mock-platform.test` | the origin in tokens, manifests, entitlements and assertion audiences; `https://` for the documents to verify (see *The address and the issuer*) |
 | `clock` | real time (CLI) | `{start}` for a fixed clock (seconds), `{real: true}` for real time |
 | `codes` | `EVC-TEST-0000-0001` (gauzy, ready), `EVC-TEST-0000-0003` (gauzy, pending approval), `EVC-TEST-0000-0004` (works), `EVL-TEST-0000-0002` (link) | connect and link codes with their product, organization, lifetime and approval state |
 | `entitlement` | `tier: paid` with lookup, discoverability, handle, public profile and Ever ID sign-in | the content of issued entitlement documents |

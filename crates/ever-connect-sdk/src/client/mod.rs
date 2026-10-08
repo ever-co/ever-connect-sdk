@@ -582,6 +582,13 @@ impl EverPlatformClient {
                     .collect()
             })
             .unwrap_or_default();
+        // `410 resync_required` names where the feed continues: kept as written (a cursor is
+        // opaque).
+        let last_id = (res.status == 410 && code == "resync_required")
+            .then(|| text("last_id"))
+            .flatten()
+            .filter(|id| !id.is_empty())
+            .map(str::to_owned);
         ProblemError {
             status: res.status,
             code,
@@ -591,6 +598,7 @@ impl EverPlatformClient {
                 .or_else(|| header("x-request-id").map(str::to_owned)),
             errors,
             retry_after_s,
+            last_id,
         }
     }
 
@@ -599,7 +607,7 @@ impl EverPlatformClient {
             return Ok(Answer::NotModified);
         }
         if res.status == 304 || !op.success.contains(&res.status) {
-            return Err(Error::Problem(self.problem(res)));
+            return Err(Error::Problem(Box::new(self.problem(res))));
         }
         if res.body.is_empty() {
             return Ok(Answer::Empty);
@@ -731,7 +739,7 @@ impl EverPlatformClient {
                 let problem = self.problem(&res);
                 self.tokens.invalidate().await;
                 if problem.code == "credential_revoked" || attempt > 0 {
-                    return Err(Error::Problem(problem));
+                    return Err(Error::Problem(Box::new(problem)));
                 }
                 attempt += 1;
                 continue;

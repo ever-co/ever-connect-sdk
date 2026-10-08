@@ -17,6 +17,13 @@ export class ProblemError extends Error {
     readonly errors?: readonly { path: string; code: string; message: string }[],
     /** Seconds the platform asks to wait (`Retry-After`). */
     readonly retryAfterS?: number,
+    /**
+     * For `410 resync_required` (the event feed's cursor is past retention): the feed position to
+     * continue from (`last_id` of the answer). Re-read the state through REST, then acknowledge
+     * this cursor and read the feed after it. Undefined for every other problem, and when the
+     * answer names no position (then read the feed again from its start).
+     */
+    readonly lastId?: string,
   ) {
     super(`Ever Platform answered ${status} ${code}`);
   }
