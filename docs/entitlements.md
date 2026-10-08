@@ -63,7 +63,7 @@ Roots are pinned per issuer in `root_keys` (`contracts/constants.json`): a root 
 
 A root changes only in an SDK release, with the old and the new root pinned side by side for the transition (adding a root is a minor release, removing one a major release).
 
-No TEST root is pinned. The TEST root (`test-root-1`) is derived from a public seed, so anyone can sign with it: it lives in `contracts/fixtures/keys/roots.json` (for the SDK's own tests) and in the mock platform (`testRootEntry(issuer)` from `ever-mock-platform/keys`), and a local run passes it through the override below. A release still refuses a `test-` root in `root_keys`.
+No TEST root is pinned. The TEST root (`test-root-1`) is derived from a public seed, so anyone can sign with it: it lives in `contracts/fixtures/keys/roots.json` (for the SDK's own tests) and in the mock platform (`testRootEntry(issuer)` from `ever-mock-platform/keys`, or `@ever-co/connect-tools/mock-platform/keys` in a product), and a local run passes it through the override below. A release still refuses a `test-` root in `root_keys`.
 
 ### Test roots for local runs
 

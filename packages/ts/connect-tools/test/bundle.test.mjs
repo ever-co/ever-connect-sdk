@@ -1,8 +1,9 @@
 // The bundle runs on its own: both bins answer --help from dist/, the harness finds the bundled mock
-// and its contract files, and no test, sample or dependency directory is shipped.
+// and its contract files, no test, sample or dependency directory is shipped, and the subpath
+// exports reach the bundled modules.
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -41,4 +42,17 @@ test('the harness finds the bundled mock and its contract files', () => {
 test('no tests, samples or node_modules are shipped', () => {
   assert.ok(files.length > 50);
   for (const f of files) assert.doesNotMatch(f, /(^|\/)(test|node_modules)\//, f);
+});
+
+test('every subpath export names a bundled module, and a product reaches the mock through them', async () => {
+  const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+  for (const [subpath, target] of Object.entries(pkg.exports)) {
+    if (subpath.includes('*') || subpath === './package.json') continue;
+    assert.ok(existsSync(fileURLToPath(new URL(`../${target}`, import.meta.url))), subpath);
+  }
+  const keys = await import('@ever-co/connect-tools/mock-platform/keys');
+  assert.equal(typeof keys.testRootEntry, 'function');
+  assert.equal(typeof keys.signRotationProof, 'function');
+  const mock = await import('@ever-co/connect-tools/mock-platform');
+  assert.equal(typeof mock.createMockPlatform, 'function');
 });

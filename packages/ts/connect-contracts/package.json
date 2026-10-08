@@ -3,7 +3,7 @@
   "version": "1.0.0-rc.1",
   "description": "Ever Platform connection contracts: request and response types, JSON Schemas, integration definitions, wire constants and fixtures. No runtime dependencies.",
   "license": "Apache-2.0",
-  "private": true,
+  "private": false,
   "type": "module",
   "sideEffects": false,
   "engines": {
@@ -13,6 +13,10 @@
     "type": "git",
     "url": "https://github.com/ever-co/ever-connect-sdk.git",
     "directory": "packages/ts/connect-contracts"
+  },
+  "homepage": "https://github.com/ever-co/ever-connect-sdk/tree/main/packages/ts/connect-contracts#readme",
+  "bugs": {
+    "url": "https://github.com/ever-co/ever-connect-sdk/issues"
   },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -39,6 +43,11 @@
     "schemas",
     "integrations"
   ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "tag": "next"
+  },
   "scripts": {
     "build": "node scripts/copy-contracts.mjs && tsup",
     "typecheck": "tsc --noEmit -p tsconfig.json",

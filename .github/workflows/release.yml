@@ -7,12 +7,18 @@ name: Release
 #
 #   guard     a tag refuses a commit that is not on main, a version that differs from the
 #             manifests, a TEST root (`test-` kid in contracts/constants.json), generated files
-#             that differ from the contract, vendored files that are not strictly the platform's,
-#             and anything the public-safe gate refuses
+#             that differ from the contract, vendored files that are not strictly the platform's
+#             (a release candidate, `-rc.N` and the like, is held to the scopes CI holds strictly
+#             and lists the remaining provisional sources in its summary; a release refuses them
+#             all), and anything the public-safe gate refuses
 #   build     build, type check, SBOMs (CycloneDX for the npm packages and the crates), npm pack
-#             and cargo package (the dry run), uploaded as workflow artifacts
-#   publish-* npm with provenance (trusted publishing, no long-lived token): contracts, then sdk,
-#             then tools; crates.io with trusted publishing (a short-lived token from the
+#             and cargo package (the dry run), uploaded as workflow artifacts; the packed npm
+#             manifests carry no `workspace:` range and the SDK pins the contracts at its version
+#   publish-* npm with provenance: contracts, then sdk, then tools, under the dist-tag `next` for
+#             a prerelease version and `latest` otherwise; a version already on npm is skipped, so
+#             a re-run is safe. Authentication: the NPM_TOKEN secret when it is set (the first
+#             publish of a package needs it), npm trusted publishing (OIDC, no long-lived token)
+#             otherwise. crates.io with trusted publishing (a short-lived token from the
 #             workflow's identity, revoked when the job ends) from the `crates-io` environment:
 #             contracts, then sdk
 #
@@ -108,13 +114,27 @@ jobs:
           node tools/generate.mjs --check
           node tools/split-integrations.mjs --check
           node tools/fixtures/build-signed.mjs --check
-      - name: Vendored files are strictly the platform's (a tag refuses any provisional source)
+      - name: Vendored files are strictly the platform's (a release tag refuses any provisional source)
         run: |
           node tools/check-schema-drift.mjs
-          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+          # The scopes CI already holds strictly on every push hold for any tag.
+          node tools/check-schema-drift.mjs --strict=stats
+          node tools/check-schema-drift.mjs --strict=connect
+          version="${GITHUB_REF_NAME#*-v}"
+          if [[ "$GITHUB_REF" == refs/tags/* && "$version" != *-* ]]; then
             node tools/check-schema-drift.mjs --strict
-          else
-            node tools/check-schema-drift.mjs --strict || echo "::warning::strict drift fails: no tag may be cut until it passes"
+          elif ! node tools/check-schema-drift.mjs --strict > "$RUNNER_TEMP/strict.log" 2>&1; then
+            cat "$RUNNER_TEMP/strict.log"
+            echo "::warning::strict drift fails: a release candidate may be tagged, a release may not until it passes"
+            {
+              echo "### Provisional contract sources"
+              echo
+              echo "A release candidate may carry them; the release (a version without a prerelease suffix) refuses them."
+              echo
+              echo '```'
+              cat "$RUNNER_TEMP/strict.log"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
           fi
       - name: Public-safe gate
         env:
@@ -159,6 +179,23 @@ jobs:
             (cd "packages/ts/$p" && pnpm pack --pack-destination ../../../release/npm)
           done
           ls -l release/npm
+      - name: Packed manifests (no workspace range; the SDK pins the contracts at its own version)
+        run: |
+          for f in release/npm/*.tgz; do
+            echo "== $f"
+            tar -xzOf "$f" package/package.json > "$RUNNER_TEMP/packed.json"
+            tar -tzf "$f" | sed 's/^/  /'
+            node -e '
+              const m = JSON.parse(require("node:fs").readFileSync(process.env.RUNNER_TEMP + "/packed.json", "utf8"));
+              const bad = [];
+              if (JSON.stringify(m).includes("workspace:")) bad.push("a workspace: range is left");
+              if (m.private === true) bad.push("private");
+              const dep = (m.dependencies ?? {})["@ever-co/connect-contracts"];
+              if (dep !== undefined && dep !== m.version) bad.push("@ever-co/connect-contracts is " + dep + ", not " + m.version);
+              if (bad.length > 0) { console.error("::error::" + m.name + ": " + bad.join("; ")); process.exit(1); }
+              console.log(m.name + "@" + m.version + ": ok");
+            '
+          done
       - name: Crate packages (the dry run; the SDK crate is verified once the contracts crate is published)
         run: |
           cargo package -p ever-connect-contracts --locked
@@ -205,9 +242,43 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm run build
       - name: Publish with provenance (contracts, sdk, tools)
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
+          version="${GITHUB_REF_NAME#ts-v}"
+          # A prerelease goes to `next`, a release to `latest`; the flag wins over publishConfig.tag.
+          case "$version" in
+            *-*) dist_tag=next ;;
+            *) dist_tag=latest ;;
+          esac
+          if [ -n "$NPM_TOKEN" ]; then
+            export NODE_AUTH_TOKEN="$NPM_TOKEN"
+            echo "auth: the NPM_TOKEN secret; provenance from the workflow's OIDC identity"
+          else
+            echo "auth: npm trusted publishing (OIDC)"
+          fi
+          echo "npm $(npm --version), dist-tag $dist_tag"
           for p in connect-contracts connect-sdk connect-tools; do
-            (cd "packages/ts/$p" && pnpm publish --provenance --access public --no-git-checks)
+            name="$(node -p "require('./packages/ts/$p/package.json').name")"
+            status="$(curl -s -o /dev/null -w '%{http_code}' "https://registry.npmjs.org/$name/$version")"
+            case "$status" in
+              200) echo "$name@$version is already on npm: skipped"; continue ;;
+              404) ;;
+              *) echo "::error::the npm registry answered $status for $name@$version"; exit 1 ;;
+            esac
+            (cd "packages/ts/$p" && pnpm publish --provenance --access public --tag "$dist_tag" --no-git-checks)
+          done
+      - name: Published (the version and its dist-tag are visible on npm)
+        run: |
+          version="${GITHUB_REF_NAME#ts-v}"
+          for p in connect-contracts connect-sdk connect-tools; do
+            name="$(node -p "require('./packages/ts/$p/package.json').name")"
+            for i in $(seq 1 30); do
+              [ "$(curl -s -o /dev/null -w '%{http_code}' "https://registry.npmjs.org/$name/$version")" = 200 ] && break
+              sleep 10
+            done
+            curl -fsS "https://registry.npmjs.org/$name" \
+              | node -e 'let s="";process.stdin.on("data",(d)=>s+=d).on("end",()=>{const d=JSON.parse(s);const v=process.argv[1];if(!d.versions?.[v]){console.error("::error::"+d.name+"@"+v+" is not on npm");process.exit(1);}console.log(d.name+"@"+v+" dist-tags "+JSON.stringify(d["dist-tags"]));})' "$version"
           done
 
   publish-crates:

@@ -15,6 +15,24 @@ place, in TypeScript and Rust:
 - an egress audit that proves a product makes no outbound call it should not
   ([tools/egress-audit/README.md](tools/egress-audit/README.md)).
 
+## Install
+
+The TypeScript packages are on npm (release candidates under the `next` dist-tag, with npm
+provenance):
+
+```sh
+npm install @ever-co/connect-sdk@next                     # the client and the verifier; pulls the contracts
+npm install --save-dev @ever-co/connect-tools@next        # the mock platform and the egress audit, for tests
+```
+
+| Package | What a product uses it for |
+|---|---|
+| [`@ever-co/connect-sdk`](https://www.npmjs.com/package/@ever-co/connect-sdk) | the client, the entitlement verifier, the client assertion, lookup hashing, usage readings and the statistics signer ([README](packages/ts/connect-sdk/README.md)) |
+| [`@ever-co/connect-contracts`](https://www.npmjs.com/package/@ever-co/connect-contracts) | types, JSON Schemas, integration definitions, constants and fixtures; a dependency of the SDK at the same version |
+| [`@ever-co/connect-tools`](https://www.npmjs.com/package/@ever-co/connect-tools) | dev only: `ever-mock-platform` and `ever-egress-audit` ([README](packages/ts/connect-tools/README.md)) |
+
+Pin the exact version in a product and depend on the packages rather than copying their sources.
+
 ## Layout
 
 | Path | Content |
