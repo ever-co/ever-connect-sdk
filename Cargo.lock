@@ -293,7 +293,7 @@ checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
 
 [[package]]
 name = "ever-connect-contracts"
-version = "1.0.0-rc.2"
+version = "1.0.0-rc.3"
 dependencies = [
  "jsonschema",
  "serde",
@@ -302,7 +302,7 @@ dependencies = [
 
 [[package]]
 name = "ever-connect-sdk"
-version = "1.0.0-rc.2"
+version = "1.0.0-rc.3"
 dependencies = [
  "base64 0.22.1",
  "ed25519-dalek",
@@ -2007,7 +2007,7 @@ checksum = "3ad82d2a33cdc9674dc7465672f271e096168fcdbe0f799d9e6db8c5892679dc"
 
 [[package]]
 name = "xtask"
-version = "1.0.0-rc.2"
+version = "1.0.0-rc.3"
 dependencies = [
  "prettyplease",
  "schemars",
