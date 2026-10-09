@@ -8,7 +8,9 @@
  *   registration  `<CC>:<number>`: the caller's country, then the number trimmed, upper-cased,
  *                 without spaces, dots and hyphens
  *   email         trim, Unicode NFC, lower-case, the part after the last `@` IDNA-encoded; no
- *                 plus-tag or dot is removed
+ *                 plus-tag or dot is removed; a domain is refused when it holds a URL-forbidden
+ *                 code point (`%` included: nothing is percent-decoded) or reads as an IPv4
+ *                 address (its last label is a number)
  *
  *   hash = hex(sha256(salt bytes ‖ ":" ‖ kind ‖ ":" ‖ utf8(normalized)))
  */
@@ -49,6 +51,97 @@ export interface LookupTestVectors {
     readonly salt_version?: number;
     readonly hash: string;
   }[];
+  /** Identifiers that cannot be checked, each with its reason: never hashed or sent. */
+  readonly refused?: readonly {
+    readonly kind: string;
+    readonly input: string;
+    readonly country?: string;
+    readonly reason: string;
+  }[];
+}
+
+/**
+ * The URL Standard's forbidden domain code points: a C0 control, a space, `#`, `%`, `/`, `:`, `<`,
+ * `>`, `?`, `@`, `[`, `\`, `]`, `^`, `|` or DELETE.
+ */
+function forbiddenDomain(c: string): boolean {
+  const code = c.codePointAt(0) ?? 0;
+  return code <= 0x20 || code === 0x7f || '#%/:<>?@[\\]^|'.includes(c);
+}
+
+/**
+ * The URL Standard's "ends in a number": the last label (a final empty one dropped) is all ASCII
+ * digits, or `0x`/`0X` and hex digits. Such a host is an IPv4 address, not a domain.
+ */
+function endsInANumber(domain: string): boolean {
+  const labels = domain.split('.');
+  if (labels.length > 1 && labels[labels.length - 1] === '') labels.pop();
+  const last = labels[labels.length - 1] ?? '';
+  if (/^[0-9]+$/.test(last)) return true;
+  return /^0[xX][0-9A-Fa-f]*$/.test(last);
+}
+
+/** RFC 3492 decoding of a punycode label (without its `xn--`), or null when it does not decode. */
+function punycodeDecode(input: string): string | null {
+  const base = 36;
+  const out: number[] = [];
+  const delimiter = input.lastIndexOf('-');
+  for (let j = 0; j < Math.max(delimiter, 0); j += 1) {
+    const c = input.charCodeAt(j);
+    if (c >= 0x80) return null;
+    out.push(c);
+  }
+  let n = 128;
+  let i = 0;
+  let bias = 72;
+  for (let at = delimiter > 0 ? delimiter + 1 : 0; at < input.length; ) {
+    const oldI = i;
+    for (let w = 1, k = base; ; k += base) {
+      if (at >= input.length) return null;
+      const c = input.charCodeAt(at++);
+      const digit = c - 48 < 10 ? c - 22 : c - 65 < 26 ? c - 65 : c - 97 < 26 ? c - 97 : base;
+      if (digit >= base || digit > Math.floor((0x7fffffff - i) / w)) return null;
+      i += digit * w;
+      const t = k <= bias ? 1 : k >= bias + 26 ? 26 : k - bias;
+      if (digit < t) break;
+      if (w > Math.floor(0x7fffffff / (base - t))) return null;
+      w *= base - t;
+    }
+    const length = out.length + 1;
+    let delta = oldI === 0 ? Math.floor((i - oldI) / 700) : (i - oldI) >> 1;
+    delta += Math.floor(delta / length);
+    let k = 0;
+    while (delta > 455) {
+      delta = Math.floor(delta / 35);
+      k += base;
+    }
+    bias = k + Math.floor((36 * delta) / (delta + 38));
+    if (Math.floor(i / length) > 0x10ffff - n) return null;
+    n += Math.floor(i / length);
+    i %= length;
+    out.splice(i, 0, n);
+    i += 1;
+  }
+  try {
+    return String.fromCodePoint(...out);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Whether every `xn--` label of an IDNA-encoded domain is a real one: it decodes, holds a non-ASCII
+ * code point and encodes back to itself. The URL host parser's answer here depends on the ICU build
+ * of the runtime; the platform's IDNA library refuses such labels everywhere.
+ */
+function aceLabelsValid(domain: string): boolean {
+  for (const label of domain.split('.')) {
+    if (!label.startsWith('xn--')) continue;
+    const decoded = punycodeDecode(label.slice(4));
+    if (decoded === null || decoded === '' || ![...decoded].some((c) => (c.codePointAt(0) ?? 0) > 0x7f)) return false;
+    if (domainToASCII(decoded) !== label) return false;
+  }
+  return true;
 }
 
 function country(ctx: { country?: string } | undefined): string {
@@ -79,8 +172,13 @@ export function normalizeIdentifier(kind: LookupKind, value: string, ctx?: { cou
       if (v === '') throw new LookupInputError('empty');
       const at = v.lastIndexOf('@');
       if (at < 0) throw new LookupInputError('no_at_sign');
-      const domain = domainToASCII(v.slice(at + 1));
-      if (domain === '') throw new LookupInputError('bad_domain');
+      const raw = v.slice(at + 1);
+      // The URL host parser would percent-decode the domain, cut it at a `/` and read a number as
+      // an IPv4 address; the platform does none of that, so a forbidden code point refuses it first.
+      if (raw === '' || [...raw].some(forbiddenDomain)) throw new LookupInputError('bad_domain');
+      const domain = domainToASCII(raw);
+      if (domain === '' || [...domain].some(forbiddenDomain) || endsInANumber(domain) || !aceLabelsValid(domain))
+        throw new LookupInputError('bad_domain');
       return `${v.slice(0, at)}@${domain}`;
     }
     default:
@@ -102,7 +200,10 @@ export function lookupHash(kind: LookupKind, normalized: string, salt: LookupSal
 export const hashIdentifier = (kind: LookupKind, value: string, salt: LookupSalt, ctx?: { country?: string }): LookupHash =>
   lookupHash(kind, normalizeIdentifier(kind, value, ctx), salt);
 
-/** Reproduces every published vector; throws {@link LookupVectorError} at the first one that differs. */
+/**
+ * Reproduces every published vector and refuses every published refused identifier for its reason;
+ * throws {@link LookupVectorError} at the first row that differs.
+ */
 export function checkTestVectors(vectors: LookupTestVectors): void {
   vectors.vectors.forEach((v, index) => {
     const kind = v.kind as LookupKind;
@@ -115,5 +216,13 @@ export function checkTestVectors(vectors: LookupTestVectors): void {
     if (normalized !== v.normalized) throw new LookupVectorError(index, 'normalized');
     const { hash } = lookupHash(kind, normalized, { version: vectors.salt_version, salt: vectors.salt });
     if (hash !== v.hash) throw new LookupVectorError(index, 'hash');
+  });
+  (vectors.refused ?? []).forEach((v, index) => {
+    try {
+      normalizeIdentifier(v.kind as LookupKind, v.input, v.country === undefined ? undefined : { country: v.country });
+    } catch (error) {
+      if (error instanceof LookupInputError && error.reason === v.reason) return;
+    }
+    throw new LookupVectorError(index, 'refused');
   });
 }

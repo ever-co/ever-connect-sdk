@@ -2385,38 +2385,49 @@ pub mod entitlement_v1 {
 
 /// Types of `contracts/schemas/ever.consent.v1.json`.
 pub mod consent_v1 {
-    ///The consent record Ever Platform keeps for one integration of one installation (and tenant link), and that a product mirrors next to its local integration state. A record is immutable; a revocation sets revoked_at. Evidence never holds an IP address or a user agent. consent_source product_ui is a consent given in the product's own dialog after a fresh Ever ID sign-in; it never applies to counterparty_discoverable or instance_url, which are enabled in app.ever.co only. Authored in this repository until the platform publishes the schema.
+    ///One consent Ever Platform keeps for one integration of one installation (and, for a per-link integration, one tenant link), as GET /v1/orgs/{org}/consents and POST /v1/consents/{consent}/revoke answer it; a product mirrors the same record next to its local integration state. A record is immutable but for its revocation (revoked_at, revoked_by_person_id, revoke_reason, revoke_source, set together). Every member is present; an absent value is null. A person id is shown only to that person (null for another member, a deleted person or a consent under the cloud terms). Evidence never holds an IP address or a user agent.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct ConsentV1 {
+        ///app_ever_co: an owner or admin in app.ever.co; cloud_terms: an installation Ever operates, under its terms; product_ui: the product's own consent dialog (not accepted by contract v1).
         pub consent_source: ConsentV1ConsentSource,
+        ///The version of the one generic data-processing agreement accepted.
         pub dpa_version: ::std::string::String,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub evidence: ::std::option::Option<ConsentV1Evidence>,
+        pub evidence: ConsentV1Evidence,
         pub granted_at: Timestamp,
+        ///Who granted it: the caller's own id when it was the caller, else null.
         #[serde(deserialize_with = "::std::option::Option::deserialize")]
         pub granted_by_person_id: ::std::option::Option<Ulid>,
         pub id: Ulid,
+        ///The installation.
         pub instance_id: Ulid,
+        ///A key of the published integration catalog, or partner:<slug>.
         pub integration_key: ::std::string::String,
+        ///The organization that consented.
         pub org_id: Ulid,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        #[serde(deserialize_with = "::std::option::Option::deserialize")]
         pub revoke_reason: ::std::option::Option<ConsentV1RevokeReason>,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        ///Where the revocation came from: owner, superseded, org_deleted and staff are platform; instance, instance_disconnected and link_unlinked are instance; operator; policy.
+        #[serde(deserialize_with = "::std::option::Option::deserialize")]
         pub revoke_source: ::std::option::Option<ConsentV1RevokeSource>,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        #[serde(deserialize_with = "::std::option::Option::deserialize")]
         pub revoked_at: ::std::option::Option<Timestamp>,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        ///Who revoked it: the caller's own id when it was the caller, else null.
+        #[serde(deserialize_with = "::std::option::Option::deserialize")]
         pub revoked_by_person_id: ::std::option::Option<Ulid>,
+        ///The scope version consented to.
         pub scope_version: i64,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        ///The consent this one replaced (a new scope or agreement version).
+        #[serde(deserialize_with = "::std::option::Option::deserialize")]
         pub supersedes_id: ::std::option::Option<Ulid>,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        ///The tenant link; null for an installation-wide integration (instance_url, stats_link, ever_id_login, webhooks).
+        #[serde(deserialize_with = "::std::option::Option::deserialize")]
         pub tenant_link_id: ::std::option::Option<Ulid>,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub terms_version: ::std::option::Option<::std::string::String>,
+        ///The terms version that disclosed the integration (consents under the cloud terms); null otherwise.
+        #[serde(deserialize_with = "::std::option::Option::deserialize")]
+        pub terms_version: ::std::option::Option<Token64>,
     }
-    ///`ConsentV1ConsentSource`
+    ///app_ever_co: an owner or admin in app.ever.co; cloud_terms: an installation Ever operates, under its terms; product_ui: the product's own consent dialog (not accepted by contract v1).
     #[derive(
         ::serde::Deserialize,
         ::serde::Serialize,
@@ -2471,7 +2482,7 @@ pub mod consent_v1 {
             value.parse()
         }
     }
-    ///`ConsentV1Evidence`
+    ///Where and how it was given; no personal data.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, Default)]
     #[serde(deny_unknown_fields)]
     pub struct ConsentV1Evidence {
@@ -2479,6 +2490,7 @@ pub mod consent_v1 {
         pub request_id: ::std::option::Option<::std::string::String>,
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub screen_version: ::std::option::Option<::std::string::String>,
+        ///app.ever.co; cloud_terms (an Ever Cloud link under the terms); staff (an installation Ever operates, set by Ever staff under the terms); product:<product> (a product's own dialog).
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub ui: ::std::option::Option<::std::string::String>,
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
@@ -2502,12 +2514,18 @@ pub mod consent_v1 {
         Owner,
         #[serde(rename = "superseded")]
         Superseded,
-        #[serde(rename = "instance_disconnected")]
-        InstanceDisconnected,
-        #[serde(rename = "org_deleted")]
-        OrgDeleted,
+        #[serde(rename = "instance")]
+        Instance,
+        #[serde(rename = "operator")]
+        Operator,
         #[serde(rename = "policy")]
         Policy,
+        #[serde(rename = "instance_disconnected")]
+        InstanceDisconnected,
+        #[serde(rename = "link_unlinked")]
+        LinkUnlinked,
+        #[serde(rename = "org_deleted")]
+        OrgDeleted,
         #[serde(rename = "staff")]
         Staff,
     }
@@ -2516,9 +2534,12 @@ pub mod consent_v1 {
             match *self {
                 Self::Owner => f.write_str("owner"),
                 Self::Superseded => f.write_str("superseded"),
-                Self::InstanceDisconnected => f.write_str("instance_disconnected"),
-                Self::OrgDeleted => f.write_str("org_deleted"),
+                Self::Instance => f.write_str("instance"),
+                Self::Operator => f.write_str("operator"),
                 Self::Policy => f.write_str("policy"),
+                Self::InstanceDisconnected => f.write_str("instance_disconnected"),
+                Self::LinkUnlinked => f.write_str("link_unlinked"),
+                Self::OrgDeleted => f.write_str("org_deleted"),
                 Self::Staff => f.write_str("staff"),
             }
         }
@@ -2529,9 +2550,12 @@ pub mod consent_v1 {
             match value {
                 "owner" => Ok(Self::Owner),
                 "superseded" => Ok(Self::Superseded),
-                "instance_disconnected" => Ok(Self::InstanceDisconnected),
-                "org_deleted" => Ok(Self::OrgDeleted),
+                "instance" => Ok(Self::Instance),
+                "operator" => Ok(Self::Operator),
                 "policy" => Ok(Self::Policy),
+                "instance_disconnected" => Ok(Self::InstanceDisconnected),
+                "link_unlinked" => Ok(Self::LinkUnlinked),
+                "org_deleted" => Ok(Self::OrgDeleted),
                 "staff" => Ok(Self::Staff),
                 _ => Err("invalid value".into()),
             }
@@ -2551,7 +2575,7 @@ pub mod consent_v1 {
             value.parse()
         }
     }
-    ///`ConsentV1RevokeSource`
+    ///Where the revocation came from: owner, superseded, org_deleted and staff are platform; instance, instance_disconnected and link_unlinked are instance; operator; policy.
     #[derive(
         ::serde::Deserialize,
         ::serde::Serialize,
@@ -2569,6 +2593,8 @@ pub mod consent_v1 {
         Platform,
         #[serde(rename = "instance")]
         Instance,
+        #[serde(rename = "operator")]
+        Operator,
         #[serde(rename = "policy")]
         Policy,
     }
@@ -2577,6 +2603,7 @@ pub mod consent_v1 {
             match *self {
                 Self::Platform => f.write_str("platform"),
                 Self::Instance => f.write_str("instance"),
+                Self::Operator => f.write_str("operator"),
                 Self::Policy => f.write_str("policy"),
             }
         }
@@ -2587,6 +2614,7 @@ pub mod consent_v1 {
             match value {
                 "platform" => Ok(Self::Platform),
                 "instance" => Ok(Self::Instance),
+                "operator" => Ok(Self::Operator),
                 "policy" => Ok(Self::Policy),
                 _ => Err("invalid value".into()),
             }
@@ -2606,7 +2634,7 @@ pub mod consent_v1 {
             value.parse()
         }
     }
-    ///`Timestamp`
+    ///An RFC 3339 time in UTC with an optional fraction.
     #[derive(
         ::serde::Deserialize, ::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
     )]
@@ -2634,6 +2662,39 @@ pub mod consent_v1 {
         }
     }
     impl ::std::str::FromStr for Timestamp {
+        type Err = ::std::convert::Infallible;
+        fn from_str(value: &str) -> ::std::result::Result<Self, Self::Err> {
+            Ok(Self(value.to_string()))
+        }
+    }
+    ///`Token64`
+    #[derive(
+        ::serde::Deserialize, ::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+    )]
+    #[serde(transparent)]
+    pub struct Token64(pub ::std::string::String);
+    impl ::std::ops::Deref for Token64 {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<Token64> for ::std::string::String {
+        fn from(value: Token64) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<::std::string::String> for Token64 {
+        fn from(value: ::std::string::String) -> Self {
+            Self(value)
+        }
+    }
+    impl ::std::fmt::Display for Token64 {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            self.0.fmt(f)
+        }
+    }
+    impl ::std::str::FromStr for Token64 {
         type Err = ::std::convert::Infallible;
         fn from_str(value: &str) -> ::std::result::Result<Self, Self::Err> {
             Ok(Self(value.to_string()))
@@ -2702,7 +2763,7 @@ pub mod consent_v1 {
 
 /// Types of `contracts/schemas/ever.key-manifest.v1.json`.
 pub mod key_manifest_v1 {
-    ///`Key`
+    ///One published key (an OKP JWK with its purpose, state and validity window).
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct Key {
@@ -2712,11 +2773,13 @@ pub mod key_manifest_v1 {
         pub kid: ::std::string::String,
         pub kty: ::std::string::String,
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub not_after: ::std::option::Option<::std::string::String>,
-        pub not_before: ::std::string::String,
+        pub not_after: ::std::option::Option<Time>,
+        pub not_before: Time,
+        ///active signs; previous only verifies, until not_after.
         pub state: KeyState,
         #[serde(rename = "use")]
         pub use_: ::std::string::String,
+        ///The public key, unpadded base64url of 32 bytes.
         pub x: ::std::string::String,
     }
     ///`KeyEverPurpose`
@@ -2774,14 +2837,15 @@ pub mod key_manifest_v1 {
             value.parse()
         }
     }
-    ///The body of GET /.well-known/ever-keys.json: the published signing keys and a compact JWS (header {alg: EdDSA, kid: <root kid>, typ: ever-key-manifest+jwt}) signed by a pinned root key whose payload is {iss, iat, exp, keys_sha256, root_kid}; keys_sha256 is the hex SHA-256 of the RFC 8785 canonical JSON of the served keys array; key times are UTC (YYYY-MM-DDTHH:MM:SS[.fraction]Z) and name a day that exists. A verifier trusts a key only when the manifest verifies against a pinned root and keys_sha256 matches the served array. Authored in this repository until the platform publishes the schema; the field set follows the platform's KeyManifestBody.
+    ///The body of GET /.well-known/ever-keys.json: the published signing keys and a compact JWS (header {alg: EdDSA, kid: <root kid>, typ: ever-key-manifest+jwt}) signed by a root key the verifier pins for the issuer, whose payload is {iss, iat, exp, keys_sha256, root_kid} ($defs.payload); keys_sha256 is the hex SHA-256 of the RFC 8785 canonical JSON of the served keys array. A verifier trusts a key only when the manifest verifies against a root pinned for the expected issuer and keys_sha256 matches the served array. Beyond this schema a verifier refuses the manifest as a whole when a key time names a day that does not exist (2026-02-31) or when a key's x is not a point of the curve or is of small order. Key times are UTC and spelled one way: YYYY-MM-DDTHH:MM:SS with an optional fraction of one to nine digits and a final Z; the fraction is dropped when windows are compared.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct KeyManifestV1 {
         pub keys: ::std::vec::Vec<Key>,
+        ///The compact JWS: three unpadded base64url parts.
         pub manifest: ::std::string::String,
     }
-    ///`KeyState`
+    ///active signs; previous only verifies, until not_after.
     #[derive(
         ::serde::Deserialize,
         ::serde::Serialize,
@@ -2832,15 +2896,50 @@ pub mod key_manifest_v1 {
             value.parse()
         }
     }
-    ///The manifest JWS payload (not part of the served body; used by verifiers and fixtures).
+    ///The manifest JWS payload (not part of the served body; for verifiers and fixtures).
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct Payload {
+        ///iat + 30 days.
         pub exp: i64,
         pub iat: i64,
+        ///The issuer's origin.
         pub iss: ::std::string::String,
         pub keys_sha256: ::std::string::String,
         pub root_kid: ::std::string::String,
+    }
+    ///A UTC time: YYYY-MM-DDTHH:MM:SS, an optional fraction of one to nine digits, Z; no offset, no leap second.
+    #[derive(
+        ::serde::Deserialize, ::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+    )]
+    #[serde(transparent)]
+    pub struct Time(pub ::std::string::String);
+    impl ::std::ops::Deref for Time {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<Time> for ::std::string::String {
+        fn from(value: Time) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<::std::string::String> for Time {
+        fn from(value: ::std::string::String) -> Self {
+            Self(value)
+        }
+    }
+    impl ::std::fmt::Display for Time {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            self.0.fmt(f)
+        }
+    }
+    impl ::std::str::FromStr for Time {
+        type Err = ::std::convert::Infallible;
+        fn from_str(value: &str) -> ::std::result::Result<Self, Self::Err> {
+            Ok(Self(value.to_string()))
+        }
     }
     /// Error types.
     pub mod error {

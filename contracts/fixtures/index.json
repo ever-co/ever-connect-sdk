@@ -696,38 +696,31 @@
     },
     {
       "file": "requests/provider-grant-status.invalid-extra-field.json",
-      "kind": "pending",
-      "schema": "instanceReportProviderGrantStatus",
+      "kind": "component",
+      "schema": "ProviderGrantStatus",
       "valid": false,
       "typed": false
     },
     {
       "file": "requests/provider-grant-status.json",
-      "kind": "pending",
-      "schema": "instanceReportProviderGrantStatus",
+      "kind": "component",
+      "schema": "ProviderGrantStatus",
       "valid": true,
-      "typed": false
+      "typed": true
     },
     {
       "file": "requests/public-url.invalid-extra-field.json",
-      "kind": "pending",
-      "schema": "instancePutPublicUrl",
-      "valid": false,
-      "typed": false
-    },
-    {
-      "file": "requests/public-url.invalid-plain-http.json",
-      "kind": "pending",
-      "schema": "instancePutPublicUrl",
+      "kind": "component",
+      "schema": "PublicUrlPut",
       "valid": false,
       "typed": false
     },
     {
       "file": "requests/public-url.json",
-      "kind": "pending",
-      "schema": "instancePutPublicUrl",
+      "kind": "component",
+      "schema": "PublicUrlPut",
       "valid": true,
-      "typed": false
+      "typed": true
     },
     {
       "file": "requests/redeem.invalid-extra-field.json",

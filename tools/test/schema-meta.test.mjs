@@ -84,7 +84,8 @@ test('the entitlement, consent and key-manifest schemas are closed objects', () 
       if (Array.isArray(n)) return n.forEach((x, i) => walk(x, `${p}/${i}`));
       if (!n || typeof n !== 'object') return;
       if (n.type === 'object' && n.properties && !n.propertyNames) assert.equal(n.additionalProperties, false, `${file}${p} is not closed`);
-      for (const [k, v] of Object.entries(n)) walk(v, `${p}/${k}`);
+      // A condition (if/then/else) constrains the object the enclosing schema already closes.
+      for (const [k, v] of Object.entries(n)) if (!['if', 'then', 'else'].includes(k)) walk(v, `${p}/${k}`);
     };
     walk(schema, '#');
   }

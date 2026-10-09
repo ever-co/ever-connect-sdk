@@ -357,39 +357,6 @@ pub mod components {
             Ok(Self(value.to_string()))
         }
     }
-    ///ISO 4217 code for money, or a platform unit code such as `XEC` (credits) listed by `GET /v1/currencies`.
-    #[derive(
-        ::serde::Deserialize, ::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
-    )]
-    #[serde(transparent)]
-    pub struct Currency(pub ::std::string::String);
-    impl ::std::ops::Deref for Currency {
-        type Target = ::std::string::String;
-        fn deref(&self) -> &::std::string::String {
-            &self.0
-        }
-    }
-    impl ::std::convert::From<Currency> for ::std::string::String {
-        fn from(value: Currency) -> Self {
-            value.0
-        }
-    }
-    impl ::std::convert::From<::std::string::String> for Currency {
-        fn from(value: ::std::string::String) -> Self {
-            Self(value)
-        }
-    }
-    impl ::std::fmt::Display for Currency {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            self.0.fmt(f)
-        }
-    }
-    impl ::std::str::FromStr for Currency {
-        type Err = ::std::convert::Infallible;
-        fn from_str(value: &str) -> ::std::result::Result<Self, Self::Err> {
-            Ok(Self(value.to_string()))
-        }
-    }
     /**One delivery series of an event to an endpoint. `error` is a category (`timeout`, `dns`,
     `tls`, `http_<status>`, `ssrf_blocked`), never the receiver's body.*/
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
@@ -787,6 +754,8 @@ pub mod components {
         AlreadyLinked,
         #[serde(rename = "already_claimed")]
         AlreadyClaimed,
+        #[serde(rename = "claim_locked")]
+        ClaimLocked,
         #[serde(rename = "invalid_client")]
         InvalidClient,
         #[serde(rename = "public_jwk_invalid")]
@@ -897,6 +866,7 @@ pub mod components {
                 Self::AlreadyConnected => f.write_str("already_connected"),
                 Self::AlreadyLinked => f.write_str("already_linked"),
                 Self::AlreadyClaimed => f.write_str("already_claimed"),
+                Self::ClaimLocked => f.write_str("claim_locked"),
                 Self::InvalidClient => f.write_str("invalid_client"),
                 Self::PublicJwkInvalid => f.write_str("public_jwk_invalid"),
                 Self::IdentifierClaimed => f.write_str("identifier_claimed"),
@@ -983,6 +953,7 @@ pub mod components {
                 "already_connected" => Ok(Self::AlreadyConnected),
                 "already_linked" => Ok(Self::AlreadyLinked),
                 "already_claimed" => Ok(Self::AlreadyClaimed),
+                "claim_locked" => Ok(Self::ClaimLocked),
                 "invalid_client" => Ok(Self::InvalidClient),
                 "public_jwk_invalid" => Ok(Self::PublicJwkInvalid),
                 "identifier_claimed" => Ok(Self::IdentifierClaimed),
@@ -2028,6 +1999,19 @@ pub mod components {
         pub type_: ::std::string::String,
         pub vendor: Vendor,
     }
+    ///One input that cannot be checked (never hashed, never sent).
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct LookupRefused {
+        ///The caller's country, when the row has one.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub country: ::std::option::Option<::std::string::String>,
+        ///The raw input.
+        pub input: ::std::string::String,
+        ///`vat`, `registration` or `email`.
+        pub kind: ::std::string::String,
+        ///`empty`, `no_country`, `no_at_sign` or `bad_domain`.
+        pub reason: ::std::string::String,
+    }
     ///`hash = hex_lower(sha256(salt_bytes || ":" || kind || ":" || utf8(normalized)))`. Up to 100 hashes per query.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
@@ -2047,6 +2031,39 @@ pub mod components {
         pub features: ::std::vec::Vec<DiscoverableFeature>,
         pub handle: Handle,
         pub hash: ::std::string::String,
+    }
+    ///The published vectors.
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct LookupTestVectors {
+        ///What the document is.
+        pub description: ::std::string::String,
+        ///The normalisation version the rows follow.
+        pub normalization_version: i64,
+        ///Inputs that cannot be checked, with the reason.
+        pub refused: ::std::vec::Vec<LookupRefused>,
+        ///The test salt, unpadded base64url of 32 bytes.
+        pub salt: ::std::string::String,
+        ///The test salt's version (`0`, never accepted by a query).
+        pub salt_version: i64,
+        ///Inputs with their normalised form and hash.
+        pub vectors: ::std::vec::Vec<LookupVector>,
+    }
+    ///One vector: an input, its normalised form and its hash under the test salt.
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct LookupVector {
+        ///The caller's country, when the row has one.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub country: ::std::option::Option<::std::string::String>,
+        ///64 lower-case hex characters.
+        pub hash: ::std::string::String,
+        ///The raw input, exactly as a product would read it.
+        pub input: ::std::string::String,
+        ///`vat`, `registration` or `email`.
+        pub kind: ::std::string::String,
+        ///The normalised identifier.
+        pub normalized: ::std::string::String,
+        ///The salt version the hash was computed with (the test salt, `0`).
+        pub salt_version: i64,
     }
     ///What the instance reports for one operation. Status and size only; never file names, paths, URLs, log lines or backup content.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
@@ -3094,13 +3111,13 @@ pub mod components {
             value.parse()
         }
     }
-    ///Money is always integer minor units plus a currency; never decimals.
+    ///An amount in minor units.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
-    #[serde(deny_unknown_fields)]
     pub struct Money {
-        ///Amount in the currency's minor unit (cents for EUR/USD).
+        ///Minor units (cents).
         pub amount_minor: i64,
-        pub currency: Currency,
+        ///ISO 4217, upper case.
+        pub currency: ::std::string::String,
     }
     ///One authoritative membership of the caller (claims inside tokens are only a hint).
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
@@ -3607,6 +3624,234 @@ pub mod components {
             value.parse()
         }
     }
+    ///A provider access grant as the installation reads it (`provider_access`). `email` and `name` of the invitee appear only once the provider person accepted the grant.
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct ProviderGrant {
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub email: ::std::option::Option<::std::string::String>,
+        pub grant_id: Ulid,
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub name: ::std::option::Option<::std::string::String>,
+        ///The product role the provider organization asked for.
+        pub role: ::std::string::String,
+        pub status: ProviderGrantStatusValue,
+    }
+    ///`ProviderGrantState`
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct ProviderGrantState {
+        pub grant_id: Ulid,
+        pub status: ProviderGrantStateStatus,
+    }
+    ///`ProviderGrantStateStatus`
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd,
+    )]
+    pub enum ProviderGrantStateStatus {
+        #[serde(rename = "person_accepted")]
+        PersonAccepted,
+        #[serde(rename = "accepted")]
+        Accepted,
+        #[serde(rename = "declined")]
+        Declined,
+        #[serde(rename = "revoked")]
+        Revoked,
+        #[serde(rename = "expired")]
+        Expired,
+    }
+    impl ::std::fmt::Display for ProviderGrantStateStatus {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::PersonAccepted => f.write_str("person_accepted"),
+                Self::Accepted => f.write_str("accepted"),
+                Self::Declined => f.write_str("declined"),
+                Self::Revoked => f.write_str("revoked"),
+                Self::Expired => f.write_str("expired"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ProviderGrantStateStatus {
+        type Err = self::error::ConversionError;
+        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "person_accepted" => Ok(Self::PersonAccepted),
+                "accepted" => Ok(Self::Accepted),
+                "declined" => Ok(Self::Declined),
+                "revoked" => Ok(Self::Revoked),
+                "expired" => Ok(Self::Expired),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for ProviderGrantStateStatus {
+        type Error = self::error::ConversionError;
+        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for ProviderGrantStateStatus {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    ///`ProviderGrantStatus`
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct ProviderGrantStatus {
+        pub grant_id: Ulid,
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub product_user_ref: ::std::option::Option<::std::string::String>,
+        pub status: ProviderGrantStatusStatus,
+    }
+    ///`ProviderGrantStatusStatus`
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd,
+    )]
+    pub enum ProviderGrantStatusStatus {
+        #[serde(rename = "accepted")]
+        Accepted,
+        #[serde(rename = "declined")]
+        Declined,
+        #[serde(rename = "revoked")]
+        Revoked,
+        #[serde(rename = "expired")]
+        Expired,
+    }
+    impl ::std::fmt::Display for ProviderGrantStatusStatus {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Accepted => f.write_str("accepted"),
+                Self::Declined => f.write_str("declined"),
+                Self::Revoked => f.write_str("revoked"),
+                Self::Expired => f.write_str("expired"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ProviderGrantStatusStatus {
+        type Err = self::error::ConversionError;
+        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "accepted" => Ok(Self::Accepted),
+                "declined" => Ok(Self::Declined),
+                "revoked" => Ok(Self::Revoked),
+                "expired" => Ok(Self::Expired),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for ProviderGrantStatusStatus {
+        type Error = self::error::ConversionError;
+        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for ProviderGrantStatusStatus {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    ///`ProviderGrantStatusValue`
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd,
+    )]
+    pub enum ProviderGrantStatusValue {
+        #[serde(rename = "person_accepted")]
+        PersonAccepted,
+        #[serde(rename = "accepted")]
+        Accepted,
+        #[serde(rename = "declined")]
+        Declined,
+        #[serde(rename = "revoked")]
+        Revoked,
+        #[serde(rename = "expired")]
+        Expired,
+    }
+    impl ::std::fmt::Display for ProviderGrantStatusValue {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::PersonAccepted => f.write_str("person_accepted"),
+                Self::Accepted => f.write_str("accepted"),
+                Self::Declined => f.write_str("declined"),
+                Self::Revoked => f.write_str("revoked"),
+                Self::Expired => f.write_str("expired"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ProviderGrantStatusValue {
+        type Err = self::error::ConversionError;
+        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "person_accepted" => Ok(Self::PersonAccepted),
+                "accepted" => Ok(Self::Accepted),
+                "declined" => Ok(Self::Declined),
+                "revoked" => Ok(Self::Revoked),
+                "expired" => Ok(Self::Expired),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for ProviderGrantStatusValue {
+        type Error = self::error::ConversionError;
+        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for ProviderGrantStatusValue {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    ///The public address as stored (normalised: lower-case host, no default port).
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct PublicUrl {
+        ///The normalised address.
+        pub base_url: ::std::string::String,
+    }
+    ///`PUT /v1/instances/me/public-url`.
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct PublicUrlPut {
+        /**The installation's public address: an absolute `https` URL with a host, no credentials,
+        no query, no fragment, at most 2 048 characters.*/
+        pub base_url: ::std::string::String,
+    }
     /**Code-first connect: the installation redeems a connect code with its own Ed25519 connect
     key, which becomes its credential. The connect key never signs anonymous statistics (those
     have a key of their own). The body carries no address or any other field outside this
@@ -3887,78 +4132,6 @@ pub mod components {
         ///Only `ever.system.webhook.test`.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub event_type: ::std::option::Option<::std::string::String>,
-    }
-    ///Normalization and hash vectors every SDK must pass.
-    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
-    pub struct TestVectors {
-        pub normalization_version: i64,
-        pub vectors: ::std::vec::Vec<TestVectorsVectorsItem>,
-    }
-    ///`TestVectorsVectorsItem`
-    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
-    pub struct TestVectorsVectorsItem {
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub country: ::std::option::Option<::std::string::String>,
-        pub hash: ::std::string::String,
-        pub input: ::std::string::String,
-        pub kind: TestVectorsVectorsItemKind,
-        pub normalized: ::std::string::String,
-        pub salt_version: i64,
-    }
-    ///`TestVectorsVectorsItemKind`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum TestVectorsVectorsItemKind {
-        #[serde(rename = "vat")]
-        Vat,
-        #[serde(rename = "registration")]
-        Registration,
-        #[serde(rename = "email")]
-        Email,
-    }
-    impl ::std::fmt::Display for TestVectorsVectorsItemKind {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Vat => f.write_str("vat"),
-                Self::Registration => f.write_str("registration"),
-                Self::Email => f.write_str("email"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for TestVectorsVectorsItemKind {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "vat" => Ok(Self::Vat),
-                "registration" => Ok(Self::Registration),
-                "email" => Ok(Self::Email),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for TestVectorsVectorsItemKind {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for TestVectorsVectorsItemKind {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
     }
     ///RFC 3339, always UTC (`Z`).
     #[derive(

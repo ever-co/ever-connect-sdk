@@ -118,7 +118,7 @@ export interface OperationSpec {
   readonly integration: string | null;
   /** The platform's rate-limit class (\`x-ever-rate-limit\`), when the contract names one. */
   readonly rateLimit: string | null;
-  readonly status: 'pinned' | 'provisional' | 'pending_upstream';
+  readonly status: 'pinned' | 'provisional' | 'pending_upstream' | 'not_in_v1';
 }
 
 export const OPERATIONS = {
@@ -218,7 +218,7 @@ pub struct Operation {
     pub integration: Option<&'static str>,
     /// The platform's rate-limit class (\`x-ever-rate-limit\`), when the contract names one.
     pub rate_limit: Option<&'static str>,
-    /// \`pinned\`, \`provisional\` or \`pending_upstream\`.
+    /// \`pinned\`, \`provisional\`, \`pending_upstream\` or \`not_in_v1\` (not served by contract v1).
     pub status: &'static str,
 }
 

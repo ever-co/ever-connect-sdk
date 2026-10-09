@@ -467,7 +467,14 @@ describe('rows 6-10 and 16', () => {
     };
     await field('integration=stats_link&return=https%3A%2F%2Fother.example.com', '?return');
     await field('integration=stats_link&return=https%3A%2F%2Fu%3Ap%40gauzy.example.com', '?return');
-    await field('integration=stats_link&return=https%3A%2F%2Fgauzy.example.com%2F%23f', '?return');
+    // A fragment routes in the browser: accepted, carried encoded inside `return` (no raw `#` in
+    // the link); the origin rules hold before the `#` exactly as without one.
+    const back = 'https://gauzy.example.com/#/pages/integrations/ever-platform?tab=consent';
+    const routed = await link(`integration=stats_link&return=${encodeURIComponent(back)}`);
+    expectOk(expect, routed, 200, 'instanceGetConsentUrl');
+    expect(routed.body.url).not.toContain('#');
+    expect(new URL(routed.body.url).searchParams.get('return')).toBe(back);
+    await field(`integration=stats_link&return=${encodeURIComponent('https://other.example.com/#https://gauzy.example.com/')}`, '?return');
     await field('integration=usage_reporting', '?link', 'required');
     await field(`integration=stats_link&link=${linkId}`, '?link');
     expectProblem(expect, await link('integration=ever_id_login'), 422, 'integration_not_available');
@@ -735,5 +742,39 @@ describe('the request record', () => {
     for (let row = 1; row <= 34; row += 1) expect(rows.has(row), `row ${row}`).toBe(true);
     expect(readdirSync(join(REPO, 'tools/mock-platform/src/routes')).length).toBeGreaterThanOrEqual(12);
     expect(b64url(Buffer.from('x'))).toBe('eA');
+  });
+});
+
+describe('row 18: the installation address', () => {
+  it('stores the address normalised and answers it; anything but an https URL without credentials, query or fragment is 422', async () => {
+    env = await startMock();
+    const { token } = await env.connect();
+    await env.admin('consent', { integration: 'instance_url' });
+    let n = 0;
+    const put = (base_url) =>
+      env.call('PUT', '/v1/instances/me/public-url', {
+        token,
+        body: { base_url },
+        headers: { 'idempotency-key': `public-url-${(n += 1)}` },
+      });
+    const stored = await put('https://Gauzy.Example.COM:443');
+    expectOk(expect, stored, 200, 'instancePutPublicUrl');
+    expect(stored.body).toEqual({ base_url: 'https://gauzy.example.com/' });
+    expect((await put('https://gauzy.example.com:8443/app')).body).toEqual({ base_url: 'https://gauzy.example.com:8443/app' });
+    for (const bad of [
+      'http://gauzy.example.com',
+      'https://u:p@gauzy.example.com',
+      'https://gauzy.example.com/?a=1',
+      'https://gauzy.example.com/#x',
+      ' https://gauzy.example.com',
+      'gauzy.example.com',
+      `https://gauzy.example.com/${'a'.repeat(2048)}`,
+    ]) {
+      const r = await put(bad);
+      expectProblem(expect, r, 422, 'validation_failed');
+      expect(r.body.errors[0]).toMatchObject({ path: '/base_url', code: bad.length > 2048 ? 'too_long' : 'invalid' });
+      expect(JSON.stringify(r.body)).not.toContain('gauzy.example.com/?a');
+    }
+    expect((await env.call('DELETE', '/v1/instances/me/public-url', { token })).status).toBe(204);
   });
 });

@@ -2,12 +2,13 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://api.ever.co/v1/entitlements/schema/ever.key-manifest.v1",
   "title": "Ever Platform key manifest v1",
-  "description": "The body of GET /.well-known/ever-keys.json: the published signing keys and a compact JWS (header {alg: EdDSA, kid: <root kid>, typ: ever-key-manifest+jwt}) signed by a pinned root key whose payload is {iss, iat, exp, keys_sha256, root_kid}; keys_sha256 is the hex SHA-256 of the RFC 8785 canonical JSON of the served keys array; key times are UTC (YYYY-MM-DDTHH:MM:SS[.fraction]Z) and name a day that exists. A verifier trusts a key only when the manifest verifies against a pinned root and keys_sha256 matches the served array. Authored in this repository until the platform publishes the schema; the field set follows the platform's KeyManifestBody.",
+  "description": "The body of GET /.well-known/ever-keys.json: the published signing keys and a compact JWS (header {alg: EdDSA, kid: <root kid>, typ: ever-key-manifest+jwt}) signed by a root key the verifier pins for the issuer, whose payload is {iss, iat, exp, keys_sha256, root_kid} ($defs.payload); keys_sha256 is the hex SHA-256 of the RFC 8785 canonical JSON of the served keys array. A verifier trusts a key only when the manifest verifies against a root pinned for the expected issuer and keys_sha256 matches the served array. Beyond this schema a verifier refuses the manifest as a whole when a key time names a day that does not exist (2026-02-31) or when a key's x is not a point of the curve or is of small order. Key times are UTC and spelled one way: YYYY-MM-DDTHH:MM:SS with an optional fraction of one to nine digits and a final Z; the fraction is dropped when windows are compared.",
   "type": "object",
   "additionalProperties": false,
   "required": ["manifest", "keys"],
   "properties": {
     "manifest": {
+      "description": "The compact JWS: three unpadded base64url parts.",
       "type": "string",
       "maxLength": 65536,
       "pattern": "^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$"
@@ -19,34 +20,41 @@
     }
   },
   "$defs": {
+    "time": {
+      "description": "A UTC time: YYYY-MM-DDTHH:MM:SS, an optional fraction of one to nine digits, Z; no offset, no leap second.",
+      "type": "string",
+      "maxLength": 30,
+      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]{1,9})?Z$"
+    },
     "key": {
+      "description": "One published key (an OKP JWK with its purpose, state and validity window).",
       "type": "object",
       "additionalProperties": false,
       "required": ["kty", "crv", "kid", "x", "use", "alg", "ever_purpose", "state", "not_before"],
       "properties": {
         "kty": { "const": "OKP" },
         "crv": { "const": "Ed25519" },
-        "kid": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,64}$", "maxLength": 64 },
-        "x": { "type": "string", "pattern": "^[A-Za-z0-9_-]{43}$", "maxLength": 43 },
+        "kid": { "type": "string", "maxLength": 64, "pattern": "^[A-Za-z0-9._-]{1,64}$" },
+        "x": { "description": "The public key, unpadded base64url of 32 bytes.", "type": "string", "maxLength": 43, "pattern": "^[A-Za-z0-9_-]{43}$" },
         "use": { "const": "sig" },
         "alg": { "const": "EdDSA" },
         "ever_purpose": { "enum": ["assertion", "intent", "entitlement"] },
-        "state": { "enum": ["active", "previous"] },
-        "not_before": { "type": "string", "format": "date-time", "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]{1,9})?Z$", "maxLength": 30 },
-        "not_after": { "oneOf": [{ "type": "string", "format": "date-time", "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]{1,9})?Z$", "maxLength": 30 }, { "type": "null" }] }
+        "state": { "description": "active signs; previous only verifies, until not_after.", "enum": ["active", "previous"] },
+        "not_before": { "$ref": "#/$defs/time" },
+        "not_after": { "oneOf": [{ "$ref": "#/$defs/time" }, { "type": "null" }] }
       }
     },
     "payload": {
-      "description": "The manifest JWS payload (not part of the served body; used by verifiers and fixtures).",
+      "description": "The manifest JWS payload (not part of the served body; for verifiers and fixtures).",
       "type": "object",
       "additionalProperties": false,
       "required": ["iss", "iat", "exp", "keys_sha256", "root_kid"],
       "properties": {
-        "iss": { "type": "string", "maxLength": 256 },
-        "iat": { "type": "integer", "minimum": 0 },
-        "exp": { "type": "integer", "minimum": 0 },
+        "iss": { "description": "The issuer's origin.", "type": "string", "maxLength": 256 },
+        "iat": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+        "exp": { "description": "iat + 30 days.", "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
         "keys_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-        "root_kid": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,64}$" }
+        "root_kid": { "type": "string", "maxLength": 64, "pattern": "^[A-Za-z0-9._-]{1,64}$" }
       }
     }
   }

@@ -24,6 +24,12 @@
   "never_path_prefixes": ["/internal", "/v1/staff"],
   "never_security": ["staffSession"],
   "keep_security": ["instanceToken", "everIdTokenRead", "everIdStepUpToken"],
+  "keep_security_by_operation": {
+    "putIntegrationState": {
+      "schemes": ["everIdToken"],
+      "why": "the pinned contract accepts an app.ever.co session or an Ever ID token of the Ever Platform project from a fresh sign-in; contract v1 serves this operation to app.ever.co only (not_in_v1 for installations), and the SDK keeps its type with the token scheme"
+    }
+  },
   "drop_extensions": ["x-ever-key-scopes"],
   "design_operation_aliases": {
     "getKeyManifest": "get_key_manifest"

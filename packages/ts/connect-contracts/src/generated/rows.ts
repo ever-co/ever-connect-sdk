@@ -5,7 +5,7 @@ export interface OutboundCallEndpoint {
   readonly method: string;
   readonly path: string;
   readonly operation_id: string;
-  readonly status: 'pinned' | 'provisional' | 'pending_upstream';
+  readonly status: 'pinned' | 'provisional' | 'pending_upstream' | 'not_in_v1';
 }
 
 export interface OutboundCallRow {
@@ -15,6 +15,8 @@ export interface OutboundCallRow {
   readonly group: string;
   readonly integration: string | null;
   readonly auth: string;
+  /** `not_in_v1`: designed, but contract v1 of the Ever Platform API does not serve it, so no product calls it against a v1 deployment. */
+  readonly availability: 'v1' | 'not_in_v1';
   readonly endpoints: readonly OutboundCallEndpoint[];
   readonly trigger: string;
   readonly payload: string;
@@ -32,6 +34,7 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "session",
     "integration": null,
     "auth": "none",
+    "availability": "v1",
     "endpoints": [
       {
         "method": "GET",
@@ -60,6 +63,7 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "session",
     "integration": null,
     "auth": "none",
+    "availability": "v1",
     "endpoints": [
       {
         "method": "GET",
@@ -88,6 +92,7 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "connection",
     "integration": null,
     "auth": "none (the connect code)",
+    "availability": "v1",
     "endpoints": [
       {
         "method": "POST",
@@ -116,6 +121,7 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "session",
     "integration": null,
     "auth": "client assertion signed with the connect key",
+    "availability": "v1",
     "endpoints": [
       {
         "method": "POST",
@@ -144,6 +150,7 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "connection",
     "integration": null,
     "auth": "instance token",
+    "availability": "v1",
     "endpoints": [
       {
         "method": "POST",
@@ -161,7 +168,7 @@ export const ROWS: readonly OutboundCallRow[] = [
         "method": "PATCH",
         "path": "/v1/instances/me/tenant-links/{link}",
         "operation_id": "instanceRekeyTenantLink",
-        "status": "provisional"
+        "status": "not_in_v1"
       }
     ],
     "trigger": "an organization admin submits a link code, removes a link, or a single-organization product moves its link to a new organization id",
@@ -184,6 +191,7 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "session",
     "integration": null,
     "auth": "instance token",
+    "availability": "v1",
     "endpoints": [
       {
         "method": "POST",
@@ -218,6 +226,7 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "session",
     "integration": null,
     "auth": "instance token",
+    "availability": "v1",
     "endpoints": [
       {
         "method": "GET",
@@ -252,6 +261,7 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "session",
     "integration": null,
     "auth": "instance token (If-None-Match)",
+    "availability": "v1",
     "endpoints": [
       {
         "method": "GET",
@@ -286,6 +296,7 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "integration",
     "integration": null,
     "auth": "instance token",
+    "availability": "v1",
     "endpoints": [
       {
         "method": "GET",
@@ -320,6 +331,7 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "integration",
     "integration": null,
     "auth": "instance token",
+    "availability": "v1",
     "endpoints": [
       {
         "method": "PUT",
@@ -348,6 +360,7 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "integration",
     "integration": "stats_link",
     "auth": "instance token",
+    "availability": "v1",
     "endpoints": [
       {
         "method": "POST",
@@ -376,18 +389,19 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "integration",
     "integration": "counterparty_discoverable",
     "auth": "instance token",
+    "availability": "not_in_v1",
     "endpoints": [
       {
         "method": "PUT",
         "path": "/v1/instances/me/tenant-links/{link}/identifiers",
         "operation_id": "instancePutLinkIdentifiers",
-        "status": "provisional"
+        "status": "not_in_v1"
       },
       {
         "method": "DELETE",
         "path": "/v1/instances/me/tenant-links/{link}/identifiers",
         "operation_id": "instanceDeleteLinkIdentifiers",
-        "status": "provisional"
+        "status": "not_in_v1"
       }
     ],
     "trigger": "the organization opted in to being discoverable in app.ever.co; its identifiers change; it opts out",
@@ -409,24 +423,25 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "integration",
     "integration": "counterparty_lookup",
     "auth": "none (salt and test vectors); instance token and Ever-Link-Id (lookup)",
+    "availability": "v1",
     "endpoints": [
       {
         "method": "GET",
         "path": "/v1/lookup/salt",
         "operation_id": "getLookupSalt",
-        "status": "provisional"
+        "status": "not_in_v1"
       },
       {
         "method": "GET",
         "path": "/v1/lookup/test-vectors",
         "operation_id": "getLookupTestVectors",
-        "status": "provisional"
+        "status": "pinned"
       },
       {
         "method": "POST",
         "path": "/v1/lookup",
         "operation_id": "lookupCounterparties",
-        "status": "provisional"
+        "status": "not_in_v1"
       }
     ],
     "trigger": "daily salt refresh; a user clicks Check on Ever Platform on a contact",
@@ -446,18 +461,19 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "integration",
     "integration": "ever_id_login",
     "auth": "instance token",
+    "availability": "not_in_v1",
     "endpoints": [
       {
         "method": "POST",
         "path": "/v1/instances/me/oidc-client",
         "operation_id": "instanceRequestOidcClient",
-        "status": "provisional"
+        "status": "not_in_v1"
       },
       {
         "method": "GET",
         "path": "/v1/instances/me/oidc-client",
         "operation_id": "instanceGetOidcClient",
-        "status": "provisional"
+        "status": "not_in_v1"
       }
     ],
     "trigger": "integration ever_id_login enabled; then a status read until the client is ready",
@@ -479,18 +495,19 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "integration",
     "integration": "app_sync",
     "auth": "instance token",
+    "availability": "not_in_v1",
     "endpoints": [
       {
         "method": "POST",
         "path": "/v1/instances/me/mirror/apps",
         "operation_id": "instanceMirrorApps",
-        "status": "provisional"
+        "status": "not_in_v1"
       },
       {
         "method": "GET",
         "path": "/v1/instances/me/mirror/apps",
         "operation_id": "instanceListMirroredApps",
-        "status": "provisional"
+        "status": "not_in_v1"
       }
     ],
     "trigger": "integration app_sync enabled and an app or deployment changes; nightly reconciliation",
@@ -509,6 +526,7 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "connection",
     "integration": null,
     "auth": "instance token",
+    "availability": "v1",
     "endpoints": [
       {
         "method": "POST",
@@ -543,6 +561,7 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "stats",
     "integration": null,
     "auth": "none: the body is signed with the statistics key carried in the signature headers",
+    "availability": "v1",
     "endpoints": [
       {
         "method": "POST",
@@ -571,18 +590,19 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "integration",
     "integration": "instance_url",
     "auth": "instance token",
+    "availability": "v1",
     "endpoints": [
       {
         "method": "PUT",
         "path": "/v1/instances/me/public-url",
         "operation_id": "instancePutPublicUrl",
-        "status": "pending_upstream"
+        "status": "pinned"
       },
       {
         "method": "DELETE",
         "path": "/v1/instances/me/public-url",
         "operation_id": "instanceDeletePublicUrl",
-        "status": "pending_upstream"
+        "status": "pinned"
       }
     ],
     "trigger": "integration instance_url enabled in app.ever.co by the organization that owns the connection and accepted by the operator; revoked",
@@ -605,18 +625,19 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "integration",
     "integration": "ever_id_login",
     "auth": "instance token",
+    "availability": "not_in_v1",
     "endpoints": [
       {
         "method": "POST",
         "path": "/v1/instances/me/person-links",
         "operation_id": "instanceCreatePersonLink",
-        "status": "provisional"
+        "status": "not_in_v1"
       },
       {
         "method": "DELETE",
         "path": "/v1/instances/me/person-links/{ref}",
         "operation_id": "instanceDeletePersonLink",
-        "status": "provisional"
+        "status": "not_in_v1"
       }
     ],
     "trigger": "a user of the installation links or unlinks Ever ID; a one-time sync of links that existed before the installation connected",
@@ -638,12 +659,13 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "receipt",
     "integration": null,
     "auth": "instance token",
+    "availability": "not_in_v1",
     "endpoints": [
       {
         "method": "POST",
         "path": "/v1/instances/me/ack",
         "operation_id": "instanceAckRequest",
-        "status": "provisional"
+        "status": "not_in_v1"
       }
     ],
     "trigger": "a deletion or export request for a person arrived on the event feed and was handled",
@@ -666,12 +688,13 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "integration",
     "integration": "profile_import",
     "auth": "instance token",
+    "availability": "not_in_v1",
     "endpoints": [
       {
         "method": "POST",
         "path": "/v1/instances/me/org-profile",
         "operation_id": "instancePushOrgProfile",
-        "status": "provisional"
+        "status": "not_in_v1"
       }
     ],
     "trigger": "an admin clicks Import into public profile",
@@ -691,12 +714,13 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "integration",
     "integration": "ever_id_login",
     "auth": "instance token",
+    "availability": "not_in_v1",
     "endpoints": [
       {
         "method": "POST",
         "path": "/v1/identity/resolve",
         "operation_id": "resolveIdentity",
-        "status": "provisional"
+        "status": "not_in_v1"
       }
     ],
     "trigger": "a backend that holds only an Ever ID token needs the Ever Platform context of that sign-in",
@@ -718,6 +742,7 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "integration",
     "integration": "ever_id_login",
     "auth": "the person's Ever ID token received at sign-in (read-only; answers only for organizations linked to this installation)",
+    "availability": "v1",
     "endpoints": [
       {
         "method": "GET",
@@ -751,12 +776,13 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "sign_in",
     "integration": null,
     "auth": "none",
+    "availability": "not_in_v1",
     "endpoints": [
       {
         "method": "GET",
         "path": "/v1/sso/discover",
         "operation_id": "discoverSso",
-        "status": "provisional"
+        "status": "not_in_v1"
       }
     ],
     "trigger": "a user picks Sign in with your company",
@@ -778,12 +804,13 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "integration",
     "integration": "billing_link",
     "auth": "instance token and Ever-Link-Id",
+    "availability": "not_in_v1",
     "endpoints": [
       {
         "method": "POST",
         "path": "/v1/instances/me/billing-links",
         "operation_id": "instanceCreateBillingLink",
-        "status": "provisional"
+        "status": "not_in_v1"
       }
     ],
     "trigger": "integration billing_link enabled (installations Ever operates only)",
@@ -802,12 +829,13 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "connection",
     "integration": null,
     "auth": "instance token",
+    "availability": "not_in_v1",
     "endpoints": [
       {
         "method": "POST",
         "path": "/v1/provision-intents/{jti}/complete",
         "operation_id": "completeProvisionIntent",
-        "status": "provisional"
+        "status": "not_in_v1"
       }
     ],
     "trigger": "a provisioning hand-off the person confirmed on a product screen",
@@ -829,18 +857,19 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "integration",
     "integration": "usage_reporting",
     "auth": "instance token and Ever-Link-Id",
+    "availability": "not_in_v1",
     "endpoints": [
       {
         "method": "POST",
         "path": "/v1/instances/me/usage",
         "operation_id": "instanceReportUsage",
-        "status": "provisional"
+        "status": "not_in_v1"
       },
       {
         "method": "POST",
         "path": "/v1/instances/me/usage-readings",
         "operation_id": "instanceReportUsageReadings",
-        "status": "provisional"
+        "status": "not_in_v1"
       }
     ],
     "trigger": "integration usage_reporting enabled (on under the cloud terms on Ever Cloud; off on self-hosted installations unless an admin consents)",
@@ -860,12 +889,13 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "integration",
     "integration": "marketplace_installs",
     "auth": "instance token",
+    "availability": "not_in_v1",
     "endpoints": [
       {
         "method": "POST",
         "path": "/v1/installs/{install}/status",
         "operation_id": "instanceReportInstallStatus",
-        "status": "provisional"
+        "status": "not_in_v1"
       }
     ],
     "trigger": "an install request picked from apps.ever.co was handled by the installation's plugin installer",
@@ -885,18 +915,19 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "connection",
     "integration": null,
     "auth": "none (device start); device code and client assertion (token poll)",
+    "availability": "not_in_v1",
     "endpoints": [
       {
         "method": "POST",
         "path": "/v1/connect/device",
         "operation_id": "connectDevice",
-        "status": "provisional"
+        "status": "not_in_v1"
       },
       {
         "method": "POST",
         "path": "/v1/connect/token",
         "operation_id": "connectDeviceToken",
-        "status": "provisional"
+        "status": "not_in_v1"
       }
     ],
     "trigger": "the operator chooses Show a code instead",
@@ -919,6 +950,7 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "integration",
     "integration": "webhooks",
     "auth": "instance token",
+    "availability": "v1",
     "endpoints": [
       {
         "method": "POST",
@@ -980,6 +1012,7 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "integration",
     "integration": null,
     "auth": "instance token",
+    "availability": "v1",
     "endpoints": [
       {
         "method": "POST",
@@ -1008,18 +1041,19 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "integration",
     "integration": "provider_access",
     "auth": "instance token",
+    "availability": "not_in_v1",
     "endpoints": [
       {
         "method": "GET",
         "path": "/v1/instances/me/provider-grants/{grant}",
         "operation_id": "instanceGetProviderGrant",
-        "status": "pending_upstream"
+        "status": "not_in_v1"
       },
       {
         "method": "POST",
         "path": "/v1/instances/me/provider-grants/{grant}/status",
         "operation_id": "instanceReportProviderGrantStatus",
-        "status": "pending_upstream"
+        "status": "not_in_v1"
       }
     ],
     "trigger": "a provider access notice arrived on the event feed and was handled",
@@ -1039,12 +1073,13 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "integration",
     "integration": null,
     "auth": "the person's Ever ID token from a fresh sign-in through this installation's own client (auth_time at most 300 s old)",
+    "availability": "not_in_v1",
     "endpoints": [
       {
         "method": "PUT",
         "path": "/v1/orgs/{org}/instances/{instance}/integrations/{key}",
         "operation_id": "putIntegrationState",
-        "status": "pinned"
+        "status": "not_in_v1"
       }
     ],
     "trigger": "an organization owner or admin confirms the in-product consent dialog after a fresh Ever ID sign-in",
@@ -1067,12 +1102,13 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "integration",
     "integration": "managed_operations",
     "auth": "instance token",
+    "availability": "not_in_v1",
     "endpoints": [
       {
         "method": "POST",
         "path": "/v1/instances/me/managed-operations/{operation}/result",
         "operation_id": "instanceReportManagedOperationResult",
-        "status": "provisional"
+        "status": "not_in_v1"
       }
     ],
     "trigger": "the product's executor finished an operation an owner or admin requested, with the managed_operations integration consented and the operator's local opt-in",

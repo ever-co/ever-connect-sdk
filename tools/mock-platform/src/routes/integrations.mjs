@@ -69,7 +69,12 @@ export function returnOrigin(raw) {
   return portNumber !== null && portNumber !== defaultPort ? `${scheme}://${host}:${portNumber}` : `${scheme}://${host}`;
 }
 
-/** A consent link's return address: https without credentials or fragment (plain http on localhost when allowed). */
+/**
+ * A consent link's return address: https without credentials (plain http on localhost when
+ * allowed). A fragment is accepted (a product that routes in the browser returns to a page named
+ * there): the origin rules apply to the part before `#`, and the link carries the whole address
+ * encoded inside `return` (no raw `#`), signed like the rest.
+ */
 function checkedReturn(raw, allowLocal) {
   if (raw.length > 2048) throw new Error('return must be an absolute URL of at most 2048 characters');
   let url;
@@ -83,7 +88,6 @@ function checkedReturn(raw, allowLocal) {
     throw new Error('return must be an https URL (plain http only on localhost, on a development deployment)');
   if (!url.hostname) throw new Error('return must name a host');
   if (url.username || url.password) throw new Error('return must not carry credentials');
-  if (raw.includes('#')) throw new Error('return must not carry a fragment');
   return url;
 }
 

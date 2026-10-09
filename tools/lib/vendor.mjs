@@ -38,6 +38,25 @@ const STATIC = [
     upstream: 'contracts/lookup/test-vectors.json',
     transform: 'lookup-vectors',
   },
+  {
+    path: 'contracts/schemas/ever.consent.v1.json',
+    source: 'contracts/consent/ever.consent.v1.schema.json',
+    upstream: null,
+    transform: null,
+  },
+  {
+    path: 'contracts/schemas/ever.key-manifest.v1.json',
+    source: 'contracts/keys/ever-keys.v1.schema.json',
+    upstream: null,
+    transform: null,
+  },
+  {
+    // Which operations contract v1 serves (pinned) and which it does not serve yet (not_in_v1).
+    path: 'contracts/openapi/v1-scope.json',
+    source: 'contracts/openapi/v1-scope.json',
+    upstream: null,
+    transform: null,
+  },
 ];
 
 const TRANSFORMS = {

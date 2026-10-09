@@ -17,9 +17,10 @@ fn vectors() -> Value {
 }
 
 #[test]
-fn all_six_vectors_are_reproduced() {
+fn every_published_vector_is_reproduced_and_every_refused_row_refused() {
     let v = vectors();
-    assert_eq!(v["vectors"].as_array().unwrap().len(), 6);
+    assert_eq!(v["vectors"].as_array().unwrap().len(), 19);
+    assert_eq!(v["refused"].as_array().unwrap().len(), 15);
     check_test_vectors(&v).unwrap();
     let salt = v["salt"].as_str().unwrap();
     let n = normalize_identifier(LookupKind::Vat, " bg 123 456 789 ", None).unwrap();
@@ -27,6 +28,43 @@ fn all_six_vectors_are_reproduced() {
         lookup_hash(LookupKind::Vat, &n, 0, salt).unwrap().hash,
         "12c9b8f891583acaea6dc0f86233ea527c32c31e0bd818c329a7105d3beaf366"
     );
+}
+
+#[test]
+fn an_email_domain_is_never_percent_decoded_cut_or_read_as_ipv4() {
+    for input in [
+        "jane@%41.com",
+        "jane@a/b.com",
+        "jane@a／b.com",
+        "jane@0x7f.1",
+        "jane@1.2.3.",
+        "jane@example.123",
+        "jane@xn--a.com",
+        "jane@a:1.com",
+        "jane@xn--.com",
+        "jane@xn--abc.com",
+        "jane@xn--zz.com",
+    ] {
+        assert_eq!(
+            normalize_identifier(LookupKind::Email, input, None),
+            Err(LookupInputError::BadDomain),
+            "{input}"
+        );
+    }
+    assert_eq!(
+        normalize_identifier(LookupKind::Email, "jane@Example.COM.", None).unwrap(),
+        "jane@example.com."
+    );
+    // A refused row the crate would hash is reported at its index.
+    let mut v = vectors();
+    v["refused"]
+        .as_array_mut()
+        .unwrap()
+        .push(serde_json::json!({
+            "kind": "email", "input": "jane@example.com", "reason": "bad_domain"
+        }));
+    let e = check_test_vectors(&v).unwrap_err();
+    assert_eq!((e.index, e.field), (15, "refused"));
 }
 
 #[test]

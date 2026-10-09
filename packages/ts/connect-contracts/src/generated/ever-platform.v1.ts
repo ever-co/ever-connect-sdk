@@ -247,9 +247,10 @@ export interface paths {
          * The app.ever.co consent deep link the product opens for its admin: signed, valid for 15
          *     minutes, carrying ids, the integration key, the return address and the expiry only (no token,
          *     no e-mail, no secret). `return` is optional; when present it must be an `https` URL without
-         *     credentials or fragment whose origin the installation declared when it connected
-         *     (`return_origins` of the redeem); plain `http` only on `localhost`, on a development
-         *     deployment.
+         *     credentials whose origin the installation declared when it connected (`return_origins` of the
+         *     redeem); plain `http` only on `localhost`, on a development deployment. It may carry a
+         *     fragment (a product that routes in the browser names its page there): the fragment is signed
+         *     with the rest of the address and never changes its origin.
          */
         readonly get: operations["instanceGetConsentUrl"];
         readonly put?: never;
@@ -587,6 +588,82 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/v1/instances/me/provider-grants/{grant}": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * Read a provider access grant addressed to this installation
+         * @description Outbound-call row 32; not in contract v1 (`contracts/openapi/v1-scope.json`).
+         *     The grant a provider
+         *     organization's owner or admin requested for one of its members on this
+         *     installation's linked organization. The invitee's `email` and `name`
+         *     travel only in this answer and only once the provider person accepted
+         *     the grant in app.ever.co (`person_accepted` or later); before that the
+         *     answer is `409 grant_not_accepted` and nothing about the person moves.
+         *     A grant of another installation answers `404`.
+         */
+        readonly get: operations["instanceGetProviderGrant"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/v1/instances/me/provider-grants/{grant}/status": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Report what the product did with a provider access grant
+         * @description Outbound-call row 32; not in contract v1 (`contracts/openapi/v1-scope.json`).
+         *     The product invited the provider's person through its own
+         *     invite and role path (`accepted`), or the grant ended on its side
+         *     (`declined`, `revoked`, `expired`). `product_user_ref` names the
+         *     product's own user, never a name or an address. A transition the grant
+         *     machine does not allow answers `409 illegal_transition`; a grant not
+         *     accepted by its person yet answers `409 grant_not_accepted`.
+         */
+        readonly post: operations["instanceReportProviderGrantStatus"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/v1/instances/me/public-url": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        /**
+         * Publishes the installation's public address (integration `instance_url`, enabled by the
+         *     organization that connected it after the operator's local accept; an installation Ever
+         *     operates has it set by Ever). The address is stored normalised and returned; it is private to
+         *     the platform (no other surface returns it) and cleared when the integration ends.
+         */
+        readonly put: operations["instancePutPublicUrl"];
+        readonly post?: never;
+        /** Withdraws the installation's public address (`204`, also when none was published). */
+        readonly delete: operations["instanceDeletePublicUrl"];
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/v1/instances/me/stats-link": {
         readonly parameters: {
             readonly query?: never;
@@ -864,8 +941,10 @@ export interface paths {
             readonly cookie?: never;
         };
         /**
-         * Normalization and hash test vectors
-         * @description Every SDK (Rust `ever-core::lookup`, TypeScript `ever-connect-sdk`) must reproduce these vectors byte for byte: `hash = hex_lower(sha256(salt_bytes || ":" || kind || ":" || utf8(normalized)))`.
+         * The published lookup test vectors: identifiers as a product reads them, their normalised form
+         *     and their hash under the test salt (version 0, never accepted by a query), plus inputs that
+         *     cannot be checked. Every client implementation reproduces every row before it hashes a real
+         *     identifier. The same document is committed as `contracts/lookup/test-vectors.json`.
          */
         readonly get: operations["getLookupTestVectors"];
         readonly put?: never;
@@ -936,6 +1015,23 @@ export interface paths {
          *     that connected a customer- or partner-operated installation, and waits for the operator's local
          *     accept (`state: pending_operator`); installations Ever operates have theirs set by Ever.
          *     Disabling revokes the consent. Any plan may switch any integration off.
+         * @description **Security (contract v1).** A person's app.ever.co session (`personSession`) or an Ever ID
+         *     access token whose `azp` is a client of the Ever Platform project (`everIdToken`). A token must
+         *     come from a sign-in at most 300 s old (`x-ever-fresh-auth-s`; else `403 step_up_required`); a
+         *     session needs no fresh sign-in. A token a product, an installation or an App obtained (its
+         *     `azp` is a product, `inst-*` or App client) is refused with `403 session_required` before the
+         *     handler runs: consenting from a product's own dialog with a product step-up token is not part
+         *     of contract v1, so a product sends its admin to app.ever.co with the signed link of
+         *     `GET /v1/instances/me/consent-url`. The caller is an owner or admin of the organization (`403
+         *     forbidden_role`), and an installation-wide integration is changed only by the organization that
+         *     connected the installation (`403 not_connection_owner`).
+         *
+         *     **Limits.** `Idempotency-Key` is required (a replay within 24 h answers the first result); the
+         *     `person` rate class (1 200 requests a minute per person by default, `EVER_RATE_LIMIT_PERSON`;
+         *     `429 rate_limited` with `Retry-After`); a body of at most 16 KiB (`413 payload_too_large`) in
+         *     the closed `IntegrationPut` shape (`422 validation_failed` for any other field); `consent.config`
+         *     empty or absent; the current `scope_version` and `dpa_version` only (`422
+         *     scope_version_outdated`).
          */
         readonly put: operations["putIntegrationState"];
         readonly post?: never;
@@ -1283,13 +1379,6 @@ export interface components {
          */
         readonly CountryCode: string;
         /**
-         * @description ISO 4217 code for money, or a platform unit code such as `XEC` (credits) listed by `GET /v1/currencies`.
-         * @example EUR
-         * @example USD
-         * @example XEC
-         */
-        readonly Currency: string;
-        /**
          * @description One delivery series of an event to an endpoint. `error` is a category (`timeout`, `dns`,
          *     `tls`, `http_<status>`, `ssrf_blocked`), never the receiver's body.
          */
@@ -1420,7 +1509,7 @@ export interface components {
          *     unknown code by its HTTP status.
          * @enum {string}
          */
-        readonly ErrorCode: "validation_failed" | "not_found" | "unauthorized" | "forbidden_role" | "forbidden_scope" | "ambiguous_credentials" | "credential_revoked" | "instance_disconnected" | "instance_pending_approval" | "not_connection_owner" | "integration_disabled" | "integration_revoked" | "denied_by_policy" | "integration_not_available" | "entitlement_required" | "tier_required" | "limit_exceeded" | "rate_limited" | "idempotency_mismatch" | "idempotency_in_progress" | "stale_version" | "module_disabled" | "handle_taken" | "handle_reserved" | "handle_retired" | "handle_invalid" | "handle_held" | "handle_held_by_you" | "code_invalid" | "code_expired" | "product_mismatch" | "product_not_supported" | "key_mismatch" | "signature_invalid" | "unlinked_org" | "schema_violation" | "mirror_owned_field" | "illegal_transition" | "already_exists" | "already_completed" | "billing_active" | "sso_required" | "reauth_required" | "session_required" | "step_up_required" | "session_bound" | "authorization_pending" | "slow_down" | "expired_token" | "already_connected" | "already_linked" | "already_claimed" | "invalid_client" | "public_jwk_invalid" | "identifier_claimed" | "salt_version_unknown" | "salt_version_retired" | "hashes_invalid" | "lookup_key_required" | "required_component" | "resync_required" | "last_owner" | "last_auth_method" | "instances_linked" | "install_in_progress" | "slug_reserved" | "checklist_incomplete" | "scope_version_outdated" | "method_not_allowed" | "payload_too_large" | "unsupported_media_type" | "gone" | "unavailable" | "upstream" | "database_absent" | "database_unreachable" | "topic_private" | "keys_unavailable" | "internal_error";
+        readonly ErrorCode: "validation_failed" | "not_found" | "unauthorized" | "forbidden_role" | "forbidden_scope" | "ambiguous_credentials" | "credential_revoked" | "instance_disconnected" | "instance_pending_approval" | "not_connection_owner" | "integration_disabled" | "integration_revoked" | "denied_by_policy" | "integration_not_available" | "entitlement_required" | "tier_required" | "limit_exceeded" | "rate_limited" | "idempotency_mismatch" | "idempotency_in_progress" | "stale_version" | "module_disabled" | "handle_taken" | "handle_reserved" | "handle_retired" | "handle_invalid" | "handle_held" | "handle_held_by_you" | "code_invalid" | "code_expired" | "product_mismatch" | "product_not_supported" | "key_mismatch" | "signature_invalid" | "unlinked_org" | "schema_violation" | "mirror_owned_field" | "illegal_transition" | "already_exists" | "already_completed" | "billing_active" | "sso_required" | "reauth_required" | "session_required" | "step_up_required" | "session_bound" | "authorization_pending" | "slow_down" | "expired_token" | "already_connected" | "already_linked" | "already_claimed" | "claim_locked" | "invalid_client" | "public_jwk_invalid" | "identifier_claimed" | "salt_version_unknown" | "salt_version_retired" | "hashes_invalid" | "lookup_key_required" | "required_component" | "resync_required" | "last_owner" | "last_auth_method" | "instances_linked" | "install_in_progress" | "slug_reserved" | "checklist_incomplete" | "scope_version_outdated" | "method_not_allowed" | "payload_too_large" | "unsupported_media_type" | "gone" | "unavailable" | "upstream" | "database_absent" | "database_unreachable" | "topic_private" | "keys_unavailable" | "internal_error";
         /**
          * @description One event on a webhook, the installation feed or SSE. Payloads carry identifiers and status
          *     only, never records; delivery is at-least-once: dedupe on `id`.
@@ -2025,6 +2114,17 @@ export interface components {
             readonly type: string;
             readonly vendor: components["schemas"]["Vendor"];
         };
+        /** @description One input that cannot be checked (never hashed, never sent). */
+        readonly LookupRefused: {
+            /** @description The caller's country, when the row has one. */
+            readonly country?: string | null;
+            /** @description The raw input. */
+            readonly input: string;
+            /** @description `vat`, `registration` or `email`. */
+            readonly kind: string;
+            /** @description `empty`, `no_country`, `no_at_sign` or `bad_domain`. */
+            readonly reason: string;
+        };
         /** @description `hash = hex_lower(sha256(salt_bytes || ":" || kind || ":" || utf8(normalized)))`. Up to 100 hashes per query. */
         readonly LookupRequest: {
             readonly hashes: readonly string[];
@@ -2037,6 +2137,45 @@ export interface components {
                 readonly handle: components["schemas"]["Handle"];
                 readonly hash: string;
             }[];
+            readonly salt_version: number;
+        };
+        /** @description The published vectors. */
+        readonly LookupTestVectors: {
+            /** @description What the document is. */
+            readonly description: string;
+            /**
+             * Format: int32
+             * @description The normalisation version the rows follow.
+             */
+            readonly normalization_version: number;
+            /** @description Inputs that cannot be checked, with the reason. */
+            readonly refused: readonly components["schemas"]["LookupRefused"][];
+            /** @description The test salt, unpadded base64url of 32 bytes. */
+            readonly salt: string;
+            /**
+             * Format: int32
+             * @description The test salt's version (`0`, never accepted by a query).
+             */
+            readonly salt_version: number;
+            /** @description Inputs with their normalised form and hash. */
+            readonly vectors: readonly components["schemas"]["LookupVector"][];
+        };
+        /** @description One vector: an input, its normalised form and its hash under the test salt. */
+        readonly LookupVector: {
+            /** @description The caller's country, when the row has one. */
+            readonly country?: string | null;
+            /** @description 64 lower-case hex characters. */
+            readonly hash: string;
+            /** @description The raw input, exactly as a product would read it. */
+            readonly input: string;
+            /** @description `vat`, `registration` or `email`. */
+            readonly kind: string;
+            /** @description The normalised identifier. */
+            readonly normalized: string;
+            /**
+             * Format: int32
+             * @description The salt version the hash was computed with (the test salt, `0`).
+             */
             readonly salt_version: number;
         };
         /**
@@ -2179,20 +2318,15 @@ export interface components {
                 readonly outcome: "applied" | "ignored_stale" | "rejected";
             }[];
         };
-        /**
-         * @description Money is always integer minor units plus a currency; never decimals.
-         * @example {
-         *       "amount_minor": 24900,
-         *       "currency": "USD"
-         *     }
-         */
+        /** @description An amount in minor units. */
         readonly Money: {
             /**
              * Format: int64
-             * @description Amount in the currency's minor unit (cents for EUR/USD).
+             * @description Minor units (cents).
              */
             readonly amount_minor: number;
-            readonly currency: components["schemas"]["Currency"];
+            /** @description ISO 4217, upper case. */
+            readonly currency: string;
         };
         /** @description One authoritative membership of the caller (claims inside tokens are only a hint). */
         readonly MyMembership: {
@@ -2346,6 +2480,40 @@ export interface components {
          * @enum {string}
          */
         readonly ProductCode: "gauzy" | "teams" | "works" | "rec" | "traduora" | "demand";
+        /** @description A provider access grant as the installation reads it (`provider_access`). `email` and `name` of the invitee appear only once the provider person accepted the grant. */
+        readonly ProviderGrant: {
+            readonly email?: string;
+            readonly grant_id: components["schemas"]["Ulid"];
+            readonly name?: string;
+            /** @description The product role the provider organization asked for. */
+            readonly role: string;
+            /** @enum {string} */
+            readonly status: "person_accepted" | "accepted" | "declined" | "revoked" | "expired";
+        };
+        readonly ProviderGrantState: {
+            readonly grant_id: components["schemas"]["Ulid"];
+            /** @enum {string} */
+            readonly status: "person_accepted" | "accepted" | "declined" | "revoked" | "expired";
+        };
+        readonly ProviderGrantStatus: {
+            readonly grant_id: components["schemas"]["Ulid"];
+            readonly product_user_ref?: string;
+            /** @enum {string} */
+            readonly status: "accepted" | "declined" | "revoked" | "expired";
+        };
+        /** @description The public address as stored (normalised: lower-case host, no default port). */
+        readonly PublicUrl: {
+            /** @description The normalised address. */
+            readonly base_url: string;
+        };
+        /** @description `PUT /v1/instances/me/public-url`. */
+        readonly PublicUrlPut: {
+            /**
+             * @description The installation's public address: an absolute `https` URL with a host, no credentials,
+             *     no query, no fragment, at most 2 048 characters.
+             */
+            readonly base_url: string;
+        };
         /**
          * @description Code-first connect: the installation redeems a connect code with its own Ed25519 connect
          *     key, which becomes its credential. The connect key never signs anonymous statistics (those
@@ -2596,19 +2764,6 @@ export interface components {
         readonly TestDelivery: {
             /** @description Only `ever.system.webhook.test`. */
             readonly event_type?: string | null;
-        };
-        /** @description Normalization and hash vectors every SDK must pass. */
-        readonly TestVectors: {
-            readonly normalization_version: number;
-            readonly vectors: readonly {
-                readonly country?: string | null;
-                readonly hash: string;
-                readonly input: string;
-                /** @enum {string} */
-                readonly kind: "vat" | "registration" | "email";
-                readonly normalized: string;
-                readonly salt_version: number;
-            }[];
         };
         /**
          * Format: date-time
@@ -3370,9 +3525,10 @@ export interface operations {
                 readonly link?: string;
                 /**
                  * @description The absolute `https` URL of the product page to return to (plain `http` only on
-                 *     `localhost`, on a development deployment); no credentials, no fragment. Its origin must
-                 *     be one the installation declared when it connected (`return_origins` of the redeem).
-                 *     Absent: the consent screen ends without a return address.
+                 *     `localhost`, on a development deployment); no credentials. It may carry a fragment (a
+                 *     product that routes in the browser names its page there), which never changes its origin:
+                 *     that origin must be one the installation declared when it connected (`return_origins` of
+                 *     the redeem). Absent: the consent screen ends without a return address.
                  */
                 readonly return?: string;
             };
@@ -3391,7 +3547,7 @@ export interface operations {
                     readonly "application/json": components["schemas"]["ConsentUrl"];
                 };
             };
-            /** @description `validation_failed` (an unknown integration, a missing, foreign or unlinked tenant link, a return address that is not https, carries credentials or a fragment, or whose origin the installation did not declare when it connected) or `integration_not_available` */
+            /** @description `validation_failed` (an unknown integration, a missing, foreign or unlinked tenant link, a return address that is not https, carries credentials, or whose origin the installation did not declare when it connected) or `integration_not_available` */
             readonly 422: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -4292,6 +4448,242 @@ export interface operations {
             };
         };
     };
+    readonly instanceGetProviderGrant: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                /** @description Provider grant id (ULID) from the `provider_grant_requested` feed notice. */
+                readonly grant: components["schemas"]["Ulid"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description The grant. */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["ProviderGrant"];
+                };
+            };
+            /** @description Principal lacks the role, scope, integration or entitlement, or the operation needs a fresh sign-in (`forbidden_role`, `forbidden_scope`, `integration_disabled`, `integration_revoked`, `instance_pending_approval`, `entitlement_required`, `tier_required`, `sso_required`, `reauth_required`, `session_required`: an Ever ID token issued to a product, installation or App client used anywhere except the two `everIdTokenRead` reads and the in-product consent write; `step_up_required`: that consent write without a sign-in in the last 300 s; `not_connection_owner`: an installation-wide integration changed by an organization that does not own the installation). */
+            readonly 403: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not found, or the module that serves this route is disabled on this deployment (`not_found`, `module_disabled`). */
+            readonly 404: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description State conflict (`handle_taken`, `already_exists`, `key_mismatch`, `idempotency_in_progress`, `illegal_transition`, `billing_active`, `job_in_progress` when another job for the same subject is running). */
+            readonly 409: {
+                headers: {
+                    /** @description Seconds to wait before retrying. */
+                    readonly "Retry-After"?: number;
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any other error, as a problem document. */
+            readonly default: {
+                headers: {
+                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
+                    readonly "RateLimit-Limit"?: number;
+                    /** @description IETF RateLimit header; requests remaining in the current window. */
+                    readonly "RateLimit-Remaining"?: number;
+                    /** @description IETF RateLimit header; seconds until the window resets. */
+                    readonly "RateLimit-Reset"?: number;
+                    /** @description The request id (generated or echoed). Quote it in support requests. */
+                    readonly "x-request-id"?: string;
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    readonly instanceReportProviderGrantStatus: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                /** @description Provider grant id (ULID). */
+                readonly grant: components["schemas"]["Ulid"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["ProviderGrantStatus"];
+            };
+        };
+        readonly responses: {
+            /** @description Recorded. */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["ProviderGrantState"];
+                };
+            };
+            /** @description Principal lacks the role, scope, integration or entitlement, or the operation needs a fresh sign-in (`forbidden_role`, `forbidden_scope`, `integration_disabled`, `integration_revoked`, `instance_pending_approval`, `entitlement_required`, `tier_required`, `sso_required`, `reauth_required`, `session_required`: an Ever ID token issued to a product, installation or App client used anywhere except the two `everIdTokenRead` reads and the in-product consent write; `step_up_required`: that consent write without a sign-in in the last 300 s; `not_connection_owner`: an installation-wide integration changed by an organization that does not own the installation). */
+            readonly 403: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not found, or the module that serves this route is disabled on this deployment (`not_found`, `module_disabled`). */
+            readonly 404: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description State conflict (`handle_taken`, `already_exists`, `key_mismatch`, `idempotency_in_progress`, `illegal_transition`, `billing_active`, `job_in_progress` when another job for the same subject is running). */
+            readonly 409: {
+                headers: {
+                    /** @description Seconds to wait before retrying. */
+                    readonly "Retry-After"?: number;
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Validation failed; unknown fields are rejected on writes (`validation_failed`, `schema_violation`, `code_invalid`, `idempotency_mismatch`, `mirror_owned_field`, `limit_exceeded`). */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any other error, as a problem document. */
+            readonly default: {
+                headers: {
+                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
+                    readonly "RateLimit-Limit"?: number;
+                    /** @description IETF RateLimit header; requests remaining in the current window. */
+                    readonly "RateLimit-Remaining"?: number;
+                    /** @description IETF RateLimit header; seconds until the window resets. */
+                    readonly "RateLimit-Reset"?: number;
+                    /** @description The request id (generated or echoed). Quote it in support requests. */
+                    readonly "x-request-id"?: string;
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    readonly instancePutPublicUrl: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header: {
+                /**
+                 * @description Client-generated key, unique per principal, at most 128 characters; remembered 24 h.
+                 *     The same key with the same request replays the first answer (`Idempotency-Replayed:
+                 *     true`); with a different request it answers `422 idempotency_mismatch`.
+                 */
+                readonly "Idempotency-Key": string;
+            };
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["PublicUrlPut"];
+            };
+        };
+        readonly responses: {
+            /** @description Stored (the normalised address) */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["PublicUrl"];
+                };
+            };
+            /** @description `integration_disabled`, `integration_revoked` or `denied_by_policy`: `instance_url` is not enabled for this installation; `instance_pending_approval` or `instance_disconnected` */
+            readonly 403: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `payload_too_large`: a body over 4 KiB */
+            readonly 413: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `validation_failed` at `/base_url`: not an absolute `https` URL with a host, or it carries credentials, a query or a fragment, or it is longer than 2 048 characters */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    readonly instanceDeletePublicUrl: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Withdrawn */
+            readonly 204: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `integration_disabled`, `integration_revoked` or `denied_by_policy`: `instance_url` is not enabled for this installation; `instance_pending_approval` or `instance_disconnected` */
+            readonly 403: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     readonly instanceLinkStats: {
         readonly parameters: {
             readonly query?: never;
@@ -5090,31 +5482,13 @@ export interface operations {
         };
         readonly requestBody?: never;
         readonly responses: {
-            /** @description OK */
+            /** @description The vectors (`Cache-Control: public, max-age=300, s-maxage=3600`) */
             readonly 200: {
                 headers: {
-                    readonly "Cache-Control"?: "public, max-age=300, s-maxage=3600";
                     readonly [name: string]: unknown;
                 };
                 content: {
-                    readonly "application/json": components["schemas"]["TestVectors"];
-                };
-            };
-            /** @description Any other error, as a problem document. */
-            readonly default: {
-                headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
-                    readonly [name: string]: unknown;
-                };
-                content: {
-                    readonly "application/problem+json": components["schemas"]["Problem"];
+                    readonly "application/json": components["schemas"]["LookupTestVectors"];
                 };
             };
         };
@@ -5213,7 +5587,16 @@ export interface operations {
                     readonly "application/json": components["schemas"]["IntegrationState"];
                 };
             };
-            /** @description `forbidden_role` (a member), `not_connection_owner` (an installation-wide integration changed by an organization that does not own the connection, or of an installation Ever operates), `denied_by_policy`, `entitlement_required`, `step_up_required` */
+            /** @description `unauthorized`: no credential, one that does not verify, or a scheme this operation does not list */
+            readonly 401: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `session_required` (a token a product, an installation or an App obtained), `step_up_required` (a token from a sign-in older than 300 s), `forbidden_role` (a member), `not_connection_owner` (an installation-wide integration changed by an organization that does not own the connection, or of an installation Ever operates), `denied_by_policy`, `entitlement_required` */
             readonly 403: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -5231,8 +5614,26 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            /** @description `payload_too_large`: a body over 16 KiB */
+            readonly 413: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             /** @description `scope_version_outdated` (a stale scope or agreement version), `integration_not_available` (not offered, or the installation is not connected), `validation_failed` (also: any option in `consent.config`; no integration takes one) */
             readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `rate_limited`: over the person rate class (`Retry-After`) */
+            readonly 429: {
                 headers: {
                     readonly [name: string]: unknown;
                 };

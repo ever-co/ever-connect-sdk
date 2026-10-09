@@ -16,14 +16,50 @@ import { fixture } from './helpers';
 const vectors = fixture<LookupTestVectors>('lookup/test-vectors.json');
 
 describe('lookup: normalisation v1 and the hash, against the published vectors', () => {
-  it('reproduces all six vectors', () => {
-    expect(vectors.vectors.length).toBe(6);
+  it('reproduces every published vector and refuses every published refused identifier for its reason', () => {
+    expect(vectors.vectors.length).toBe(19);
+    expect(vectors.refused?.length).toBe(15);
     expect(() => checkTestVectors(vectors)).not.toThrow();
     const first = vectors.vectors[0]!;
     expect(first.input).toBe(' bg 123 456 789 ');
     expect(lookupHash('vat', normalizeIdentifier('vat', first.input), { version: 0, salt: vectors.salt }).hash).toBe(
       '12c9b8f891583acaea6dc0f86233ea527c32c31e0bd818c329a7105d3beaf366',
     );
+  });
+  it('an e-mail domain is never percent-decoded, cut at a slash or read as an IPv4 address', () => {
+    for (const input of [
+      'jane@%41.com',
+      'jane@a/b.com',
+      'jane@a／b.com',
+      'jane@0x7f.1',
+      'jane@1.2.3.',
+      'jane@example.123',
+      'jane@xn--a.com',
+      'jane@a:1.com',
+      // An ACE label that does not decode to a real label (the runtime's URL parser may accept it).
+      'jane@xn--.com',
+      'jane@xn--abc.com',
+      'jane@xn--zz.com',
+    ]) {
+      expect(() => normalizeIdentifier('email', input), input).toThrow(LookupInputError);
+      try {
+        normalizeIdentifier('email', input);
+      } catch (error) {
+        expect((error as LookupInputError).reason, input).toBe('bad_domain');
+      }
+    }
+    expect(normalizeIdentifier('email', 'jane@Example.COM.')).toBe('jane@example.com.');
+    expect(normalizeIdentifier('email', 'jane@xn--ls8h.la')).toBe('jane@xn--ls8h.la');
+    expect(normalizeIdentifier('email', 'jane@xn--80ak6aa92e.com')).toBe('jane@xn--80ak6aa92e.com');
+    // A refused row the SDK would hash is reported at its index.
+    const lax = { ...vectors, refused: [...(vectors.refused ?? []), { kind: 'email', input: 'jane@example.com', reason: 'bad_domain' }] };
+    try {
+      checkTestVectors(lax);
+      expect.unreachable();
+    } catch (error) {
+      expect((error as LookupVectorError).field).toBe('refused');
+      expect((error as LookupVectorError).index).toBe(15);
+    }
   });
   it('one changed vector fails at its index', () => {
     const broken = { ...vectors, vectors: vectors.vectors.map((v, i) => (i === 4 ? { ...v, hash: '0'.repeat(64) } : v)) };

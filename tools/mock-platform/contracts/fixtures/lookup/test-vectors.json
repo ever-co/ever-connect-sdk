@@ -1,4 +1,5 @@
 {
+  "description": "Counterparty lookup test vectors (normalization version 1). Each row of `vectors` is an identifier as a product reads it, its normalized form and hex_lower(sha256(salt_bytes || ':' || kind || ':' || normalized)) under the test salt (version 0, sha256 of the text ever-lookup-test-salt, never accepted by a query). Each row of `refused` cannot be checked and is never hashed or sent. Computed by the Ever Platform lookup module; every client implementation must reproduce every row.",
   "salt_version": 0,
   "salt": "oXdv2Z2X27XAr8ToW3-GHP6OD-AetKCiA4oRkF_FnWM",
   "normalization_version": 1,
@@ -35,7 +36,7 @@
     },
     {
       "kind": "email",
-      "input": "Jane.Doe+x@Exämple.com ",
+      "input": "Jane.Doe+x@Ex\u00e4mple.com ",
       "normalized": "jane.doe+x@xn--exmple-cua.com",
       "salt_version": 0,
       "hash": "115359ae4e546210526840c005fb832d7ee51e44f19fdfed8f163c04340f9582"
@@ -46,6 +47,180 @@
       "normalized": "acme@example.com",
       "salt_version": 0,
       "hash": "3116007e07691603630786b813de99da03048dfddad522e98f9e01ed72904068"
+    },
+    {
+      "kind": "vat",
+      "input": "123456789",
+      "country": " bg ",
+      "normalized": "BG123456789",
+      "salt_version": 0,
+      "hash": "12c9b8f891583acaea6dc0f86233ea527c32c31e0bd818c329a7105d3beaf366"
+    },
+    {
+      "kind": "vat",
+      "input": "DE123456789",
+      "country": "BG",
+      "normalized": "DE123456789",
+      "salt_version": 0,
+      "hash": "4bdabbf37545dc49a7c8ac4a4431fa7f973da56cf8c24b9120d971527d2502ae"
+    },
+    {
+      "kind": "vat",
+      "input": "fr-12 345/678 901",
+      "normalized": "FR12345678901",
+      "salt_version": 0,
+      "hash": "1ddd31cdc236a2982f4272b0c8b8091d1c63a4bc55ce8975e8333dda0bcb2f11"
+    },
+    {
+      "kind": "vat",
+      "input": "\ufeff\u00a0BG123456789\u2028",
+      "normalized": "BG123456789",
+      "salt_version": 0,
+      "hash": "12c9b8f891583acaea6dc0f86233ea527c32c31e0bd818c329a7105d3beaf366"
+    },
+    {
+      "kind": "vat",
+      "input": "BG123456789\u0085",
+      "normalized": "BG123456789\u0085",
+      "salt_version": 0,
+      "hash": "7d7569c42fe6f96b41c2c402b2f81f9328fd97064adc8779f67a2807ffe0448f"
+    },
+    {
+      "kind": "registration",
+      "input": " hrb-12.345 ",
+      "country": "de",
+      "normalized": "DE:HRB12345",
+      "salt_version": 0,
+      "hash": "920a26abfc3224865b5813244e30d708fb733c5b65644ea80a4a844ec0ae68f5"
+    },
+    {
+      "kind": "registration",
+      "input": "HRB 12/345",
+      "country": "DE",
+      "normalized": "DE:HRB12/345",
+      "salt_version": 0,
+      "hash": "de61fd70dc18bc3a40f160c0f56dfbee2183ed9997cba094d97485090afec610"
+    },
+    {
+      "kind": "email",
+      "input": "Jose\u0301@Example.com",
+      "normalized": "jos\u00e9@example.com",
+      "salt_version": 0,
+      "hash": "3801e91c090822853283da13a8d64272a384f24784ba8291279a36a671b098e0"
+    },
+    {
+      "kind": "email",
+      "input": "a.b+c@B\u00fccher.example",
+      "normalized": "a.b+c@xn--bcher-kva.example",
+      "salt_version": 0,
+      "hash": "f88b67fcba9497c929be2a8a9a5250bc2984b452f6e559c07a73ed1560754f2e"
+    },
+    {
+      "kind": "email",
+      "input": "info@Stra\u00dfe.de",
+      "normalized": "info@xn--strae-oqa.de",
+      "salt_version": 0,
+      "hash": "79b87fe3470e6f6cfb7b715583acdf0bab6a099e3e84a2a2eb1be64c6fc3af88"
+    },
+    {
+      "kind": "email",
+      "input": "\"x@y\"@Example.COM",
+      "normalized": "\"x@y\"@example.com",
+      "salt_version": 0,
+      "hash": "fcecaaa1b182343b097eefc951ded5a346b518a16c04a30f8d64b5e480707fb1"
+    },
+    {
+      "kind": "email",
+      "input": "Jane@\uff25XAMPLE.com",
+      "normalized": "jane@example.com",
+      "salt_version": 0,
+      "hash": "cbf1837fe81f6024084f0e2dbfeb51710ee08886aa067f6623014dfbb7f14550"
+    },
+    {
+      "kind": "email",
+      "input": "jane@example.com.",
+      "normalized": "jane@example.com.",
+      "salt_version": 0,
+      "hash": "6e9e0742b0bb06e11131cd226df37bc382cf0a28c96548a399e0074ad2343149"
+    }
+  ],
+  "refused": [
+    {
+      "kind": "vat",
+      "input": " .-/ ",
+      "reason": "empty"
+    },
+    {
+      "kind": "vat",
+      "input": "123456789",
+      "reason": "no_country"
+    },
+    {
+      "kind": "vat",
+      "input": "123456789",
+      "country": "Bulgaria",
+      "reason": "no_country"
+    },
+    {
+      "kind": "registration",
+      "input": "123",
+      "reason": "no_country"
+    },
+    {
+      "kind": "registration",
+      "input": " - ",
+      "country": "BG",
+      "reason": "empty"
+    },
+    {
+      "kind": "email",
+      "input": "jane.example.com",
+      "reason": "no_at_sign"
+    },
+    {
+      "kind": "email",
+      "input": "jane@",
+      "reason": "bad_domain"
+    },
+    {
+      "kind": "email",
+      "input": "jane@exa mple.com",
+      "reason": "bad_domain"
+    },
+    {
+      "kind": "email",
+      "input": "jane@%41.com",
+      "reason": "bad_domain"
+    },
+    {
+      "kind": "email",
+      "input": "jane@a/b.com",
+      "reason": "bad_domain"
+    },
+    {
+      "kind": "email",
+      "input": "jane@a\uff0fb.com",
+      "reason": "bad_domain"
+    },
+    {
+      "kind": "email",
+      "input": "jane@0x7f.1",
+      "reason": "bad_domain"
+    },
+    {
+      "kind": "email",
+      "input": "jane@example.123",
+      "reason": "bad_domain"
+    },
+    {
+      "kind": "email",
+      "input": "jane@xn--a.com",
+      "reason": "bad_domain"
+    },
+    {
+      "kind": "email",
+      "input": "   ",
+      "reason": "empty"
     }
   ]
 }

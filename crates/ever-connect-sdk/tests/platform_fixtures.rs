@@ -51,7 +51,7 @@ fn every_platform_document_reaches_its_expected_outcome() {
     assert_eq!(fixtures.values().filter(|e| e["valid"] == true).count(), 3);
     assert_eq!(
         fixtures.values().filter(|e| e["valid"] == false).count(),
-        10
+        14
     );
     for (file, e) in fixtures {
         let jws = std::fs::read_to_string(path(file)).unwrap();
@@ -87,6 +87,58 @@ fn every_platform_document_reaches_its_expected_outcome() {
             );
         } else {
             let code = result.map_or_else(|err| err.code.as_str(), |_| "ok");
+            assert_eq!(code, e["code"].as_str().unwrap(), "{file}");
+        }
+    }
+}
+
+/// The roots of a platform root file, as the SDK pins them (`iss` from the platform's `issuer`).
+fn roots_of(file: &str) -> Vec<RootKey> {
+    fixture(file)
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|r| {
+            RootKey::from_jwk(&json!({"kid": r["kid"], "x": r["x"], "iss": r["issuer"], "kty": "OKP", "crv": "Ed25519"}))
+        })
+        .collect()
+}
+
+#[test]
+fn every_platform_key_manifest_reaches_its_expected_outcome() {
+    let ctx = &fixture("context.json")["manifests"];
+    let issuer = ctx["issuer"].as_str().unwrap();
+    let now = ctx["now"].as_i64().unwrap();
+    let expected = fixture("expected.json");
+    let manifests = expected["manifests"].as_object().unwrap();
+    assert_eq!(manifests.values().filter(|e| e["valid"] == true).count(), 1);
+    assert_eq!(
+        manifests.values().filter(|e| e["valid"] == false).count(),
+        10
+    );
+    for (file, e) in manifests {
+        let roots_file = ctx["roots_file_by_file"]
+            .get(file)
+            .and_then(Value::as_str)
+            .unwrap_or_else(|| ctx["roots_file"].as_str().unwrap());
+        let roots = roots_of(roots_file);
+        let result = KeySet::verify(
+            &fixture(file),
+            &VerifyKeyManifestOptions {
+                issuer,
+                unsafe_root_keys: Some(&roots),
+                now: Some(now),
+            },
+        );
+        if e["valid"] == true {
+            let set = result.unwrap_or_else(|err| panic!("{file}: {}", err.code()));
+            assert_eq!(
+                set.manifest().keys().len(),
+                usize::try_from(e["keys"].as_u64().unwrap()).unwrap(),
+                "{file}"
+            );
+        } else {
+            let code = result.map_or_else(|err| err.code(), |_| "ok");
             assert_eq!(code, e["code"].as_str().unwrap(), "{file}");
         }
     }

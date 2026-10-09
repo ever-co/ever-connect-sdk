@@ -356,21 +356,16 @@ function requestCases() {
         'bad-status': (b) => [{ ...b, status: 'done' }, '/status'],
       },
     ),
-    'public-url': c(
-      'pending:instancePutPublicUrl',
-      { base_url: 'https://gauzy.example.com' },
-      {
-        'plain-http': () => [{ base_url: 'http://gauzy.example.com' }, '/base_url'],
-        'extra-field': (b) => [extra(b), '/unexpected_field'],
-      },
-    ),
+    // The pinned body is closed; an address that is not https is refused by the server (422), not
+    // by the schema (the mock answers it the same way).
+    'public-url': c('PublicUrlPut', { base_url: 'https://gauzy.example.com' }, { 'extra-field': (b) => [extra(b), '/unexpected_field'] }),
     'integration-accept': c(
       'IntegrationAccept',
       { consent_id: IDS.consent, accepted: true },
       { 'extra-field': (b) => [extra(b), '/unexpected_field'] },
     ),
     'provider-grant-status': c(
-      'pending:instanceReportProviderGrantStatus',
+      'ProviderGrantStatus',
       { grant_id: ulid('grant/1'), status: 'accepted', product_user_ref: 'user-9' },
       { 'extra-field': (b) => [extra(b, 'email', 'jane@example.com'), '/email'] },
     ),
@@ -909,7 +904,7 @@ function consentRecords() {
       integration_key: 'usage_reporting',
       consent_source: 'cloud_terms',
       granted_by_person_id: null,
-      evidence: { screen_version: '1' },
+      evidence: { ui: 'cloud_terms', screen_version: '1' },
     },
     revoked: {
       ...base,

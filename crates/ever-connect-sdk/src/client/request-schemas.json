@@ -937,6 +937,47 @@
           "demand"
         ]
       },
+      "ProviderGrantStatus": {
+        "type": "object",
+        "required": [
+          "grant_id",
+          "status"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "grant_id": {
+            "$ref": "#/components/schemas/Ulid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "accepted",
+              "declined",
+              "revoked",
+              "expired"
+            ]
+          },
+          "product_user_ref": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+          }
+        }
+      },
+      "PublicUrlPut": {
+        "additionalProperties": false,
+        "description": "`PUT /v1/instances/me/public-url`.",
+        "properties": {
+          "base_url": {
+            "description": "The installation's public address: an absolute `https` URL with a host, no credentials,\nno query, no fragment, at most 2 048 characters.",
+            "maxLength": 2048,
+            "type": "string"
+          }
+        },
+        "required": [
+          "base_url"
+        ],
+        "type": "object"
+      },
       "RedeemRequest": {
         "additionalProperties": false,
         "description": "Code-first connect: the installation redeems a connect code with its own Ed25519 connect\nkey, which becomes its credential. The connect key never signs anonymous statistics (those\nhave a key of their own). The body carries no address or any other field outside this\nschema: an instance's public address is set by the organization in app.ever.co, or later by\nthe instance through a consented integration. The optional `return_origins` are not stored:\nthe platform keeps a digest of each, to refuse a consent link that would return anywhere\nelse.",

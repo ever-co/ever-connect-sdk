@@ -1,5 +1,5 @@
 {
-  "description": "The verification outcome of each document in the contract's order (typ, alg, manifest not expired, kid in the root-verified manifest with purpose entitlement, signature, schema id, issuer, audience, closed schema, instance, subject, iat/nbf, seq).",
+  "description": "The verification outcome of each document in the contract's order (typ, alg, manifest not expired, kid in the root-verified manifest with purpose entitlement, signature, schema id, issuer, audience, closed schema, instance, subject, iat/nbf, seq), and of each key manifest body in the manifest order (the published schema and usable keys, then the compact JWS, typ, alg, root, signature, payload, issuer, iat, exp, keys_sha256).",
   "fixtures": {
     "invalid/extra-claim.jws": {
       "code": "schema_violation",
@@ -24,6 +24,26 @@
     "invalid/seq-beyond-i-json.jws": {
       "code": "schema_violation",
       "reason": "an integer above 2^53 - 1, the schema's maximum",
+      "valid": false
+    },
+    "invalid/signature-empty.jws": {
+      "code": "bad_signature",
+      "reason": "a canonical but empty signature part: the signature check fails",
+      "valid": false
+    },
+    "invalid/signature-padded.jws": {
+      "code": "malformed",
+      "reason": "the signature part carries base64 padding",
+      "valid": false
+    },
+    "invalid/signature-standard-alphabet.jws": {
+      "code": "malformed",
+      "reason": "the signature part uses the standard base64 alphabet",
+      "valid": false
+    },
+    "invalid/signature-stray-bits.jws": {
+      "code": "malformed",
+      "reason": "the signature part ends in non-zero padding bits (not canonical base64url)",
       "valid": false
     },
     "invalid/stale-seq.jws": {
@@ -67,6 +87,62 @@
       "kid": "ent-test-1",
       "seq": 4,
       "subject": "link:01JC7Q0V3A8M2K9R4T6Y8B1D3F",
+      "valid": true
+    }
+  },
+  "manifests": {
+    "keys/invalid/time-date-only.json": {
+      "code": "schema_violation",
+      "reason": "a key time without a time of day",
+      "valid": false
+    },
+    "keys/invalid/time-expanded-year.json": {
+      "code": "schema_violation",
+      "reason": "a key time with an expanded year",
+      "valid": false
+    },
+    "keys/invalid/time-february-31.json": {
+      "code": "schema_violation",
+      "reason": "a key time naming a day that does not exist",
+      "valid": false
+    },
+    "keys/invalid/time-garbage-not-after.json": {
+      "code": "schema_violation",
+      "reason": "a not_after that is not a time",
+      "valid": false
+    },
+    "keys/invalid/time-leap-second.json": {
+      "code": "schema_violation",
+      "reason": "a key time on a leap second",
+      "valid": false
+    },
+    "keys/invalid/time-lower-case-z.json": {
+      "code": "schema_violation",
+      "reason": "a key time ending in a lower-case z",
+      "valid": false
+    },
+    "keys/invalid/time-offset.json": {
+      "code": "schema_violation",
+      "reason": "a key time with an offset instead of Z",
+      "valid": false
+    },
+    "keys/invalid/time-space.json": {
+      "code": "schema_violation",
+      "reason": "a key time with a space instead of T",
+      "valid": false
+    },
+    "keys/invalid/weak-key.json": {
+      "code": "schema_violation",
+      "reason": "a key of small order (the identity point): every signature under it would verify",
+      "valid": false
+    },
+    "keys/invalid/weak-root.json": {
+      "code": "unknown_root",
+      "reason": "the valid manifest against a root of small order (the identity point)",
+      "valid": false
+    },
+    "keys/manifest.json": {
+      "keys": 2,
       "valid": true
     }
   }
