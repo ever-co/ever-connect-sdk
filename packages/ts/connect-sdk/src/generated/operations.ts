@@ -2,7 +2,7 @@
 // The client's operation table: one entry per operation of contracts/openapi/ever-platform.v1.yaml.
 
 /** The SDK version: the `User-Agent` names it (`ever-connect-sdk/<version> (<product>/<version>)`). */
-export const SDK_VERSION = "1.0.0-rc.3";
+export const SDK_VERSION = "1.0.0-rc.4";
 
 /** How an operation authenticates: none, the instance token, or the person's Ever ID token. */
 export type OperationAuth = 'none' | 'instance' | 'person';

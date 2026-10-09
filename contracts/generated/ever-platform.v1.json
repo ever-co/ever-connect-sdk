@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Ever Platform API: instance-facing contract",
-    "version": "1.0.0-rc.3",
+    "version": "1.0.0-rc.4",
     "description": "The calls an installation of an Ever product makes to Ever Platform: the operations that accept an instance token, the public operations a product calls (key manifest, connect, statistics, lookup salt) and the two Ever ID reads a product makes with the token of a person who signed in. Every operation carries `x-ever-row`, its row in the outbound-call table. Errors are `application/problem+json` with a stable `code`.",
     "contact": {
       "name": "Ever Co."
