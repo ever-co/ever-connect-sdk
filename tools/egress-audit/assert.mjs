@@ -31,7 +31,7 @@
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { checkCallLog } from './assert-call-log.mjs';
-import { hostOfUrl, matchNeverAllowed } from './hosts.mjs';
+import { entryLabel, hideExtraHosts, hostOfUrl, matchNeverAllowed } from './hosts.mjs';
 import { harEntries, redactUrl } from './lib/har.mjs';
 
 /** The Ever domains of the first version, kept for importers; the checks read ever-hosts.json (hosts.mjs). */
@@ -122,7 +122,7 @@ export function reverseAddress(name) {
 }
 
 /** A list match as a violation field: {list: category, entry}. */
-const listOf = (match) => ({ list: match.category, entry: match.entry });
+const listOf = (match) => ({ list: match.category, entry: entryLabel(match) });
 
 /** The {route, attribute, url} key of a DOM reference or a baseline entry (URLs compared without their secrets). */
 const refKey = (r) => `${r.route}|${r.attribute}|${redactUrl(r.url)}`;
@@ -225,6 +225,10 @@ function evaluateBrowser(browser, { violations, faults, known, subnets, corednsL
     visits: visits.length,
     loaded: visits.filter((v) => v.ok).length,
     status_4xx: visits.filter((v) => v.ok && v.status >= 400).map((v) => `${v.route} ${v.status}`),
+    // Routes that ended somewhere else than they were asked for (a redirect, the sign-in page).
+    sign_in_path: browser.signInPath ?? null,
+    redirected: visits.filter((v) => v.ok && v.final_path && v.path && v.final_path !== v.path).map((v) => `${v.route} -> ${v.final_path}`),
+    route_list: browser.routeCheck ?? null,
     skipped: browser.skipped ?? [],
     checks: {
       e: { dns_queries: queries.length, outside, attempts },
@@ -309,7 +313,8 @@ export function evaluate(evidence) {
   // A proven violation fails the run even when part of it faulted; a run with neither a violation
   // nor its full evidence proves nothing (2).
   const exit = violations.length > 0 ? 1 : faults.length > 0 ? 2 : 0;
-  return {
+  // Names added with EVER_EGRESS_EXTRA_HOSTS are printed as extra#<n>, never by name.
+  return hideExtraHosts({
     exit,
     mode: evidence.modeName,
     violations,
@@ -322,7 +327,7 @@ export function evaluate(evidence) {
       calls: calls ? calls.rows : null,
       ...(browser ? { browser } : {}),
     },
-  };
+  });
 }
 
 function main(argv) {

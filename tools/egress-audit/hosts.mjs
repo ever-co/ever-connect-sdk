@@ -137,7 +137,47 @@ export function loadOptinHosts(file, lists = loadEverHosts()) {
   for (const { host } of data.hosts) {
     const h = normaliseHost(host);
     if (!isEverOwned(h, lists)) throw new Error(`${file}: ${h} is not under an Ever-owned name of ever-hosts.json`);
+    if (isPlatformServiceHost(h))
+      throw new Error(`${file}: ${h} is an Ever Platform service name; an opt-in is an older default-off feature, never the platform itself`);
     hosts.add(h);
   }
   return hosts;
+}
+
+/**
+ * How a report or a message names a list entry: the entry itself, or `extra#<n>` for a name added
+ * with EVER_EGRESS_EXTRA_HOSTS. Those names are kept out of public files on purpose (CI passes them
+ * from a secret), so no report, violation or message prints them.
+ */
+export function entryLabel(match, lists = loadEverHosts()) {
+  if (!match || match.category !== 'extra') return match?.entry;
+  return `extra#${lists.extra.indexOf(match.entry) + 1}`;
+}
+
+/** A copy of value (strings, arrays and plain objects, deep) with every EVER_EGRESS_EXTRA_HOSTS name replaced by its label. */
+export function hideExtraHosts(value, lists = loadEverHosts()) {
+  const extra = lists.extra ?? [];
+  if (extra.length === 0) return value;
+  // Longest first, so a name never leaves part of a longer one behind.
+  const order = extra.map((name, i) => ({ name, label: `extra#${i + 1}` })).sort((a, b) => b.name.length - a.name.length);
+  const hide = (text) => order.reduce((t, { name, label }) => t.replace(new RegExp(quote(name), 'gi'), label), text);
+  const walk = (v) => {
+    if (typeof v === 'string') return hide(v);
+    if (Array.isArray(v)) return v.map(walk);
+    if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [hide(k), walk(x)]));
+    return v;
+  };
+  return walk(value);
+}
+
+/**
+ * The platform's own service names: never an operator opt-in. An opt-in is a feature that existed
+ * before the modules (an update check, a news feed), never the platform API, app or sign-in.
+ */
+export const PLATFORM_SERVICE_HOSTS = ['ever.co', 'api.ever.co', 'app.ever.co', 'auth.ever.co', 'apps.ever.co'];
+
+/** Whether a name is one of the platform's service names or under api., app., auth. or apps.ever.co. */
+export function isPlatformServiceHost(name) {
+  const host = normaliseHost(name);
+  return PLATFORM_SERVICE_HOSTS.some((p) => host === p || (p !== 'ever.co' && host.endsWith(`.${p}`)));
 }

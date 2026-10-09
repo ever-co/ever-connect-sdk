@@ -2,12 +2,14 @@
 // leaky product and passing only with the evidence a pass needs, before any product trusts it.
 // The API runs use the fixture config without its web keys; the browser runs (fixtures ui-*) use it
 // as it is, so the browser leg walks the toy web app.
-import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { join, relative, sep } from 'node:path';
 import { harLeaks } from './har.mjs';
 import { HARNESS_DIR, loadConfig, runAudit } from './runner.mjs';
 
 const ACCOUNT_PASSWORD = 'selftest-password-0e6a';
+/** The web fixture's session cookie (lib/web.mjs): `session=` and 32 hex digits. */
+const SESSION_COOKIE = /session=[0-9a-f]{32}/;
 const WEB_KEYS = [
   'web_service',
   'web_url',
@@ -87,6 +89,18 @@ export const SELFTEST_RUNS = [
     expect: 'non-zero',
     expectedSeen: true,
   },
+  // A sign-in that fails (a wrong password, no check of where it ended): every route lands on the
+  // sign-in page, which is a fault, never a pass.
+  {
+    name: 'off/ui-quiet(failed sign-in)',
+    fixture: 'ui-quiet',
+    artifact: 'ui-quiet-failed-sign-in',
+    mode: 'off',
+    browser: true,
+    config: { adapter: 'adapter.bad-sign-in.mjs' },
+    expect: 2,
+    faults: [/ended on the sign-in page/],
+  },
   // A config with a web_service run without the browser leg proves the API side only: never a pass.
   {
     name: 'off/ui-quiet(--legs api)',
@@ -99,8 +113,35 @@ export const SELFTEST_RUNS = [
   },
 ];
 
-export function judge(run, report, { harText } = {}) {
+/**
+ * Every file of a run's artefacts (dotfiles included, binary files read byte for byte) that holds
+ * one of the secrets or matches one of the patterns: the fixture password and the session cookie
+ * must be in none of them, whatever the leg wrote or failed to clean up.
+ */
+export function artifactLeaks(dir, secrets = [], patterns = []) {
   const problems = [];
+  if (!existsSync(dir)) return problems;
+  const walk = (d) => {
+    for (const name of readdirSync(d)) {
+      const p = join(d, name);
+      if (statSync(p).isDirectory()) walk(p);
+      else {
+        const text = readFileSync(p, 'latin1');
+        const file = relative(dir, p).split(sep).join('/');
+        for (const s of secrets) if (s && text.includes(s)) problems.push(`${file} holds the fixture password`);
+        for (const re of patterns) if (re.test(text)) problems.push(`${file} holds the session cookie`);
+      }
+    }
+  };
+  walk(dir);
+  return problems;
+}
+
+export function judge(run, report, { harText, leaks = [] } = {}) {
+  const problems = [];
+  for (const re of run.faults ?? [])
+    if (!(report.faults ?? []).some((f) => re.test(f))) problems.push(`no fault matching ${re} was seen`);
+  problems.push(...leaks);
   if (run.expect === 'non-zero' ? report.exit === 0 : report.exit !== run.expect)
     problems.push(`exit ${report.exit}, expected ${run.expect}`);
   for (const rule of run.rules ?? []) if (!report.violations.some((v) => v.rule === rule)) problems.push(`no ${rule} violation was seen`);
@@ -153,9 +194,11 @@ export async function selftest({ artifactsDir, only, legs, log = () => {}, print
     } catch (error) {
       report = { exit: 2, violations: [], faults: [error.message] };
     }
-    const harFile = join(dir, `${run.mode}${run.noMock ? '-nomock' : ''}`, 'browser', 'browser.har');
+    const runDir = join(dir, `${run.mode}${run.noMock ? '-nomock' : ''}`);
+    const harFile = join(runDir, 'browser', 'browser.har');
     const harText = existsSync(harFile) ? readFileSync(harFile, 'utf8') : undefined;
-    const problems = judge(run, report, { harText });
+    const leaks = run.browser ? artifactLeaks(runDir, [ACCOUNT_PASSWORD], [SESSION_COOKIE]) : [];
+    const problems = judge(run, report, { harText, leaks });
     results.push({ ...run, exit: report.exit, problems, faults: report.faults, violations: report.violations.map((v) => v.rule) });
     for (const f of report.faults ?? []) print(`  fault: ${f}`);
     for (const v of report.violations ?? []) print(`  violation: ${JSON.stringify(v)}`);

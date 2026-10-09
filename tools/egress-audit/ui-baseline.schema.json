@@ -2,13 +2,18 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ever-connect-sdk.invalid/egress-audit/ui-baseline.schema.json",
   "title": "ui-baseline.json",
-  "description": "DOM references to a never-allowed host that the product's UI rendered before the Ever Platform modules existed (a footer link, a documentation link), written once and allowed to shrink only (check-baseline-shrink). An entry excuses the same {route, attribute, url} in the DOM check and nothing else: never a DNS query, a connection attempt, a HAR entry or a request.",
+  "description": "DOM references to a never-allowed host that the product's UI rendered before the Ever Platform modules existed (a footer link, a documentation link), written once (adopted with check-baseline-shrink --first-version) and allowed to shrink only (check-baseline-shrink --config). An entry excuses the same {route, attribute, url} in the DOM check and nothing else: never a DNS query, a connection attempt, a HAR entry or a request.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["entries"],
+  "required": ["base_commit", "entries"],
   "properties": {
     "$schema": { "type": "string" },
     "description": { "type": "string" },
+    "base_commit": {
+      "description": "The product commit the entries were recorded from (before the first module change), as a full or abbreviated SHA. check-baseline-shrink requires it to be in the history and refuses any change to it once the file exists.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{7,40}$"
+    },
     "entries": {
       "type": "array",
       "items": {

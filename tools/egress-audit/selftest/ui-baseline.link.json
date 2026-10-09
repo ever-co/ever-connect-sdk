@@ -1,6 +1,7 @@
 {
   "$schema": "../ui-baseline.schema.json",
   "description": "The self-test's baseline for the ui-link fixture: its footer link, rendered on every page.",
+  "base_commit": "d75f380b78a368910651a3438a6577d4dd9dce9d",
   "entries": [
     { "route": "/", "attribute": "href", "url": "https://app.ever.co/", "reason": "footer link that predates the modules (self-test)" },
     { "route": "/about", "attribute": "href", "url": "https://app.ever.co/", "reason": "footer link that predates the modules (self-test)" },

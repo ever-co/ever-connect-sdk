@@ -27,10 +27,21 @@ const SAFE_HEADERS = new Set([
 const URL_HEADERS = new Set(['location', 'referer']);
 export const REDACTED = '[redacted]';
 
+/** A path segment that names a person or carries a credential: an e-mail address or a JWT. */
+const SECRET_SEGMENT = /@|%40|^eyJ[\w-]{6,}\.[\w-]{6,}\.[\w-]*$/i;
+
+/** A path with each segment that holds an e-mail address or a JWT replaced by [redacted]. */
+const redactPath = (path) =>
+  path
+    .split('/')
+    .map((seg) => (SECRET_SEGMENT.test(seg) ? REDACTED : seg))
+    .join('/');
+
 /**
  * A URL without its secrets: query values, the fragment and any user info are dropped (query names
- * stay); a mailto: address keeps only its domain. A value that is not a URL is answered as is when
- * it has no query, else cut at the `?`.
+ * stay), and a path segment holding an e-mail address or a JWT is replaced; a mailto: address keeps
+ * only its domain, and a tel: or sms: URL only its scheme. A value that is not a URL is answered as
+ * is when it has no query, else cut at the `?`.
  */
 export function redactUrl(value) {
   const text = String(value ?? '');
@@ -40,15 +51,18 @@ export function redactUrl(value) {
     const at = first.lastIndexOf('@');
     return at >= 0 ? `mailto:${REDACTED}@${first.slice(at + 1)}` : 'mailto:';
   }
+  const phone = /^(tel|sms|callto):/i.exec(text);
+  if (phone) return `${phone[1].toLowerCase()}:${REDACTED}`;
   let u;
   try {
     u = new URL(text);
   } catch {
     return text.split(/[?#]/)[0];
   }
-  if (!/^(https?|wss?|ftp):$/.test(u.protocol)) return `${u.protocol}${u.protocol === 'data:' ? REDACTED : u.pathname.split(/[?#]/)[0]}`;
+  if (!/^(https?|wss?|ftp):$/.test(u.protocol))
+    return `${u.protocol}${u.protocol === 'data:' ? REDACTED : redactPath(u.pathname.split(/[?#]/)[0])}`;
   const keys = [...new Set([...u.searchParams.keys()])];
-  return `${u.protocol}//${u.host}${u.pathname}${keys.length ? `?${keys.map((k) => `${encodeURIComponent(k)}=`).join('&')}` : ''}`;
+  return `${u.protocol}//${u.host}${redactPath(u.pathname)}${keys.length ? `?${keys.map((k) => `${encodeURIComponent(k)}=`).join('&')}` : ''}`;
 }
 
 const headers = (list) =>
