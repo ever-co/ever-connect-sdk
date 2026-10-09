@@ -322,7 +322,11 @@ test('a renamed or re-pointed baseline counts as growing it', () => {
   write('ui-baseline.json', baseline([entry('https://app.ever.co/')]));
   write('egress-audit.config.json', { product: 'teams', ui_baseline: 'old-baseline.json' });
   assert.equal(shrink(['--base', 'HEAD', '--config', config]).exit, 1);
-  assert.equal(shrink(['--base', 'HEAD', '--config', config, '--file', join(dir, 'ui-baseline.json')]).exit, 2, '--file must be the config baseline');
+  assert.equal(
+    shrink(['--base', 'HEAD', '--config', config, '--file', join(dir, 'ui-baseline.json')]).exit,
+    2,
+    '--file must be the config baseline',
+  );
 });
 
 test('base_commit is required, must be in the history, and never changes once the baseline exists', () => {

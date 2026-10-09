@@ -95,8 +95,7 @@ export function check({ base: ref, config: configArg, file: fileArg, firstVersio
       throw new Usage(`${configArg} could not be read: ${error.message}`);
     }
     const fromConfig = baselinePathOf(config, configFile);
-    if (file && file !== fromConfig)
-      throw new Usage(`--file ${fileArg} is not the baseline the config names (${repoPath(fromConfig)})`);
+    if (file && file !== fromConfig) throw new Usage(`--file ${fileArg} is not the baseline the config names (${repoPath(fromConfig)})`);
     file = fromConfig;
     // The path the config named at the base: a baseline that moved is a new baseline.
     const configAtBase = showAt(ref, repoPath(configFile), top);
@@ -191,7 +190,11 @@ export function check({ base: ref, config: configArg, file: fileArg, firstVersio
   if (added.length > 0) out.push(`${path} may only shrink; added since ${ref}:\n  ${added.map(show).join('\n  ')}`);
   if (out.length > 0) return { exit: 1, problems: out, notes };
   const removed = (base.entries ?? []).length - current.entries.length;
-  return { exit: 0, problems: [], notes: [...notes, `ok (${current.entries.length} entries, ${Math.max(0, removed)} removed since ${ref})`] };
+  return {
+    exit: 0,
+    problems: [],
+    notes: [...notes, `ok (${current.entries.length} entries, ${Math.max(0, removed)} removed since ${ref})`],
+  };
 }
 
 export function main(argv) {

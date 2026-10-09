@@ -18,7 +18,7 @@ Usage:
   ever-egress-audit static-hostnames [--root <dir>] --allow-dirs <dir>[,<dir>] [--optin-hosts <file> | --config <file>] [--baseline <file>] [--all-files]
   ever-egress-audit cloud-inference --dirs <module dir>[,<module dir>]
   ever-egress-audit ui-routes --framework angular|next-app|solidstart --entry <path> --out <ui-routes.json> [--check]
-  ever-egress-audit check-baseline-shrink --base <git ref> [--file ui-baseline.json]
+  ever-egress-audit check-baseline-shrink --base <git ref> --config <egress-audit.config.json> [--first-version] (or --file <ui-baseline.json>)
 
 Modes:
 ${Object.entries(modes)

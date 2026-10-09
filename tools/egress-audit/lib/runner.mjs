@@ -55,7 +55,9 @@ export function loadConfig(path) {
     const match = matchNeverAllowed(host);
     if (match)
       throw new UsageError(
-        hideExtraHosts(`allowed_external_hosts: ${host} is on the never-allowed list (${match.category}: ${entryLabel(match)}) and can never be allowed`),
+        hideExtraHosts(
+          `allowed_external_hosts: ${host} is on the never-allowed list (${match.category}: ${entryLabel(match)}) and can never be allowed`,
+        ),
       );
   }
   if (config.web_service && !config.web_url) throw new UsageError('web_service needs web_url (the UI address inside the sealed network)');
@@ -162,10 +164,23 @@ export function loadBrowserInputs(config, configDir, modeName, mode) {
   };
 }
 
+/** Refuses a web_url whose host is not web_service or one of its names (aliases, container name). */
+export function checkWebUrl(config, model) {
+  if (!config.web_service) return;
+  const names = composeNames({ [config.web_service]: model.services[config.web_service] ?? {} });
+  const host = new URL(config.web_url).hostname.toLowerCase();
+  if (!names.includes(host))
+    throw new UsageError(`web_url ${config.web_url} does not name web_service ${config.web_service} (its names: ${names.join(', ')})`);
+}
+
 /** The root of the git repository holding dir, or null. */
 function gitTop(dir) {
   try {
-    return execFileSync('git', ['rev-parse', '--show-toplevel'], { cwd: dir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    return execFileSync('git', ['rev-parse', '--show-toplevel'], {
+      cwd: dir,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
   } catch {
     return null;
   }
@@ -194,7 +209,15 @@ export function checkRouteList(list, config, configDir) {
     const { missing, stale } = compareRoutes(generated, list);
     return { framework, checked: true, missing, stale };
   } catch (error) {
-    return { framework, checked: false, missing: [], stale: [], error: String(error.message ?? error).split('\n')[0].slice(0, 300) };
+    return {
+      framework,
+      checked: false,
+      missing: [],
+      stale: [],
+      error: String(error.message ?? error)
+        .split('\n')[0]
+        .slice(0, 300),
+    };
   }
 }
 
@@ -417,12 +440,7 @@ export async function runAudit({
     ])
       if (!model.services[s]) throw new UsageError(`service ${s} is not in ${config.compose.join(', ')}`);
     // The walk reaches the web service itself, never another service.
-    if (config.web_service) {
-      const names = composeNames({ [config.web_service]: model.services[config.web_service] });
-      const host = new URL(config.web_url).hostname.toLowerCase();
-      if (!names.includes(host))
-        throw new UsageError(`web_url ${config.web_url} does not name web_service ${config.web_service} (its names: ${names.join(', ')})`);
-    }
+    checkWebUrl(config, model);
     if (browserOn) {
       const rc = browserInputs.routeCheck;
       if (rc.error) evidence.browser.faults.push(`the route list could not be compared with the router: ${rc.error}`);
@@ -646,7 +664,11 @@ function runBrowser({ full, out, evidence, plan, image, base, adapterFile, proje
   } finally {
     // The plan stays with the evidence, with the env and fixture values redacted (names kept); the
     // build context (playwright-core and the adapter included) does not.
-    writeJson(join(out, 'browser-plan.json'), { ...plan, env: redactValues(plan.env ?? {}), fixtures: redactValues(plan.fixtures ?? null) });
+    writeJson(join(out, 'browser-plan.json'), {
+      ...plan,
+      env: redactValues(plan.env ?? {}),
+      fixtures: redactValues(plan.fixtures ?? null),
+    });
     rmSync(context, { recursive: true, force: true });
   }
   docker(['rm', '-f', name], { allowFail: true, log });

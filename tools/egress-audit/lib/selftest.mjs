@@ -139,8 +139,7 @@ export function artifactLeaks(dir, secrets = [], patterns = []) {
 
 export function judge(run, report, { harText, leaks = [] } = {}) {
   const problems = [];
-  for (const re of run.faults ?? [])
-    if (!(report.faults ?? []).some((f) => re.test(f))) problems.push(`no fault matching ${re} was seen`);
+  for (const re of run.faults ?? []) if (!(report.faults ?? []).some((f) => re.test(f))) problems.push(`no fault matching ${re} was seen`);
   problems.push(...leaks);
   if (run.expect === 'non-zero' ? report.exit === 0 : report.exit !== run.expect)
     problems.push(`exit ${report.exit}, expected ${run.expect}`);

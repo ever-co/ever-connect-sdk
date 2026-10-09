@@ -54,7 +54,9 @@ let cached = null;
 
 /** The list: {ever_owned[], analytics_sinks[], reference[], extra[]} (extra from EVER_EGRESS_EXTRA_HOSTS). */
 export function loadEverHosts({ file = EVER_HOSTS_FILE, env = process.env } = {}) {
-  if (file === EVER_HOSTS_FILE && env === process.env && cached) return cached;
+  // The cache follows the variable, so a run (or a test) that sets it later is not answered stale.
+  const extraRaw = env.EVER_EGRESS_EXTRA_HOSTS ?? '';
+  if (file === EVER_HOSTS_FILE && env === process.env && cached && cached.extraRaw === extraRaw) return cached.lists;
   const data = JSON.parse(readFileSync(file, 'utf8'));
   const schema = JSON.parse(readFileSync(join(here, 'hosts.schema.json'), 'utf8'));
   const validate = new Ajv2020({ allErrors: true, strict: false }).compile(schema);
@@ -66,7 +68,7 @@ export function loadEverHosts({ file = EVER_HOSTS_FILE, env = process.env } = {}
     reference: data.reference,
     extra: extraHosts(env),
   };
-  if (file === EVER_HOSTS_FILE && env === process.env) cached = lists;
+  if (file === EVER_HOSTS_FILE && env === process.env) cached = { extraRaw, lists };
   return lists;
 }
 
@@ -138,7 +140,9 @@ export function loadOptinHosts(file, lists = loadEverHosts()) {
     const h = normaliseHost(host);
     if (!isEverOwned(h, lists)) throw new Error(`${file}: ${h} is not under an Ever-owned name of ever-hosts.json`);
     if (isPlatformServiceHost(h))
-      throw new Error(`${file}: ${h} is an Ever Platform service name; an opt-in is an older default-off feature, never the platform itself`);
+      throw new Error(
+        `${file}: ${h} is an Ever Platform service name; an opt-in is an older default-off feature, never the platform itself`,
+      );
     hosts.add(h);
   }
   return hosts;

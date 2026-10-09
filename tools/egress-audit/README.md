@@ -132,9 +132,12 @@ evidence.json` reproduces the verdict.
 --build`), `health_timeout_s`, `allowed_external_hosts`, `env_prefix` (replaces the leading `EVER_`
 of every mode variable, for example `TR_EVER_`), `subnet`, `phase` (the highest phase whose
 outbound-call rows apply), `every_trigger_exclude_rows`, `mock_image`, `mock_config`, `modes` and
-`artifacts_dir`. The browser leg's keys (`web_service`, `web_url`, `ui_routes`, `route_params`,
-`ui_baseline`, `idle_pages`, `idle_s`, `ui_page_timeout_s`, `ui_skip_routes`,
-`ui_expected_requests`, `optin_hosts`, `browser_image`) are in [Browser leg](#browser-leg).
+`artifacts_dir`. The browser leg's keys (`web_service`, `web_url`, `web_static`, `no_web_reason`,
+`ui_routes`, `ui_routes_root`, `route_params`, `ui_baseline`, `idle_pages`, `idle_s`,
+`ui_page_timeout_s`, `ui_skip_routes`, `ui_expected_requests`, `optin_hosts`, `browser_image`) are in
+[Browser leg](#browser-leg). A product with a UI (`gauzy`, `teams`, `works`, `rec`, `traduora`) must
+name its `web_service`, or set `"web_service": null` with a `no_web_reason`: a config that leaves the
+key out is refused.
 
 ## Adapter
 
@@ -143,9 +146,12 @@ An ES module whose default export may define `login`, `createFixtures`, `openSet
 headers}`) and `env` (extra environment per mode). See `adapter.schema.json` and
 `selftest/adapter.mjs`. The adapter runs in the driver container, so it reaches the product by its
 compose service name. What `createFixtures` answers (ids, never a token) reaches the browser leg's
-hooks as `ctx.fixtures`: `uiLogin(page, ctx)` signs in through the product's sign-in page with the
-Playwright page, and `routeParams(ctx)` answers the route parameter values only a run knows. The
-browser hooks run in the browser container (the adapter is copied there too).
+hooks as `ctx.fixtures`; a value shaped like a credential (a JWT, a `Bearer ` value, more than 64
+characters) faults the run instead. `uiLogin(page, ctx)` signs in through the product's sign-in page
+with the Playwright page and must end signed in (wait for the page after the sign-in): the first
+page it opens is taken as the sign-in page, and a route that ends there faults the run. `uiLogin`
+that opens no page faults too. `routeParams(ctx)` answers the route parameter values only a run
+knows. The browser hooks run in the browser container (the adapter is copied there too).
 
 ## Self-test
 
@@ -164,10 +170,13 @@ browser hooks run in the browser container (the adapter is copied there too).
 | `off/ui-link(baseline)` | the same, with the link in `selftest/ui-baseline.link.json` | pass (0) |
 | `positive_stats/ui-stats` | the page reads `GET /api/ever-stats/status`; the server posts the golden report | pass (0), the status call seen from the browser |
 | `positive_stats/ui-stats(no mock)` | the same without the mock platform | not pass, with the status call still seen from the browser |
+| `off/ui-quiet(failed sign-in)` | the quiet app with `selftest/adapter.bad-sign-in.mjs`: a wrong password, no check of where the sign-in ended | fault (2), every route named as ending on the sign-in page |
 | `off/ui-quiet(--legs api)` | the web config run without its browser leg | fault (2): never a pass |
 
 The summary prints one line per run (`off/leaky=1`, `positive_stats/no-mock=1`, ...). Every browser
-run also checks that its `browser.har` holds no cookie, header value, body or the fixture's password.
+run also checks that its `browser.har` holds no cookie, header value, body or the fixture's password,
+and that no file of its artefacts (dotfiles, logs, the plan and the pcaps included) holds the
+fixture's password or its session cookie.
 `--legs api` runs the API runs only.
 
 ## Browser leg
@@ -182,7 +191,10 @@ sniffer (`browser.pcap`). It signs in with the adapter's `uiLogin`, opens every 
 `idle_pages` open for `idle_s` (30) seconds, and writes `browser/browser.har` (no bodies, cookies,
 header values, form or query values), `browser/requests.json`, `browser/dom-refs.json` (every
 `href`, `src`, `srcset`, `action`, `formaction`, `poster`, `ping`, `data`, `xlink:href`, meta
-refresh and style `url()` of every frame and open shadow root) and `browser/visits.json`.
+refresh and style `url()` of every frame and open shadow root) and `browser/visits.json` (each
+route's final path, and the sign-in page's path). Playwright's raw HAR, which keeps cookies, header
+values and form fields, is recorded in a private temporary directory outside the evidence and
+deleted on every path, errors included. The walk runs as the image's unprivileged `pwuser`.
 
 | Check | Fails when |
 |---|---|
@@ -192,24 +204,32 @@ refresh and style `url()` of every frame and open shadow root) and `browser/visi
 | positive control | a request of `ui_expected_requests[mode]` was not made to a compose service (required in `positive_stats`) |
 
 A run of a config with a `web_service` that leaves the browser out (`--legs api`) faults (exit 2),
-so it never passes. Config keys:
+so it never passes. A sign-in that does not hold (a route that ends on the sign-in page) faults, a
+route list generated from a router (its `framework` and `entry`) is generated again in the run and
+a router route it lacks faults, and the report's `browser` section lists the routes that ended
+somewhere else than asked (`redirected`) and whether the route list was compared (`route_list`).
+Config keys:
 
 | Key | Default | Meaning |
 |---|---|---|
-| `web_service`, `web_url` | none | the compose service of the UI and its address by service name |
+| `web_service`, `web_url` | none | the compose service of the UI and its address by service name (`web_url` must name that service or one of its aliases); `null` with `no_web_reason` for a UI product audited without the leg |
+| `web_static` | `false` | `true` when `web_service` serves static files only; otherwise `web_service` must be one of `process_services`, or the config is refused |
 | `ui_routes` | `ui-routes.json` | the routes to open (`ui-routes.schema.json`) |
+| `ui_routes_root`, `ui_routes_export`, `ui_routes_tsconfig` | the git repository root | where the route list's `entry` is, for the run's own comparison with the router (and Angular's `--export` and `--tsconfig`) |
 | `route_params` | `route-params.json` when present | `{name: value}` or `{"/path/:name": {name: value}}` |
-| `ui_baseline` | `ui-baseline.json` when present | `{entries: [{route, attribute, url, reason}]}`, may only shrink |
-| `idle_pages`, `idle_s` | none, `30` | the settings, integrations and catalog routes held open, and for how long |
+| `ui_baseline` | `ui-baseline.json` when present | `{base_commit, entries: [{route, attribute, url, reason}]}`, may only shrink |
+| `idle_pages`, `idle_s` | none, `30` | the settings, integrations and catalog routes held open, and for how long (an idle page may not be in `ui_skip_routes`) |
 | `ui_page_timeout_s` | `60` | load timeout per page, before its one retry |
 | `ui_skip_routes` | none | `[{path, reason}]`, for example a sign-out route |
 | `ui_expected_requests` | none | `{mode: ["GET /api/ever-stats/status"]}` |
 | `optin_hosts` | `optin-hosts.json` | operator opt-ins, read by `static-hostnames` only |
-| `browser_image` | the pinned image | another image with the same browser build |
+| `browser_image` | the pinned image | another image with the same browser build, pinned by digest (`name@sha256:...`) |
 
 `ever-hosts.json` is the never-allowed list of every leg and of `static-hostnames`; each entry
 matches the name and every name under it. `EVER_EGRESS_EXTRA_HOSTS` (comma-separated) adds names
-for a run; nothing removes one. [docs/egress-audit.md](../../docs/egress-audit.md) has the
+for a run; nothing removes one. Pass it from a CI secret: reports, violations and messages name
+those entries `extra#<n>` (in the order given), never by name; the raw evidence (`dns.log`, the
+sniffer logs, the pcaps, `evidence.json`) keeps what was seen. [docs/egress-audit.md](../../docs/egress-audit.md) has the
 product-side steps.
 
 ## Static helpers
@@ -220,15 +240,22 @@ product-side steps.
   directories that may name them. The product's `optin-hosts.json` (`{hosts: [{host, setting,
   reason}]}`, each host under an Ever-owned name) lists the hosts of older features that stay off
   until an operator turns them on: the scan accepts exactly those, and no capture check ever reads
-  the file. `--baseline` accepts the hosts of the DOM baseline; `--all-files` scans built output
-  (for example `.next/static`) instead of the files git tracks.
+  the file; an opt-in is never a platform service name (`ever.co`, or `api.`, `app.`, `auth.`,
+  `apps.ever.co` and the names under them). `--baseline` accepts the DOM baseline's references,
+  each as its exact URL only (as the baseline writes it, or without its trailing slash), never the
+  whole host; `--all-files` scans built output (for example `.next/static`) instead of the files
+  git tracks.
 - `ever-egress-audit ui-routes --framework angular|next-app|solidstart --entry <path> --out
   ui-routes.json [--check]`: writes the route list from the router (entries with `"source":
   "manual"` are kept), or, with `--check`, exits 1 naming each router route missing from the
   committed list and each listed router route the router no longer has. What only the running app
   knows (a route list built by a service, a matcher) is printed as a note to add by hand.
-- `ever-egress-audit check-baseline-shrink --base <git ref> [--file ui-baseline.json]`: exits 1
-  when the baseline gained an entry since the base commit.
+- `ever-egress-audit check-baseline-shrink --base <git ref> --config <egress-audit.config.json>
+  [--first-version]` (or `--file <ui-baseline.json>`): exits 1 when the baseline gained an entry
+  since the base commit, when it is new there (a renamed file is new), when the config points
+  `ui_baseline` at another path than at the base, or when its `base_commit` changed or is not in
+  the history. `--first-version` adopts a new baseline once, in the change that adds it, and fails
+  once the file exists at the base. It needs the history (`fetch-depth: 0`).
 - `ever-egress-audit cloud-inference --dirs <module dirs>`: no module reads a payment secret, a demo
   flag, a cloud-provider variable, a deployment path, a desktop flag or the host name to guess where
   it runs.
@@ -255,7 +282,12 @@ steps:
 - The browser image is about 3.5 GB; a run that cannot pull it faults. Only Chromium is walked.
 - Only the services in `process_services` are sniffed; databases and other third-party services in
   the compose files are sealed but not watched, and they keep Docker's resolver, so their DNS
-  queries are not in the log. List every service that runs product code.
+  queries are not in the log. List every service that runs product code, the UI's server included
+  (server rendering, API routes, a backend-for-frontend, an nginx `proxy_pass`): a `web_service`
+  outside `process_services` is refused unless `web_static` says it serves static files only.
+- Run the audit on seed data only, never on a copy of a production database: URLs are redacted
+  (query values, fragments, user info, e-mail addresses and JWTs in a path, phone numbers) but the
+  rest of a path is kept.
 - A connection attempt to an IPv6 address fails inside the namespace without a packet; the DNS
   query that would precede it (`AAAA`) is still seen, and so is the `ENETUNREACH` a Node process
   logs for an address written in the code.
