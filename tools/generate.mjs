@@ -219,10 +219,32 @@ async function schemaTypes(ctx) {
 }
 
 // ---------------------------------------------------------------------------------------- step 4
+/**
+ * typify names an inline property schema `<Parent><Property>`; when a component already has that
+ * name (ProviderGrant.status and the ProviderGrantStatus body), the inline schema becomes its own
+ * definition `<Parent><Property>Value` so the two types stay apart.
+ */
+function hoistCollidingInline(defs) {
+  for (const [name, def] of Object.entries({ ...defs })) {
+    for (const [prop, sub] of Object.entries(def?.properties ?? {})) {
+      if (!sub || typeof sub !== 'object' || sub.$ref) continue;
+      if (!(sub.enum || sub.properties || sub.oneOf || sub.anyOf)) continue;
+      const inlineName = `${name}${rustTypeName(prop)}`;
+      if (!(inlineName in defs)) continue;
+      let hoisted = `${inlineName}Value`;
+      while (hoisted in defs) hoisted = `${hoisted}_`;
+      defs[hoisted] = sub;
+      def.properties[prop] = { $ref: `#/definitions/${hoisted}` };
+    }
+  }
+  return defs;
+}
+
 function rustBundle(ctx) {
   const components = {};
   for (const [name, schema] of Object.entries(ctx.spec.components.schemas))
     Object.assign(components, forRust(schema, `${name}_`, { rootName: name }));
+  hoistCollidingInline(components);
   const modules = SCHEMA_DOCS.map((d) => ({
     name: d.module,
     doc: `Types of \`contracts/schemas/${d.file}\`.`,

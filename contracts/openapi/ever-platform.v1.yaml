@@ -295,7 +295,6 @@ paths:
       x-ever-rate-limit: person
       operationId: redeliverWebhook
       security:
-        - everIdToken: []
         - instanceToken: []
       parameters:
         - description: The delivery id.
@@ -2915,7 +2914,6 @@ paths:
         - identity
       operationId: getMyContext
       security:
-        - everIdToken: []
         - everIdTokenRead: []
       responses:
         "200":
@@ -2942,7 +2940,6 @@ paths:
         - registry
       operationId: listMyMemberships
       security:
-        - everIdToken: []
         - everIdTokenRead: []
       responses:
         "200":
@@ -3371,7 +3368,6 @@ paths:
       x-ever-rate-limit: person
       operationId: deleteWebhook
       security:
-        - everIdToken: []
         - instanceToken: []
       parameters:
         - description: The endpoint id.
@@ -3408,7 +3404,6 @@ paths:
       x-ever-rate-limit: person
       operationId: updateWebhook
       security:
-        - everIdToken: []
         - instanceToken: []
       parameters:
         - description: The endpoint id.
@@ -3457,7 +3452,6 @@ paths:
       x-ever-rate-limit: person
       operationId: listWebhookDeliveries
       security:
-        - everIdToken: []
         - instanceToken: []
       parameters:
         - description: The endpoint id.
@@ -3521,7 +3515,6 @@ paths:
       x-ever-rate-limit: person
       operationId: rotateWebhookSecret
       security:
-        - everIdToken: []
         - instanceToken: []
       parameters:
         - description: The endpoint id.
@@ -3575,7 +3568,6 @@ paths:
       x-ever-rate-limit: person
       operationId: testWebhook
       security:
-        - everIdToken: []
         - instanceToken: []
       parameters:
         - description: The endpoint id.

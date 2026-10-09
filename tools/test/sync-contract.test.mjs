@@ -12,6 +12,7 @@ import { checkRows } from '../sync-contract.mjs';
 const spec = YAML.parse(readFileSync(join(REPO, 'contracts/openapi/ever-platform.v1.yaml'), 'utf8'));
 const rowsDoc = readJson(join(REPO, 'contracts/openapi/rows.json'));
 const pending = readJson(join(REPO, 'contracts/openapi/pending-upstream.json'));
+const syncConfig = readJson(join(REPO, 'contracts/openapi/sync.config.json'));
 const METHODS = ['get', 'put', 'post', 'delete', 'patch'];
 const ops = Object.entries(spec.paths).flatMap(([path, item]) =>
   METHODS.filter((m) => item[m]).map((m) => ({ method: m, path, op: item[m] })),
@@ -45,6 +46,10 @@ test('no staff, internal or person-session operation is left', () => {
     assert.ok(!path.startsWith('/v1/staff'), `${path} is a staff route`);
     assert.ok(!path.startsWith('/internal'), `${path} is an internal route`);
     const schemes = (op.security ?? []).flatMap((s) => Object.keys(s));
+    // An Ever ID token of the Ever Platform project only where the config keeps it, on an
+    // operation contract v1 serves to app.ever.co only (never to an installation).
+    const keptHere = syncConfig.keep_security_by_operation?.[op.operationId]?.schemes ?? [];
+    for (const k of keptHere) assert.equal(op['x-ever-availability'], 'not_in_v1', `${op.operationId} keeps ${k} but is served in v1`);
     for (const banned of [
       'personSession',
       'staffSession',
@@ -54,22 +59,33 @@ test('no staff, internal or person-session operation is left', () => {
       'everIdToken',
       'webhookSignature',
     ])
-      assert.ok(!schemes.includes(banned), `${op.operationId} accepts ${banned}`);
+      assert.ok(!schemes.includes(banned) || keptHere.includes(banned), `${op.operationId} accepts ${banned}`);
   }
   for (const banned of ['personSession', 'staffSession', 'orgApiKey'])
     assert.ok(!(banned in (spec.components.securitySchemes ?? {})), `the spec defines ${banned}`);
 });
 
-test('the installation address (row 18) and the other pending rows are only in pending-upstream.json', () => {
+test('a pending row stays out of the spec; the installation address (row 18) is pinned and nothing is pending', () => {
   for (const p of pending.operations) {
     assert.ok(!spec.paths[p.path]?.[p.method.toLowerCase()], `${p.method} ${p.path} is in the spec although pending upstream`);
   }
-  const row18 = pending.operations.filter((p) => p.row === 18);
-  assert.deepEqual(row18.map((p) => `${p.method} ${p.path}`).sort(), [
-    'DELETE /v1/instances/me/public-url',
-    'PUT /v1/instances/me/public-url',
-  ]);
-  assert.deepEqual(Object.keys(row18.find((p) => p.method === 'PUT').request.properties), ['base_url']);
+  assert.deepEqual(pending.operations, []);
+  const item = spec.paths['/v1/instances/me/public-url'];
+  assert.deepEqual([item.put['x-ever-row'], item.delete['x-ever-row']], [18, 18]);
+  assert.equal(item.put['x-ever-availability'], undefined);
+  const body = spec.components.schemas[item.put.requestBody.content['application/json'].schema.$ref.split('/').pop()];
+  assert.deepEqual(Object.keys(body.properties), ['base_url']);
+});
+
+test('what contract v1 does not serve is marked, with its reason, and is no longer provisional', () => {
+  const scope = readJson(join(REPO, 'contracts/openapi/v1-scope.json'));
+  const marked = ops.filter((o) => o.op['x-ever-availability'] === 'not_in_v1').map((o) => o.op.operationId);
+  const expected = [...scope.not_in_v1.map((n) => n.operation_id), 'putIntegrationState'].sort();
+  assert.deepEqual(marked.sort(), expected);
+  for (const o of ops.filter((x) => x.op['x-ever-availability'])) assert.ok(o.op['x-ever-availability-note'].length > 10, o.op.operationId);
+  const vendorDoc = readJson(join(REPO, 'contracts/VENDOR.json'));
+  assert.deepEqual(vendorDoc.openapi.provisional_operations, []);
+  assert.deepEqual(vendorDoc.openapi.not_in_v1_operations, expected);
 });
 
 test('the redeem body carries no address and every request body is closed', () => {

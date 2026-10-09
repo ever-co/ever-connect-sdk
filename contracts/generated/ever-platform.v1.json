@@ -428,9 +428,6 @@
         "operationId": "redeliverWebhook",
         "security": [
           {
-            "everIdToken": []
-          },
-          {
             "instanceToken": []
           }
         ],
@@ -4230,9 +4227,6 @@
         "operationId": "getMyContext",
         "security": [
           {
-            "everIdToken": []
-          },
-          {
             "everIdTokenRead": []
           }
         ],
@@ -4270,9 +4264,6 @@
         ],
         "operationId": "listMyMemberships",
         "security": [
-          {
-            "everIdToken": []
-          },
           {
             "everIdTokenRead": []
           }
@@ -4871,9 +4862,6 @@
         "operationId": "deleteWebhook",
         "security": [
           {
-            "everIdToken": []
-          },
-          {
             "instanceToken": []
           }
         ],
@@ -4927,9 +4915,6 @@
         "x-ever-rate-limit": "person",
         "operationId": "updateWebhook",
         "security": [
-          {
-            "everIdToken": []
-          },
           {
             "instanceToken": []
           }
@@ -5009,9 +4994,6 @@
         "x-ever-rate-limit": "person",
         "operationId": "listWebhookDeliveries",
         "security": [
-          {
-            "everIdToken": []
-          },
           {
             "instanceToken": []
           }
@@ -5107,9 +5089,6 @@
         "operationId": "rotateWebhookSecret",
         "security": [
           {
-            "everIdToken": []
-          },
-          {
             "instanceToken": []
           }
         ],
@@ -5184,9 +5163,6 @@
         "x-ever-rate-limit": "person",
         "operationId": "testWebhook",
         "security": [
-          {
-            "everIdToken": []
-          },
           {
             "instanceToken": []
           }

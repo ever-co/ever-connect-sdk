@@ -51,12 +51,8 @@ export const lookupHandlers = {
   },
 
   getLookupTestVectors() {
-    const v = contract().lookupVectors;
-    return {
-      status: 200,
-      headers: { 'cache-control': 'public, max-age=300' },
-      body: { normalization_version: v.normalization_version, salt_version: v.salt_version, salt: v.salt, vectors: v.vectors },
-    };
+    // The platform's published document, as it is (vectors and refused rows).
+    return { status: 200, headers: { 'cache-control': 'public, max-age=300' }, body: contract().lookupVectors };
   },
 
   lookupCounterparties: Object.assign(

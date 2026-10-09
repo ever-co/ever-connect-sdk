@@ -171,12 +171,56 @@ pub fn normalize_identifier(
             let at = v.rfind('@').ok_or(LookupInputError::NoAtSign)?;
             let domain =
                 idna::domain_to_ascii(&v[at + 1..]).map_err(|_| LookupInputError::BadDomain)?;
-            if domain.is_empty() {
+            // Nothing is percent-decoded and a host that reads as an IPv4 address is no domain.
+            if domain.is_empty()
+                || domain.chars().any(forbidden_domain)
+                || ends_in_a_number(&domain)
+            {
                 return Err(LookupInputError::BadDomain);
             }
             Ok(format!("{}@{domain}", &v[..at]))
         }
     }
+}
+
+/// The URL Standard's forbidden domain code points: a C0 control, a space, `#`, `%`, `/`, `:`,
+/// `<`, `>`, `?`, `@`, `[`, `\`, `]`, `^`, `|` or DELETE.
+const fn forbidden_domain(c: char) -> bool {
+    matches!(
+        c,
+        '\u{0}'
+            ..='\u{20}'
+                | '#'
+                | '%'
+                | '/'
+                | ':'
+                | '<'
+                | '>'
+                | '?'
+                | '@'
+                | '['
+                | '\\'
+                | ']'
+                | '^'
+                | '|'
+                | '\u{7f}'
+    )
+}
+
+/// The URL Standard's "ends in a number": the last label (a final empty one dropped) is all ASCII
+/// digits, or `0x`/`0X` and hex digits. Such a host is an IPv4 address, not a domain.
+fn ends_in_a_number(domain: &str) -> bool {
+    let mut labels: Vec<&str> = domain.split('.').collect();
+    if labels.len() > 1 && labels.last() == Some(&"") {
+        labels.pop();
+    }
+    let last = labels.last().copied().unwrap_or_default();
+    if !last.is_empty() && last.bytes().all(|b| b.is_ascii_digit()) {
+        return true;
+    }
+    last.strip_prefix("0x")
+        .or_else(|| last.strip_prefix("0X"))
+        .is_some_and(|hex| hex.bytes().all(|b| b.is_ascii_hexdigit()))
 }
 
 /// One hashed identifier, as `POST /v1/lookup` and the identifier upload take it.
@@ -231,7 +275,8 @@ pub fn lookup_hash(
 pub struct LookupVectorError {
     /// The index of the vector.
     pub index: usize,
-    /// `normalized` or `hash`.
+    /// `normalized` or `hash`; `refused` for a row of `refused` not refused for its reason (the
+    /// index is then in `refused`).
     pub field: &'static str,
 }
 
@@ -247,7 +292,8 @@ impl fmt::Display for LookupVectorError {
 
 impl std::error::Error for LookupVectorError {}
 
-/// Reproduces every published vector (`GET /v1/lookup/test-vectors`).
+/// Reproduces every published vector (`GET /v1/lookup/test-vectors`) and refuses every published
+/// `refused` identifier for its reason.
 ///
 /// # Errors
 /// [`LookupVectorError`] at the first vector that differs.
@@ -291,6 +337,24 @@ pub fn check_test_vectors(vectors: &Value) -> Result<(), LookupVectorError> {
                 index,
                 field: "hash",
             });
+        }
+    }
+    let refused = vectors
+        .get("refused")
+        .and_then(Value::as_array)
+        .map_or(&[][..], Vec::as_slice);
+    for (index, v) in refused.iter().enumerate() {
+        let field = |name| v.get(name).and_then(Value::as_str);
+        let error = LookupVectorError {
+            index,
+            field: "refused",
+        };
+        let kind = field("kind")
+            .and_then(LookupKind::parse)
+            .ok_or_else(|| error.clone())?;
+        match normalize_identifier(kind, field("input").unwrap_or(""), field("country")) {
+            Err(why) if Some(why.reason()) == field("reason") => {}
+            _ => return Err(error),
         }
     }
     Ok(())

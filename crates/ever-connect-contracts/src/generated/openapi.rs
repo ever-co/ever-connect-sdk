@@ -3635,7 +3635,7 @@ pub mod components {
         pub name: ::std::option::Option<::std::string::String>,
         ///The product role the provider organization asked for.
         pub role: ::std::string::String,
-        pub status: ProviderGrantStatus,
+        pub status: ProviderGrantStatusValue,
     }
     ///`ProviderGrantState`
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
@@ -3716,69 +3716,6 @@ pub mod components {
         pub product_user_ref: ::std::option::Option<::std::string::String>,
         pub status: ProviderGrantStatusStatus,
     }
-    ///`ProviderGrantStatus`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum ProviderGrantStatus {
-        #[serde(rename = "person_accepted")]
-        PersonAccepted,
-        #[serde(rename = "accepted")]
-        Accepted,
-        #[serde(rename = "declined")]
-        Declined,
-        #[serde(rename = "revoked")]
-        Revoked,
-        #[serde(rename = "expired")]
-        Expired,
-    }
-    impl ::std::fmt::Display for ProviderGrantStatus {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::PersonAccepted => f.write_str("person_accepted"),
-                Self::Accepted => f.write_str("accepted"),
-                Self::Declined => f.write_str("declined"),
-                Self::Revoked => f.write_str("revoked"),
-                Self::Expired => f.write_str("expired"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for ProviderGrantStatus {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "person_accepted" => Ok(Self::PersonAccepted),
-                "accepted" => Ok(Self::Accepted),
-                "declined" => Ok(Self::Declined),
-                "revoked" => Ok(Self::Revoked),
-                "expired" => Ok(Self::Expired),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for ProviderGrantStatus {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for ProviderGrantStatus {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
     ///`ProviderGrantStatusStatus`
     #[derive(
         ::serde::Deserialize,
@@ -3831,6 +3768,69 @@ pub mod components {
         }
     }
     impl ::std::convert::TryFrom<::std::string::String> for ProviderGrantStatusStatus {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    ///`ProviderGrantStatusValue`
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd,
+    )]
+    pub enum ProviderGrantStatusValue {
+        #[serde(rename = "person_accepted")]
+        PersonAccepted,
+        #[serde(rename = "accepted")]
+        Accepted,
+        #[serde(rename = "declined")]
+        Declined,
+        #[serde(rename = "revoked")]
+        Revoked,
+        #[serde(rename = "expired")]
+        Expired,
+    }
+    impl ::std::fmt::Display for ProviderGrantStatusValue {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::PersonAccepted => f.write_str("person_accepted"),
+                Self::Accepted => f.write_str("accepted"),
+                Self::Declined => f.write_str("declined"),
+                Self::Revoked => f.write_str("revoked"),
+                Self::Expired => f.write_str("expired"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for ProviderGrantStatusValue {
+        type Err = self::error::ConversionError;
+        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "person_accepted" => Ok(Self::PersonAccepted),
+                "accepted" => Ok(Self::Accepted),
+                "declined" => Ok(Self::Declined),
+                "revoked" => Ok(Self::Revoked),
+                "expired" => Ok(Self::Expired),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for ProviderGrantStatusValue {
+        type Error = self::error::ConversionError;
+        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for ProviderGrantStatusValue {
         type Error = self::error::ConversionError;
         fn try_from(
             value: ::std::string::String,

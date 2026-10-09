@@ -228,7 +228,11 @@ export const OK = {
   ingestStatsReport: (env) => env.call('POST', '/v1/stats/reports', report()),
   instancePutPublicUrl: async (env) => {
     const c = await connected(env, { enable: ['instance_url'] });
-    return env.call('PUT', '/v1/instances/me/public-url', { token: c.token, body: { base_url: 'https://gauzy.example.com' } });
+    return env.call('PUT', '/v1/instances/me/public-url', {
+      token: c.token,
+      body: { base_url: 'https://gauzy.example.com' },
+      headers: idem('u'),
+    });
   },
   instanceDeletePublicUrl: async (env) =>
     env.call('DELETE', '/v1/instances/me/public-url', { token: (await connected(env, { enable: ['instance_url'] })).token }),
@@ -458,7 +462,8 @@ const calls = {
       headers: linkHeader(c),
       body: { ops: [{ op: 'upsert', kind: 'app', external_id: 'w', external_version: 1, occurred_at: '2026-11-02T10:00:00Z' }] },
     }),
-  publicUrl: (env, c) => env.call('PUT', '/v1/instances/me/public-url', { token: c.token, body: { base_url: 'https://g.example.com' } }),
+  publicUrl: (env, c) =>
+    env.call('PUT', '/v1/instances/me/public-url', { token: c.token, body: { base_url: 'https://g.example.com' }, headers: idem('u') }),
   personLink: (env, c) =>
     env.call('POST', '/v1/instances/me/person-links', {
       token: c.token,
@@ -868,6 +873,7 @@ export const ERRORS = {
     env.call('PUT', '/v1/instances/me/public-url', {
       token: (await connected(env, { enable: ['instance_url'] })).token,
       body: { base_url: 'http://g.example.com' },
+      headers: idem('u-http'),
     }),
   ...integrationPairs(19, 'ever_id_login', calls.personLink),
   '19:404:not_found': async (env) =>

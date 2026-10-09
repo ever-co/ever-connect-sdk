@@ -324,16 +324,11 @@
       "path": "/status"
     },
     "public-url.json": {
-      "schema": "pending:instancePutPublicUrl",
+      "schema": "PublicUrlPut",
       "valid": true
     },
-    "public-url.invalid-plain-http.json": {
-      "schema": "pending:instancePutPublicUrl",
-      "valid": false,
-      "path": "/base_url"
-    },
     "public-url.invalid-extra-field.json": {
-      "schema": "pending:instancePutPublicUrl",
+      "schema": "PublicUrlPut",
       "valid": false,
       "path": "/unexpected_field"
     },
@@ -347,11 +342,11 @@
       "path": "/unexpected_field"
     },
     "provider-grant-status.json": {
-      "schema": "pending:instanceReportProviderGrantStatus",
+      "schema": "ProviderGrantStatus",
       "valid": true
     },
     "provider-grant-status.invalid-extra-field.json": {
-      "schema": "pending:instanceReportProviderGrantStatus",
+      "schema": "ProviderGrantStatus",
       "valid": false,
       "path": "/email"
     }

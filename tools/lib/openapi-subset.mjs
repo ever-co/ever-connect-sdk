@@ -270,7 +270,8 @@ export function buildSubset({ platform, config, rowsByOperation, version, title,
     op.operationId = operationId;
     const docForSecurity = source === 'pinned' ? pinned : design.doc;
     const declared = src.security ?? docForSecurity.security ?? [];
-    const security = declared.filter((req) => Object.keys(req).length === 0 || Object.keys(req).every((name) => keep.has(name)));
+    const keepHere = new Set([...keep, ...(config.keep_security_by_operation?.[operationId]?.schemes ?? [])]);
+    const security = declared.filter((req) => Object.keys(req).length === 0 || Object.keys(req).every((name) => keepHere.has(name)));
     const override = securityOverrides[operationId];
     if (override) {
       // A credential a product uses that the platform does not accept on this operation yet.

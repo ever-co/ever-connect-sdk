@@ -1,7 +1,7 @@
 {
   "description": "sha256 of every file tools/generate.mjs writes",
   "files": {
-    "contracts/generated/ever-platform.v1.json": "e47a378d82a3158b1faef583c30b13175c95dd6b3775fb6f8674273c44e8a43b",
+    "contracts/generated/ever-platform.v1.json": "51d73ee8e61008894f1a449bef470f8d2352bf31e0f861885aa0296660db7504",
     "contracts/generated/outbound-calls.json": "3985bdf0db83b1fdf68a0bfaadab944979950afa39a05342ec7da6a67d0dad9d",
     "contracts/generated/row-coverage.json": "6ac2ca6319a1c4d3c3851c30175616239b9d416685dea3798dfb0e2e6e51b08d",
     "crates/ever-connect-contracts/src/generated/constants.rs": "d260ea421002811c32979363b89dbbb95c5e2a411a81e77f4336c23a7fd90738",
@@ -54,7 +54,7 @@
     "crates/ever-connect-contracts/src/generated/data/schemas/ever.key-manifest.v1.json": "2704b43ece543387f1b0cc400fcfbf8148647a7eff91da5e4916d7b2460e7974",
     "crates/ever-connect-contracts/src/generated/data/schemas/ever.stats.v1.json": "0cd746f7dec75117a6b812b7a832f9ceca4c97a6ecf65d22d6967a6475efc6e5",
     "crates/ever-connect-contracts/src/generated/data/schemas/ever.usage.v1.json": "d06ef9bfe14fb43d91566a7d58ed70f10b934f3941d449ac2295094288d47237",
-    "crates/ever-connect-contracts/src/generated/openapi.rs": "c33d74d85211da7fcebbede5268608f40940477e93363f7403b25ba669eca996",
+    "crates/ever-connect-contracts/src/generated/openapi.rs": "3416d4bd5b1929664ed4aa624ca745e5959aa0417a73d9cfcf2f9d787e9d4a72",
     "crates/ever-connect-contracts/src/generated/schemas.rs": "27866b8aa9a3993e1db4ab99e9bda72a61a1169a11ab5f911e6bb33b05d17ca2",
     "crates/ever-connect-contracts/tests/typed/mod.rs": "8647d90ed95913a48fbe1c1656b6604e5b3cc5d114c17bb9262dfeb147aca98a",
     "crates/ever-connect-sdk/src/client/generated.rs": "b190afcf3c18a05a6a1820a2f7830dd8368cdebc43d279a1d6ac41dbaab82a49",
@@ -72,7 +72,7 @@
     "tools/egress-audit/selftest/stats-sender/report.json": "78615e517bf4713ee2d557a839200ac6c3e39451fd8ef26fdf8c7dff77fd7f39",
     "tools/mock-platform/contracts/constants.json": "ceac639de6941db87a4624db1c8dfa6461c2ff6d478ba4031f801a55f5752114",
     "tools/mock-platform/contracts/fixtures/lookup/test-vectors.json": "d76355ba62f3e18bf1d6b1a0b5dc5265c108cb9c104c0e45050594a589144b69",
-    "tools/mock-platform/contracts/generated/ever-platform.v1.json": "e47a378d82a3158b1faef583c30b13175c95dd6b3775fb6f8674273c44e8a43b",
+    "tools/mock-platform/contracts/generated/ever-platform.v1.json": "51d73ee8e61008894f1a449bef470f8d2352bf31e0f861885aa0296660db7504",
     "tools/mock-platform/contracts/generated/outbound-calls.json": "3985bdf0db83b1fdf68a0bfaadab944979950afa39a05342ec7da6a67d0dad9d",
     "tools/mock-platform/contracts/generated/row-coverage.json": "6ac2ca6319a1c4d3c3851c30175616239b9d416685dea3798dfb0e2e6e51b08d",
     "tools/mock-platform/contracts/integrations/app_sync.json": "1fa3bfa566557109905ec0ecc6832b1ac39ec799b737d231bc95ccf54ae5b70e",

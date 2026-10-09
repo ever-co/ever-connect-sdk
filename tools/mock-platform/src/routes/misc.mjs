@@ -79,10 +79,37 @@ function validateWebhookInput(body) {
   if (errors.length > 0) fail(422, 'validation_failed', undefined, { errors });
 }
 
+/** The longest public address accepted. */
+const PUBLIC_URL_MAX = 2048;
+
+/**
+ * The installation's public address as Ever Platform stores it: an absolute https URL with a host,
+ * no credentials, no query and no fragment, at most 2 048 characters, normalised by the URL
+ * Standard (lower-case host, no default port); anything else is 422 at /base_url, never echoed.
+ */
+export function normalisedPublicUrl(raw) {
+  const refuse = (message) => fail(422, 'validation_failed', undefined, { errors: [{ path: '/base_url', code: 'invalid', message }] });
+  if (typeof raw !== 'string' || raw === '' || raw.length > PUBLIC_URL_MAX || raw.trim() !== raw)
+    refuse('an absolute https URL of at most 2048 characters');
+  let u;
+  try {
+    u = new URL(raw);
+  } catch {
+    refuse('an absolute https URL');
+  }
+  if (u.protocol !== 'https:') refuse('an https URL');
+  if (!u.hostname) refuse('an https URL with a host');
+  if (u.username || u.password) refuse('an https URL without credentials');
+  if (u.href.includes('?') || u.href.includes('#')) refuse('an https URL without a query or a fragment');
+  if (u.href.length > PUBLIC_URL_MAX) refuse('an absolute https URL of at most 2048 characters');
+  return u.href;
+}
+
 export const miscHandlers = {
   instancePutPublicUrl({ instance, body }) {
-    instance.public_url = body.base_url;
-    return { status: 200, body: { base_url: body.base_url } };
+    const base_url = normalisedPublicUrl(body.base_url);
+    instance.public_url = base_url;
+    return { status: 200, body: { base_url } };
   },
 
   instanceDeletePublicUrl({ instance }) {
