@@ -8,7 +8,9 @@
  *   registration  `<CC>:<number>`: the caller's country, then the number trimmed, upper-cased,
  *                 without spaces, dots and hyphens
  *   email         trim, Unicode NFC, lower-case, the part after the last `@` IDNA-encoded; no
- *                 plus-tag or dot is removed
+ *                 plus-tag or dot is removed; a domain is refused when it holds a URL-forbidden
+ *                 code point (`%` included: nothing is percent-decoded) or reads as an IPv4
+ *                 address (its last label is a number)
  *
  *   hash = hex(sha256(salt bytes ‖ ":" ‖ kind ‖ ":" ‖ utf8(normalized)))
  */
@@ -49,6 +51,34 @@ export interface LookupTestVectors {
     readonly salt_version?: number;
     readonly hash: string;
   }[];
+  /** Identifiers that cannot be checked, each with its reason: never hashed or sent. */
+  readonly refused?: readonly {
+    readonly kind: string;
+    readonly input: string;
+    readonly country?: string;
+    readonly reason: string;
+  }[];
+}
+
+/**
+ * The URL Standard's forbidden domain code points: a C0 control, a space, `#`, `%`, `/`, `:`, `<`,
+ * `>`, `?`, `@`, `[`, `\`, `]`, `^`, `|` or DELETE.
+ */
+function forbiddenDomain(c: string): boolean {
+  const code = c.codePointAt(0) ?? 0;
+  return code <= 0x20 || code === 0x7f || '#%/:<>?@[\\]^|'.includes(c);
+}
+
+/**
+ * The URL Standard's "ends in a number": the last label (a final empty one dropped) is all ASCII
+ * digits, or `0x`/`0X` and hex digits. Such a host is an IPv4 address, not a domain.
+ */
+function endsInANumber(domain: string): boolean {
+  const labels = domain.split('.');
+  if (labels.length > 1 && labels[labels.length - 1] === '') labels.pop();
+  const last = labels[labels.length - 1] ?? '';
+  if (/^[0-9]+$/.test(last)) return true;
+  return /^0[xX][0-9A-Fa-f]*$/.test(last);
 }
 
 function country(ctx: { country?: string } | undefined): string {
@@ -79,8 +109,12 @@ export function normalizeIdentifier(kind: LookupKind, value: string, ctx?: { cou
       if (v === '') throw new LookupInputError('empty');
       const at = v.lastIndexOf('@');
       if (at < 0) throw new LookupInputError('no_at_sign');
-      const domain = domainToASCII(v.slice(at + 1));
-      if (domain === '') throw new LookupInputError('bad_domain');
+      const raw = v.slice(at + 1);
+      // The URL host parser would percent-decode the domain, cut it at a `/` and read a number as
+      // an IPv4 address; the platform does none of that, so a forbidden code point refuses it first.
+      if (raw === '' || [...raw].some(forbiddenDomain)) throw new LookupInputError('bad_domain');
+      const domain = domainToASCII(raw);
+      if (domain === '' || [...domain].some(forbiddenDomain) || endsInANumber(domain)) throw new LookupInputError('bad_domain');
       return `${v.slice(0, at)}@${domain}`;
     }
     default:
@@ -102,7 +136,10 @@ export function lookupHash(kind: LookupKind, normalized: string, salt: LookupSal
 export const hashIdentifier = (kind: LookupKind, value: string, salt: LookupSalt, ctx?: { country?: string }): LookupHash =>
   lookupHash(kind, normalizeIdentifier(kind, value, ctx), salt);
 
-/** Reproduces every published vector; throws {@link LookupVectorError} at the first one that differs. */
+/**
+ * Reproduces every published vector and refuses every published refused identifier for its reason;
+ * throws {@link LookupVectorError} at the first row that differs.
+ */
 export function checkTestVectors(vectors: LookupTestVectors): void {
   vectors.vectors.forEach((v, index) => {
     const kind = v.kind as LookupKind;
@@ -115,5 +152,13 @@ export function checkTestVectors(vectors: LookupTestVectors): void {
     if (normalized !== v.normalized) throw new LookupVectorError(index, 'normalized');
     const { hash } = lookupHash(kind, normalized, { version: vectors.salt_version, salt: vectors.salt });
     if (hash !== v.hash) throw new LookupVectorError(index, 'hash');
+  });
+  (vectors.refused ?? []).forEach((v, index) => {
+    try {
+      normalizeIdentifier(v.kind as LookupKind, v.input, v.country === undefined ? undefined : { country: v.country });
+    } catch (error) {
+      if (error instanceof LookupInputError && error.reason === v.reason) return;
+    }
+    throw new LookupVectorError(index, 'refused');
   });
 }

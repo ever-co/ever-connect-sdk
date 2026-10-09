@@ -165,9 +165,12 @@ export class LookupVectorError extends Error {
   override readonly name = 'LookupVectorError';
   constructor(
     readonly index: number,
-    readonly field: 'normalized' | 'hash',
+    /** `refused`: a row of `refused` the SDK hashes, or refuses for another reason (the index is in `refused`). */
+    readonly field: 'normalized' | 'hash' | 'refused',
   ) {
-    super(`lookup test vector ${index}: the ${field} differs`);
+    super(
+      field === 'refused' ? `lookup refused row ${index}: not refused for its reason` : `lookup test vector ${index}: the ${field} differs`,
+    );
   }
 }
 
