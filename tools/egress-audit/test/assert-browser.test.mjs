@@ -227,34 +227,125 @@ function repo() {
   return { dir, git };
 }
 
-test('ui-baseline.json may only shrink: an entry added after the base commit fails, a removed one passes', () => {
-  const entry = (url) => ({ route: '/', attribute: 'href', url, reason: 'footer' });
-  const { dir, git } = repo();
-  const file = join(dir, 'ui-baseline.json');
-  writeFileSync(file, JSON.stringify({ entries: [entry('https://app.ever.co/'), entry('https://ever.team/')] }));
-  git('add', '.');
-  git('commit', '-q', '-m', 'baseline');
-  const quiet = { write: () => true };
+/** Runs check-baseline-shrink's CLI with its output silenced; answers the exit code and what it wrote. */
+function shrink(args) {
   const out = process.stdout.write;
   const err = process.stderr.write;
-  const run = () => {
-    process.stdout.write = quiet.write;
-    process.stderr.write = quiet.write;
-    try {
-      return shrinkMain(['--base', 'HEAD', '--file', file]);
-    } finally {
-      process.stdout.write = out;
-      process.stderr.write = err;
-    }
+  let text = '';
+  process.stdout.write = (t) => {
+    text += t;
+    return true;
   };
+  process.stderr.write = process.stdout.write;
+  try {
+    return { exit: shrinkMain(args), text };
+  } finally {
+    process.stdout.write = out;
+    process.stderr.write = err;
+  }
+}
+
+const entry = (url, route = '/') => ({ route, attribute: 'href', url, reason: 'footer' });
+
+/** A product repository with a first commit (the base_commit of its baseline) and helpers. */
+function product() {
+  const { dir, git } = repo();
+  writeFileSync(join(dir, 'README.md'), 'product\n');
+  git('add', '.');
+  git('commit', '-q', '-m', 'product before the modules');
+  const first = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: dir, encoding: 'utf8' }).trim();
+  const write = (name, value) => writeFileSync(join(dir, name), JSON.stringify(value));
+  const commit = (m) => {
+    git('add', '-A');
+    git('commit', '-q', '-m', m);
+  };
+  const baseline = (entries, extra = {}) => ({ base_commit: first, entries, ...extra });
+  return { dir, git, first, write, commit, baseline };
+}
+
+test('ui-baseline.json may only shrink: an entry added after the base commit fails, a removed one passes', () => {
+  const { dir, write, commit, baseline } = product();
+  const file = join(dir, 'ui-baseline.json');
+  write('ui-baseline.json', baseline([entry('https://app.ever.co/'), entry('https://ever.team/')]));
+  commit('baseline');
+  const run = () => shrink(['--base', 'HEAD', '--file', file]).exit;
   assert.equal(run(), 0);
-  writeFileSync(file, JSON.stringify({ entries: [entry('https://app.ever.co/')] }));
+  write('ui-baseline.json', baseline([entry('https://app.ever.co/')]));
   assert.equal(run(), 0);
-  writeFileSync(file, JSON.stringify({ entries: [entry('https://app.ever.co/'), entry('https://gauzy.co/')] }));
+  write('ui-baseline.json', baseline([entry('https://app.ever.co/'), entry('https://gauzy.co/')]));
   assert.equal(run(), 1);
   assert.deepEqual(
     addedEntries({ entries: [entry('https://gauzy.co/?a=1')] }, { entries: [entry('https://gauzy.co/?a=2')] }),
     [],
     'URLs are compared without their query values',
   );
+});
+
+test('a new baseline fails unless it is adopted with --first-version, and the flag fails once the file exists', () => {
+  const { dir, write, commit, baseline } = product();
+  const config = join(dir, 'egress-audit.config.json');
+  write('egress-audit.config.json', { product: 'teams' });
+  commit('config');
+  // The probe of the review: a new file holding an Ever script passes as "its first version".
+  write('ui-baseline.json', baseline([{ ...entry('https://api.ever.co/launcher.js'), attribute: 'src' }]));
+  const noFlag = shrink(['--base', 'HEAD', '--config', config]);
+  assert.equal(noFlag.exit, 1);
+  assert.match(noFlag.text, /is new since HEAD/);
+  assert.equal(shrink(['--base', 'HEAD', '--file', join(dir, 'ui-baseline.json')]).exit, 1, 'with --file as well');
+  const adopted = shrink(['--base', 'HEAD', '--config', config, '--first-version']);
+  assert.equal(adopted.exit, 0, adopted.text);
+  assert.match(adopted.text, /adopted/);
+  commit('adopt the baseline');
+  const stale = shrink(['--base', 'HEAD', '--config', config, '--first-version']);
+  assert.equal(stale.exit, 1);
+  assert.match(stale.text, /remove the flag/);
+  assert.equal(shrink(['--base', 'HEAD', '--config', config]).exit, 0);
+});
+
+test('a renamed or re-pointed baseline counts as growing it', () => {
+  const { dir, git, write, commit, baseline } = product();
+  const config = join(dir, 'egress-audit.config.json');
+  write('egress-audit.config.json', { product: 'teams' });
+  write('ui-baseline.json', baseline([entry('https://app.ever.co/')]));
+  write('old-baseline.json', baseline([entry('https://app.ever.co/'), entry('https://gauzy.co/')]));
+  commit('baseline');
+  // The probe of the review: git mv to ui-baseline.v2.json plus one added app.ever.co link.
+  git('mv', 'ui-baseline.json', 'ui-baseline.v2.json');
+  write('ui-baseline.v2.json', baseline([entry('https://app.ever.co/'), entry('https://app.ever.co/', '/settings')]));
+  write('egress-audit.config.json', { product: 'teams', ui_baseline: 'ui-baseline.v2.json' });
+  const renamed = shrink(['--base', 'HEAD', '--config', config]);
+  assert.equal(renamed.exit, 1);
+  assert.match(renamed.text, /the baseline moved since HEAD \(ui-baseline\.json -> ui-baseline\.v2\.json\)/);
+  assert.equal(shrink(['--base', 'HEAD', '--file', join(dir, 'ui-baseline.v2.json')]).exit, 1, '--file: a renamed file is new');
+  // Pointing ui_baseline at another file that already existed (with more entries) is refused too.
+  git('mv', 'ui-baseline.v2.json', 'ui-baseline.json');
+  write('ui-baseline.json', baseline([entry('https://app.ever.co/')]));
+  write('egress-audit.config.json', { product: 'teams', ui_baseline: 'old-baseline.json' });
+  assert.equal(shrink(['--base', 'HEAD', '--config', config]).exit, 1);
+  assert.equal(
+    shrink(['--base', 'HEAD', '--config', config, '--file', join(dir, 'ui-baseline.json')]).exit,
+    2,
+    '--file must be the config baseline',
+  );
+});
+
+test('base_commit is required, must be in the history, and never changes once the baseline exists', () => {
+  const { dir, write, commit, baseline, first } = product();
+  const file = join(dir, 'ui-baseline.json');
+  write('ui-baseline.json', { entries: [entry('https://app.ever.co/')] });
+  const missing = shrink(['--base', 'HEAD', '--file', file, '--first-version']);
+  assert.equal(missing.exit, 1);
+  assert.match(missing.text, /base_commit/);
+  write('ui-baseline.json', baseline([entry('https://app.ever.co/')], { base_commit: '0123456789abcdef0123456789abcdef01234567' }));
+  assert.equal(shrink(['--base', 'HEAD', '--file', file, '--first-version']).exit, 1, 'not a commit of the history');
+  write('ui-baseline.json', baseline([entry('https://app.ever.co/')]));
+  commit('baseline');
+  write('README.md', 'later\n');
+  commit('later');
+  const later = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: dir, encoding: 'utf8' }).trim();
+  write('ui-baseline.json', baseline([entry('https://app.ever.co/')], { base_commit: later }));
+  const moved = shrink(['--base', 'HEAD', '--file', file]);
+  assert.equal(moved.exit, 1);
+  assert.match(moved.text, new RegExp(`base_commit changed since HEAD \\(${first} -> ${later}\\)`));
+  assert.equal(shrink(['--file', file]).exit, 2, '--base is required');
 });

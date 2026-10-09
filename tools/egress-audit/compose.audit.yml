@@ -24,7 +24,7 @@ services:
       default:
         ipv4_address: __DNS_IP__
   __HOLDER__:
-    image: alpine:3.20
+    image: alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc
     init: true
     dns: [__DNS_IP__]
     command: ["sh", "-c", "printf 'nameserver __DNS_IP__\\n' > /etc/resolv.conf && exec sleep infinity"]
@@ -32,7 +32,7 @@ services:
       default:
         aliases: [__SERVICE__]
   __SNIFFER__:
-    image: nicolaka/netshoot:v0.13
+    image: nicolaka/netshoot:v0.13@sha256:a20c2531bf35436ed3766cd6cfe89d352b050ccc4d7005ce6400adf97503da1b
     network_mode: service:__HOLDER__
     cap_add: [NET_RAW, NET_ADMIN]
     command:

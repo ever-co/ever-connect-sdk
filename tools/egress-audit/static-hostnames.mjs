@@ -12,7 +12,9 @@
  * --optin-hosts (or the config's optin_hosts, default optin-hosts.json beside the config): the
  * product's documented operator opt-ins, hosts of older features that stay off until an operator
  * turns them on; the scan accepts exactly those hosts. Only this scan reads the file.
- * --baseline: the hosts of the product's ui-baseline.json links are accepted too.
+ * --baseline: the product's ui-baseline.json references are accepted, each only as its exact URL
+ * (as the baseline writes it, or without its trailing slash) where a line names it; the rest of the
+ * line, and every other use of the same host, is still scanned.
  * --all-files: scan every file under the root, built output included (for example .next/static),
  * instead of the files git tracks.
  *
@@ -71,20 +73,37 @@ function files(root, allFiles) {
   }
 }
 
+const quoteRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * A matcher that blanks each accepted baseline URL out of a line: the URL exactly (or without its
+ * trailing slash), not followed by more of a URL, so `https://gauzy.co/` never excuses
+ * `https://gauzy.co/api/x`.
+ */
+export function baselineMatcher(urls = []) {
+  const forms = [...new Set(urls.flatMap((u) => [u, u.replace(/\/$/, '')]).filter((u) => u && hostOfUrl(u)))];
+  if (forms.length === 0) return null;
+  forms.sort((a, b) => b.length - a.length);
+  return new RegExp(`(${forms.map(quoteRe).join('|')})(?![\\w./~%?#:@-])`, 'gi');
+}
+
 /** The Ever-owned hosts a line names, minus the accepted ones; and whether it names the base URL variable. */
-export function lineFindings(line, accepted = new Set(), lists = loadEverHosts()) {
-  const hosts = hostsInText(line).filter((h) => isEverOwned(h, lists) && !accepted.has(normaliseHost(h)));
+export function lineFindings(line, accepted = new Set(), lists = loadEverHosts(), baseline = null) {
+  const text = baseline ? line.replace(baseline, ' ') : line;
+  const hosts = hostsInText(text).filter((h) => isEverOwned(h, lists) && !accepted.has(normaliseHost(h)));
   const variable = VARIABLE_PATTERNS.some((p) => p.test(line));
   return { hosts, variable };
 }
 
 /**
  * file:line of every Ever-owned host or base URL variable outside allowDirs.
- * opts: {optinHosts: Set, baselineHosts: Set, allFiles: boolean}
+ * opts: {optinHosts: Set, baselineUrls: string[], allFiles: boolean}. (baselineHosts, a Set of hosts,
+ * is no longer honoured: a baseline excuses its exact URLs only.)
  */
 export function scanHostnames(root, allowDirs, opts = {}) {
   const lists = loadEverHosts();
-  const accepted = new Set([...(opts.optinHosts ?? []), ...(opts.baselineHosts ?? [])].map(normaliseHost));
+  const accepted = new Set([...(opts.optinHosts ?? [])].map(normaliseHost));
+  const baseline = baselineMatcher(opts.baselineUrls ?? []);
   const findings = [];
   for (const file of files(root, opts.allFiles)) {
     if (!TEXT.test(file) || allowed(file, allowDirs)) continue;
@@ -95,17 +114,23 @@ export function scanHostnames(root, allowDirs, opts = {}) {
       continue;
     }
     text.split('\n').forEach((line, i) => {
-      const f = lineFindings(line, accepted, lists);
+      const f = lineFindings(line, accepted, lists, baseline);
       if (f.hosts.length > 0 || f.variable) findings.push(`${file}:${i + 1}`);
     });
   }
   return findings;
 }
 
-/** The hosts of a ui-baseline.json's links. */
+/** The hosts of a ui-baseline.json's links (kept for importers; the scan accepts baselineUrls only). */
 export function baselineHosts(file) {
   const data = JSON.parse(readFileSync(file, 'utf8'));
   return new Set((data.entries ?? []).map((e) => hostOfUrl(e.url)).filter(Boolean));
+}
+
+/** The URLs of a ui-baseline.json's entries. */
+export function baselineUrls(file) {
+  const data = JSON.parse(readFileSync(file, 'utf8'));
+  return [...new Set((data.entries ?? []).map((e) => String(e.url ?? '')).filter(Boolean))];
 }
 
 export function main(argv) {
@@ -123,15 +148,15 @@ export function main(argv) {
     if (config.optin_hosts || existsSync(candidate)) optinFile = candidate;
   }
   let optinHosts = new Set();
-  let baseline = new Set();
+  let baseline = [];
   try {
     if (optinFile) optinHosts = loadOptinHosts(resolve(optinFile));
-    if (arg('baseline')) baseline = baselineHosts(resolve(arg('baseline')));
+    if (arg('baseline')) baseline = baselineUrls(resolve(arg('baseline')));
   } catch (error) {
     process.stderr.write(`static-hostnames: ${error.message}\n`);
     return 2;
   }
-  const findings = scanHostnames(root, allow, { optinHosts, baselineHosts: baseline, allFiles: argv.includes('--all-files') });
+  const findings = scanHostnames(root, allow, { optinHosts, baselineUrls: baseline, allFiles: argv.includes('--all-files') });
   if (findings.length > 0) {
     process.stderr.write(
       `static-hostnames: an Ever host or the Ever Platform base URL outside the allowed directories:\n  ${findings.join('\n  ')}\n`,

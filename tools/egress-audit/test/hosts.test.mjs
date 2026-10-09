@@ -83,6 +83,9 @@ test('config.schema.json refuses exactly the listed names in allowed_external_ho
     process_services: ['api'],
     health_url: 'http://api:3000/h',
     module_routes: ['/x'],
+    // The API leg alone, stated: a product with a UI names its web service or says why not.
+    web_service: null,
+    no_web_reason: 'the API leg of this test',
   };
   for (const host of ['app.ever.co', 'ever.co', 'eu.i.posthog.com', 'data.githands.com', 'sentry.io', 'x.ever.sh'])
     assert.equal(validate({ ...base, allowed_external_hosts: [host] }), false, host);
@@ -99,6 +102,8 @@ test('ever-egress-audit refuses to start with a listed name in allowed_external_
     process_services: ['api'],
     health_url: 'http://api:3000/h',
     module_routes: ['/x'],
+    web_service: null,
+    no_web_reason: 'the API leg of this test',
   };
   writeFileSync(join(dir, 'bad.json'), JSON.stringify({ ...base, allowed_external_hosts: ['app.ever.co'] }));
   assert.throws(

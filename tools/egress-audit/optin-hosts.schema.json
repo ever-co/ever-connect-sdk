@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ever-connect-sdk.invalid/egress-audit/optin-hosts.schema.json",
   "title": "optin-hosts.json",
-  "description": "A product's documented operator opt-ins: hosts of features that existed before the Ever Platform modules, switched off by the product's default configuration and kept for an operator who turns them on. Only the static scan (static-hostnames) honours this file, so the product's code may keep naming these hosts; the DNS, connection, HAR and DOM checks never read it, so a run that calls one of them still fails. Every host must be under an ever_owned name of ever-hosts.json.",
+  "description": "A product's documented operator opt-ins: hosts of features that existed before the Ever Platform modules, switched off by the product's default configuration and kept for an operator who turns them on. Only the static scan (static-hostnames) honours this file, so the product's code may keep naming these hosts; the DNS, connection, HAR and DOM checks never read it, so a run that calls one of them still fails. Every host must be under an ever_owned name of ever-hosts.json, and none may be an Ever Platform service name (ever.co itself, or api., app., auth., apps.ever.co and every name under them).",
   "type": "object",
   "additionalProperties": false,
   "required": ["hosts"],
@@ -16,7 +16,11 @@
         "additionalProperties": false,
         "required": ["host", "setting", "reason"],
         "properties": {
-          "host": { "type": "string", "pattern": "^([a-z0-9]([a-z0-9-]*[a-z0-9])?\\.)+[a-z]{2,}$" },
+          "host": {
+            "type": "string",
+            "pattern": "^([a-z0-9]([a-z0-9-]*[a-z0-9])?\\.)+[a-z]{2,}$",
+            "not": { "pattern": "^(ever\\.co|(.+\\.)?(api|app|auth|apps)\\.ever\\.co)$" }
+          },
           "setting": { "description": "The operator setting that turns the feature on (off by default).", "type": "string", "minLength": 1 },
           "reason": { "description": "What the feature does and where it is documented.", "type": "string", "minLength": 1 }
         }

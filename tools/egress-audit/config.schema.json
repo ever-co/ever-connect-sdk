@@ -48,9 +48,21 @@
       }
     },
     "web_service": {
-      "description": "The compose service that serves the product UI. Naming it turns the browser leg on (--legs api,browser becomes the default).",
+      "description": "The compose service that serves the product UI. Naming it turns the browser leg on (--legs api,browser becomes the default). It must be one of process_services (its own requests, server rendering included, are then captured and resolved through the audit resolver), unless web_static says it serves static files only. A product with a UI (gauzy, teams, works, rec, traduora) must name it, or set it to null with no_web_reason.",
+      "anyOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }]
+    },
+    "web_static": {
+      "description": "true when web_service serves static files only (for example nginx with the built UI, no proxy_pass, no server rendering): it may then stay out of process_services. Any server-side code in the web service (server rendering, an API route, a backend-for-frontend, a proxy) needs it in process_services instead.",
+      "type": "boolean"
+    },
+    "no_web_reason": {
+      "description": "Required with \"web_service\": null: why the browser leg does not run for this product (reviewed with the config).",
       "type": "string",
       "minLength": 1
+    },
+    "ui_routes_root": {
+      "description": "The product root the route list's entry is relative to (default: the root of the git repository holding this file). A run regenerates the list from the router named by its framework and entry and faults on a router route the list lacks.",
+      "type": "string"
     },
     "web_url": {
       "description": "The UI's address from inside the sealed network, by service name (for example http://webapp:4200).",
@@ -58,6 +70,8 @@
       "pattern": "^http://[^\\s/]+(/\\S*)?$"
     },
     "ui_routes": { "description": "The route list the browser walks (default ui-routes.json; see ui-routes.schema.json and ever-egress-audit ui-routes).", "type": "string" },
+    "ui_routes_export": { "description": "Angular: the name of the Routes array in the entry file when it declares several (as ui-routes --export), for the run's own route check.", "type": "string" },
+    "ui_routes_tsconfig": { "description": "Angular: the tsconfig whose paths the generator follows (as ui-routes --tsconfig), relative to ui_routes_root, for the run's own route check.", "type": "string" },
     "route_params": {
       "description": "Static route parameter values, {name: value} or {\"/path/:name\": {name: value}} (default route-params.json when present); the adapter's routeParams hook adds the values only a run knows.",
       "type": "string"
@@ -93,8 +107,9 @@
       "type": "string"
     },
     "browser_image": {
-      "description": "The browser image (default: the harness's pinned Playwright image); it must carry the browser build of the bundled playwright-core.",
-      "type": "string"
+      "description": "The browser image (default: the harness's pinned Playwright image); it must carry the browser build of the bundled playwright-core, and it is pinned by digest (name[:tag]@sha256:<64 hex>).",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._/:-]*@sha256:[a-f0-9]{64}$"
     },
     "artifacts_dir": { "description": "Where evidence and report.json go (default ./egress-audit-artifacts).", "type": "string" },
     "wait_s": { "description": "Seconds to watch the product after the scenario (default 120).", "type": "integer", "minimum": 0, "maximum": 3600 },

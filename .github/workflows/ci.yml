@@ -345,7 +345,11 @@ jobs:
           docker image inspect "$PLAYWRIGHT_IMAGE" --format 'browser image {{.Id}} {{.Size}}'
       - name: Browser walk test (inside the pinned Playwright image)
         run: docker run --rm -v "$PWD:/w" -w /w "$PLAYWRIGHT_IMAGE" node --test tools/egress-audit/test/browser.test.mjs
-      - name: Self-test of both legs (off/leaky, off/ui-leaky and off/ui-link must fail, positive_stats without the mock must not pass)
+      - name: Self-test of both legs (off/leaky, off/ui-leaky and off/ui-link must fail, positive_stats without the mock must not pass, a failed sign-in must fault)
+        env:
+          # Names added to the never-allowed list for the run, kept out of the public files: from a
+          # secret (empty without it), so logs mask them; reports name them extra#<n>.
+          EVER_EGRESS_EXTRA_HOSTS: ${{ secrets.EVER_EGRESS_EXTRA_HOSTS }}
         run: node tools/egress-audit/run.mjs --selftest --legs api,browser --artifacts egress-audit-artifacts
       - name: Evidence (pcaps, DNS logs, HARs, DOM references, report.json)
         if: always()

@@ -1,6 +1,6 @@
 {
   "name": "@ever-co/connect-sdk",
-  "version": "1.0.0-rc.4",
+  "version": "1.0.0-rc.5",
   "description": "Ever Platform connection SDK: the client over the generated operation table, the key manifest and entitlement verifier, the client assertion, lookup hashing, usage readings, the anonymous statistics signer and the managed-operation runner.",
   "license": "Apache-2.0",
   "private": false,

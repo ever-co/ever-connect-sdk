@@ -172,6 +172,9 @@ test('the config schema refuses Ever hosts in the allow-list; the self-test conf
     process_services: ['api'],
     health_url: 'http://api:3000/api/health',
     module_routes: ['/api/ever-connect/status'],
+    // The API leg alone, stated: a product with a UI names its web service or says why not.
+    web_service: null,
+    no_web_reason: 'the API leg of this test',
   };
   const write = (name, value) => {
     const file = join(dir, name);
