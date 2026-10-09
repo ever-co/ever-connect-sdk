@@ -36,6 +36,10 @@ describe('lookup: normalisation v1 and the hash, against the published vectors',
       'jane@example.123',
       'jane@xn--a.com',
       'jane@a:1.com',
+      // An ACE label that does not decode to a real label (the runtime's URL parser may accept it).
+      'jane@xn--.com',
+      'jane@xn--abc.com',
+      'jane@xn--zz.com',
     ]) {
       expect(() => normalizeIdentifier('email', input), input).toThrow(LookupInputError);
       try {
@@ -45,6 +49,8 @@ describe('lookup: normalisation v1 and the hash, against the published vectors',
       }
     }
     expect(normalizeIdentifier('email', 'jane@Example.COM.')).toBe('jane@example.com.');
+    expect(normalizeIdentifier('email', 'jane@xn--ls8h.la')).toBe('jane@xn--ls8h.la');
+    expect(normalizeIdentifier('email', 'jane@xn--80ak6aa92e.com')).toBe('jane@xn--80ak6aa92e.com');
     // A refused row the SDK would hash is reported at its index.
     const lax = { ...vectors, refused: [...(vectors.refused ?? []), { kind: 'email', input: 'jane@example.com', reason: 'bad_domain' }] };
     try {

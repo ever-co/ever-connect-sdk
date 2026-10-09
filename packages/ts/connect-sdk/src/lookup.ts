@@ -81,6 +81,69 @@ function endsInANumber(domain: string): boolean {
   return /^0[xX][0-9A-Fa-f]*$/.test(last);
 }
 
+/** RFC 3492 decoding of a punycode label (without its `xn--`), or null when it does not decode. */
+function punycodeDecode(input: string): string | null {
+  const base = 36;
+  const out: number[] = [];
+  const delimiter = input.lastIndexOf('-');
+  for (let j = 0; j < Math.max(delimiter, 0); j += 1) {
+    const c = input.charCodeAt(j);
+    if (c >= 0x80) return null;
+    out.push(c);
+  }
+  let n = 128;
+  let i = 0;
+  let bias = 72;
+  for (let at = delimiter > 0 ? delimiter + 1 : 0; at < input.length; ) {
+    const oldI = i;
+    for (let w = 1, k = base; ; k += base) {
+      if (at >= input.length) return null;
+      const c = input.charCodeAt(at++);
+      const digit = c - 48 < 10 ? c - 22 : c - 65 < 26 ? c - 65 : c - 97 < 26 ? c - 97 : base;
+      if (digit >= base || digit > Math.floor((0x7fffffff - i) / w)) return null;
+      i += digit * w;
+      const t = k <= bias ? 1 : k >= bias + 26 ? 26 : k - bias;
+      if (digit < t) break;
+      if (w > Math.floor(0x7fffffff / (base - t))) return null;
+      w *= base - t;
+    }
+    const length = out.length + 1;
+    let delta = oldI === 0 ? Math.floor((i - oldI) / 700) : (i - oldI) >> 1;
+    delta += Math.floor(delta / length);
+    let k = 0;
+    while (delta > 455) {
+      delta = Math.floor(delta / 35);
+      k += base;
+    }
+    bias = k + Math.floor((36 * delta) / (delta + 38));
+    if (Math.floor(i / length) > 0x10ffff - n) return null;
+    n += Math.floor(i / length);
+    i %= length;
+    out.splice(i, 0, n);
+    i += 1;
+  }
+  try {
+    return String.fromCodePoint(...out);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Whether every `xn--` label of an IDNA-encoded domain is a real one: it decodes, holds a non-ASCII
+ * code point and encodes back to itself. The URL host parser's answer here depends on the ICU build
+ * of the runtime; the platform's IDNA library refuses such labels everywhere.
+ */
+function aceLabelsValid(domain: string): boolean {
+  for (const label of domain.split('.')) {
+    if (!label.startsWith('xn--')) continue;
+    const decoded = punycodeDecode(label.slice(4));
+    if (decoded === null || decoded === '' || ![...decoded].some((c) => (c.codePointAt(0) ?? 0) > 0x7f)) return false;
+    if (domainToASCII(decoded) !== label) return false;
+  }
+  return true;
+}
+
 function country(ctx: { country?: string } | undefined): string {
   const cc = (ctx?.country ?? '').trim().toUpperCase();
   if (!/^[A-Z]{2}$/.test(cc)) throw new LookupInputError('no_country');
@@ -114,7 +177,8 @@ export function normalizeIdentifier(kind: LookupKind, value: string, ctx?: { cou
       // an IPv4 address; the platform does none of that, so a forbidden code point refuses it first.
       if (raw === '' || [...raw].some(forbiddenDomain)) throw new LookupInputError('bad_domain');
       const domain = domainToASCII(raw);
-      if (domain === '' || [...domain].some(forbiddenDomain) || endsInANumber(domain)) throw new LookupInputError('bad_domain');
+      if (domain === '' || [...domain].some(forbiddenDomain) || endsInANumber(domain) || !aceLabelsValid(domain))
+        throw new LookupInputError('bad_domain');
       return `${v.slice(0, at)}@${domain}`;
     }
     default:

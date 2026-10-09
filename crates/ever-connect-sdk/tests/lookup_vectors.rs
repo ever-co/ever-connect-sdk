@@ -41,6 +41,9 @@ fn an_email_domain_is_never_percent_decoded_cut_or_read_as_ipv4() {
         "jane@example.123",
         "jane@xn--a.com",
         "jane@a:1.com",
+        "jane@xn--.com",
+        "jane@xn--abc.com",
+        "jane@xn--zz.com",
     ] {
         assert_eq!(
             normalize_identifier(LookupKind::Email, input, None),
