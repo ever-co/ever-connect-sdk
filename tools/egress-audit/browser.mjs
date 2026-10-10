@@ -69,7 +69,10 @@ export const routeOf = (url, routing = 'path') => {
 export function webBase(webUrl, routing = 'auto') {
   const text = String(webUrl ?? '');
   const at = text.indexOf('#');
-  const base = (at < 0 ? text : text.slice(0, at)).replace(/\/+$/, '');
+  let base = at < 0 ? text : text.slice(0, at);
+  let end = base.length;
+  while (end > 0 && base[end - 1] === '/') end -= 1;
+  base = base.slice(0, end);
   const declared = routing === 'hash' || routing === 'path' ? routing : at >= 0 ? 'hash' : null;
   return { base, routing: declared };
 }
