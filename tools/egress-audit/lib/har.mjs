@@ -65,6 +65,37 @@ export function redactUrl(value) {
   return `${u.protocol}//${u.host}${redactPath(u.pathname)}${keys.length ? `?${keys.map((k) => `${encodeURIComponent(k)}=`).join('&')}` : ''}`;
 }
 
+/**
+ * The route a hash-routed app (Angular useHash, a #/ router) shows: the fragment's path when the
+ * fragment starts with `/` (`#/pages/x?tab=1` -> `/pages/x`), else null. No trailing slash but on `/`.
+ */
+export function fragmentRoute(value) {
+  let u;
+  try {
+    u = new URL(String(value ?? ''));
+  } catch {
+    return null;
+  }
+  const fragment = u.hash.replace(/^#/, '');
+  if (!fragment.startsWith('/')) return null;
+  const path = fragment.split('?')[0].replace(/\/{2,}/g, '/');
+  return path.length > 1 ? path.replace(/\/$/, '') : '/';
+}
+
+/**
+ * redactUrl, with the route of a hash-routed page kept: a `#/` fragment stays, its path redacted
+ * as a URL path is and its query cut to names (`#/reset/eyJ...?token=x` -> `#/reset/[redacted]?token=`).
+ * Any other fragment is dropped, as redactUrl drops it.
+ */
+export function redactRouteUrl(value) {
+  const plain = redactUrl(value);
+  const route = fragmentRoute(value);
+  if (route === null) return plain;
+  const query = new URL(String(value)).hash.split('?').slice(1).join('?');
+  const keys = [...new Set(new URLSearchParams(query).keys())];
+  return `${plain}#${redactPath(route)}${keys.length ? `?${keys.map((k) => `${encodeURIComponent(k)}=`).join('&')}` : ''}`;
+}
+
 const headers = (list) =>
   (list ?? []).map(({ name, value }) => {
     const n = String(name).toLowerCase();

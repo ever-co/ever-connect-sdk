@@ -13,6 +13,8 @@ const SESSION_COOKIE = /session=[0-9a-f]{32}/;
 const WEB_KEYS = [
   'web_service',
   'web_url',
+  'ui_routing',
+  'ui_sign_in_route',
   'ui_routes',
   'route_params',
   'ui_baseline',

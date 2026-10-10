@@ -174,3 +174,173 @@ test('a page that never loads is retried once, then reported as a fault; a param
     server.close();
   }
 });
+
+// A hash-routed app (as Angular useHash): one document at every path; the routes live in the
+// fragment. Signed out, every route redirects to #/auth/login, and it does so a moment after the
+// load (as a router does once the app has started), so the sign-in page is not the first route the
+// load shows. Signing in posts to the API, which sets the session, then routes to #/pages/dashboard.
+const HASH_APP = page(`<main id="view"></main><script>
+const view = document.getElementById('view');
+const signedIn = () => /(^|; )session=ok/.test(document.cookie);
+function render() {
+  const route = (location.hash.replace(/^#/, '').split('?')[0]) || '/';
+  if (!signedIn() && route !== '/auth/login') return void location.replace('#/auth/login');
+  if (route === '/' || route === '/auth/login' && signedIn()) return void location.replace('#/pages/dashboard');
+  if (route === '/auth/login') {
+    view.innerHTML = '<form><input name="email"><input name="password" type="password"><button>Go</button></form><a href="https://planted-hash-signin.invalid/terms">terms</a>';
+    view.querySelector('form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await fetch('/api/sign-in', { method: 'POST', body: 'x' });
+      location.hash = '#/pages/dashboard';
+    });
+    return;
+  }
+  if (/^/pages/(dashboard|settings|items/[^/]+)$/.test(route))
+    view.innerHTML = '<h1>' + route + '</h1><a href="https://planted-hash.invalid/' + route.split('/')[2] + '">x</a>';
+  else location.replace('#/pages/dashboard');
+}
+window.addEventListener('hashchange', render);
+setTimeout(render, 150);
+</script>`);
+
+function hashSite() {
+  const hits = [];
+  const server = createServer((req, res) => {
+    const url = new URL(req.url, 'http://x');
+    hits.push(`${req.method} ${url.pathname}`);
+    if (url.pathname === '/api/sign-in' && req.method === 'POST') {
+      req.resume();
+      res.writeHead(204, { 'set-cookie': 'session=ok; Path=/' });
+      return res.end();
+    }
+    res.writeHead(200, { 'content-type': 'text/html' });
+    res.end(HASH_APP);
+  });
+  return new Promise((resolve) =>
+    server.listen(0, '127.0.0.1', () => resolve({ server, hits, base: `http://127.0.0.1:${server.address().port}` })),
+  );
+}
+
+/** Signs in through the hash app's own redirect: it opens the root route, not the sign-in route. */
+const hashAdapter = (signIn = true) => ({
+  async uiLogin(p, ctx) {
+    await p.goto(`${ctx.webUrl}/`);
+    await p.waitForSelector('input[name=email]');
+    if (!signIn) return;
+    await p.fill('input[name=email]', 'a@example.test');
+    await p.fill('input[name=password]', PASSWORD);
+    await Promise.all([p.waitForURL(/#\/pages\/dashboard$/), p.click('button')]);
+  },
+  async routeParams() {
+    return { id: 'one' };
+  },
+});
+
+const HASH_ROUTES = [{ path: '/pages/dashboard' }, { path: '/pages/items/:id' }, { path: '/pages/settings' }];
+
+test('hash routing: routes opened in the fragment, the sign-in route read after the app redirects to it, declared, from a web_url ending in #, or detected', {
+  skip: !chromium && 'no browser for playwright-core here',
+  timeout: 240000,
+}, async () => {
+  const { server, hits, base } = await hashSite();
+  try {
+    for (const [web_url, ui_routing] of [
+      [base, 'hash'],
+      [`${base}/#`, undefined],
+      [base, 'auto'],
+    ]) {
+      const outDir = mkdtempSync(join(tmpdir(), 'ever-browser-hash-'));
+      const r = await walk({
+        chromium,
+        adapter: hashAdapter(),
+        outDir,
+        plan: { web_url, ui_routing, routes: HASH_ROUTES, idle_s: 0, page_timeout_s: 20 },
+      });
+      const label = `${web_url} ${ui_routing}`;
+      assert.deepEqual(r.faults, [], label);
+      assert.equal(r.routing, 'hash', label);
+      assert.equal(r.signInPath, '/auth/login', label);
+      assert.deepEqual(
+        r.visits.map((v) => `${v.route} ${v.url.replace(base, '')} ${v.final_path}`),
+        [
+          '/pages/dashboard /#/pages/dashboard /pages/dashboard',
+          '/pages/items/:id /#/pages/items/one /pages/items/one',
+          '/pages/settings /#/pages/settings /pages/settings',
+        ],
+        label,
+      );
+      assert.deepEqual(r.redirected, [], label);
+      const refs = JSON.parse(readFileSync(join(outDir, 'dom-refs.json'), 'utf8'));
+      assert.ok(
+        refs.some((x) => x.route === '/pages/items/:id' && x.url === 'https://planted-hash.invalid/items'),
+        label,
+      );
+      assert.ok(
+        refs.some((x) => x.route === '/auth/login' && x.url === 'https://planted-hash-signin.invalid/terms'),
+        label,
+      );
+      const visits = JSON.parse(readFileSync(join(outDir, 'visits.json'), 'utf8'));
+      assert.equal(visits.routing, 'hash');
+      assert.equal(visits.sign_in_path, '/auth/login');
+    }
+    // One document: a hash route is never asked of the server.
+    assert.ok(
+      hits.every((h) => h === 'GET /' || h === 'POST /api/sign-in' || h === 'GET /favicon.ico'),
+      hits.join(', '),
+    );
+  } finally {
+    server.close();
+  }
+});
+
+test('hash routing: a sign-in that does not hold is seen; a path-routed walk of a hash app is a fault that names ui_routing', {
+  skip: !chromium && 'no browser for playwright-core here',
+  timeout: 180000,
+}, async () => {
+  const { server, base } = await hashSite();
+  try {
+    const out = await walk({
+      chromium,
+      adapter: hashAdapter(false),
+      outDir: mkdtempSync(join(tmpdir(), 'ever-browser-hash-')),
+      plan: { web_url: base, ui_routing: 'hash', routes: HASH_ROUTES, idle_s: 0, page_timeout_s: 20 },
+    });
+    assert.equal(out.signInPath, '/auth/login');
+    assert.ok(
+      out.faults.some((f) =>
+        /3 route\(s\) ended on the sign-in page \/auth\/login \(\/pages\/dashboard, \/pages\/items\/:id, \/pages\/settings\)/.test(f),
+      ),
+      out.faults.join('\n'),
+    );
+    const named = await walk({
+      chromium,
+      adapter: hashAdapter(false),
+      outDir: mkdtempSync(join(tmpdir(), 'ever-browser-hash-')),
+      plan: {
+        web_url: base,
+        ui_routing: 'hash',
+        sign_in_route: '/auth/login',
+        routes: HASH_ROUTES.slice(0, 1),
+        idle_s: 0,
+        page_timeout_s: 20,
+      },
+    });
+    assert.ok(
+      named.faults.some((f) => /ended on the sign-in page \/auth\/login/.test(f)),
+      named.faults.join('\n'),
+    );
+    const path = await walk({
+      chromium,
+      adapter: hashAdapter(),
+      outDir: mkdtempSync(join(tmpdir(), 'ever-browser-hash-')),
+      plan: { web_url: base, ui_routing: 'path', routes: HASH_ROUTES.slice(0, 1), idle_s: 0, page_timeout_s: 20 },
+    });
+    assert.equal(path.routing, 'path');
+    assert.ok(
+      path.faults.some((f) => /1 route\(s\) ended on a #\/ fragment route .*set "ui_routing": "hash"/.test(f)),
+      path.faults.join('\n'),
+    );
+  } finally {
+    server.close();
+  }
+});

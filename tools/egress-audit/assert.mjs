@@ -227,6 +227,8 @@ function evaluateBrowser(browser, { violations, faults, known, subnets, corednsL
     status_4xx: visits.filter((v) => v.ok && v.status >= 400).map((v) => `${v.route} ${v.status}`),
     // Routes that ended somewhere else than they were asked for (a redirect, the sign-in page).
     sign_in_path: browser.signInPath ?? null,
+    // How routes were opened and read: "path", or "hash" (a route is the path of a #/ fragment).
+    routing: browser.routing ?? null,
     redirected: visits.filter((v) => v.ok && v.final_path && v.path && v.final_path !== v.path).map((v) => `${v.route} -> ${v.final_path}`),
     route_list: browser.routeCheck ?? null,
     skipped: browser.skipped ?? [],
