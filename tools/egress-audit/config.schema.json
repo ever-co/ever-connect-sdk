@@ -65,7 +65,7 @@
       "type": "string"
     },
     "web_url": {
-      "description": "The UI's address from inside the sealed network, by service name (for example http://webapp:4200).",
+      "description": "The UI's address from inside the sealed network, by service name (for example http://webapp:4200). For an app that routes in the fragment, set ui_routing to hash rather than ending this in # (a trailing # is still read as hash routing).",
       "type": "string",
       "pattern": "^http://[^\\s/]+(/\\S*)?$"
     },
