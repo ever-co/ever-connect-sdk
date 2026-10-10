@@ -27,7 +27,13 @@ test('Angular: children, spreads of a local function, a lazy NgModule level (bar
     '/pages/employees/:id',
     '/pages/employees/:id/edit',
     '/pages/integrations/ever-platform',
+    // One lazily loaded NgModule under two parents: its routes under each of them.
+    '/pages/organizations/edit/:id/amounts',
+    '/pages/organizations/edit/:id/nested',
+    '/pages/organizations/edit/:id/time',
     '/pages/reports/amounts',
+    // The module loads itself again: the second load on one chain is opened at its own path.
+    '/pages/reports/nested',
     '/pages/reports/time',
     '/pages/settings',
     '/pages/settings/features',
@@ -97,7 +103,7 @@ test('ever-egress-audit ui-routes writes the list; --check exits 1 naming a rout
     );
   const w = cli();
   assert.equal(w.status, 0, w.stderr);
-  assert.match(w.stdout, /12 router routes/);
+  assert.match(w.stdout, /16 router routes/);
   const written = JSON.parse(readFileSync(out, 'utf8'));
   assert.equal(written.framework, 'angular');
   assert.equal(written.entry, 'src/app/app.routes.ts');
