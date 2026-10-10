@@ -32,7 +32,7 @@ usage = ["schema"]
 schema = ["dep:fancy-regex"]
 
 [dependencies]
-ever-connect-contracts = { path = "../ever-connect-contracts", version = "1.0.0-rc.5" }
+ever-connect-contracts = { path = "../ever-connect-contracts", version = "1.0.0-rc.6" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 jsonschema = { workspace = true, optional = true }

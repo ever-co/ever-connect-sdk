@@ -27,14 +27,14 @@ npm install @ever-co/connect-sdk@next                     # pnpm add / yarn add 
 npm install --save-dev @ever-co/connect-tools@next        # the mock platform and the egress audit, for tests
 ```
 
-`1.0.0-rc.5` is a release candidate, published under the `next` dist-tag with npm provenance. Pin
+`1.0.0-rc.6` is a release candidate, published under the `next` dist-tag with npm provenance. Pin
 the exact version; the SDK depends on `@ever-co/connect-contracts` at the same version, so there is
 nothing else to add:
 
 ```jsonc
 // package.json of the product
-"dependencies": { "@ever-co/connect-sdk": "1.0.0-rc.5" },
-"devDependencies": { "@ever-co/connect-tools": "1.0.0-rc.5" }
+"dependencies": { "@ever-co/connect-sdk": "1.0.0-rc.6" },
+"devDependencies": { "@ever-co/connect-tools": "1.0.0-rc.6" }
 ```
 
 Do not copy the sources into a product: depend on the package, so every product verifies with the

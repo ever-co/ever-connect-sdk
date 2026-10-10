@@ -1,7 +1,7 @@
 # Egress audit: the browser leg
 
 **Audience:** engineers who run the egress audit of a product that hosts the Ever Platform modules, and reviewers who read its results.
-**Applies to:** `ever-egress-audit` in `@ever-co/connect-tools` (from `1.0.0-rc.3`; the stricter checks below from `1.0.0-rc.5`).
+**Applies to:** `ever-egress-audit` in `@ever-co/connect-tools` (from `1.0.0-rc.3`; the stricter checks below from `1.0.0-rc.5`; hash routing (`ui_routing`) from `1.0.0-rc.6`).
 **Prerequisites:** the API leg set up as in [`tools/egress-audit/README.md`](../tools/egress-audit/README.md); Docker with `NET_RAW` and `NET_ADMIN`.
 
 The API leg proves what the product's server processes do. It never sees what the product's UI does in a person's browser, and some products are mostly a UI. The browser leg runs a real browser against the product, in the same sealed Docker setup, and holds it to the same rule: with the modules off, the UI looks up no Ever host, requests none and renders no new link to one.
