@@ -195,7 +195,7 @@ function render() {
     });
     return;
   }
-  if (/^/pages/(dashboard|settings|items/[^/]+)$/.test(route))
+  if (['/pages/dashboard', '/pages/settings'].includes(route) || route.startsWith('/pages/items/'))
     view.innerHTML = '<h1>' + route + '</h1><a href="https://planted-hash.invalid/' + route.split('/')[2] + '">x</a>';
   else location.replace('#/pages/dashboard');
 }
