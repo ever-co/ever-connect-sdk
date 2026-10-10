@@ -438,12 +438,16 @@ export function angularRoutes({ entry, exportName, root = process.cwd(), tsconfi
       const children = [];
       const c = prop(obj, 'children');
       if (c) children.push(...routeObjects(initOf(c), depth + 1));
+      // The NgModules already loaded on THIS route's chain of parents: a module that loads itself
+      // (directly or through others) stops there, while the same module reached through another
+      // parent is walked again under that parent (one module, two places in the tree).
+      const chain = new Set(seen);
       const lazy = prop(obj, 'loadChildren');
-      if (lazy) children.push(...lazyChildren(initOf(lazy), seen, depth + 1));
+      if (lazy) children.push(...lazyChildren(initOf(lazy), chain, depth + 1));
       // A route with children is reached through them (its own path through a '' child); a route
       // whose children could not be followed is still opened at its own path.
       if (children.length === 0) addRoute(full, obj, meta);
-      else walkRoutes(children, full, seen, depth + 1);
+      else walkRoutes(children, full, chain, depth + 1);
     }
   }
 

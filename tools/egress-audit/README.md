@@ -132,8 +132,8 @@ evidence.json` reproduces the verdict.
 --build`), `health_timeout_s`, `allowed_external_hosts`, `env_prefix` (replaces the leading `EVER_`
 of every mode variable, for example `TR_EVER_`), `subnet`, `phase` (the highest phase whose
 outbound-call rows apply), `every_trigger_exclude_rows`, `mock_image`, `mock_config`, `modes` and
-`artifacts_dir`. The browser leg's keys (`web_service`, `web_url`, `web_static`, `no_web_reason`,
-`ui_routes`, `ui_routes_root`, `route_params`, `ui_baseline`, `idle_pages`, `idle_s`,
+`artifacts_dir`. The browser leg's keys (`web_service`, `web_url`, `ui_routing`, `ui_sign_in_route`,
+`web_static`, `no_web_reason`, `ui_routes`, `ui_routes_root`, `route_params`, `ui_baseline`, `idle_pages`, `idle_s`,
 `ui_page_timeout_s`, `ui_skip_routes`, `ui_expected_requests`, `optin_hosts`, `browser_image`) are in
 [Browser leg](#browser-leg). A product with a UI (`gauzy`, `teams`, `works`, `rec`, `traduora`) must
 name its `web_service`, or set `"web_service": null` with a `no_web_reason`: a config that leaves the
@@ -149,7 +149,8 @@ compose service name. What `createFixtures` answers (ids, never a token) reaches
 hooks as `ctx.fixtures`; a value shaped like a credential (a JWT, a `Bearer ` value, more than 64
 characters) faults the run instead. `uiLogin(page, ctx)` signs in through the product's sign-in page
 with the Playwright page and must end signed in (wait for the page after the sign-in): the first
-page it opens is taken as the sign-in page, and a route that ends there faults the run. `uiLogin`
+page it opens is taken as the sign-in page (with hash routing, the route that page shows until the
+form is first used), and a route that ends there faults the run. `uiLogin`
 that opens no page faults too. `routeParams(ctx)` answers the route parameter values only a run
 knows. The browser hooks run in the browser container (the adapter is copied there too).
 
@@ -213,6 +214,8 @@ Config keys:
 | Key | Default | Meaning |
 |---|---|---|
 | `web_service`, `web_url` | none | the compose service of the UI and its address by service name (`web_url` must name that service or one of its aliases); `null` with `no_web_reason` for a UI product audited without the leg |
+| `ui_routing` | `auto` | `path`, `hash` (routes live in the URL fragment, as Angular `useHash`: opened at `web_url/#/route`, and the sign-in page, a route ending on it and `redirected` are read from the fragment) or `auto` (hash when `web_url` ends in `#` or a page of the sign-in shows a `#/` route). With `hash`, give `web_url` without the `#`: `ctx.baseUrl` is `web_url/#`, so `ctx.baseUrl + route` is a route's URL either way (also `ctx.routeUrl(route)`; `ctx.webUrl` is the bare address). A path-routed walk whose routes end on `#/` routes faults, naming `ui_routing` |
+| `ui_sign_in_route` | taken from `uiLogin` | the sign-in page's route (for example `/auth/login`), when it should not be taken from the first page `uiLogin` opens |
 | `web_static` | `false` | `true` when `web_service` serves static files only; otherwise `web_service` must be one of `process_services`, or the config is refused |
 | `ui_routes` | `ui-routes.json` | the routes to open (`ui-routes.schema.json`) |
 | `ui_routes_root`, `ui_routes_export`, `ui_routes_tsconfig` | the git repository root | where the route list's `entry` is, for the run's own comparison with the router (and Angular's `--export` and `--tsconfig`) |

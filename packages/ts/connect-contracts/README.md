@@ -22,7 +22,7 @@ which depends on this package at the same version.
 npm install @ever-co/connect-contracts@next   # pnpm add / yarn add work the same way
 ```
 
-`1.0.0-rc.5` is a release candidate, published under the `next` dist-tag. Pin the exact version:
+`1.0.0-rc.6` is a release candidate, published under the `next` dist-tag. Pin the exact version:
 the contracts follow semantic versioning, and the SDK and the contracts always carry the same one.
 
 ```ts

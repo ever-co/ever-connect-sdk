@@ -26,6 +26,8 @@ export const appRoutes: Routes = [
 			},
 			{ path: 'employees/:id', loadChildren: () => import('./employees/employees.routes').then((m) => m.EMPLOYEE_ROUTES) },
 			{ path: 'reports', loadChildren: () => import('./reports/reports.module').then((m) => m.ReportsModule) },
+			// The same lazily loaded module under a second parent: its routes exist in both places.
+			{ path: 'organizations/edit/:id', loadChildren: () => import('./reports/reports.module').then((m) => m.ReportsModule) },
 			...registry.getRoutes('page-sections')
 		]
 	},

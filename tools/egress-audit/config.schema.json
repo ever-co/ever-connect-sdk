@@ -65,9 +65,18 @@
       "type": "string"
     },
     "web_url": {
-      "description": "The UI's address from inside the sealed network, by service name (for example http://webapp:4200).",
+      "description": "The UI's address from inside the sealed network, by service name (for example http://webapp:4200). For an app that routes in the fragment, set ui_routing to hash rather than ending this in # (a trailing # is still read as hash routing).",
       "type": "string",
       "pattern": "^http://[^\\s/]+(/\\S*)?$"
+    },
+    "ui_routing": {
+      "description": "How the UI routes: \"path\" (a route is the URL path), \"hash\" (a route is the path of a #/ fragment, as Angular useHash or a hash router: routes are opened at web_url/#/route, and the sign-in page, a route that ends on it and the redirects are read from the fragment) or \"auto\" (default: hash when web_url ends in # or a page of the sign-in shows a #/ route, else path). With hash routing give web_url without the #; the adapter's ctx.baseUrl is web_url/# then, so ctx.baseUrl + a route path is the route's URL either way (ctx.routeUrl(path) says the same, ctx.webUrl is the bare address).",
+      "enum": ["path", "hash", "auto"]
+    },
+    "ui_sign_in_route": {
+      "description": "The route of the product's sign-in page (for example /auth/login), when the walk should not take it from the first page uiLogin opens. A route that ends there was never rendered signed in.",
+      "type": "string",
+      "pattern": "^/"
     },
     "ui_routes": { "description": "The route list the browser walks (default ui-routes.json; see ui-routes.schema.json and ever-egress-audit ui-routes).", "type": "string" },
     "ui_routes_export": { "description": "Angular: the name of the Routes array in the entry file when it declares several (as ui-routes --export), for the run's own route check.", "type": "string" },

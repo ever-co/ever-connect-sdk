@@ -88,6 +88,8 @@ function stubChromium({ signedIn = () => true, idleRejects = false } = {}) {
         };
         return {
           on: () => {},
+          exposeBinding: async () => {},
+          addInitScript: async () => {},
           newPage: async () => page,
           close: async () => writeFileSync(opts.recordHar.path, JSON.stringify(RAW_HAR)),
         };

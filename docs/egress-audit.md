@@ -1,7 +1,7 @@
 # Egress audit: the browser leg
 
 **Audience:** engineers who run the egress audit of a product that hosts the Ever Platform modules, and reviewers who read its results.
-**Applies to:** `ever-egress-audit` in `@ever-co/connect-tools` (from `1.0.0-rc.3`; the stricter checks below from `1.0.0-rc.5`).
+**Applies to:** `ever-egress-audit` in `@ever-co/connect-tools` (from `1.0.0-rc.3`; the stricter checks below from `1.0.0-rc.5`; hash routing (`ui_routing`) from `1.0.0-rc.6`).
 **Prerequisites:** the API leg set up as in [`tools/egress-audit/README.md`](../tools/egress-audit/README.md); Docker with `NET_RAW` and `NET_ADMIN`.
 
 The API leg proves what the product's server processes do. It never sees what the product's UI does in a person's browser, and some products are mostly a UI. The browser leg runs a real browser against the product, in the same sealed Docker setup, and holds it to the same rule: with the modules off, the UI looks up no Ever host, requests none and renders no new link to one.
@@ -21,7 +21,7 @@ A run with a `web_service` in its config (and `--legs api,browser`, the default 
 `browser.mjs`:
 
 1. records a HAR (no bodies), every request and every WebSocket of one browser context;
-2. signs in through the product's real sign-in page (the adapter's `uiLogin`); the first page `uiLogin` opens is the sign-in page;
+2. signs in through the product's real sign-in page (the adapter's `uiLogin`); the first page `uiLogin` opens is the sign-in page (with hash routing, the route that page shows until the sign-in form is first used, so the app's own redirect to its sign-in route counts; `ui_sign_in_route` names it instead);
 3. opens every route of the product's `ui-routes.json`, with parameter values from `route-params.json` and the adapter's `routeParams`; a page that fails to load is retried once, then reported as a fault;
 4. holds each idle page (settings, integrations, catalog) open for `idle_s` seconds (30 by default);
 5. dumps every URL the rendered page points at, in every frame and open shadow root: `href`, `src`, `srcset`, `action`, `formaction`, `poster`, `ping`, `data`, `xlink:href`, a meta refresh and `url()` in a `style` attribute.
@@ -118,6 +118,8 @@ Keys of `egress-audit.config.json` for the browser leg (schema: `tools/egress-au
 | `web_service` | required for `gauzy`, `teams`, `works`, `rec`, `traduora` | the compose service that serves the UI; `null` with `no_web_reason` to run a UI product without the leg (reviewed, stated) |
 | `web_static` | `false` | `true` only when `web_service` serves static files (for example nginx with the built UI and no `proxy_pass`) |
 | `web_url` | required with `web_service` | the UI's address inside the sealed setup, by the name of `web_service` or one of its aliases (for example `http://webapp:4200`) |
+| `ui_routing` | `auto` | `path` (a route is the URL path), `hash` (a route is the path of a `#/` fragment, as Angular `useHash`: routes are opened at `web_url/#/route`, and the sign-in page, a route that ends on it and `redirected` are read from the fragment) or `auto` (hash when `web_url` ends in `#` or a page of the sign-in shows a `#/` route, else path). A path-routed walk whose routes end on `#/` routes faults, naming this key |
+| `ui_sign_in_route` | taken from `uiLogin` | the route of the sign-in page (for example `/auth/login`), when it should not be taken from the first page `uiLogin` opens |
 | `ui_routes` | `ui-routes.json` | the route list |
 | `ui_routes_root` | the git repository root | where the route list's `entry` is, so the run can compare it with the router (`ui_routes_export`, `ui_routes_tsconfig`: Angular's `--export` and `--tsconfig`) |
 | `route_params` | `route-params.json` when present | static parameter values |
@@ -146,7 +148,8 @@ export default {
     return { teamId: '...' };
   },
   async uiLogin(page, ctx) {
-    // Playwright page; ctx: {baseUrl (web_url), apiUrl, mode, env, fixtures, fetch, log}
+    // Playwright page; ctx: {baseUrl, webUrl, routing, routeUrl(route), apiUrl, mode, env, fixtures, fetch, log}.
+    // baseUrl + a route is the route's URL: web_url, or web_url/# with "ui_routing": "hash".
     await page.goto(`${ctx.baseUrl}/auth/login`); // the first page opened: the sign-in page
     await page.fill('input[name=email]', 'admin@example.test');
     await page.fill('input[name=password]', SEED_PASSWORD); // a constant of the adapter: the seed account
@@ -160,6 +163,8 @@ export default {
 ```
 
 `SEED_PASSWORD` is a constant of the adapter (the seed account of the product's test data), as in `tools/egress-audit/selftest/adapter.mjs`. The browser container gets no product environment, so `process.env` holds nothing of the product there; the product's mode environment reaches the hooks as `ctx.env`. Nothing the hooks print is kept as is: `browser-walk.log` and the driver logs are scrubbed of cookie, authorization and password values.
+
+**Hash routing.** An app that routes in the URL fragment (Angular `RouterModule.forRoot(routes, { useHash: true })`) sets `"ui_routing": "hash"` and gives `web_url` without the `#` (for example `"web_url": "http://webapp:4200", "ui_routing": "hash"`). The route list stays the router's paths (`/pages/dashboard`); the walk opens `http://webapp:4200/#/pages/dashboard`, and the sign-in page, a route that ends on it and the redirects are read from the fragment. A `web_url` ending in `#` (`http://webapp:4200/#`) is read the same way, for configs written before the key existed.
 
 A sign-in that fails must not pass quietly: if `uiLogin` returns before it is signed in (a rejected password re-renders the form, a missing wait), every route redirects to the sign-in page and the run faults, naming them. `createFixtures` answers ids: a value shaped like a credential (a JWT, a `Bearer ` value, more than 64 characters) faults the run.
 

@@ -7,6 +7,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import YAML from 'yaml';
+import { routeOf, routeUrl, webBase } from '../browser.mjs';
+import { fragmentRoute, redactRouteUrl } from '../lib/har.mjs';
 import { BROWSER, buildOverlay, productModel, SNIFFER_FILTER } from '../lib/overlay.mjs';
 import { HARNESS_DIR, loadBrowserInputs, loadConfig, resolveLegs } from '../lib/runner.mjs';
 
@@ -153,4 +155,60 @@ test('a config with a web service needs its address, and the reverse', () => {
   assert.throws(() => loadConfig(join(dir, 'a.json')), /web_service needs web_url/);
   writeFileSync(join(dir, 'b.json'), JSON.stringify({ ...base, web_url: 'http://web:3030' }));
   assert.throws(() => loadConfig(join(dir, 'b.json')), /web_url needs web_service/);
+});
+
+test('hash routing: ui_routing in the config, a web_url that ends in # read as hash routing, a fragment that says otherwise refused', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'ever-audit-hash-'));
+  const base = {
+    product: 'gauzy',
+    compose: ['c.yml'],
+    api_service: 'webapp',
+    process_services: ['webapp'],
+    health_url: 'http://webapp:4200/h',
+    module_routes: ['/x'],
+    web_service: 'webapp',
+  };
+  const load = (name, extra) => {
+    writeFileSync(join(dir, name), JSON.stringify({ ...base, ...extra }));
+    return () => loadConfig(join(dir, name));
+  };
+  assert.equal(
+    load('a.json', { web_url: 'http://webapp:4200', ui_routing: 'hash', ui_sign_in_route: '/auth/login' })().config.ui_routing,
+    'hash',
+  );
+  assert.doesNotThrow(load('b.json', { web_url: 'http://webapp:4200/#' }));
+  assert.doesNotThrow(load('c.json', { web_url: 'http://webapp:4200/#/', ui_routing: 'hash' }));
+  assert.throws(
+    load('d.json', { web_url: 'http://webapp:4200/#', ui_routing: 'path' }),
+    /ends in a fragment \(hash routing\) but ui_routing is "path"/,
+  );
+  assert.throws(
+    load('e.json', { web_url: 'http://webapp:4200/#/pages' }),
+    /has a fragment: give the bare address and set "ui_routing": "hash"/,
+  );
+  assert.throws(load('f.json', { web_url: 'http://webapp:4200', ui_routing: 'fragment' }), /ui_routing/);
+  assert.throws(load('g.json', { web_url: 'http://webapp:4200', ui_sign_in_route: 'auth/login' }), /ui_sign_in_route/);
+  assert.throws(load('h.json', { web_service: null, no_web_reason: 'x', ui_routing: 'hash' }), /ui_routing goes with web_service/);
+});
+
+test('hash routing: web_url read for the walk, the URL of a route, the route of a URL (redacted, fragment query cut to names)', () => {
+  assert.deepEqual(webBase('http://webapp:4200/#'), { base: 'http://webapp:4200', routing: 'hash' });
+  assert.deepEqual(webBase('http://webapp:4200/#/', 'auto'), { base: 'http://webapp:4200', routing: 'hash' });
+  assert.deepEqual(webBase('http://webapp:4200/', 'hash'), { base: 'http://webapp:4200', routing: 'hash' });
+  assert.deepEqual(webBase('http://web:3030'), { base: 'http://web:3030', routing: null });
+  assert.deepEqual(webBase('http://web:3030/app/', 'path'), { base: 'http://web:3030/app', routing: 'path' });
+  assert.equal(routeUrl('http://webapp:4200', '/pages/organizations/edit/7', 'hash'), 'http://webapp:4200/#/pages/organizations/edit/7');
+  assert.equal(routeUrl('http://web:3030', '/settings', 'path'), 'http://web:3030/settings');
+  const r = (u, routing) => routeOf(redactRouteUrl(u), routing);
+  assert.equal(r('http://webapp:4200/#/auth/login?returnUrl=%2Fpages', 'hash'), '/auth/login');
+  assert.equal(r('http://webapp:4200/', 'hash'), '/');
+  assert.equal(r('http://webapp:4200/#/pages/x/', 'hash'), '/pages/x');
+  assert.equal(r('http://webapp:4200/pages/x#/auth/login', 'path'), '/pages/x');
+  assert.equal(
+    redactRouteUrl('http://webapp:4200/#/reset/a@b.test?token=secret&token=again'),
+    'http://webapp:4200/#/reset/[redacted]?token=',
+  );
+  assert.equal(redactRouteUrl('http://web:3030/docs#section'), 'http://web:3030/docs');
+  assert.equal(fragmentRoute('http://web:3030/docs#section'), null);
+  assert.equal(fragmentRoute('http://webapp:4200/#/'), '/');
 });

@@ -70,6 +70,21 @@ export function loadConfig(path) {
       `${config.product} has a UI: name its web_service (and web_url) so the browser leg runs, or set "web_service": null with no_web_reason`,
     );
   if (config.web_static !== undefined && !config.web_service) throw new UsageError('web_static goes with web_service');
+  for (const key of ['ui_routing', 'ui_sign_in_route'])
+    if (config[key] !== undefined && !config.web_service) throw new UsageError(`${key} goes with web_service`);
+  // A fragment in web_url is hash routing said the old way (http://web:4200/#): kept working, and
+  // refused when it says something else than the routing does.
+  if (config.web_url?.includes('#')) {
+    const fragment = config.web_url.slice(config.web_url.indexOf('#') + 1);
+    if (fragment !== '' && fragment !== '/')
+      throw new UsageError(
+        `web_url ${config.web_url} has a fragment: give the bare address and set "ui_routing": "hash" for an app that routes in the fragment`,
+      );
+    if (config.ui_routing === 'path')
+      throw new UsageError(
+        `web_url ${config.web_url} ends in a fragment (hash routing) but ui_routing is "path": drop the # or set "ui_routing": "hash"`,
+      );
+  }
   // The web service's own requests (server rendering, API routes, a backend-for-frontend, a proxy)
   // are captured, and resolved through the audit resolver, only when it is a process service.
   if (config.web_service && !config.process_services.includes(config.web_service) && config.web_static !== true)
@@ -605,6 +620,8 @@ export async function runAudit({
           evidence,
           plan: {
             web_url: config.web_url,
+            ui_routing: config.ui_routing ?? 'auto',
+            ...(config.ui_sign_in_route ? { sign_in_route: config.ui_sign_in_route } : {}),
             api_url: new URL(config.health_url).origin,
             mode: modeName,
             env: productEnv,
@@ -691,6 +708,7 @@ function runBrowser({ full, out, evidence, plan, image, base, adapterFile, proje
   b.visits = visits.visits;
   b.skipped = visits.skipped;
   b.signInPath = visits.sign_in_path ?? null;
+  b.routing = visits.routing ?? null;
   // A raw recording must never reach the evidence (browser.mjs keeps it outside /out).
   for (const f of ['.raw.har', 'raw.har']) rmSync(join(dir, f), { force: true });
 }

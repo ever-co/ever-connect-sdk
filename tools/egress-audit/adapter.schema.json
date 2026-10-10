@@ -10,7 +10,7 @@
       "description": "Creates what a user would create (a tenant, an organization, a project, a Work...). What it answers (ids and slugs, never a token) reaches the browser leg's hooks as ctx.fixtures."
     },
     "uiLogin": {
-      "description": "Browser leg: async uiLogin(page, ctx) signs in through the product's real sign-in page with the Playwright page (ctx: {baseUrl (web_url), apiUrl, mode, env, fixtures, fetch, log}). It runs in the browser container, in the browser's sniffed namespace."
+      "description": "Browser leg: async uiLogin(page, ctx) signs in through the product's real sign-in page with the Playwright page (ctx: {baseUrl, webUrl, routing, routeUrl(route), apiUrl, mode, env, fixtures, fetch, log}; baseUrl + a route is the route's URL: web_url, or web_url/# with hash routing). It runs in the browser container, in the browser's sniffed namespace."
     },
     "routeParams": {
       "description": "Browser leg: async routeParams(ctx) answers the route parameter values only a run knows, {name: value} or {\"/path/:name\": {name: value}}, merged over route-params.json."
