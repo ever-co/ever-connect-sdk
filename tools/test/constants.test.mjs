@@ -91,8 +91,8 @@ test('root_keys: the Ever Platform roots only, each pinned to one issuer; never 
   }
   assert.deepEqual(
     pinned.map((k) => k.iss),
-    ['https://api-dev.ever.co', 'https://api-stage.ever.co'],
-    'the development and staging roots (the production root comes with its own reviewed change)',
+    ['https://api-dev.ever.co', 'https://api-stage.ever.co', 'https://api.ever.co'],
+    'the development, staging and production roots, one per issuer',
   );
 });
 

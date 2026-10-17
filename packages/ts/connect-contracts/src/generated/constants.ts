@@ -151,6 +151,15 @@ export const CONSTANTS = {
       "x": "Ync-MW21JL72GOiS-RVrlvS3gyFH5Krh5f6I66jw1Qc",
       "use": "sig",
       "alg": "EdDSA"
+    },
+    {
+      "kid": "ever-202610-025b",
+      "iss": "https://api.ever.co",
+      "kty": "OKP",
+      "crv": "Ed25519",
+      "x": "AwXJEZdyiK3QEhUnNB-0fIsN9PPLgbF6O3tyZT3moDc",
+      "use": "sig",
+      "alg": "EdDSA"
     }
   ],
   "root_keys_file_env": "EVER_PLATFORM_ROOT_KEYS_FILE",

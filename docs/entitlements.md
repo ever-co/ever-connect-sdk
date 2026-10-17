@@ -59,7 +59,7 @@ Roots are pinned per issuer in `root_keys` (`contracts/constants.json`): a root 
 |---|---|---|
 | `https://api-dev.ever.co` | `ever-202610-0d77` | product builds that talk to the development API |
 | `https://api-stage.ever.co` | `ever-202610-8704` | product builds that talk to the staging API |
-| `https://api.ever.co` | pending | added by its own reviewed change once the production root exists; until then no release is tagged |
+| `https://api.ever.co` | `ever-202610-025b` | product builds that talk to the production API |
 
 A root changes only in an SDK release, with the old and the new root pinned side by side for the transition (adding a root is a minor release, removing one a major release).
 
@@ -161,5 +161,5 @@ An installation without egress can be given a document by hand (downloaded from 
 | Schemas | `contracts/schemas/ever.key-manifest.v1.json`, `contracts/schemas/ever.entitlement.v1.json` |
 | Constants (roots, lifetimes, refresh intervals, the roots file hosts) | `contracts/constants.json`, also exported by `@ever-co/connect-contracts` and the `ever-connect-contracts` crate |
 | The verifier | `@ever-co/connect-sdk` (`verifyKeyManifest`, `KeySet`, `verifyEntitlement`, `entitlementStatus`); the `ever-connect-sdk` crate, feature `entitlement` (`manifest`, `keyset`, `entitlement`) |
-| Fixtures with expected outcomes | `contracts/fixtures/keys/` (TEST root, the small-order encodings, the shared origin vectors), `contracts/fixtures/keys-platform/` (manifests the development and staging APIs serve), `contracts/fixtures/entitlement/` (with `mutations.json`: the answers of the seeded mutation corpus, and `structured.json`: documents and manifests built on purpose with the answers of the reference verifier; both languages reproduce every answer), `contracts/fixtures/entitlement-platform/` (the platform's own signed fixtures, vendored byte for byte: 3 valid and 10 invalid documents, the key manifest and root that vouch for them, the context and expected outcomes; both languages reach every one) |
+| Fixtures with expected outcomes | `contracts/fixtures/keys/` (TEST root, the small-order encodings, the shared origin vectors), `contracts/fixtures/keys-platform/` (manifests the development, staging and production APIs serve), `contracts/fixtures/entitlement/` (with `mutations.json`: the answers of the seeded mutation corpus, and `structured.json`: documents and manifests built on purpose with the answers of the reference verifier; both languages reproduce every answer), `contracts/fixtures/entitlement-platform/` (the platform's own signed fixtures, vendored byte for byte: 3 valid and 10 invalid documents, the key manifest and root that vouch for them, the context and expected outcomes; both languages reach every one) |
 | A platform that signs both | the mock platform (`docs/mock-platform.md`): `GET /.well-known/ever-keys.json` and the entitlement routes, signed with the TEST keys; `POST /__mock/keys/rotate` and `POST /__mock/entitlement/reissue` drive rotation and re-issue |

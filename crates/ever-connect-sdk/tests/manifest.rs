@@ -1,5 +1,6 @@
 //! The key manifest verifier and the key set against the SDK fixtures (signed by the TEST root)
-//! and the manifests Ever Platform serves (signed by the pinned development and staging roots).
+//! and the manifests Ever Platform serves (signed by the pinned development, staging and production
+//! roots).
 #![cfg(feature = "entitlement")]
 #![allow(clippy::unwrap_used, clippy::expect_used, missing_docs)]
 
@@ -202,6 +203,12 @@ fn the_small_order_encodings_are_weak_keys_as_the_typescript_check_says() {
 #[test]
 fn the_platform_manifests_verify_with_the_pinned_root_of_their_issuer_only() {
     let expected = fixture("keys-platform/expected.json");
+    let issuers: Vec<&str> = expected["fixtures"]
+        .as_object()
+        .unwrap()
+        .values()
+        .map(|e| e["issuer"].as_str().unwrap())
+        .collect();
     for (file, e) in expected["fixtures"].as_object().unwrap() {
         let body = fixture(&format!("keys-platform/{file}"));
         let issuer = e["issuer"].as_str().unwrap();
@@ -220,16 +227,41 @@ fn the_platform_manifests_verify_with_the_pinned_root_of_their_issuer_only() {
             .map(|v| v.as_str().unwrap())
             .collect();
         assert_eq!(kids, trusted);
-        assert_eq!(
-            code(verify_key_manifest(&body, &o("https://api.ever.co", at))),
-            "unknown_root"
-        );
+        for other in issuers.iter().filter(|i| **i != issuer) {
+            assert_eq!(
+                code(verify_key_manifest(&body, &o(other, at))),
+                "unknown_root"
+            );
+        }
         let expired = e["expired_at"].as_i64().unwrap();
         assert_eq!(
             code(verify_key_manifest(&body, &o(issuer, expired))),
             "manifest_expired"
         );
     }
+}
+
+#[test]
+fn every_pinned_root_is_the_root_of_a_manifest_the_platform_serves_for_its_issuer() {
+    let expected = fixture("keys-platform/expected.json");
+    let mut served: Vec<(String, String)> = expected["fixtures"]
+        .as_object()
+        .unwrap()
+        .values()
+        .map(|e| {
+            (
+                e["root_kid"].as_str().unwrap().to_owned(),
+                e["issuer"].as_str().unwrap().to_owned(),
+            )
+        })
+        .collect();
+    let mut pinned: Vec<(String, String)> = pinned_root_keys()
+        .iter()
+        .map(|r| (r.kid.clone(), r.iss.clone().unwrap()))
+        .collect();
+    served.sort();
+    pinned.sort();
+    assert_eq!(pinned, served);
 }
 
 #[test]

@@ -1948,6 +1948,108 @@
       "roots": "pinned",
       "expected_issuer": "https://api.ever.co",
       "expect": "manifest:unknown_root"
+    },
+    {
+      "name": "anchor/prod-key-set-prod-document",
+      "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6ImF0dGFja2VyLTEiLCJ0eXAiOiJldmVyLWVudGl0bGVtZW50K2p3dCJ9.eyJpc3MiOiJodHRwczovL2FwaS5ldmVyLmNvIiwiYXVkIjoiZXZlci1jb25uZWN0Iiwic3ViIjoiaW5zdGFuY2U6MDFKTkU3VjlKMDNKNlhRMldOOEgwWjg4UjUiLCJqdGkiOiIwMUpXS04xUjFKMk45REtUNzUwMUcxRjYyOCIsImlhdCI6MTc5MzYxMzYwMCwibmJmIjoxNzkzNjEzNTQwLCJleHAiOjE3OTQyMTg0MDAsImV2ZXIiOnsic2NoZW1hIjoiZXZlci5lbnRpdGxlbWVudC52MSIsInNlcSI6Mywib3JnX2lkIjoiMDFKTkI3OU5aVzJTODVHRjRBOTZNTVg2QlQiLCJoYW5kbGUiOiJhY21lIiwidGVuYW50X2lkIjoiMDFKN01aVENQS1pZUjZOMVQzNDlGUjZKQlAiLCJpbnN0YW5jZV9pZCI6IjAxSk5FN1Y5SjAzSjZYUTJXTjhIMFo4OFI1IiwidGllciI6InBhaWQiLCJwbGFuIjp7ImNvZGUiOiJldmVyX2dhdXp5X3NlbGZob3N0ZWRfc21hbGxfYnVzaW5lc3NfbGlmZXRpbWUiLCJzb3VyY2UiOiJsaWNlbmNlX2NlcnRpZmljYXRlIiwicmVmIjoiRVZFUi1HQVVaWS1TQi0xQTJCM0M0RCJ9LCJwcm9kdWN0cyI6WyJnYXV6eSIsInRlYW1zIl0sImxpY2VuY2VfaWRzIjpbIkVWRVItR0FVWlktU0ItMUEyQjNDNEQiXSwiZmVhdHVyZXMiOnsiaGFuZGxlIjp0cnVlLCJkaXNjb3ZlcmFiaWxpdHkiOmZhbHNlLCJsb29rdXAiOnRydWUsInByb2ZpbGUucHVibGljIjp0cnVlLCJwcm9maWxlLmJhZGdlcyI6ZmFsc2UsImxpc3RpbmdzIjpmYWxzZSwibWFya2V0cGxhY2UuYnV5IjpmYWxzZSwiaW5zdGFuY2VzLm11bHRpIjpmYWxzZSwiZXZlcl9pZF9sb2dpbiI6dHJ1ZSwiYXBwX3N5bmMiOmZhbHNlLCJ1c2FnZV9yZXBvcnRpbmciOmZhbHNlLCJwcm92aWRlcl9hY2Nlc3MiOmZhbHNlfSwibGltaXRzIjp7Imluc3RhbmNlcy5jb25uZWN0ZWQiOjUsImxpc3RpbmdzLnB1Ymxpc2hlZCI6NSwiYXBpLnJwbSI6NjAwLCJtZW1iZXJzIjo1LCJ3ZWJob29rcy5lbmRwb2ludHMiOjUsImxvb2t1cC5oYXNoZXNfcGVyX2RheSI6NjAwMCwibG9va3VwLnF1ZXJpZXNfcGVyX21pbiI6NjB9LCJtZXRlcnMiOnsiaW5zdGFuY2VzLmNvbm5lY3RlZCI6eyJ1c2VkIjoxLCJwZXJpb2QiOm51bGx9LCJsb29rdXAucXVlcmllcyI6eyJ1c2VkIjoxMiwicGVyaW9kIjoiMjAyNi0xMSJ9fSwibWFuYWdlZCI6eyJ1cGRhdGVzIjpmYWxzZSwiYmFja3VwcyI6ZmFsc2UsInN1cHBvcnRfbGV2ZWwiOiJjb21tdW5pdHkifSwiZ3JhY2VfcyI6MjU5MjAwMCwicmVmcmVzaF9hZnRlcl9zIjoyMTYwMH19.DIS3v29sXeSjLwfiOGfdL4HTtRUBYkSl2ATUvcIWOVXrZCCzuNKrWoF59EIFiQfVYa1LQw-FKDTg0i48K0Z-DA",
+      "manifest": {
+        "manifest": "eyJhbGciOiJFZERTQSIsImtpZCI6ImV2ZXItMjAyNjEwLTAyNWIiLCJ0eXAiOiJldmVyLWtleS1tYW5pZmVzdCtqd3QifQ.eyJleHAiOjE3OTQ4NjA3NTEsImlhdCI6MTc5MjI2ODc1MSwiaXNzIjoiaHR0cHM6Ly9hcGkuZXZlci5jbyIsImtleXNfc2hhMjU2IjoiOTZhMWU2MWI5ZGIzMjg4MDE1YmVjYzYzMzFlNjU0OTFjMmU5OThkMDhlMzY3YTdiYTI1Mzc1YjM0ZWJhNjlkOSIsInJvb3Rfa2lkIjoiZXZlci0yMDI2MTAtMDI1YiJ9.tia0kNf_EaCzNXFJ45odtAjTDiC1_ZRtR9rP7BZMzSfybwl2PJvMpCvKdpI8AYfphqOgo2qv182Od8GIvIfiBQ",
+        "keys": [
+          {
+            "alg": "EdDSA",
+            "crv": "Ed25519",
+            "ever_purpose": "assertion",
+            "kid": "ever-202610-63ed",
+            "kty": "OKP",
+            "not_after": null,
+            "not_before": "2026-10-17T20:25:50Z",
+            "state": "active",
+            "use": "sig",
+            "x": "A_z_-OYZRMRzMQVXR6MnBOtYqRaprzI2p83svID1Eks"
+          },
+          {
+            "alg": "EdDSA",
+            "crv": "Ed25519",
+            "ever_purpose": "intent",
+            "kid": "ever-202610-3234",
+            "kty": "OKP",
+            "not_after": null,
+            "not_before": "2026-10-17T20:25:51Z",
+            "state": "active",
+            "use": "sig",
+            "x": "7yvXpGan4lBme69FLxcQ5lMZ7ESBZgWoiA-QphVmpm0"
+          },
+          {
+            "alg": "EdDSA",
+            "crv": "Ed25519",
+            "ever_purpose": "entitlement",
+            "kid": "ever-202610-15bb",
+            "kty": "OKP",
+            "not_after": null,
+            "not_before": "2026-10-17T20:25:51Z",
+            "state": "active",
+            "use": "sig",
+            "x": "QMMjJ65z12P6HnLTa1e7cTjuoLDGSk1K0OFOywZeRiU"
+          }
+        ]
+      },
+      "manifest_issuer": "https://api.ever.co",
+      "manifest_now": 1792355151,
+      "now": 1792355151,
+      "roots": "pinned",
+      "expected_issuer": "https://api.ever.co",
+      "expect": "unknown_kid+refresh"
+    },
+    {
+      "name": "anchor/prod-manifest-for-prod",
+      "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6ImF0dGFja2VyLTEiLCJ0eXAiOiJldmVyLWVudGl0bGVtZW50K2p3dCJ9.eyJpc3MiOiJodHRwczovL2FwaS5ldmVyLmNvIiwiYXVkIjoiZXZlci1jb25uZWN0Iiwic3ViIjoiaW5zdGFuY2U6MDFKTkU3VjlKMDNKNlhRMldOOEgwWjg4UjUiLCJqdGkiOiIwMUpXS04xUjFKMk45REtUNzUwMUcxRjYyOCIsImlhdCI6MTc5MzYxMzYwMCwibmJmIjoxNzkzNjEzNTQwLCJleHAiOjE3OTQyMTg0MDAsImV2ZXIiOnsic2NoZW1hIjoiZXZlci5lbnRpdGxlbWVudC52MSIsInNlcSI6Mywib3JnX2lkIjoiMDFKTkI3OU5aVzJTODVHRjRBOTZNTVg2QlQiLCJoYW5kbGUiOiJhY21lIiwidGVuYW50X2lkIjoiMDFKN01aVENQS1pZUjZOMVQzNDlGUjZKQlAiLCJpbnN0YW5jZV9pZCI6IjAxSk5FN1Y5SjAzSjZYUTJXTjhIMFo4OFI1IiwidGllciI6InBhaWQiLCJwbGFuIjp7ImNvZGUiOiJldmVyX2dhdXp5X3NlbGZob3N0ZWRfc21hbGxfYnVzaW5lc3NfbGlmZXRpbWUiLCJzb3VyY2UiOiJsaWNlbmNlX2NlcnRpZmljYXRlIiwicmVmIjoiRVZFUi1HQVVaWS1TQi0xQTJCM0M0RCJ9LCJwcm9kdWN0cyI6WyJnYXV6eSIsInRlYW1zIl0sImxpY2VuY2VfaWRzIjpbIkVWRVItR0FVWlktU0ItMUEyQjNDNEQiXSwiZmVhdHVyZXMiOnsiaGFuZGxlIjp0cnVlLCJkaXNjb3ZlcmFiaWxpdHkiOmZhbHNlLCJsb29rdXAiOnRydWUsInByb2ZpbGUucHVibGljIjp0cnVlLCJwcm9maWxlLmJhZGdlcyI6ZmFsc2UsImxpc3RpbmdzIjpmYWxzZSwibWFya2V0cGxhY2UuYnV5IjpmYWxzZSwiaW5zdGFuY2VzLm11bHRpIjpmYWxzZSwiZXZlcl9pZF9sb2dpbiI6dHJ1ZSwiYXBwX3N5bmMiOmZhbHNlLCJ1c2FnZV9yZXBvcnRpbmciOmZhbHNlLCJwcm92aWRlcl9hY2Nlc3MiOmZhbHNlfSwibGltaXRzIjp7Imluc3RhbmNlcy5jb25uZWN0ZWQiOjUsImxpc3RpbmdzLnB1Ymxpc2hlZCI6NSwiYXBpLnJwbSI6NjAwLCJtZW1iZXJzIjo1LCJ3ZWJob29rcy5lbmRwb2ludHMiOjUsImxvb2t1cC5oYXNoZXNfcGVyX2RheSI6NjAwMCwibG9va3VwLnF1ZXJpZXNfcGVyX21pbiI6NjB9LCJtZXRlcnMiOnsiaW5zdGFuY2VzLmNvbm5lY3RlZCI6eyJ1c2VkIjoxLCJwZXJpb2QiOm51bGx9LCJsb29rdXAucXVlcmllcyI6eyJ1c2VkIjoxMiwicGVyaW9kIjoiMjAyNi0xMSJ9fSwibWFuYWdlZCI6eyJ1cGRhdGVzIjpmYWxzZSwiYmFja3VwcyI6ZmFsc2UsInN1cHBvcnRfbGV2ZWwiOiJjb21tdW5pdHkifSwiZ3JhY2VfcyI6MjU5MjAwMCwicmVmcmVzaF9hZnRlcl9zIjoyMTYwMH19.DIS3v29sXeSjLwfiOGfdL4HTtRUBYkSl2ATUvcIWOVXrZCCzuNKrWoF59EIFiQfVYa1LQw-FKDTg0i48K0Z-DA",
+      "manifest": {
+        "manifest": "eyJhbGciOiJFZERTQSIsImtpZCI6ImV2ZXItMjAyNjEwLTAyNWIiLCJ0eXAiOiJldmVyLWtleS1tYW5pZmVzdCtqd3QifQ.eyJleHAiOjE3OTQ4NjA3NTEsImlhdCI6MTc5MjI2ODc1MSwiaXNzIjoiaHR0cHM6Ly9hcGkuZXZlci5jbyIsImtleXNfc2hhMjU2IjoiOTZhMWU2MWI5ZGIzMjg4MDE1YmVjYzYzMzFlNjU0OTFjMmU5OThkMDhlMzY3YTdiYTI1Mzc1YjM0ZWJhNjlkOSIsInJvb3Rfa2lkIjoiZXZlci0yMDI2MTAtMDI1YiJ9.tia0kNf_EaCzNXFJ45odtAjTDiC1_ZRtR9rP7BZMzSfybwl2PJvMpCvKdpI8AYfphqOgo2qv182Od8GIvIfiBQ",
+        "keys": [
+          {
+            "alg": "EdDSA",
+            "crv": "Ed25519",
+            "ever_purpose": "assertion",
+            "kid": "ever-202610-63ed",
+            "kty": "OKP",
+            "not_after": null,
+            "not_before": "2026-10-17T20:25:50Z",
+            "state": "active",
+            "use": "sig",
+            "x": "A_z_-OYZRMRzMQVXR6MnBOtYqRaprzI2p83svID1Eks"
+          },
+          {
+            "alg": "EdDSA",
+            "crv": "Ed25519",
+            "ever_purpose": "intent",
+            "kid": "ever-202610-3234",
+            "kty": "OKP",
+            "not_after": null,
+            "not_before": "2026-10-17T20:25:51Z",
+            "state": "active",
+            "use": "sig",
+            "x": "7yvXpGan4lBme69FLxcQ5lMZ7ESBZgWoiA-QphVmpm0"
+          },
+          {
+            "alg": "EdDSA",
+            "crv": "Ed25519",
+            "ever_purpose": "entitlement",
+            "kid": "ever-202610-15bb",
+            "kty": "OKP",
+            "not_after": null,
+            "not_before": "2026-10-17T20:25:51Z",
+            "state": "active",
+            "use": "sig",
+            "x": "QMMjJ65z12P6HnLTa1e7cTjuoLDGSk1K0OFOywZeRiU"
+          }
+        ]
+      },
+      "manifest_issuer": "https://api.ever.co",
+      "manifest_now": 1792355151,
+      "now": 1792355151,
+      "roots": "pinned",
+      "expected_issuer": "https://api.ever.co",
+      "expect": "unknown_kid+refresh"
     }
   ]
 }
