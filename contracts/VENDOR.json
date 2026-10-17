@@ -2,24 +2,24 @@
   "description": "Where every contract file of this repository comes from. Written by tools/sync-contract.mjs; checked by tools/check-schema-drift.mjs. `provisional` sources are drafts the platform has not published yet: tools/check-schema-drift.mjs --strict refuses them.",
   "platform": {
     "repository": "ever-co/platform",
-    "commit": "8bffb00658ec9d503d42976085b1f595628b3e5a"
+    "commit": "6fc9fb9627ed7670749f62fd978bff4900e50fa5"
   },
   "openapi": {
     "target": "contracts/openapi/ever-platform.v1.yaml",
-    "sha256": "5e33102bd34ace63d4bd1443a2d70b8d96f0f14446ed21681ad64ef861d42089",
+    "sha256": "646d45304a5bea80805aae7afc43b90de699037737c76b48c615d7d03c1dd8cb",
     "pinned": {
       "source": "contracts/openapi/ever-api.v1.json",
-      "sha256": "84c3666da6a1aea510ed75a3ede91c0f6ed71d17ee991adc2146bc7dcd063a65"
+      "sha256": "f94278e00681a77747f643bb6d988e66c74531133818fc6d7138e42ab2459ebe"
     },
     "design": {
       "source": "docs/specs/api",
       "sha256": "740c8492b15be95265d23a69b92085d84bc4dcc20bb8407a4615b33f93c3ec5c",
       "files": 21
     },
-    "operations": 58,
+    "operations": 59,
     "scope": {
       "source": "contracts/openapi/v1-scope.json",
-      "sha256": "273451c5d5e605a05e8d77fc31f148eb2ea8479be0d5994ac1d9dc45b8a62dee",
+      "sha256": "bcccf18a5093e7a660c063afbced40135e1dbe76ef218c6033f6743ba831a41d",
       "version": "1.0.0"
     },
     "provisional_operations": [],
@@ -170,8 +170,8 @@
     {
       "path": "contracts/openapi/v1-scope.json",
       "source": "contracts/openapi/v1-scope.json",
-      "source_sha256": "273451c5d5e605a05e8d77fc31f148eb2ea8479be0d5994ac1d9dc45b8a62dee",
-      "sha256": "273451c5d5e605a05e8d77fc31f148eb2ea8479be0d5994ac1d9dc45b8a62dee",
+      "source_sha256": "bcccf18a5093e7a660c063afbced40135e1dbe76ef218c6033f6743ba831a41d",
+      "sha256": "bcccf18a5093e7a660c063afbced40135e1dbe76ef218c6033f6743ba831a41d",
       "transform": null,
       "provisional": false,
       "upstream": null

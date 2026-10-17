@@ -1097,6 +1097,35 @@
         "traduora"
       ],
       "phase": 3
+    },
+    {
+      "row": 35,
+      "title": "Live event stream",
+      "module": "connect",
+      "group": "session",
+      "integration": null,
+      "auth": "instance token",
+      "availability": "v1",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/rt/sse",
+          "operation_id": "realtimeStream",
+          "status": "pinned"
+        }
+      ],
+      "trigger": "while connected, only when the product opens the live stream of its own instance topic; the event feed (row 7) stays the way a product receives and acknowledges its events. A deployment that does not serve the stream answers 503 realtime_disabled",
+      "payload": "topics (instance/<the installation's instance id>); Last-Event-ID when it reconnects",
+      "cadence": "one open stream at a time; when the platform ends it with sys.closed {reauthenticate}, the product reconnects with a fresh instance token and its last event id; after sys.closed {access_revoked} it does not reconnect",
+      "disable": "disconnect, or stop opening the stream",
+      "products": [
+        "gauzy",
+        "teams",
+        "works",
+        "rec",
+        "traduora"
+      ],
+      "phase": 2
     }
   ]
 }

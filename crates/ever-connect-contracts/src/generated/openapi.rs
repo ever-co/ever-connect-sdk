@@ -806,6 +806,16 @@ pub mod components {
         DatabaseUnreachable,
         #[serde(rename = "topic_private")]
         TopicPrivate,
+        #[serde(rename = "realtime_disabled")]
+        RealtimeDisabled,
+        #[serde(rename = "topic_forbidden")]
+        TopicForbidden,
+        #[serde(rename = "topic_invalid")]
+        TopicInvalid,
+        #[serde(rename = "realtime_busy")]
+        RealtimeBusy,
+        #[serde(rename = "too_many_streams")]
+        TooManyStreams,
         #[serde(rename = "keys_unavailable")]
         KeysUnavailable,
         #[serde(rename = "internal_error")]
@@ -892,6 +902,11 @@ pub mod components {
                 Self::DatabaseAbsent => f.write_str("database_absent"),
                 Self::DatabaseUnreachable => f.write_str("database_unreachable"),
                 Self::TopicPrivate => f.write_str("topic_private"),
+                Self::RealtimeDisabled => f.write_str("realtime_disabled"),
+                Self::TopicForbidden => f.write_str("topic_forbidden"),
+                Self::TopicInvalid => f.write_str("topic_invalid"),
+                Self::RealtimeBusy => f.write_str("realtime_busy"),
+                Self::TooManyStreams => f.write_str("too_many_streams"),
                 Self::KeysUnavailable => f.write_str("keys_unavailable"),
                 Self::InternalError => f.write_str("internal_error"),
             }
@@ -979,6 +994,11 @@ pub mod components {
                 "database_absent" => Ok(Self::DatabaseAbsent),
                 "database_unreachable" => Ok(Self::DatabaseUnreachable),
                 "topic_private" => Ok(Self::TopicPrivate),
+                "realtime_disabled" => Ok(Self::RealtimeDisabled),
+                "topic_forbidden" => Ok(Self::TopicForbidden),
+                "topic_invalid" => Ok(Self::TopicInvalid),
+                "realtime_busy" => Ok(Self::RealtimeBusy),
+                "too_many_streams" => Ok(Self::TooManyStreams),
                 "keys_unavailable" => Ok(Self::KeysUnavailable),
                 "internal_error" => Ok(Self::InternalError),
                 _ => Err("invalid value".into()),

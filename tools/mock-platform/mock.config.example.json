@@ -24,6 +24,9 @@
     "revoke_credential_at_call": null,
     "connect_issuance_off": false,
     "legal_unavailable": false,
-    "consent_links_unavailable": false
+    "consent_links_unavailable": false,
+    "realtime_disabled": false,
+    "realtime_busy": false,
+    "too_many_streams": false
   }
 }

@@ -1122,6 +1122,35 @@ export const ROWS: readonly OutboundCallRow[] = [
       "traduora"
     ],
     "phase": 3
+  },
+  {
+    "row": 35,
+    "title": "Live event stream",
+    "module": "connect",
+    "group": "session",
+    "integration": null,
+    "auth": "instance token",
+    "availability": "v1",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/rt/sse",
+        "operation_id": "realtimeStream",
+        "status": "pinned"
+      }
+    ],
+    "trigger": "while connected, only when the product opens the live stream of its own instance topic; the event feed (row 7) stays the way a product receives and acknowledges its events. A deployment that does not serve the stream answers 503 realtime_disabled",
+    "payload": "topics (instance/<the installation's instance id>); Last-Event-ID when it reconnects",
+    "cadence": "one open stream at a time; when the platform ends it with sys.closed {reauthenticate}, the product reconnects with a fresh instance token and its last event id; after sys.closed {access_revoked} it does not reconnect",
+    "disable": "disconnect, or stop opening the stream",
+    "products": [
+      "gauzy",
+      "teams",
+      "works",
+      "rec",
+      "traduora"
+    ],
+    "phase": 2
   }
 ];
 
@@ -2517,6 +2546,51 @@ export const ROW_COVERAGE: readonly RowCoverage[] = [
       {
         "status": 422,
         "code": "validation_failed",
+        "documented": true
+      }
+    ]
+  },
+  {
+    "row": 35,
+    "operations": [
+      {
+        "operation_id": "realtimeStream",
+        "method": "GET",
+        "path": "/rt/sse",
+        "success": [
+          200
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "status": 401,
+        "code": "unauthorized",
+        "documented": true
+      },
+      {
+        "status": 403,
+        "code": "topic_forbidden",
+        "documented": true
+      },
+      {
+        "status": 422,
+        "code": "topic_invalid",
+        "documented": true
+      },
+      {
+        "status": 429,
+        "code": "too_many_streams",
+        "documented": true
+      },
+      {
+        "status": 503,
+        "code": "realtime_disabled",
+        "documented": true
+      },
+      {
+        "status": 503,
+        "code": "realtime_busy",
         "documented": true
       }
     ]

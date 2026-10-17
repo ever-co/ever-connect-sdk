@@ -47,6 +47,27 @@ export const OPERATIONS = {
     "rateLimit": null,
     "status": "pinned"
   },
+  "realtimeStream": {
+    "id": "realtimeStream",
+    "method": "GET",
+    "path": "/rt/sse",
+    "pathParams": [],
+    "query": [
+      "topics"
+    ],
+    "auth": "instance",
+    "idempotencyKey": "none",
+    "linkHeader": "none",
+    "conditional": false,
+    "body": null,
+    "success": [
+      200
+    ],
+    "row": 35,
+    "integration": null,
+    "rateLimit": null,
+    "status": "pinned"
+  },
   "connectDevice": {
     "id": "connectDevice",
     "method": "POST",
