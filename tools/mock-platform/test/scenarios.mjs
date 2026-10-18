@@ -138,6 +138,10 @@ export const OK = {
     const page = await env.call('GET', '/v1/instances/me/events?wait=0', { token: c.token });
     return env.call('POST', '/v1/instances/me/events/ack', { token: c.token, body: { last_id: page.body.last_id } });
   },
+  realtimeStream: async (env) => {
+    const c = await connected(env);
+    return env.call('GET', `/rt/sse?topics=instance/${c.instanceId}`, { token: c.token });
+  },
   instanceGetEntitlement: async (env) => env.call('GET', '/v1/instances/me/entitlement', { token: (await connected(env)).token }),
   instanceGetLinkEntitlement: async (env) => {
     const c = await connected(env);
@@ -1165,5 +1169,26 @@ export const ERRORS = {
       token: m.token,
       body: { status: 'succeeded', file_name: 'backup.tar' },
     });
+  },
+  '35:401:unauthorized': async (env) => env.call('GET', `/rt/sse?topics=instance/${(await connected(env)).instanceId}`),
+  '35:403:topic_forbidden': async (env) => {
+    const c = await connected(env);
+    return env.call('GET', `/rt/sse?topics=instance/${c.instanceId},org/${env.state.instance(c.instanceId).org.id}`, { token: c.token });
+  },
+  '35:422:topic_invalid': async (env) => env.call('GET', '/rt/sse?topics=instances', { token: (await connected(env)).token }),
+  '35:429:too_many_streams': async (env) => {
+    const c = await connected(env);
+    await env.admin('faults', { too_many_streams: true });
+    return env.call('GET', `/rt/sse?topics=instance/${c.instanceId}`, { token: c.token });
+  },
+  '35:503:realtime_disabled': async (env) => {
+    const c = await connected(env);
+    await env.admin('faults', { realtime_disabled: true });
+    return env.call('GET', `/rt/sse?topics=instance/${c.instanceId}`, { token: c.token });
+  },
+  '35:503:realtime_busy': async (env) => {
+    const c = await connected(env);
+    await env.admin('faults', { realtime_busy: true });
+    return env.call('GET', `/rt/sse?topics=instance/${c.instanceId}`, { token: c.token });
   },
 };

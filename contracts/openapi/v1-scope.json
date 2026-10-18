@@ -177,6 +177,11 @@
       "path": "/v1/webhooks/{webhook}/deliveries"
     },
     {
+      "operation_id": "realtimeStream",
+      "method": "GET",
+      "path": "/rt/sse"
+    },
+    {
       "operation_id": "redeliverWebhook",
       "method": "POST",
       "path": "/v1/deliveries/{delivery}/redeliver"

@@ -3,7 +3,7 @@
 
 export const CONSTANTS = {
   "$comment": "Wire constants of the Ever Platform modules. tools/split-integrations.mjs refreshes the fields read from the contract (contracts_version, code patterns, install_sources, products, stats_headers, feed_event_types, integration_keys, root_keys); every other value is a default a product may override by its own configuration.",
-  "contracts_version": "1.0.0-rc.6",
+  "contracts_version": "1.0.0-rc.7",
   "connect_code_pattern": "^EVC(-[0-9A-HJKMNP-TV-Za-hj-kmnp-tv-z]{4}){3}$",
   "link_code_pattern": "^EVL(-[0-9A-HJKMNP-TV-Za-hj-kmnp-tv-z]{4}){3}$",
   "install_sources": "^(cloud|self-hosted|ever\\.sh|works_app|desktop|partner:[a-z0-9-]{2,32})$",
@@ -149,6 +149,15 @@ export const CONSTANTS = {
       "kty": "OKP",
       "crv": "Ed25519",
       "x": "Ync-MW21JL72GOiS-RVrlvS3gyFH5Krh5f6I66jw1Qc",
+      "use": "sig",
+      "alg": "EdDSA"
+    },
+    {
+      "kid": "ever-202610-025b",
+      "iss": "https://api.ever.co",
+      "kty": "OKP",
+      "crv": "Ed25519",
+      "x": "AwXJEZdyiK3QEhUnNB-0fIsN9PPLgbF6O3tyZT3moDc",
       "use": "sig",
       "alg": "EdDSA"
     }

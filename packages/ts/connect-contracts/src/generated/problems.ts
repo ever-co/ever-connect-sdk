@@ -80,6 +80,11 @@ export const PROBLEM_CODES = [
   "database_absent",
   "database_unreachable",
   "topic_private",
+  "realtime_disabled",
+  "topic_forbidden",
+  "topic_invalid",
+  "realtime_busy",
+  "too_many_streams",
   "keys_unavailable",
   "internal_error"
 ] as const;

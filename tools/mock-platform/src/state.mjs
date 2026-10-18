@@ -78,7 +78,9 @@ export const DEFAULT_CONFIG = {
     webhook_endpoints: 5,
   },
   // legal_unavailable: no terms published (legal texts 503, no consent recorded: 503);
-  // consent_links_unavailable: consent links not configured (503).
+  // consent_links_unavailable: consent links not configured (503); realtime_disabled: the live
+  // stream is off (503), realtime_busy: the replica is full (503), too_many_streams: the caller
+  // holds as many streams as it may (429).
   faults: {
     keys_unavailable: false,
     webhooks_module_disabled: false,
@@ -86,6 +88,9 @@ export const DEFAULT_CONFIG = {
     connect_issuance_off: false,
     legal_unavailable: false,
     consent_links_unavailable: false,
+    realtime_disabled: false,
+    realtime_busy: false,
+    too_many_streams: false,
   },
 };
 

@@ -61,6 +61,11 @@ const SENTENCES = {
   limit_exceeded: 'a limit is reached',
   method_not_allowed: 'method not allowed',
   unsupported_media_type: 'the body must be application/json',
+  realtime_disabled: 'the stream is off on this deployment',
+  realtime_busy: 'this replica holds as many streams as it may',
+  too_many_streams: 'the caller holds as many open streams as it may',
+  topic_forbidden: 'a topic is out of reach of this credential',
+  topic_invalid: 'the topic list is not valid',
 };
 
 /** The problem body; `instance` echoes the caller's x-request-id (null without one). */

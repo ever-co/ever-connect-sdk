@@ -1389,6 +1389,51 @@
           "documented": true
         }
       ]
+    },
+    {
+      "row": 35,
+      "operations": [
+        {
+          "operation_id": "realtimeStream",
+          "method": "GET",
+          "path": "/rt/sse",
+          "success": [
+            200
+          ]
+        }
+      ],
+      "errors": [
+        {
+          "status": 401,
+          "code": "unauthorized",
+          "documented": true
+        },
+        {
+          "status": 403,
+          "code": "topic_forbidden",
+          "documented": true
+        },
+        {
+          "status": 422,
+          "code": "topic_invalid",
+          "documented": true
+        },
+        {
+          "status": 429,
+          "code": "too_many_streams",
+          "documented": true
+        },
+        {
+          "status": 503,
+          "code": "realtime_disabled",
+          "documented": true
+        },
+        {
+          "status": 503,
+          "code": "realtime_busy",
+          "documented": true
+        }
+      ]
     }
   ]
 }

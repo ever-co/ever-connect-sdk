@@ -29,7 +29,7 @@ describe('row coverage', () => {
   it('reports 0 uncovered (row, status, code) pairs and operations', () => {
     expect(uncovered).toEqual([]);
     expect(pairs.length).toBeGreaterThanOrEqual(120);
-    expect(new Set(coverage.map((r) => r.row)).size).toBe(34);
+    expect(new Set(coverage.map((r) => r.row)).size).toBe(35);
   });
 });
 

@@ -156,16 +156,26 @@ describe('the pinned roots and the manifests Ever Platform serves', () => {
   const platform = fixture<{
     fixtures: Record<string, { issuer: string; root_kid: string; verify_at: number; expired_at: number; trusted_kids: string[] }>;
   }>('keys-platform/expected.json').fixtures;
+  const issuers = Object.values(platform).map((e) => e.issuer);
   for (const [file, e] of Object.entries(platform)) {
     it(`${file} verifies with the pinned root of ${e.issuer} only`, () => {
       const body = fixture(`keys-platform/${file}`);
       const m = verifyKeyManifest(body, { issuer: e.issuer, now: e.verify_at });
       expect(m.rootKid).toBe(e.root_kid);
       expect(m.keys.map((k) => k.kid)).toEqual(e.trusted_kids);
-      expect(codeOf(() => verifyKeyManifest(body, { issuer: 'https://api.ever.co', now: e.verify_at }))).toBe('unknown_root');
+      for (const other of issuers.filter((i) => i !== e.issuer))
+        expect(codeOf(() => verifyKeyManifest(body, { issuer: other, now: e.verify_at }))).toBe('unknown_root');
       expect(codeOf(() => verifyKeyManifest(body, { issuer: e.issuer, now: e.expired_at }))).toBe('manifest_expired');
     });
   }
+  it('every pinned root is the root of a manifest Ever Platform serves for its issuer', () => {
+    const served = Object.values(platform).map((e) => `${e.root_kid} ${e.issuer}`);
+    expect(
+      pinnedRootKeys()
+        .map((r) => `${r.kid} ${r.iss}`)
+        .sort(),
+    ).toEqual(served.sort());
+  });
   it('every pinned root names its issuer; no TEST root is pinned', () => {
     const pinned = pinnedRootKeys();
     expect(pinned).toEqual(CONSTANTS.root_keys);

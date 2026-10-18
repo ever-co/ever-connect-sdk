@@ -19,6 +19,26 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/rt/sse": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * Opens a live stream over the requested topics.
+         * @description Server-Sent Events. Public topics (system, profile/<handle>, listing/<id>) need no credential (any credential may be presented, an organization API key included; it reaches nothing more) and carry allow-listed fields only; org/<id> needs an active member, person/<id> that person, instance/<id> that approved instance's token. Frames: sys.hello first, then events (data: {id, topic, seq, type, ts, data}), sys.resync {reason, since} when the snapshot must be re-read, sys.closed {reason} when the stream ends (access_revoked: do not reconnect; reauthenticate: reconnect with a fresh credential and Last-Event-ID); a keep-alive comment every 20 s. Open streams are capped per replica (503 realtime_busy) and per caller (429 too_many_streams), both with Retry-After. Off by default (503 realtime_disabled).
+         */
+        readonly get: operations["realtimeStream"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/v1/connect/device": {
         readonly parameters: {
             readonly query?: never;
@@ -1509,7 +1529,7 @@ export interface components {
          *     unknown code by its HTTP status.
          * @enum {string}
          */
-        readonly ErrorCode: "validation_failed" | "not_found" | "unauthorized" | "forbidden_role" | "forbidden_scope" | "ambiguous_credentials" | "credential_revoked" | "instance_disconnected" | "instance_pending_approval" | "not_connection_owner" | "integration_disabled" | "integration_revoked" | "denied_by_policy" | "integration_not_available" | "entitlement_required" | "tier_required" | "limit_exceeded" | "rate_limited" | "idempotency_mismatch" | "idempotency_in_progress" | "stale_version" | "module_disabled" | "handle_taken" | "handle_reserved" | "handle_retired" | "handle_invalid" | "handle_held" | "handle_held_by_you" | "code_invalid" | "code_expired" | "product_mismatch" | "product_not_supported" | "key_mismatch" | "signature_invalid" | "unlinked_org" | "schema_violation" | "mirror_owned_field" | "illegal_transition" | "already_exists" | "already_completed" | "billing_active" | "sso_required" | "reauth_required" | "session_required" | "step_up_required" | "session_bound" | "authorization_pending" | "slow_down" | "expired_token" | "already_connected" | "already_linked" | "already_claimed" | "claim_locked" | "invalid_client" | "public_jwk_invalid" | "identifier_claimed" | "salt_version_unknown" | "salt_version_retired" | "hashes_invalid" | "lookup_key_required" | "required_component" | "resync_required" | "last_owner" | "last_auth_method" | "instances_linked" | "install_in_progress" | "slug_reserved" | "checklist_incomplete" | "scope_version_outdated" | "method_not_allowed" | "payload_too_large" | "unsupported_media_type" | "gone" | "unavailable" | "upstream" | "database_absent" | "database_unreachable" | "topic_private" | "keys_unavailable" | "internal_error";
+        readonly ErrorCode: "validation_failed" | "not_found" | "unauthorized" | "forbidden_role" | "forbidden_scope" | "ambiguous_credentials" | "credential_revoked" | "instance_disconnected" | "instance_pending_approval" | "not_connection_owner" | "integration_disabled" | "integration_revoked" | "denied_by_policy" | "integration_not_available" | "entitlement_required" | "tier_required" | "limit_exceeded" | "rate_limited" | "idempotency_mismatch" | "idempotency_in_progress" | "stale_version" | "module_disabled" | "handle_taken" | "handle_reserved" | "handle_retired" | "handle_invalid" | "handle_held" | "handle_held_by_you" | "code_invalid" | "code_expired" | "product_mismatch" | "product_not_supported" | "key_mismatch" | "signature_invalid" | "unlinked_org" | "schema_violation" | "mirror_owned_field" | "illegal_transition" | "already_exists" | "already_completed" | "billing_active" | "sso_required" | "reauth_required" | "session_required" | "step_up_required" | "session_bound" | "authorization_pending" | "slow_down" | "expired_token" | "already_connected" | "already_linked" | "already_claimed" | "claim_locked" | "invalid_client" | "public_jwk_invalid" | "identifier_claimed" | "salt_version_unknown" | "salt_version_retired" | "hashes_invalid" | "lookup_key_required" | "required_component" | "resync_required" | "last_owner" | "last_auth_method" | "instances_linked" | "install_in_progress" | "slug_reserved" | "checklist_incomplete" | "scope_version_outdated" | "method_not_allowed" | "payload_too_large" | "unsupported_media_type" | "gone" | "unavailable" | "upstream" | "database_absent" | "database_unreachable" | "topic_private" | "realtime_disabled" | "topic_forbidden" | "topic_invalid" | "realtime_busy" | "too_many_streams" | "keys_unavailable" | "internal_error";
         /**
          * @description One event on a webhook, the installation feed or SSE. Payloads carry identifiers and status
          *     only, never records; delivery is at-least-once: dedupe on `id`.
@@ -2942,6 +2962,80 @@ export interface operations {
                 };
             };
             /** @description No signed manifest is available yet */
+            readonly 503: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    readonly realtimeStream: {
+        readonly parameters: {
+            readonly query?: {
+                /**
+                 * @description Comma-separated topics, e.g. `?topics=system,org/01J9…` (at most `EVER_RT_MAX_TOPICS`,
+                 *     1024 characters).
+                 */
+                readonly topics?: string;
+            };
+            readonly header?: {
+                /** @description The last frame id received: replays what was missed within the resume window (an organization topic from the subscriber's membership start only), else the first frame after sys.hello is sys.resync */
+                readonly "Last-Event-ID"?: string | null;
+            };
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description The event stream */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "text/event-stream": string;
+                };
+            };
+            /** @description A private topic without a credential */
+            readonly 401: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description A topic the credential does not reach (topic_forbidden) */
+            readonly 403: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description A malformed topic list (topic_invalid) */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The caller holds as many open streams as it may (too_many_streams; Retry-After) */
+            readonly 429: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The stream is off on this deployment (realtime_disabled), or this replica holds as many streams as it may (realtime_busy; Retry-After) */
             readonly 503: {
                 headers: {
                     readonly [name: string]: unknown;

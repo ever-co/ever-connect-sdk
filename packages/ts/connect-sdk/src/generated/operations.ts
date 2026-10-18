@@ -2,7 +2,7 @@
 // The client's operation table: one entry per operation of contracts/openapi/ever-platform.v1.yaml.
 
 /** The SDK version: the `User-Agent` names it (`ever-connect-sdk/<version> (<product>/<version>)`). */
-export const SDK_VERSION = "1.0.0-rc.6";
+export const SDK_VERSION = "1.0.0-rc.7";
 
 /** How an operation authenticates: none, the instance token, or the person's Ever ID token. */
 export type OperationAuth = 'none' | 'instance' | 'person';
@@ -43,6 +43,27 @@ export const OPERATIONS = {
       200
     ],
     "row": 1,
+    "integration": null,
+    "rateLimit": null,
+    "status": "pinned"
+  },
+  "realtimeStream": {
+    "id": "realtimeStream",
+    "method": "GET",
+    "path": "/rt/sse",
+    "pathParams": [],
+    "query": [
+      "topics"
+    ],
+    "auth": "instance",
+    "idempotencyKey": "none",
+    "linkHeader": "none",
+    "conditional": false,
+    "body": null,
+    "success": [
+      200
+    ],
+    "row": 35,
     "integration": null,
     "rateLimit": null,
     "status": "pinned"

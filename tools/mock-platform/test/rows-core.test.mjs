@@ -739,7 +739,7 @@ describe('the request record', () => {
   it('every documented row is routed', async () => {
     env = await startMock();
     const rows = new Set(env.mock.routes.map((r) => r.row));
-    for (let row = 1; row <= 34; row += 1) expect(rows.has(row), `row ${row}`).toBe(true);
+    for (let row = 1; row <= 35; row += 1) expect(rows.has(row), `row ${row}`).toBe(true);
     expect(readdirSync(join(REPO, 'tools/mock-platform/src/routes')).length).toBeGreaterThanOrEqual(12);
     expect(b64url(Buffer.from('x'))).toBe('eA');
   });
@@ -776,5 +776,93 @@ describe('row 18: the installation address', () => {
       expect(JSON.stringify(r.body)).not.toContain('gauzy.example.com/?a');
     }
     expect((await env.call('DELETE', '/v1/instances/me/public-url', { token })).status).toBe(204);
+  });
+});
+
+describe('row 35: the live event stream', () => {
+  /** The frames of an event stream: {id, event, data}, in order. */
+  const frames = (text) =>
+    text
+      .split('\n\n')
+      .filter((block) => block.trim() !== '')
+      .map((block) => {
+        const out = { id: null, event: null, data: null };
+        for (const line of block.split('\n')) {
+          const i = line.indexOf(': ');
+          const [field, value] = i < 0 ? [line, ''] : [line.slice(0, i), line.slice(i + 2)];
+          if (field === 'data') out.data = JSON.parse(value);
+          else out[field] = value;
+        }
+        return out;
+      });
+  const open = (path, token, headers = {}) => env.call('GET', path, { token, headers });
+
+  it('answers sys.hello, the instance topic after Last-Event-ID, then sys.closed {reauthenticate}', async () => {
+    env = await startMock();
+    const { instanceId, token } = await env.connect();
+    const topic = `instance/${instanceId}`;
+    const first = await open(`/rt/sse?topics=${topic}`, token);
+    expectOk(expect, first, 200, 'realtimeStream');
+    expect(first.headers.get('content-type')).toBe('text/event-stream');
+    expect(first.headers.get('cache-control')).toBe('no-store, no-transform');
+    const hello = frames(first.text);
+    expect(hello.map((f) => f.event)).toEqual(['sys.hello', 'sys.closed']);
+    expect(hello[0].data).toMatchObject({ topics: [topic], replayed: 0 });
+    expect(hello[1].data).toEqual({ reason: 'reauthenticate' });
+
+    // The first heartbeat puts ever.registry.instance.seen on the instance topic.
+    expect((await env.call('POST', '/v1/instances/me/heartbeat', { token, body: { version: '1.0.0' } })).status).toBe(200);
+    const resumed = frames((await open(`/rt/sse?topics=${topic}`, token, { 'last-event-id': hello[0].id })).text);
+    expect(resumed.map((f) => f.event)).toEqual(['sys.hello', 'ever.registry.instance.seen', 'sys.closed']);
+    expect(resumed[0].data.replayed).toBe(1);
+    expect(resumed[1].data).toMatchObject({ topic, type: 'ever.registry.instance.seen' });
+    expect(resumed[1].id).toBe(resumed[1].data.id);
+    expect(resumed[1].id).toBe(env.state.instance(instanceId).feed.at(-1).id);
+
+    const caughtUp = frames((await open(`/rt/sse?topics=${topic}`, token, { 'last-event-id': resumed[1].id })).text);
+    expect(caughtUp.map((f) => f.event)).toEqual(['sys.hello', 'sys.closed']);
+  });
+
+  it('an unknown Last-Event-ID is answered with sys.resync right after sys.hello', async () => {
+    env = await startMock();
+    const { instanceId, token } = await env.connect();
+    const r = frames((await open(`/rt/sse?topics=instance/${instanceId}`, token, { 'last-event-id': 'not-a-cursor' })).text);
+    expect(r.map((f) => f.event)).toEqual(['sys.hello', 'sys.resync', 'sys.closed']);
+    expect(r[1].data).toEqual({ reason: 'unknown_cursor', since: null });
+  });
+
+  it('public topics need no credential; a private topic does, and one topic out of reach refuses the whole request', async () => {
+    env = await startMock();
+    const { instanceId, token } = await env.connect();
+    const anonymousHello = await open('/rt/sse?topics=system,profile/acme', undefined);
+    expectOk(expect, anonymousHello, 200, 'realtimeStream');
+    // No cursor on a stream of public topics: no `id:` line (an empty one would reset the client's).
+    expect(anonymousHello.text).not.toMatch(/^id:/m);
+    expectProblem(expect, await open(`/rt/sse?topics=system,instance/${instanceId}`, undefined), 401, 'unauthorized');
+    // Any credential reaches the public topics; one that is not this instance's token reaches no private one.
+    expectOk(expect, await open('/rt/sse?topics=system', 'an-organization-key'), 200, 'realtimeStream');
+    expectProblem(expect, await open(`/rt/sse?topics=instance/${instanceId}`, 'an-organization-key'), 403, 'topic_forbidden');
+    expectProblem(expect, await open('/rt/sse?topics=instance/01JM0000000000000000000000', token), 403, 'topic_forbidden');
+    expectProblem(expect, await open(`/rt/sse?topics=instance/${instanceId},internal`, token), 403, 'topic_forbidden');
+    for (const bad of ['', ',', 'org/acme', 'profile/a b', `system,${'listing/x,'.repeat(120)}`]) {
+      const r = await open(`/rt/sse?topics=${encodeURIComponent(bad)}`, token);
+      expectProblem(expect, r, 422, 'topic_invalid');
+    }
+    const anonymous = ['system', 'profile/a', 'profile/b', 'listing/c', 'listing/d'].join(',');
+    expectProblem(expect, await open(`/rt/sse?topics=${anonymous}`, undefined), 422, 'topic_invalid');
+    expectOk(expect, await open(`/rt/sse?topics=${anonymous}`, token), 200, 'realtimeStream');
+  });
+
+  it('the busy and per-caller caps carry Retry-After', async () => {
+    env = await startMock();
+    const { instanceId, token } = await env.connect();
+    await env.admin('faults', { too_many_streams: true });
+    const many = await open(`/rt/sse?topics=instance/${instanceId}`, token);
+    expectProblem(expect, many, 429, 'too_many_streams');
+    expect(many.headers.get('retry-after')).toBe('30');
+    await env.admin('faults', { too_many_streams: false, realtime_busy: true });
+    const busy = await open(`/rt/sse?topics=instance/${instanceId}`, token);
+    expectProblem(expect, busy, 503, 'realtime_busy');
+    expect(busy.headers.get('retry-after')).toBe('5');
   });
 });

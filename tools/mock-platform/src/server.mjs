@@ -21,6 +21,7 @@ import { mirrorHandlers } from './routes/mirror.mjs';
 import { miscHandlers } from './routes/misc.mjs';
 import { oidcHandlers } from './routes/oidc.mjs';
 import { personHandlers } from './routes/person.mjs';
+import { realtimeHandlers } from './routes/realtime.mjs';
 import { statsHandlers } from './routes/stats.mjs';
 import { statsLinkHandlers } from './routes/stats-link.mjs';
 import { MockState, makeConfig } from './state.mjs';
@@ -40,6 +41,7 @@ const HANDLERS = {
   ...miscHandlers,
   ...consentHandlers,
   ...managedHandlers,
+  ...realtimeHandlers,
 };
 
 const MAX_BODY = { ingestStatsReport: 16 * 1024, instanceMirrorApps: 4 * 1024 * 1024 };
@@ -62,6 +64,8 @@ function routesFromContract() {
   for (const [template, item] of Object.entries(c.spec.paths)) {
     for (const [method, op] of Object.entries(item)) {
       const security = (op.security ?? []).flatMap((s) => Object.keys(s));
+      // An empty alternative ({}) makes the credential optional: it is checked only when one is sent.
+      const optionalAuth = (op.security ?? []).some((s) => Object.keys(s).length === 0);
       routes.push({
         method: method.toUpperCase(),
         template,
@@ -69,6 +73,7 @@ function routesFromContract() {
         operationId: op.operationId,
         row: op['x-ever-row'],
         security,
+        optionalAuth,
         integration: op['x-ever-integration'] ?? null,
         idempotent: (op.parameters ?? []).some((p) => p.in === 'header' && p.name === 'Idempotency-Key' && p.required),
         schema: requestSchemaName(op),
@@ -85,6 +90,7 @@ function routesFromContract() {
       operationId: p.operation_id,
       row: p.row,
       security: ['instanceToken'],
+      optionalAuth: false,
       integration: p.integration,
       idempotent: false,
       schema: null,
@@ -197,6 +203,12 @@ export function createMockPlatform(options = {}) {
         res.end();
         return '';
       }
+      // A text body (the event stream) goes out as it is, with the media type its handler names.
+      if (typeof body === 'string') {
+        res.writeHead(status, h);
+        res.end(body);
+        return body;
+      }
       const isProblem = body && typeof body === 'object' && 'code' in body && 'type' in body && status >= 400;
       const text = JSON.stringify(body);
       res.writeHead(status, { 'content-type': isProblem ? 'application/problem+json' : 'application/json', ...h });
@@ -262,7 +274,13 @@ export function createMockPlatform(options = {}) {
       };
       // The statistics handler answers its own size limit, after the media type (the platform's order).
       if (tooLarge && route.operationId !== 'ingestStatsReport') fail(413, 'payload_too_large');
-      if (route.security.includes('instanceToken')) authInstance(ctx);
+      // On an operation where the credential is optional, a bearer that is not one of the mock's
+      // instance tokens counts as another credential (an organization key, a person): the handler
+      // decides what it reaches.
+      const presented = bearer(req);
+      const otherCredential = route.optionalAuth && presented !== null && !state.tokens.has(presented);
+      if (route.security.includes('instanceToken') && !(route.optionalAuth && (presented === null || otherCredential))) authInstance(ctx);
+      ctx.otherCredential = otherCredential;
       if (route.hasBody && route.operationId !== 'ingestStatsReport') {
         const type = String(headers['content-type'] ?? '');
         const form = route.operationId === 'instanceToken' && type.startsWith('application/x-www-form-urlencoded');

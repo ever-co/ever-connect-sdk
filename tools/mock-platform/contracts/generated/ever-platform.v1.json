@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Ever Platform API: instance-facing contract",
-    "version": "1.0.0-rc.6",
+    "version": "1.0.0-rc.7",
     "description": "The calls an installation of an Ever product makes to Ever Platform: the operations that accept an instance token, the public operations a product calls (key manifest, connect, statistics, lookup salt) and the two Ever ID reads a product makes with the token of a person who signed in. Every operation carries `x-ever-row`, its row in the outbound-call table. Errors are `application/problem+json` with a stable `code`.",
     "contact": {
       "name": "Ever Co."
@@ -45,6 +45,108 @@
           }
         },
         "x-ever-row": 1
+      }
+    },
+    "/rt/sse": {
+      "get": {
+        "description": "Server-Sent Events. Public topics (system, profile/<handle>, listing/<id>) need no credential (any credential may be presented, an organization API key included; it reaches nothing more) and carry allow-listed fields only; org/<id> needs an active member, person/<id> that person, instance/<id> that approved instance's token. Frames: sys.hello first, then events (data: {id, topic, seq, type, ts, data}), sys.resync {reason, since} when the snapshot must be re-read, sys.closed {reason} when the stream ends (access_revoked: do not reconnect; reauthenticate: reconnect with a fresh credential and Last-Event-ID); a keep-alive comment every 20 s. Open streams are capped per replica (503 realtime_busy) and per caller (429 too_many_streams), both with Retry-After. Off by default (503 realtime_disabled).",
+        "summary": "Opens a live stream over the requested topics.",
+        "tags": [
+          "realtime"
+        ],
+        "operationId": "realtimeStream",
+        "security": [
+          {},
+          {
+            "instanceToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "description": "Comma-separated topics, e.g. `?topics=system,org/01J9…` (at most `EVER_RT_MAX_TOPICS`,\n1024 characters).",
+            "in": "query",
+            "name": "topics",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The last frame id received: replays what was missed within the resume window (an organization topic from the subscriber's membership start only), else the first frame after sys.hello is sys.resync",
+            "in": "header",
+            "name": "Last-Event-ID",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "The event stream"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A private topic without a credential"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A topic the credential does not reach (topic_forbidden)"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A malformed topic list (topic_invalid)"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The caller holds as many open streams as it may (too_many_streams; Retry-After)"
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The stream is off on this deployment (realtime_disabled), or this replica holds as many streams as it may (realtime_busy; Retry-After)"
+          }
+        },
+        "x-ever-row": 35
       }
     },
     "/v1/connect/device": {
@@ -6077,6 +6179,11 @@
           "database_absent",
           "database_unreachable",
           "topic_private",
+          "realtime_disabled",
+          "topic_forbidden",
+          "topic_invalid",
+          "realtime_busy",
+          "too_many_streams",
           "keys_unavailable",
           "internal_error"
         ],
