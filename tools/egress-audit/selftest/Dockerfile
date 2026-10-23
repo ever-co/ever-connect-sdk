@@ -1,6 +1,6 @@
 # One image per fixture product: the shared helpers, the golden statistics report and the
 # fixture's own directory.
-FROM node:24-alpine
+FROM node:26.12.1-alpine
 ARG FIXTURE=quiet
 WORKDIR /app
 COPY package.json ./
