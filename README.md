@@ -56,8 +56,9 @@ Pin the exact version in a product and depend on the packages rather than copyin
 
 ## Build and test
 
-Requirements: Node 24 (`.nvmrc`) with pnpm through Corepack, the Rust toolchain pinned in
-`rust-toolchain.toml`, and Docker for the mock image and the egress audit.
+Requirements: Node 26.12.1 (`.nvmrc`) with pnpm through Corepack (Node 25+ no longer bundles it:
+`npm install -g corepack`), the Rust toolchain pinned in `rust-toolchain.toml`, and Docker for the
+mock image and the egress audit.
 
 ```sh
 corepack enable
