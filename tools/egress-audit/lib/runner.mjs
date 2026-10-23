@@ -22,7 +22,7 @@ const MOCK_CONTRACTS = join(MOCK_DIR, 'contracts');
 export const LOCAL_MOCK_IMAGE = 'ever-mock-platform:audit-local';
 // Every image of the audit is pinned by digest (Renovate moves the tag and the digest together).
 const COREDNS_IMAGE = 'coredns/coredns:1.12.1@sha256:e8c262566636e6bc340ece6473b0eed193cad045384401529721ddbe6463d31c';
-const DRIVER_BASE_IMAGE = 'node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1';
+const DRIVER_BASE_IMAGE = 'node:26.12.1-alpine@sha256:40cd011b55415bc894e45b02fdd5a5dfde056921b7d23a64c74f80497af48797';
 /** The browser leg's image: Playwright 1.62.1 (its Chromium matches the bundled playwright-core), pinned by digest. */
 export const BROWSER_BASE_IMAGE =
   'mcr.microsoft.com/playwright:v1.62.1@sha256:dcc5531e97840b9b5e794f2814476b21571c5124a3fca2267d73041f56e7580e';
