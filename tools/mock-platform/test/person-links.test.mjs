@@ -193,6 +193,21 @@ describe('person links', () => {
     });
     expect(badCode.status).toBe(422);
 
+    // The platform trims a legal basis before it counts 200 characters.
+    const padded = await env.call('POST', '/v1/instances/me/ack', {
+      token: c.token,
+      body: { job_id: deletionJob.job_id, result: 'retained_legal', legal_basis: `  ${'b'.repeat(200)}  ` },
+    });
+    expect(padded.status, 'a 200-character basis with spaces around it').toBe(204);
+    // An export URL is measured in bytes, as the platform measures it.
+    const second = await env.admin('person-request', { instance_id: c.instanceId, kind: 'export' });
+    const multibyte = `https://product.example/${'é'.repeat(1020)}`;
+    const long = await env.call('POST', '/v1/instances/me/ack', {
+      token: c.token,
+      body: { job_id: second.job_id, result: 'exported', export_url: multibyte },
+    });
+    expect(long.status, 'over 2048 bytes though under 2048 characters').toBe(422);
+
     const nullBody = await fetch(`${env.url}/v1/instances/me/oidc-client`, {
       method: 'POST',
       headers: { authorization: `Bearer ${c.token}`, 'content-type': 'application/json' },

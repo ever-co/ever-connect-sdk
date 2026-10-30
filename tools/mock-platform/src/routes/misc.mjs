@@ -108,9 +108,12 @@ export function normalisedPublicUrl(raw) {
 /** 422 `validation_failed` naming one field. */
 const invalid = (path, message) => fail(422, 'validation_failed', message, { errors: [{ path, code: 'invalid', message }] });
 
-/** An absolute `https` URL with a host and no credentials, at most 2048 characters. */
+/**
+ * An absolute `https` URL with a host and no credentials, at most 2048 bytes in UTF-8: the platform
+ * measures the raw string in bytes (`raw.len()` in Rust), so the mock does too.
+ */
 const httpsUrl = (raw) => {
-  if (typeof raw !== 'string' || raw.length > 2048) return false;
+  if (typeof raw !== 'string' || Buffer.byteLength(raw, 'utf8') > 2048) return false;
   try {
     const u = new URL(raw);
     return u.protocol === 'https:' && u.hostname !== '' && !u.username && !u.password;
@@ -156,21 +159,28 @@ export const miscHandlers = {
   // Row 20 as the platform answers it: the answer must fit the request (a deletion or an export),
   // `retained_legal` names its basis, `failed` keeps the receipt open, and a final answer is
   // immutable (the same one again is a replay, another one a conflict).
-  instanceAckRequest({ instance, body }) {
-    // An own entry only: a job id like `constructor` or `__proto__` names no request (404, not a
-    // property of the object the jobs are kept in).
-    const job = Object.hasOwn(instance.jobs, body.job_id) ? instance.jobs[body.job_id] : undefined;
-    if (!job) fail(404, 'not_found', 'no deletion or export request with this job id');
-    const fits = job.type.endsWith('export_requested') ? EXPORT_ANSWERS : DELETION_ANSWERS;
-    if (!fits.includes(body.result)) fail(422, 'validation_failed', 'this answer does not answer this kind of request');
-    answerProblem(body);
-    if (job.result && job.result !== 'failed') {
-      if (job.result === body.result) return { status: 204 };
-      fail(409, 'receipt_final', 'the receipt already holds another final answer');
-    }
-    job.result = body.result;
-    return { status: 204 };
-  },
+  instanceAckRequest: Object.assign(
+    ({ instance, body, validation }) => {
+      // The body's shape first; the platform trims `legal_basis` before it counts 200 characters, so
+      // the schema's limit on the untrimmed value is left to `answerProblem`.
+      const shape = validation.errors.filter((e) => !(e.path === '/legal_basis' && e.code === 'too_long'));
+      if (shape.length > 0) fail(422, 'validation_failed', undefined, { errors: shape });
+      // An own entry only: a job id like `constructor` or `__proto__` names no request (404, not a
+      // property of the object the jobs are kept in).
+      const job = Object.hasOwn(instance.jobs, body.job_id) ? instance.jobs[body.job_id] : undefined;
+      if (!job) fail(404, 'not_found', 'no deletion or export request with this job id');
+      const fits = job.type.endsWith('export_requested') ? EXPORT_ANSWERS : DELETION_ANSWERS;
+      if (!fits.includes(body.result)) fail(422, 'validation_failed', 'this answer does not answer this kind of request');
+      answerProblem(body);
+      if (job.result && job.result !== 'failed') {
+        if (job.result === body.result) return { status: 204 };
+        fail(409, 'receipt_final', 'the receipt already holds another final answer');
+      }
+      job.result = body.result;
+      return { status: 204 };
+    },
+    { ownValidation: true },
+  ),
 
   instancePushOrgProfile({ instance, body }) {
     if (!instance.links[body.tenant_link_id])
