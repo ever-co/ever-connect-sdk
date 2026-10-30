@@ -154,6 +154,15 @@ describe('person links', () => {
     expect((await env.call('POST', '/v1/identity/resolve', { token: c.token, body: other })).status).toBe(200);
   });
 
+  it('an answer naming an inherited property as its job id is an unknown job (404, not 500)', async () => {
+    const c = await setup();
+    for (const job_id of ['constructor', '__proto__', 'toString']) {
+      const r = await env.call('POST', '/v1/instances/me/ack', { token: c.token, body: { job_id, result: 'deleted' } });
+      expect(r.status, job_id).toBe(404);
+      expect(r.body.code, job_id).toBe('not_found');
+    }
+  });
+
   it('unlinking twice, or a reference never linked, answers 204', async () => {
     const c = await setup();
     await env.call('POST', '/v1/instances/me/person-links', { token: c.token, body: report });
