@@ -178,16 +178,16 @@
       "path": "/email"
     },
     "ack.json": {
-      "schema": "AckRequest",
+      "schema": "InstanceAck",
       "valid": true
     },
     "ack.invalid-bad-result.json": {
-      "schema": "AckRequest",
+      "schema": "InstanceAck",
       "valid": false,
       "path": "/result"
     },
     "ack.invalid-extra-field.json": {
-      "schema": "AckRequest",
+      "schema": "InstanceAck",
       "valid": false,
       "path": "/email"
     },

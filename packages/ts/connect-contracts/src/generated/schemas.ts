@@ -1408,10 +1408,17 @@ export interface EverRegistryPersonDeletionRequestedV1 {
   job_id: EverRegistryPersonDeletionRequestedV1CommonUlid;
   respond_by: EverRegistryPersonDeletionRequestedV1CommonDatetime;
   subject_hash: EverRegistryPersonDeletionRequestedV1CommonHex64;
+  /**
+   * subject_hashes (the request to one linked instance, on instance/{instance_id}): the hash of every (iss, sub) pair that instance holds a link for; subject_hash repeats the first. Absent on the platform's own record of the request.
+   *
+   * @minItems 1
+   */
+  subject_hashes?: [EverRegistryPersonDeletionRequestedV1CommonHex64, ...EverRegistryPersonDeletionRequestedV1CommonHex64[]];
 }
 
 export type EverRegistryPersonExportRequestedV1CommonUlid = string;
 export type EverRegistryPersonExportRequestedV1CommonDatetime = string;
+export type EverRegistryPersonExportRequestedV1CommonHex64 = string;
 
 /**
  * fan-out to every installation linked to one of the person's organizations; the installation answers with its own export
@@ -1420,6 +1427,12 @@ export interface EverRegistryPersonExportRequestedV1 {
   person_id: EverRegistryPersonExportRequestedV1CommonUlid;
   job_id: EverRegistryPersonExportRequestedV1CommonUlid;
   respond_by: EverRegistryPersonExportRequestedV1CommonDatetime;
+  /**
+   * subject_hashes (the request to one linked instance, on instance/{instance_id}): the hash of every (iss, sub) pair that instance holds a link for, so it finds the account to export. Absent on the platform's own record of the request.
+   *
+   * @minItems 1
+   */
+  subject_hashes?: [EverRegistryPersonExportRequestedV1CommonHex64, ...EverRegistryPersonExportRequestedV1CommonHex64[]];
 }
 
 export type EverRegistryTenantLinkCreatedV1CommonUlid = string;
@@ -5494,6 +5507,15 @@ export const EVENT_SCHEMAS = {
         },
         "subject_hash": {
           "$ref": "common.schema.json#/$defs/hex64"
+        },
+        "subject_hashes": {
+          "description": "subject_hashes (the request to one linked instance, on instance/{instance_id}): the hash of every (iss, sub) pair that instance holds a link for; subject_hash repeats the first. Absent on the platform's own record of the request.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "common.schema.json#/$defs/hex64"
+          }
         }
       }
     } as JsonSchemaDocument,
@@ -5518,6 +5540,15 @@ export const EVENT_SCHEMAS = {
         },
         "respond_by": {
           "$ref": "common.schema.json#/$defs/datetime"
+        },
+        "subject_hashes": {
+          "description": "subject_hashes (the request to one linked instance, on instance/{instance_id}): the hash of every (iss, sub) pair that instance holds a link for, so it finds the account to export. Absent on the platform's own record of the request.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "common.schema.json#/$defs/hex64"
+          }
         }
       }
     } as JsonSchemaDocument,

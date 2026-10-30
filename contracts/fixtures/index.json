@@ -375,21 +375,21 @@
     {
       "file": "requests/ack.invalid-bad-result.json",
       "kind": "component",
-      "schema": "AckRequest",
+      "schema": "InstanceAck",
       "valid": false,
       "typed": false
     },
     {
       "file": "requests/ack.invalid-extra-field.json",
       "kind": "component",
-      "schema": "AckRequest",
+      "schema": "InstanceAck",
       "valid": false,
       "typed": false
     },
     {
       "file": "requests/ack.json",
       "kind": "component",
-      "schema": "AckRequest",
+      "schema": "InstanceAck",
       "valid": true,
       "typed": true
     },

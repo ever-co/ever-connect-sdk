@@ -368,12 +368,14 @@ export function createEverPlatformClient(o: EverPlatformClientOptions) {
         remove: (linkId: string) => plain('instanceDeleteLinkIdentifiers', { path: { link: linkId } }),
       },
       oidcClient: {
-        request: (req: RequestBody<'instanceRequestOidcClient'>, idempotencyKey: string) =>
+        /** The platform needs no Idempotency-Key here (a pending or ready client answers 409); a given one is ignored. */
+        request: (req: RequestBody<'instanceRequestOidcClient'>, idempotencyKey?: string) =>
           plain('instanceRequestOidcClient', { body: req, idempotencyKey }),
         get: () => plain('instanceGetOidcClient'),
       },
       personLinks: {
-        create: (req: RequestBody<'instanceCreatePersonLink'>, idempotencyKey: string) =>
+        /** The platform needs no Idempotency-Key here (the same report again answers the recorded link); a given one is ignored. */
+        create: (req: RequestBody<'instanceCreatePersonLink'>, idempotencyKey?: string) =>
           plain('instanceCreatePersonLink', { body: req, idempotencyKey }),
         remove: (productUserRef: string) => plain('instanceDeletePersonLink', { path: { ref: productUserRef } }),
       },

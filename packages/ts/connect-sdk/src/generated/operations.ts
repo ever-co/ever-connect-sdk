@@ -2,7 +2,7 @@
 // The client's operation table: one entry per operation of contracts/openapi/ever-platform.v1.yaml.
 
 /** The SDK version: the `User-Agent` names it (`ever-connect-sdk/<version> (<product>/<version>)`). */
-export const SDK_VERSION = "1.0.0-rc.7";
+export const SDK_VERSION = "1.0.0-rc.8";
 
 /** How an operation authenticates: none, the instance token, or the person's Ever ID token. */
 export type OperationAuth = 'none' | 'instance' | 'person';
@@ -202,7 +202,7 @@ export const OPERATIONS = {
     "row": 22,
     "integration": "ever_id_login",
     "rateLimit": "instance",
-    "status": "not_in_v1"
+    "status": "pinned"
   },
   "instanceReportInstallStatus": {
     "id": "instanceReportInstallStatus",
@@ -261,7 +261,7 @@ export const OPERATIONS = {
     "conditional": false,
     "body": {
       "schema": {
-        "$ref": "#/components/schemas/AckRequest"
+        "$ref": "#/components/schemas/InstanceAck"
       },
       "required": true
     },
@@ -271,7 +271,7 @@ export const OPERATIONS = {
     "row": 20,
     "integration": null,
     "rateLimit": "instance",
-    "status": "not_in_v1"
+    "status": "pinned"
   },
   "instanceCreateBillingLink": {
     "id": "instanceCreateBillingLink",
@@ -614,7 +614,7 @@ export const OPERATIONS = {
     "row": 14,
     "integration": "ever_id_login",
     "rateLimit": "instance",
-    "status": "not_in_v1"
+    "status": "pinned"
   },
   "instanceRequestOidcClient": {
     "id": "instanceRequestOidcClient",
@@ -623,7 +623,7 @@ export const OPERATIONS = {
     "pathParams": [],
     "query": [],
     "auth": "instance",
-    "idempotencyKey": "required",
+    "idempotencyKey": "none",
     "linkHeader": "none",
     "conditional": false,
     "body": {
@@ -638,7 +638,7 @@ export const OPERATIONS = {
     "row": 14,
     "integration": "ever_id_login",
     "rateLimit": "instance",
-    "status": "not_in_v1"
+    "status": "pinned"
   },
   "instancePushOrgProfile": {
     "id": "instancePushOrgProfile",
@@ -671,7 +671,7 @@ export const OPERATIONS = {
     "pathParams": [],
     "query": [],
     "auth": "instance",
-    "idempotencyKey": "required",
+    "idempotencyKey": "none",
     "linkHeader": "none",
     "conditional": false,
     "body": {
@@ -686,7 +686,7 @@ export const OPERATIONS = {
     "row": 19,
     "integration": "ever_id_login",
     "rateLimit": "instance",
-    "status": "not_in_v1"
+    "status": "pinned"
   },
   "instanceDeletePersonLink": {
     "id": "instanceDeletePersonLink",
@@ -707,7 +707,7 @@ export const OPERATIONS = {
     "row": 19,
     "integration": "ever_id_login",
     "rateLimit": "instance",
-    "status": "not_in_v1"
+    "status": "pinned"
   },
   "instanceGetProviderGrant": {
     "id": "instanceGetProviderGrant",
@@ -1392,41 +1392,41 @@ export type OperationId = keyof typeof OPERATIONS;
 export const REQUEST_SCHEMAS: { readonly [key: string]: unknown } = {
   "components": {
     "schemas": {
-      "AckRequest": {
-        "type": "object",
-        "description": "Receipt from a product for a deletion or export request it received on the feed or by webhook.",
-        "required": [
-          "job_id",
-          "result"
-        ],
+      "AckDetail": {
         "additionalProperties": false,
+        "description": "Non-identifying detail of an instance's answer: machine tokens and times only (no free text,\nno personal data).",
         "properties": {
-          "job_id": {
-            "$ref": "#/components/schemas/Ulid"
+          "controller_kind": {
+            "description": "For `forwarded_to_controller`: who controls the account, `operator` (the instance's\noperator) or `tenant` (the tenant's admins).",
+            "example": "tenant",
+            "type": "string"
           },
-          "result": {
-            "type": "string",
-            "description": "Deletion receipts (`deleted | anonymised | retained_legal | no_account | forwarded_to_controller | failed`) are stored in `p_provisioning.deletion_receipt`; export receipts (`exported | no_account | forwarded_to_controller`) in `p_provisioning.export_receipt`, chosen by the kind of `job_id`. `forwarded_to_controller` means the product removed the person's link rows and served the erasure or access notice to the account's controller (`detail.controller_kind` = `operator` or `tenant`, `detail.notified_at`); `failed` means an Ever-controlled account could not be deleted and keeps the job open.",
-            "enum": [
-              "deleted",
-              "anonymised",
-              "retained_legal",
-              "no_account",
-              "forwarded_to_controller",
-              "failed",
-              "exported"
-            ]
+          "notified_at": {
+            "description": "For `forwarded_to_controller`: when the erasure or access notice went out.",
+            "format": "date-time",
+            "type": "string"
           },
-          "detail": {
-            "type": "object",
-            "description": "Non-identifying detail (for example a retention reason code)."
-          },
-          "export_url": {
-            "type": "string",
-            "format": "uri",
-            "description": "For export receipts, a signed URL of the product's own export."
+          "reason_code": {
+            "description": "Why a `failed` answer failed, a machine token (`^[a-z_]{1,64}$`), for example\n`account_deletion_pending`.",
+            "example": "account_deletion_pending",
+            "pattern": "^[a-z_]{1,64}$",
+            "type": "string"
           }
-        }
+        },
+        "type": "object"
+      },
+      "AckResult": {
+        "description": "The answers an instance may give (the contract's closed set; which ones fit a deletion or an\nexport, and what each needs, is checked when the answer is read).",
+        "enum": [
+          "deleted",
+          "anonymised",
+          "retained_legal",
+          "no_account",
+          "forwarded_to_controller",
+          "exported",
+          "failed"
+        ],
+        "type": "string"
       },
       "BillingLinkCreate": {
         "type": "object",
@@ -1661,26 +1661,29 @@ export const REQUEST_SCHEMAS: { readonly [key: string]: unknown } = {
         }
       },
       "IdentityResolveRequest": {
-        "type": "object",
-        "description": "For product backends that hold only an ID token. Returns the context shape; `orgs`, `orgs_filtered` and `links` are scoped to the calling instance (organizations with an active tenant_link on it; the caller filter).",
+        "additionalProperties": false,
+        "description": "The subject to resolve.",
+        "properties": {
+          "id_token": {
+            "description": "An ID token issued to this installation's own Ever ID client (verified; it must name\n`issuer` and `subject`; omitted when the product holds none, never `null`).",
+            "type": "string"
+          },
+          "issuer": {
+            "description": "The Ever ID issuer (this deployment's).",
+            "example": "https://auth.ever.co",
+            "type": "string"
+          },
+          "subject": {
+            "description": "The Ever ID subject.",
+            "maxLength": 128,
+            "type": "string"
+          }
+        },
         "required": [
           "issuer",
           "subject"
         ],
-        "additionalProperties": false,
-        "properties": {
-          "issuer": {
-            "type": "string",
-            "format": "uri"
-          },
-          "subject": {
-            "type": "string"
-          },
-          "id_token": {
-            "type": "string",
-            "description": "When present it is verified and must match `issuer`/`subject`."
-          }
-        }
+        "type": "object"
       },
       "InstallSource": {
         "type": "string",
@@ -1717,6 +1720,42 @@ export const REQUEST_SCHEMAS: { readonly [key: string]: unknown } = {
             "type": "string"
           }
         }
+      },
+      "InstanceAck": {
+        "additionalProperties": false,
+        "description": "A connected instance's answer to a person's deletion or export request it received on its feed\nor by webhook.",
+        "properties": {
+          "detail": {
+            "$ref": "#/components/schemas/AckDetail",
+            "description": "Non-identifying detail."
+          },
+          "export_url": {
+            "description": "For `exported`: the `https` URL of the product's own export (stored, linked to the\nperson, never fetched by the platform).",
+            "example": "https://gauzy.example.com/exports/abc",
+            "maxLength": 2048,
+            "type": "string"
+          },
+          "job_id": {
+            "description": "The request's `job_id`.",
+            "example": "01K6A7S2ABCDEFGHJKMNPQRSTV",
+            "type": "string"
+          },
+          "legal_basis": {
+            "description": "The legal obligation a `retained_legal` answer keeps the data under (a statute or a\ncontract clause, never personal data; 1 to 200 characters).",
+            "example": "HGB 257 (commercial records, 10 years)",
+            "maxLength": 200,
+            "type": "string"
+          },
+          "result": {
+            "$ref": "#/components/schemas/AckResult",
+            "description": "A deletion: `deleted`, `anonymised`, `retained_legal`, `no_account`,\n`forwarded_to_controller` or `failed`. An export: `exported`, `no_account`,\n`forwarded_to_controller` or `failed`. `failed` keeps the receipt open for a later final\nanswer; every other answer is final."
+          }
+        },
+        "required": [
+          "job_id",
+          "result"
+        ],
+        "type": "object"
       },
       "InstanceIntegrationPut": {
         "additionalProperties": false,
@@ -2200,24 +2239,27 @@ export const REQUEST_SCHEMAS: { readonly [key: string]: unknown } = {
         }
       },
       "OidcClientRequest": {
-        "type": "object",
-        "description": "Ask the platform to create the OIDC client that lets this instance offer \"Sign in with Ever ID\" (integration `ever_id_login`).",
+        "additionalProperties": false,
+        "description": "The installation's sign-in endpoints for its Ever ID client.",
+        "properties": {
+          "logout_uri": {
+            "description": "The installation's back-channel logout endpoint (exact, `https`, the same origin).",
+            "example": "https://gauzy.acme.example/auth/ever-id/logout",
+            "maxLength": 2048,
+            "type": "string"
+          },
+          "redirect_uri": {
+            "description": "Where Ever ID returns the person after sign-in (exact, `https`).",
+            "example": "https://gauzy.acme.example/auth/ever-id/callback",
+            "maxLength": 2048,
+            "type": "string"
+          }
+        },
         "required": [
           "redirect_uri",
           "logout_uri"
         ],
-        "additionalProperties": false,
-        "properties": {
-          "redirect_uri": {
-            "type": "string",
-            "format": "uri"
-          },
-          "logout_uri": {
-            "type": "string",
-            "format": "uri",
-            "description": "Back-channel logout endpoint of the instance."
-          }
-        }
+        "type": "object"
       },
       "OrgProfilePush": {
         "type": "object",
@@ -2268,53 +2310,56 @@ export const REQUEST_SCHEMAS: { readonly [key: string]: unknown } = {
         }
       },
       "PersonLinkCreate": {
-        "type": "object",
-        "description": "Reported by a connected instance when a local user links an Ever ID. Identifiers only; never an e-mail.",
+        "additionalProperties": false,
+        "description": "A local user of the installation linked an Ever ID: identifiers only, never an e-mail or a\nperson's name.",
+        "properties": {
+          "display_name": {
+            "description": "The product tenant's display name (never a person's name or an e-mail; omitted when\nnone).",
+            "maxLength": 120,
+            "type": "string"
+          },
+          "identity_issuer": {
+            "description": "The Ever ID issuer of the identity (this deployment's).",
+            "example": "https://auth.ever.co",
+            "type": "string"
+          },
+          "identity_subject": {
+            "description": "The Ever ID subject of the identity.",
+            "maxLength": 128,
+            "type": "string"
+          },
+          "link_method": {
+            "description": "`explicit` (the user linked it) or `confirmed` (an existing account confirmed by its\ne-mail); `provisioned` is the platform's own and never reported.",
+            "example": "explicit",
+            "type": "string"
+          },
+          "product_org_id": {
+            "description": "The product organization the user belongs to (omitted when none; never `null`).",
+            "maxLength": 128,
+            "type": "string"
+          },
+          "product_tenant_id": {
+            "description": "The product tenant the user belongs to (omitted when none; never `null`).",
+            "maxLength": 128,
+            "type": "string"
+          },
+          "product_user_ref": {
+            "description": "The product's own user id (opaque to the platform).",
+            "maxLength": 128,
+            "type": "string"
+          },
+          "tenant_link_id": {
+            "description": "The tenant link the product tenant has with an organization, when it has one (an active\nlink of this installation; omitted when none, never `null`).",
+            "type": "string"
+          }
+        },
         "required": [
           "product_user_ref",
           "identity_issuer",
           "identity_subject",
           "link_method"
         ],
-        "additionalProperties": false,
-        "properties": {
-          "product_user_ref": {
-            "type": "string",
-            "maxLength": 128
-          },
-          "product_tenant_id": {
-            "type": "string",
-            "maxLength": 128
-          },
-          "product_org_id": {
-            "type": "string",
-            "maxLength": 128
-          },
-          "tenant_link_id": {
-            "$ref": "#/components/schemas/Ulid"
-          },
-          "display_name": {
-            "type": "string",
-            "description": "Product tenant display name (not the person's name).",
-            "maxLength": 120
-          },
-          "identity_issuer": {
-            "type": "string",
-            "format": "uri"
-          },
-          "identity_subject": {
-            "type": "string",
-            "maxLength": 128
-          },
-          "link_method": {
-            "type": "string",
-            "enum": [
-              "provisioned",
-              "explicit",
-              "confirmed"
-            ]
-          }
-        }
+        "type": "object"
       },
       "ProductCode": {
         "type": "string",

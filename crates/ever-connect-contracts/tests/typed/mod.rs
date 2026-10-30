@@ -15,7 +15,8 @@ fn rt<T: DeserializeOwned + Serialize>(value: &Value) -> Result<Value, String> {
 /// A contract component schema, by name.
 pub fn component(name: &str, value: &Value) -> Option<Result<Value, String>> {
     Some(match name {
-        "AckRequest" => rt::<components::AckRequest>(value),
+        "AckDetail" => rt::<components::AckDetail>(value),
+        "AckResult" => rt::<components::AckResult>(value),
         "BillingLink" => rt::<components::BillingLink>(value),
         "BillingLinkCreate" => rt::<components::BillingLinkCreate>(value),
         "Compat" => rt::<components::Compat>(value),
@@ -61,6 +62,7 @@ pub fn component(name: &str, value: &Value) -> Option<Result<Value, String>> {
         "InstallSource" => rt::<components::InstallSource>(value),
         "InstallStatus" => rt::<components::InstallStatus>(value),
         "Instance" => rt::<components::Instance>(value),
+        "InstanceAck" => rt::<components::InstanceAck>(value),
         "InstanceEntitlement" => rt::<components::InstanceEntitlement>(value),
         "InstanceIntegrationPut" => rt::<components::InstanceIntegrationPut>(value),
         "InstanceIntegrations" => rt::<components::InstanceIntegrations>(value),

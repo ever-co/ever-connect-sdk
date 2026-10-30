@@ -21,7 +21,7 @@ copying either tool:
 npm install --save-dev @ever-co/connect-tools@next   # pnpm add -D / yarn add -D work the same way
 ```
 
-`1.0.0-rc.7` is a release candidate, published under the `next` dist-tag; pin the exact version,
+`1.0.0-rc.8` is a release candidate, published under the `next` dist-tag; pin the exact version,
 the same as `@ever-co/connect-sdk`.
 
 ## Use

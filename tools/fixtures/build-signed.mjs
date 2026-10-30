@@ -270,7 +270,7 @@ function requestCases() {
       },
     ),
     ack: c(
-      'AckRequest',
+      'InstanceAck',
       { job_id: IDS.job, result: 'anonymised', detail: { reason_code: 'identity_unlinked' } },
       {
         'bad-result': (b) => [{ ...b, result: 'ignored' }, '/result'],
@@ -454,6 +454,9 @@ function feed(constants) {
     if (data && typeof data === 'object') {
       if ('instance_id' in data) data.instance_id = IDS.instance;
       if ('org_id' in data) data.org_id = IDS.org;
+      // `subject_hash` repeats the first `subject_hashes` entry: one account, both spellings.
+      if (Array.isArray(data.subject_hashes) && data.subject_hashes.length > 0 && 'subject_hash' in data)
+        data.subject_hash = data.subject_hashes[0];
     }
     const v = validateEventData(type, data);
     if (!v.ok) throw new Error(`feed/${type}.json: data does not validate: ${JSON.stringify(v.errors[0])}`);
@@ -1060,7 +1063,8 @@ function consentScreens(constants, integrations) {
         })),
         platform_keeps: d.scope.map((r) => ({ field: r.field_path, retention: r.retention })),
         how_often: [...new Set(d.scope.map((r) => FREQUENCY[r.frequency]))],
-        where_to_change: 'Integrations & data in this product, or Instances in app.ever.co; turning it off stops the data at once.',
+        where_to_change:
+          'Integrations & data in this product, or Instances in app.ever.co; turning it off refuses new requests at once; the revoke effect says what else changes and when.',
         revoke_effect: d.revoke_effect,
         legal: { ...LEGAL },
         authorisation: 'I am authorised to enable this for {organization}',

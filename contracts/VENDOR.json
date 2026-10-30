@@ -2,24 +2,24 @@
   "description": "Where every contract file of this repository comes from. Written by tools/sync-contract.mjs; checked by tools/check-schema-drift.mjs. `provisional` sources are drafts the platform has not published yet: tools/check-schema-drift.mjs --strict refuses them.",
   "platform": {
     "repository": "ever-co/platform",
-    "commit": "6fc9fb9627ed7670749f62fd978bff4900e50fa5"
+    "commit": "a2d9b73d5f06edc6538eb400af13a446f1d224c6"
   },
   "openapi": {
     "target": "contracts/openapi/ever-platform.v1.yaml",
-    "sha256": "006de2f0825300f10ee02bcf56a89ca30f2f950de4f35329f8cfd9d7a1057331",
+    "sha256": "91e5f9b7bdd80fc74f85ccbf7828af0c13d17e055edc985ef999184514c843c7",
     "pinned": {
       "source": "contracts/openapi/ever-api.v1.json",
-      "sha256": "f94278e00681a77747f643bb6d988e66c74531133818fc6d7138e42ab2459ebe"
+      "sha256": "ef7d0f3402fb3b662fe34f9d224e636e4caf742535caecfede5a9065d181627b"
     },
     "design": {
       "source": "docs/specs/api",
-      "sha256": "740c8492b15be95265d23a69b92085d84bc4dcc20bb8407a4615b33f93c3ec5c",
+      "sha256": "c4e2e2ae71f66f06b5959867a9bf79ec0105566ed8872c3d94b2898d260cc583",
       "files": 21
     },
     "operations": 59,
     "scope": {
       "source": "contracts/openapi/v1-scope.json",
-      "sha256": "bcccf18a5093e7a660c063afbced40135e1dbe76ef218c6033f6743ba831a41d",
+      "sha256": "e6588e7bbea40d84a5e3fac45212f53bd7f6e0b2f286b3f3fac53549880d93ac",
       "version": "1.0.0"
     },
     "provisional_operations": [],
@@ -29,12 +29,8 @@
       "connectDeviceToken",
       "discoverSso",
       "getLookupSalt",
-      "instanceAckRequest",
       "instanceCreateBillingLink",
-      "instanceCreatePersonLink",
       "instanceDeleteLinkIdentifiers",
-      "instanceDeletePersonLink",
-      "instanceGetOidcClient",
       "instanceGetProviderGrant",
       "instanceListMirroredApps",
       "instanceMirrorApps",
@@ -46,13 +42,10 @@
       "instanceReportProviderGrantStatus",
       "instanceReportUsage",
       "instanceReportUsageReadings",
-      "instanceRequestOidcClient",
       "lookupCounterparties",
-      "putIntegrationState",
-      "resolveIdentity"
+      "putIntegrationState"
     ],
     "shape_differences": [
-      "Context",
       "Identifier",
       "Money",
       "Problem",
@@ -134,8 +127,8 @@
     {
       "path": "contracts/integrations/catalog.v1.json",
       "source": "contracts/integrations/catalog.v1.json",
-      "source_sha256": "90e48db66a5e3d6f944993b858cb368d68192e88c91af380a624ed2bc9286cc4",
-      "sha256": "90e48db66a5e3d6f944993b858cb368d68192e88c91af380a624ed2bc9286cc4",
+      "source_sha256": "75c6fc5995d270a3081e06a23a61dd5e8516e9a88f9930852dccaf9b8dab95ed",
+      "sha256": "75c6fc5995d270a3081e06a23a61dd5e8516e9a88f9930852dccaf9b8dab95ed",
       "transform": null,
       "provisional": false,
       "upstream": null
@@ -170,8 +163,8 @@
     {
       "path": "contracts/openapi/v1-scope.json",
       "source": "contracts/openapi/v1-scope.json",
-      "source_sha256": "bcccf18a5093e7a660c063afbced40135e1dbe76ef218c6033f6743ba831a41d",
-      "sha256": "bcccf18a5093e7a660c063afbced40135e1dbe76ef218c6033f6743ba831a41d",
+      "source_sha256": "e6588e7bbea40d84a5e3fac45212f53bd7f6e0b2f286b3f3fac53549880d93ac",
+      "sha256": "e6588e7bbea40d84a5e3fac45212f53bd7f6e0b2f286b3f3fac53549880d93ac",
       "transform": null,
       "provisional": false,
       "upstream": null
@@ -368,8 +361,8 @@
     {
       "path": "contracts/schemas/events/ever.registry.person.deletion_requested.v1.schema.json",
       "source": "contracts/events/schemas/ever.registry.person.deletion_requested.v1.schema.json",
-      "source_sha256": "bc82b5c3e4fd952f12e65c41dbb61016e7caf34085c83f36f3033c64b6677ceb",
-      "sha256": "bc82b5c3e4fd952f12e65c41dbb61016e7caf34085c83f36f3033c64b6677ceb",
+      "source_sha256": "fcacefa11245438abbad53c872c2ca8fa9abea8ab79ae1eefc91d5dfbfc0c7a4",
+      "sha256": "fcacefa11245438abbad53c872c2ca8fa9abea8ab79ae1eefc91d5dfbfc0c7a4",
       "transform": null,
       "provisional": false,
       "upstream": null
@@ -377,8 +370,8 @@
     {
       "path": "contracts/schemas/events/ever.registry.person.export_requested.v1.schema.json",
       "source": "contracts/events/schemas/ever.registry.person.export_requested.v1.schema.json",
-      "source_sha256": "32f38a49e6fbc6751dee86f919c9d1ee0f421a68cff25cd27c5f11b19513df94",
-      "sha256": "32f38a49e6fbc6751dee86f919c9d1ee0f421a68cff25cd27c5f11b19513df94",
+      "source_sha256": "4493668fde55e8947d1f21d3253d2bad0bf0d5d1e75b6b8d6114ec1b96859db4",
+      "sha256": "4493668fde55e8947d1f21d3253d2bad0bf0d5d1e75b6b8d6114ec1b96859db4",
       "transform": null,
       "provisional": false,
       "upstream": null
