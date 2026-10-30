@@ -4,90 +4,22 @@
 
 /// Every component schema of `contracts/openapi/ever-platform.v1.yaml`.
 pub mod components {
-    ///Receipt from a product for a deletion or export request it received on the feed or by webhook.
-    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    /**Non-identifying detail of an instance's answer: machine tokens and times only (no free text,
+    no personal data).*/
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, Default)]
     #[serde(deny_unknown_fields)]
-    pub struct AckRequest {
-        ///Non-identifying detail (for example a retention reason code).
-        #[serde(default, skip_serializing_if = "::serde_json::Map::is_empty")]
-        pub detail: ::serde_json::Map<::std::string::String, ::serde_json::Value>,
-        ///For export receipts, a signed URL of the product's own export.
+    pub struct AckDetail {
+        /**For `forwarded_to_controller`: who controls the account, `operator` (the instance's
+        operator) or `tenant` (the tenant's admins).*/
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub export_url: ::std::option::Option<::std::string::String>,
-        pub job_id: Ulid,
-        ///Deletion receipts (`deleted | anonymised | retained_legal | no_account | forwarded_to_controller | failed`) are stored in `p_provisioning.deletion_receipt`; export receipts (`exported | no_account | forwarded_to_controller`) in `p_provisioning.export_receipt`, chosen by the kind of `job_id`. `forwarded_to_controller` means the product removed the person's link rows and served the erasure or access notice to the account's controller (`detail.controller_kind` = `operator` or `tenant`, `detail.notified_at`); `failed` means an Ever-controlled account could not be deleted and keeps the job open.
-        pub result: AckRequestResult,
-    }
-    ///Deletion receipts (`deleted | anonymised | retained_legal | no_account | forwarded_to_controller | failed`) are stored in `p_provisioning.deletion_receipt`; export receipts (`exported | no_account | forwarded_to_controller`) in `p_provisioning.export_receipt`, chosen by the kind of `job_id`. `forwarded_to_controller` means the product removed the person's link rows and served the erasure or access notice to the account's controller (`detail.controller_kind` = `operator` or `tenant`, `detail.notified_at`); `failed` means an Ever-controlled account could not be deleted and keeps the job open.
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum AckRequestResult {
-        #[serde(rename = "deleted")]
-        Deleted,
-        #[serde(rename = "anonymised")]
-        Anonymised,
-        #[serde(rename = "retained_legal")]
-        RetainedLegal,
-        #[serde(rename = "no_account")]
-        NoAccount,
-        #[serde(rename = "forwarded_to_controller")]
-        ForwardedToController,
-        #[serde(rename = "failed")]
-        Failed,
-        #[serde(rename = "exported")]
-        Exported,
-    }
-    impl ::std::fmt::Display for AckRequestResult {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Deleted => f.write_str("deleted"),
-                Self::Anonymised => f.write_str("anonymised"),
-                Self::RetainedLegal => f.write_str("retained_legal"),
-                Self::NoAccount => f.write_str("no_account"),
-                Self::ForwardedToController => f.write_str("forwarded_to_controller"),
-                Self::Failed => f.write_str("failed"),
-                Self::Exported => f.write_str("exported"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for AckRequestResult {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "deleted" => Ok(Self::Deleted),
-                "anonymised" => Ok(Self::Anonymised),
-                "retained_legal" => Ok(Self::RetainedLegal),
-                "no_account" => Ok(Self::NoAccount),
-                "forwarded_to_controller" => Ok(Self::ForwardedToController),
-                "failed" => Ok(Self::Failed),
-                "exported" => Ok(Self::Exported),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for AckRequestResult {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for AckRequestResult {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
+        pub controller_kind: ::std::option::Option<::std::string::String>,
+        ///For `forwarded_to_controller`: when the erasure or access notice went out.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub notified_at: ::std::option::Option<::std::string::String>,
+        /**Why a `failed` answer failed, a machine token (`^[a-z_]{1,64}$`), for example
+        `account_deletion_pending`.*/
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub reason_code: ::std::option::Option<::std::string::String>,
     }
     ///`BillingLink`
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
@@ -674,6 +606,14 @@ pub mod components {
         IntegrationDisabled,
         #[serde(rename = "integration_revoked")]
         IntegrationRevoked,
+        #[serde(rename = "subject_unknown")]
+        SubjectUnknown,
+        #[serde(rename = "link_not_found")]
+        LinkNotFound,
+        #[serde(rename = "oidc_client_exists")]
+        OidcClientExists,
+        #[serde(rename = "redirect_uri_invalid")]
+        RedirectUriInvalid,
         #[serde(rename = "denied_by_policy")]
         DeniedByPolicy,
         #[serde(rename = "integration_not_available")]
@@ -730,6 +670,10 @@ pub mod components {
         AlreadyExists,
         #[serde(rename = "already_completed")]
         AlreadyCompleted,
+        #[serde(rename = "legal_basis_required")]
+        LegalBasisRequired,
+        #[serde(rename = "receipt_final")]
+        ReceiptFinal,
         #[serde(rename = "billing_active")]
         BillingActive,
         #[serde(rename = "sso_required")]
@@ -836,6 +780,10 @@ pub mod components {
                 Self::NotConnectionOwner => f.write_str("not_connection_owner"),
                 Self::IntegrationDisabled => f.write_str("integration_disabled"),
                 Self::IntegrationRevoked => f.write_str("integration_revoked"),
+                Self::SubjectUnknown => f.write_str("subject_unknown"),
+                Self::LinkNotFound => f.write_str("link_not_found"),
+                Self::OidcClientExists => f.write_str("oidc_client_exists"),
+                Self::RedirectUriInvalid => f.write_str("redirect_uri_invalid"),
                 Self::DeniedByPolicy => f.write_str("denied_by_policy"),
                 Self::IntegrationNotAvailable => f.write_str("integration_not_available"),
                 Self::EntitlementRequired => f.write_str("entitlement_required"),
@@ -864,6 +812,8 @@ pub mod components {
                 Self::IllegalTransition => f.write_str("illegal_transition"),
                 Self::AlreadyExists => f.write_str("already_exists"),
                 Self::AlreadyCompleted => f.write_str("already_completed"),
+                Self::LegalBasisRequired => f.write_str("legal_basis_required"),
+                Self::ReceiptFinal => f.write_str("receipt_final"),
                 Self::BillingActive => f.write_str("billing_active"),
                 Self::SsoRequired => f.write_str("sso_required"),
                 Self::ReauthRequired => f.write_str("reauth_required"),
@@ -928,6 +878,10 @@ pub mod components {
                 "not_connection_owner" => Ok(Self::NotConnectionOwner),
                 "integration_disabled" => Ok(Self::IntegrationDisabled),
                 "integration_revoked" => Ok(Self::IntegrationRevoked),
+                "subject_unknown" => Ok(Self::SubjectUnknown),
+                "link_not_found" => Ok(Self::LinkNotFound),
+                "oidc_client_exists" => Ok(Self::OidcClientExists),
+                "redirect_uri_invalid" => Ok(Self::RedirectUriInvalid),
                 "denied_by_policy" => Ok(Self::DeniedByPolicy),
                 "integration_not_available" => Ok(Self::IntegrationNotAvailable),
                 "entitlement_required" => Ok(Self::EntitlementRequired),
@@ -956,6 +910,8 @@ pub mod components {
                 "illegal_transition" => Ok(Self::IllegalTransition),
                 "already_exists" => Ok(Self::AlreadyExists),
                 "already_completed" => Ok(Self::AlreadyCompleted),
+                "legal_basis_required" => Ok(Self::LegalBasisRequired),
+                "receipt_final" => Ok(Self::ReceiptFinal),
                 "billing_active" => Ok(Self::BillingActive),
                 "sso_required" => Ok(Self::SsoRequired),
                 "reauth_required" => Ok(Self::ReauthRequired),
@@ -1278,14 +1234,17 @@ pub mod components {
         ///The last four characters of the subject.
         pub subject_hint: ::std::string::String,
     }
-    ///For product backends that hold only an ID token. Returns the context shape; `orgs`, `orgs_filtered` and `links` are scoped to the calling instance (organizations with an active tenant_link on it; the caller filter).
+    ///The subject to resolve.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct IdentityResolveRequest {
-        ///When present it is verified and must match `issuer`/`subject`.
+        /**An ID token issued to this installation's own Ever ID client (verified; it must name
+        `issuer` and `subject`; omitted when the product holds none, never `null`).*/
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub id_token: ::std::option::Option<::std::string::String>,
+        ///The Ever ID issuer (this deployment's).
         pub issuer: ::std::string::String,
+        ///The Ever ID subject.
         pub subject: ::std::string::String,
     }
     ///The install fact, not the mechanics; `next_action_url` tells the caller where to continue (deep link, checkout, product admin).
@@ -1606,6 +1565,30 @@ pub mod components {
         pub version: ::std::option::Option<::std::string::String>,
         ///The row version (`If-Match`).
         pub version_row: i64,
+    }
+    /**A connected instance's answer to a person's deletion or export request it received on its feed
+    or by webhook.*/
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct InstanceAck {
+        ///Non-identifying detail.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub detail: ::std::option::Option<AckDetail>,
+        /**For `exported`: the `https` URL of the product's own export (stored, linked to the
+        person, never fetched by the platform).*/
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub export_url: ::std::option::Option<::std::string::String>,
+        ///The request's `job_id`.
+        pub job_id: ::std::string::String,
+        /**The legal obligation a `retained_legal` answer keeps the data under (a statute or a
+        contract clause, never personal data; 1 to 200 characters).*/
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub legal_basis: ::std::option::Option<::std::string::String>,
+        /**A deletion: `deleted`, `anonymised`, `retained_legal`, `no_account`,
+        `forwarded_to_controller` or `failed`. An export: `exported`, `no_account`,
+        `forwarded_to_controller` or `failed`. `failed` keeps the receipt open for a later final
+        answer; every other answer is final.*/
+        pub result: ::std::string::String,
     }
     ///A signed entitlement document as an installation receives it.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
@@ -3165,88 +3148,32 @@ pub mod components {
         ///The memberships.
         pub items: ::std::vec::Vec<MyMembership>,
     }
-    ///`OidcClient`
+    ///The installation's Ever ID client.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct OidcClient {
+        ///The OIDC client id, when ready.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub client_id: ::std::option::Option<::std::string::String>,
-        ///Returned exactly once, on the first `ready` read.
+        ///The client secret: in the first `ready` answer only (store it; it is never shown again).
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub client_secret: ::std::option::Option<::std::string::String>,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub created_at: ::std::option::Option<::std::string::String>,
+        ///The Ever ID issuer, when ready.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub issuer: ::std::option::Option<::std::string::String>,
+        ///The request it was made for.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub job_id: ::std::option::Option<Ulid>,
-        pub status: OidcClientStatus,
+        pub job_id: ::std::option::Option<::std::string::String>,
+        ///`pending`, `ready`, `failed` or `revoked`.
+        pub status: ::std::string::String,
     }
-    ///Ask the platform to create the OIDC client that lets this instance offer "Sign in with Ever ID" (integration `ever_id_login`).
+    ///The installation's sign-in endpoints for its Ever ID client.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct OidcClientRequest {
-        ///Back-channel logout endpoint of the instance.
+        ///The installation's back-channel logout endpoint (exact, `https`, the same origin).
         pub logout_uri: ::std::string::String,
+        ///Where Ever ID returns the person after sign-in (exact, `https`).
         pub redirect_uri: ::std::string::String,
-    }
-    ///`OidcClientStatus`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum OidcClientStatus {
-        #[serde(rename = "pending")]
-        Pending,
-        #[serde(rename = "ready")]
-        Ready,
-        #[serde(rename = "failed")]
-        Failed,
-        #[serde(rename = "revoked")]
-        Revoked,
-    }
-    impl ::std::fmt::Display for OidcClientStatus {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Pending => f.write_str("pending"),
-                Self::Ready => f.write_str("ready"),
-                Self::Failed => f.write_str("failed"),
-                Self::Revoked => f.write_str("revoked"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for OidcClientStatus {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "pending" => Ok(Self::Pending),
-                "ready" => Ok(Self::Ready),
-                "failed" => Ok(Self::Failed),
-                "revoked" => Ok(Self::Revoked),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for OidcClientStatus {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for OidcClientStatus {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
     }
     ///Consented organization profile fields pushed by an instance (integration `profile_import`). Only the declared fields are accepted.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
@@ -3341,153 +3268,50 @@ pub mod components {
         #[serde(deserialize_with = "::std::option::Option::deserialize")]
         pub next_cursor: ::std::option::Option<::std::string::String>,
     }
-    ///`PersonLink`
+    ///A person link as the installation sees it.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct PersonLink {
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub display_name: ::std::option::Option<::std::string::String>,
-        pub id: Ulid,
-        pub instance_id: Ulid,
-        pub link_method: PersonLinkLinkMethod,
-        pub linked_at: Timestamp,
-        pub person_id: Ulid,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub product_org_id: ::std::option::Option<::std::string::String>,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub product_tenant_id: ::std::option::Option<::std::string::String>,
+        ///The link.
+        pub id: ::std::string::String,
+        ///The installation.
+        pub instance_id: ::std::string::String,
+        ///How it was linked.
+        pub link_method: ::std::string::String,
+        ///When it was linked.
+        pub linked_at: ::std::string::String,
+        ///The Ever Platform person behind the identity.
+        pub person_id: ::std::string::String,
+        ///The product's user id.
         pub product_user_ref: ::std::string::String,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub tenant_link_id: ::std::option::Option<::std::string::String>,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub unlinked_at: ::std::option::Option<::std::string::String>,
     }
-    ///Reported by a connected instance when a local user links an Ever ID. Identifiers only; never an e-mail.
+    /**A local user of the installation linked an Ever ID: identifiers only, never an e-mail or a
+    person's name.*/
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct PersonLinkCreate {
-        ///Product tenant display name (not the person's name).
+        /**The product tenant's display name (never a person's name or an e-mail; omitted when
+        none).*/
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub display_name: ::std::option::Option<::std::string::String>,
+        ///The Ever ID issuer of the identity (this deployment's).
         pub identity_issuer: ::std::string::String,
+        ///The Ever ID subject of the identity.
         pub identity_subject: ::std::string::String,
-        pub link_method: PersonLinkCreateLinkMethod,
+        /**`explicit` (the user linked it) or `confirmed` (an existing account confirmed by its
+        e-mail); `provisioned` is the platform's own and never reported.*/
+        pub link_method: ::std::string::String,
+        ///The product organization the user belongs to (omitted when none; never `null`).
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub product_org_id: ::std::option::Option<::std::string::String>,
+        ///The product tenant the user belongs to (omitted when none; never `null`).
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub product_tenant_id: ::std::option::Option<::std::string::String>,
+        ///The product's own user id (opaque to the platform).
         pub product_user_ref: ::std::string::String,
+        /**The tenant link the product tenant has with an organization, when it has one (an active
+        link of this installation; omitted when none, never `null`).*/
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub tenant_link_id: ::std::option::Option<Ulid>,
-    }
-    ///`PersonLinkCreateLinkMethod`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum PersonLinkCreateLinkMethod {
-        #[serde(rename = "provisioned")]
-        Provisioned,
-        #[serde(rename = "explicit")]
-        Explicit,
-        #[serde(rename = "confirmed")]
-        Confirmed,
-    }
-    impl ::std::fmt::Display for PersonLinkCreateLinkMethod {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Provisioned => f.write_str("provisioned"),
-                Self::Explicit => f.write_str("explicit"),
-                Self::Confirmed => f.write_str("confirmed"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for PersonLinkCreateLinkMethod {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "provisioned" => Ok(Self::Provisioned),
-                "explicit" => Ok(Self::Explicit),
-                "confirmed" => Ok(Self::Confirmed),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for PersonLinkCreateLinkMethod {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for PersonLinkCreateLinkMethod {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    ///`PersonLinkLinkMethod`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum PersonLinkLinkMethod {
-        #[serde(rename = "provisioned")]
-        Provisioned,
-        #[serde(rename = "explicit")]
-        Explicit,
-        #[serde(rename = "confirmed")]
-        Confirmed,
-    }
-    impl ::std::fmt::Display for PersonLinkLinkMethod {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Provisioned => f.write_str("provisioned"),
-                Self::Explicit => f.write_str("explicit"),
-                Self::Confirmed => f.write_str("confirmed"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for PersonLinkLinkMethod {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "provisioned" => Ok(Self::Provisioned),
-                "explicit" => Ok(Self::Explicit),
-                "confirmed" => Ok(Self::Confirmed),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for PersonLinkLinkMethod {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for PersonLinkLinkMethod {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
+        pub tenant_link_id: ::std::option::Option<::std::string::String>,
     }
     ///Pricing is delegated to the app; `external` means the vendor bills on its own site.
     #[derive(

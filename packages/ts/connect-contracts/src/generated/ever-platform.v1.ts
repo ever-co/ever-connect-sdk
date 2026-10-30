@@ -28,7 +28,7 @@ export interface paths {
         };
         /**
          * Opens a live stream over the requested topics.
-         * @description Server-Sent Events. Public topics (system, profile/<handle>, listing/<id>) need no credential (any credential may be presented, an organization API key included; it reaches nothing more) and carry allow-listed fields only; org/<id> needs an active member, person/<id> that person, instance/<id> that approved instance's token. Frames: sys.hello first, then events (data: {id, topic, seq, type, ts, data}), sys.resync {reason, since} when the snapshot must be re-read, sys.closed {reason} when the stream ends (access_revoked: do not reconnect; reauthenticate: reconnect with a fresh credential and Last-Event-ID); a keep-alive comment every 20 s. Open streams are capped per replica (503 realtime_busy) and per caller (429 too_many_streams), both with Retry-After. Off by default (503 realtime_disabled).
+         * @description Server-Sent Events. Public topics (system, profile/<handle>, listing/<id>) need no credential (any credential may be presented, an organization API key included; it reaches nothing more) and carry allow-listed fields only; org/<id> needs an active member, person/<id> that person, instance/<id> that approved instance's token. Frames: sys.hello first, then events (data: {id, topic, seq, type, ts, data}), sys.resync {reason, since} when the snapshot must be re-read, sys.closed {reason} when the stream ends (access_revoked: do not reconnect; reauthenticate: reconnect with a fresh credential and Last-Event-ID; slow_consumer: the client did not read what was written in time, reconnect with Last-Event-ID); a keep-alive comment every 20 s. Open streams are capped per replica (503 realtime_busy) and per caller (429 too_many_streams), both with Retry-After. Off by default (503 realtime_disabled).
          */
         readonly get: operations["realtimeStream"];
         readonly put?: never;
@@ -153,8 +153,8 @@ export interface paths {
         readonly get?: never;
         readonly put?: never;
         /**
-         * Resolve an Ever ID subject to its context (product backends)
-         * @description For backends that hold only an ID token. `links` are restricted to the calling instance. Sign-in in the product never blocks on this call.
+         * Resolves an Ever ID subject to its context for this installation: organizations with an
+         *     active tenant link on it and only its links (product backends that hold only the subject).
          */
         readonly post: operations["resolveIdentity"];
         readonly delete?: never;
@@ -212,20 +212,7 @@ export interface paths {
         };
         readonly get?: never;
         readonly put?: never;
-        /**
-         * Product receipt for a deletion or export request
-         * @description Each connected product removes its own `(issuer, subject)` rows and
-         *     applies its own account policy to the accounts Ever controls, then
-         *     answers honestly (`deleted`, `anonymised`, `retained_legal`,
-         *     `no_account`, `failed`, or `exported` with a signed URL of its own
-         *     export). For an account held by another controller (a self-hosted or
-         *     partner instance, an Ever Cloud tenant with other members) it removes
-         *     only its link rows, notifies that controller and answers
-         *     `forwarded_to_controller` with `detail.controller_kind` and
-         *     `detail.notified_at`. Unacknowledged requests are flagged to
-         *     support after 7 days; the job continues. Idempotent by `(job_id,
-         *     instance)`.
-         */
+        /** A connected instance answers the receipt of a person's deletion or export it was asked for. */
         readonly post: operations["instanceAckRequest"];
         readonly delete?: never;
         readonly options?: never;
@@ -543,12 +530,12 @@ export interface paths {
             readonly path?: never;
             readonly cookie?: never;
         };
-        /** Poll the OIDC client creation */
+        /** The installation's Ever ID client; the secret is in the first `ready` answer only. */
         readonly get: operations["instanceGetOidcClient"];
         readonly put?: never;
         /**
-         * Request an OIDC client for "Sign in with Ever ID"
-         * @description Requires integration `ever_id_login`. The client is created asynchronously; poll with `GET`. The secret is returned exactly once.
+         * Asks for the installation's Ever ID client (integration `ever_id_login`); it is made shortly
+         *     after: poll `GET`.
          */
         readonly post: operations["instanceRequestOidcClient"];
         readonly delete?: never;
@@ -583,7 +570,10 @@ export interface paths {
         };
         readonly get?: never;
         readonly put?: never;
-        /** Report that a local user linked an Ever ID */
+        /**
+         * Reports that a local user of the installation linked an Ever ID (integration `ever_id_login`).
+         *     Deletion and export requests for that person later reach this installation.
+         */
         readonly post: operations["instanceCreatePersonLink"];
         readonly delete?: never;
         readonly options?: never;
@@ -601,7 +591,10 @@ export interface paths {
         readonly get?: never;
         readonly put?: never;
         readonly post?: never;
-        /** Report that a local user unlinked their Ever ID */
+        /**
+         * Reports that a local user of the installation unlinked their Ever ID (`204`, also when nothing
+         *     was linked).
+         */
         readonly delete: operations["instanceDeletePersonLink"];
         readonly options?: never;
         readonly head?: never;
@@ -1217,21 +1210,28 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** @description Receipt from a product for a deletion or export request it received on the feed or by webhook. */
-        readonly AckRequest: {
-            /** @description Non-identifying detail (for example a retention reason code). */
-            readonly detail?: Record<string, never>;
+        /**
+         * @description Non-identifying detail of an instance's answer: machine tokens and times only (no free text,
+         *     no personal data).
+         */
+        readonly AckDetail: {
             /**
-             * Format: uri
-             * @description For export receipts, a signed URL of the product's own export.
+             * @description For `forwarded_to_controller`: who controls the account, `operator` (the instance's
+             *     operator) or `tenant` (the tenant's admins).
+             * @example tenant
              */
-            readonly export_url?: string;
-            readonly job_id: components["schemas"]["Ulid"];
+            readonly controller_kind?: string;
             /**
-             * @description Deletion receipts (`deleted | anonymised | retained_legal | no_account | forwarded_to_controller | failed`) are stored in `p_provisioning.deletion_receipt`; export receipts (`exported | no_account | forwarded_to_controller`) in `p_provisioning.export_receipt`, chosen by the kind of `job_id`. `forwarded_to_controller` means the product removed the person's link rows and served the erasure or access notice to the account's controller (`detail.controller_kind` = `operator` or `tenant`, `detail.notified_at`); `failed` means an Ever-controlled account could not be deleted and keeps the job open.
-             * @enum {string}
+             * Format: date-time
+             * @description For `forwarded_to_controller`: when the erasure or access notice went out.
              */
-            readonly result: "deleted" | "anonymised" | "retained_legal" | "no_account" | "forwarded_to_controller" | "failed" | "exported";
+            readonly notified_at?: string;
+            /**
+             * @description Why a `failed` answer failed, a machine token (`^[a-z_]{1,64}$`), for example
+             *     `account_deletion_pending`.
+             * @example account_deletion_pending
+             */
+            readonly reason_code?: string;
         };
         readonly BillingLink: {
             readonly created_at: components["schemas"]["Timestamp"];
@@ -1529,7 +1529,7 @@ export interface components {
          *     unknown code by its HTTP status.
          * @enum {string}
          */
-        readonly ErrorCode: "validation_failed" | "not_found" | "unauthorized" | "forbidden_role" | "forbidden_scope" | "ambiguous_credentials" | "credential_revoked" | "instance_disconnected" | "instance_pending_approval" | "not_connection_owner" | "integration_disabled" | "integration_revoked" | "denied_by_policy" | "integration_not_available" | "entitlement_required" | "tier_required" | "limit_exceeded" | "rate_limited" | "idempotency_mismatch" | "idempotency_in_progress" | "stale_version" | "module_disabled" | "handle_taken" | "handle_reserved" | "handle_retired" | "handle_invalid" | "handle_held" | "handle_held_by_you" | "code_invalid" | "code_expired" | "product_mismatch" | "product_not_supported" | "key_mismatch" | "signature_invalid" | "unlinked_org" | "schema_violation" | "mirror_owned_field" | "illegal_transition" | "already_exists" | "already_completed" | "billing_active" | "sso_required" | "reauth_required" | "session_required" | "step_up_required" | "session_bound" | "authorization_pending" | "slow_down" | "expired_token" | "already_connected" | "already_linked" | "already_claimed" | "claim_locked" | "invalid_client" | "public_jwk_invalid" | "identifier_claimed" | "salt_version_unknown" | "salt_version_retired" | "hashes_invalid" | "lookup_key_required" | "required_component" | "resync_required" | "last_owner" | "last_auth_method" | "instances_linked" | "install_in_progress" | "slug_reserved" | "checklist_incomplete" | "scope_version_outdated" | "method_not_allowed" | "payload_too_large" | "unsupported_media_type" | "gone" | "unavailable" | "upstream" | "database_absent" | "database_unreachable" | "topic_private" | "realtime_disabled" | "topic_forbidden" | "topic_invalid" | "realtime_busy" | "too_many_streams" | "keys_unavailable" | "internal_error";
+        readonly ErrorCode: "validation_failed" | "not_found" | "unauthorized" | "forbidden_role" | "forbidden_scope" | "ambiguous_credentials" | "credential_revoked" | "instance_disconnected" | "instance_pending_approval" | "not_connection_owner" | "integration_disabled" | "integration_revoked" | "subject_unknown" | "link_not_found" | "oidc_client_exists" | "redirect_uri_invalid" | "denied_by_policy" | "integration_not_available" | "entitlement_required" | "tier_required" | "limit_exceeded" | "rate_limited" | "idempotency_mismatch" | "idempotency_in_progress" | "stale_version" | "module_disabled" | "handle_taken" | "handle_reserved" | "handle_retired" | "handle_invalid" | "handle_held" | "handle_held_by_you" | "code_invalid" | "code_expired" | "product_mismatch" | "product_not_supported" | "key_mismatch" | "signature_invalid" | "unlinked_org" | "schema_violation" | "mirror_owned_field" | "illegal_transition" | "already_exists" | "already_completed" | "legal_basis_required" | "receipt_final" | "billing_active" | "sso_required" | "reauth_required" | "session_required" | "step_up_required" | "session_bound" | "authorization_pending" | "slow_down" | "expired_token" | "already_connected" | "already_linked" | "already_claimed" | "claim_locked" | "invalid_client" | "public_jwk_invalid" | "identifier_claimed" | "salt_version_unknown" | "salt_version_retired" | "hashes_invalid" | "lookup_key_required" | "required_component" | "resync_required" | "last_owner" | "last_auth_method" | "instances_linked" | "install_in_progress" | "slug_reserved" | "checklist_incomplete" | "scope_version_outdated" | "method_not_allowed" | "payload_too_large" | "unsupported_media_type" | "gone" | "unavailable" | "upstream" | "database_absent" | "database_unreachable" | "topic_private" | "realtime_disabled" | "topic_forbidden" | "topic_invalid" | "realtime_busy" | "too_many_streams" | "keys_unavailable" | "internal_error";
         /**
          * @description One event on a webhook, the installation feed or SSE. Payloads carry identifiers and status
          *     only, never records; delivery is at-least-once: dedupe on `id`.
@@ -1709,12 +1709,19 @@ export interface components {
             /** @description The last four characters of the subject. */
             readonly subject_hint: string;
         };
-        /** @description For product backends that hold only an ID token. Returns the context shape; `orgs`, `orgs_filtered` and `links` are scoped to the calling instance (organizations with an active tenant_link on it; the caller filter). */
+        /** @description The subject to resolve. */
         readonly IdentityResolveRequest: {
-            /** @description When present it is verified and must match `issuer`/`subject`. */
+            /**
+             * @description An ID token issued to this installation's own Ever ID client (verified; it must name
+             *     `issuer` and `subject`; omitted when the product holds none, never `null`).
+             */
             readonly id_token?: string;
-            /** Format: uri */
+            /**
+             * @description The Ever ID issuer (this deployment's).
+             * @example https://auth.ever.co
+             */
             readonly issuer: string;
+            /** @description The Ever ID subject. */
             readonly subject: string;
         };
         /** @description The install fact, not the mechanics; `next_action_url` tells the caller where to continue (deep link, checkout, product admin). */
@@ -1832,6 +1839,39 @@ export interface components {
              * @description The row version (`If-Match`).
              */
             readonly version_row: number;
+        };
+        /**
+         * @description A connected instance's answer to a person's deletion or export request it received on its feed
+         *     or by webhook.
+         */
+        readonly InstanceAck: {
+            /** @description Non-identifying detail. */
+            readonly detail?: components["schemas"]["AckDetail"];
+            /**
+             * @description For `exported`: the `https` URL of the product's own export (stored, linked to the
+             *     person, never fetched by the platform).
+             * @example https://gauzy.example.com/exports/abc
+             */
+            readonly export_url?: string;
+            /**
+             * @description The request's `job_id`.
+             * @example 01K6A7S2ABCDEFGHJKMNPQRSTV
+             */
+            readonly job_id: string;
+            /**
+             * @description The legal obligation a `retained_legal` answer keeps the data under (a statute or a
+             *     contract clause, never personal data; 1 to 200 characters).
+             * @example HGB 257 (commercial records, 10 years)
+             */
+            readonly legal_basis?: string;
+            /**
+             * @description A deletion: `deleted`, `anonymised`, `retained_legal`, `no_account`,
+             *     `forwarded_to_controller` or `failed`. An export: `exported`, `no_account`,
+             *     `forwarded_to_controller` or `failed`. `failed` keeps the receipt open for a later final
+             *     answer; every other answer is final.
+             * @example deleted
+             */
+            readonly result: string;
         };
         /** @description A signed entitlement document as an installation receives it. */
         readonly InstanceEntitlement: {
@@ -2378,26 +2418,33 @@ export interface components {
             /** @description The memberships. */
             readonly items: readonly components["schemas"]["MyMembership"][];
         };
+        /** @description The installation's Ever ID client. */
         readonly OidcClient: {
-            readonly client_id?: string;
-            /** @description Returned exactly once, on the first `ready` read. */
-            readonly client_secret?: string;
-            /** Format: date-time */
-            readonly created_at?: string | null;
-            /** Format: uri */
-            readonly issuer?: string;
-            readonly job_id?: components["schemas"]["Ulid"];
-            /** @enum {string} */
-            readonly status: "pending" | "ready" | "failed" | "revoked";
+            /** @description The OIDC client id, when ready. */
+            readonly client_id?: string | null;
+            /** @description The client secret: in the first `ready` answer only (store it; it is never shown again). */
+            readonly client_secret?: string | null;
+            /** @description The Ever ID issuer, when ready. */
+            readonly issuer?: string | null;
+            /** @description The request it was made for. */
+            readonly job_id?: string | null;
+            /**
+             * @description `pending`, `ready`, `failed` or `revoked`.
+             * @example ready
+             */
+            readonly status: string;
         };
-        /** @description Ask the platform to create the OIDC client that lets this instance offer "Sign in with Ever ID" (integration `ever_id_login`). */
+        /** @description The installation's sign-in endpoints for its Ever ID client. */
         readonly OidcClientRequest: {
             /**
-             * Format: uri
-             * @description Back-channel logout endpoint of the instance.
+             * @description The installation's back-channel logout endpoint (exact, `https`, the same origin).
+             * @example https://gauzy.acme.example/auth/ever-id/logout
              */
             readonly logout_uri: string;
-            /** Format: uri */
+            /**
+             * @description Where Ever ID returns the person after sign-in (exact, `https`).
+             * @example https://gauzy.acme.example/auth/ever-id/callback
+             */
             readonly redirect_uri: string;
         };
         /** @description Consented organization profile fields pushed by an instance (integration `profile_import`). Only the declared fields are accepted. */
@@ -2435,34 +2482,58 @@ export interface components {
             /** @description Opaque cursor to pass as `?cursor=` for the next page. */
             readonly next_cursor: string | null;
         };
+        /** @description A person link as the installation sees it. */
         readonly PersonLink: {
-            readonly display_name?: string | null;
-            readonly id: components["schemas"]["Ulid"];
-            readonly instance_id: components["schemas"]["Ulid"];
-            /** @enum {string} */
-            readonly link_method: "provisioned" | "explicit" | "confirmed";
-            readonly linked_at: components["schemas"]["Timestamp"];
-            readonly person_id: components["schemas"]["Ulid"];
-            readonly product_org_id?: string | null;
-            readonly product_tenant_id?: string | null;
+            /** @description The link. */
+            readonly id: string;
+            /** @description The installation. */
+            readonly instance_id: string;
+            /** @description How it was linked. */
+            readonly link_method: string;
+            /**
+             * Format: date-time
+             * @description When it was linked.
+             */
+            readonly linked_at: string;
+            /** @description The Ever Platform person behind the identity. */
+            readonly person_id: string;
+            /** @description The product's user id. */
             readonly product_user_ref: string;
-            readonly tenant_link_id?: string | null;
-            /** Format: date-time */
-            readonly unlinked_at?: string | null;
         };
-        /** @description Reported by a connected instance when a local user links an Ever ID. Identifiers only; never an e-mail. */
+        /**
+         * @description A local user of the installation linked an Ever ID: identifiers only, never an e-mail or a
+         *     person's name.
+         */
         readonly PersonLinkCreate: {
-            /** @description Product tenant display name (not the person's name). */
+            /**
+             * @description The product tenant's display name (never a person's name or an e-mail; omitted when
+             *     none).
+             */
             readonly display_name?: string;
-            /** Format: uri */
+            /**
+             * @description The Ever ID issuer of the identity (this deployment's).
+             * @example https://auth.ever.co
+             */
             readonly identity_issuer: string;
+            /** @description The Ever ID subject of the identity. */
             readonly identity_subject: string;
-            /** @enum {string} */
-            readonly link_method: "provisioned" | "explicit" | "confirmed";
+            /**
+             * @description `explicit` (the user linked it) or `confirmed` (an existing account confirmed by its
+             *     e-mail); `provisioned` is the platform's own and never reported.
+             * @example explicit
+             */
+            readonly link_method: string;
+            /** @description The product organization the user belongs to (omitted when none; never `null`). */
             readonly product_org_id?: string;
+            /** @description The product tenant the user belongs to (omitted when none; never `null`). */
             readonly product_tenant_id?: string;
+            /** @description The product's own user id (opaque to the platform). */
             readonly product_user_ref: string;
-            readonly tenant_link_id?: components["schemas"]["Ulid"];
+            /**
+             * @description The tenant link the product tenant has with an organization, when it has one (an active
+             *     link of this installation; omitted when none, never `null`).
+             */
+            readonly tenant_link_id?: string;
         };
         /**
          * @description Pricing is delegated to the app; `external` means the vendor bills on its own site.
@@ -3337,7 +3408,7 @@ export interface operations {
             };
         };
         readonly responses: {
-            /** @description OK */
+            /** @description The context, scoped to this installation (`Cache-Control: private, no-store`) */
             readonly 200: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -3346,7 +3417,16 @@ export interface operations {
                     readonly "application/json": components["schemas"]["Context"];
                 };
             };
-            /** @description Principal lacks the role, scope, integration or entitlement, or the operation needs a fresh sign-in (`forbidden_role`, `forbidden_scope`, `integration_disabled`, `integration_revoked`, `instance_pending_approval`, `entitlement_required`, `tier_required`, `sso_required`, `reauth_required`, `session_required`: an Ever ID token issued to a product, installation or App client used anywhere except the two `everIdTokenRead` reads and the in-product consent write; `step_up_required`: that consent write without a sign-in in the last 300 s; `not_connection_owner`: an installation-wide integration changed by an organization that does not own the installation). */
+            /** @description No valid instance token */
+            readonly 401: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `integration_disabled`, `integration_revoked` or `denied_by_policy`: `ever_id_login` is not enabled for this installation */
             readonly 403: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -3355,7 +3435,7 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Not found, or the module that serves this route is disabled on this deployment (`not_found`, `module_disabled`). */
+            /** @description `not_found`, the same for an unknown subject and one this installation holds no link for */
             readonly 404: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -3364,17 +3444,9 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Any other error, as a problem document. */
-            readonly default: {
+            /** @description `unavailable`: an `id_token` cannot be checked right now; retry */
+            readonly 503: {
                 headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
                     readonly [name: string]: unknown;
                 };
                 content: {
@@ -3496,20 +3568,27 @@ export interface operations {
         };
         readonly requestBody: {
             readonly content: {
-                readonly "application/json": components["schemas"]["AckRequest"];
+                readonly "application/json": components["schemas"]["InstanceAck"];
             };
         };
         readonly responses: {
-            /** @description Success with no body. */
+            /** @description Recorded (also when the receipt already held this very answer) */
             readonly 204: {
                 headers: {
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
                     readonly [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Not found, or the module that serves this route is disabled on this deployment (`not_found`, `module_disabled`). */
+            /** @description No valid instance token */
+            readonly 401: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description This instance was not asked for this job */
             readonly 404: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -3518,8 +3597,8 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Validation failed; unknown fields are rejected on writes (`validation_failed`, `schema_violation`, `code_invalid`, `idempotency_mismatch`, `mirror_owned_field`, `limit_exceeded`). */
-            readonly 422: {
+            /** @description `receipt_final`: the receipt already holds another final answer */
+            readonly 409: {
                 headers: {
                     readonly [name: string]: unknown;
                 };
@@ -3527,17 +3606,9 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Any other error, as a problem document. */
-            readonly default: {
+            /** @description `legal_basis_required`: `retained_legal` without `legal_basis`; `validation_failed`: a result that does not answer this kind of request, or a malformed field */
+            readonly 422: {
                 headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
                     readonly [name: string]: unknown;
                 };
                 content: {
@@ -4286,7 +4357,7 @@ export interface operations {
         };
         readonly requestBody?: never;
         readonly responses: {
-            /** @description OK */
+            /** @description The client (`Cache-Control: no-store`) */
             readonly 200: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -4295,8 +4366,8 @@ export interface operations {
                     readonly "application/json": components["schemas"]["OidcClient"];
                 };
             };
-            /** @description Not found, or the module that serves this route is disabled on this deployment (`not_found`, `module_disabled`). */
-            readonly 404: {
+            /** @description `integration_disabled`, `integration_revoked` or `denied_by_policy` */
+            readonly 403: {
                 headers: {
                     readonly [name: string]: unknown;
                 };
@@ -4304,17 +4375,9 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Any other error, as a problem document. */
-            readonly default: {
+            /** @description No client was asked for */
+            readonly 404: {
                 headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
                     readonly [name: string]: unknown;
                 };
                 content: {
@@ -4326,10 +4389,7 @@ export interface operations {
     readonly instanceRequestOidcClient: {
         readonly parameters: {
             readonly query?: never;
-            readonly header: {
-                /** @description Client-generated key, unique per principal, <= 128 characters. See the `Idempotency` schema. */
-                readonly "Idempotency-Key": string;
-            };
+            readonly header?: never;
             readonly path?: never;
             readonly cookie?: never;
         };
@@ -4339,7 +4399,7 @@ export interface operations {
             };
         };
         readonly responses: {
-            /** @description Creation queued. */
+            /** @description Queued: poll GET for the client */
             readonly 202: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -4348,7 +4408,7 @@ export interface operations {
                     readonly "application/json": components["schemas"]["OidcClient"];
                 };
             };
-            /** @description Principal lacks the role, scope, integration or entitlement, or the operation needs a fresh sign-in (`forbidden_role`, `forbidden_scope`, `integration_disabled`, `integration_revoked`, `instance_pending_approval`, `entitlement_required`, `tier_required`, `sso_required`, `reauth_required`, `session_required`: an Ever ID token issued to a product, installation or App client used anywhere except the two `everIdTokenRead` reads and the in-product consent write; `step_up_required`: that consent write without a sign-in in the last 300 s; `not_connection_owner`: an installation-wide integration changed by an organization that does not own the installation). */
+            /** @description `integration_disabled`, `integration_revoked` or `denied_by_policy`: `ever_id_login` is not enabled for this installation; `instance_pending_approval` or `instance_disconnected` */
             readonly 403: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -4357,28 +4417,18 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description State conflict (`handle_taken`, `already_exists`, `key_mismatch`, `idempotency_in_progress`, `illegal_transition`, `billing_active`, `job_in_progress` when another job for the same subject is running). */
+            /** @description `oidc_client_exists`: a client is pending or ready already */
             readonly 409: {
                 headers: {
-                    /** @description Seconds to wait before retrying. */
-                    readonly "Retry-After"?: number;
                     readonly [name: string]: unknown;
                 };
                 content: {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Any other error, as a problem document. */
-            readonly default: {
+            /** @description `redirect_uri_invalid`: not an exact `https` URI, or the two are not one origin; `product_not_supported`: this deployment makes no client for the product */
+            readonly 422: {
                 headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
                     readonly [name: string]: unknown;
                 };
                 content: {
@@ -4452,10 +4502,7 @@ export interface operations {
     readonly instanceCreatePersonLink: {
         readonly parameters: {
             readonly query?: never;
-            readonly header: {
-                /** @description Client-generated key, unique per principal, <= 128 characters. See the `Idempotency` schema. */
-                readonly "Idempotency-Key": string;
-            };
+            readonly header?: never;
             readonly path?: never;
             readonly cookie?: never;
         };
@@ -4465,7 +4512,7 @@ export interface operations {
             };
         };
         readonly responses: {
-            /** @description Recorded. */
+            /** @description Recorded (also when the same report was already recorded) */
             readonly 201: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -4474,7 +4521,7 @@ export interface operations {
                     readonly "application/json": components["schemas"]["PersonLink"];
                 };
             };
-            /** @description Principal lacks the role, scope, integration or entitlement, or the operation needs a fresh sign-in (`forbidden_role`, `forbidden_scope`, `integration_disabled`, `integration_revoked`, `instance_pending_approval`, `entitlement_required`, `tier_required`, `sso_required`, `reauth_required`, `session_required`: an Ever ID token issued to a product, installation or App client used anywhere except the two `everIdTokenRead` reads and the in-product consent write; `step_up_required`: that consent write without a sign-in in the last 300 s; `not_connection_owner`: an installation-wide integration changed by an organization that does not own the installation). */
+            /** @description `integration_disabled`, `integration_revoked` or `denied_by_policy`: `ever_id_login` is not enabled for this installation; `instance_pending_approval` or `instance_disconnected` */
             readonly 403: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -4483,17 +4530,18 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Any other error, as a problem document. */
-            readonly default: {
+            /** @description `subject_unknown`: no active Ever ID identity has this subject (nothing written); `link_not_found`: `tenant_link_id` is not an active tenant link of this installation; `schema_violation`: an e-mail address as `display_name`; `validation_failed` naming the field */
+            readonly 422: {
                 headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `unavailable`: the identity lookup is not available on this deployment */
+            readonly 503: {
+                headers: {
                     readonly [name: string]: unknown;
                 };
                 content: {
@@ -4514,26 +4562,16 @@ export interface operations {
         };
         readonly requestBody?: never;
         readonly responses: {
-            /** @description Success with no body. */
+            /** @description Unlinked */
             readonly 204: {
                 headers: {
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
                     readonly [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Any other error, as a problem document. */
-            readonly default: {
+            /** @description `integration_disabled`, `integration_revoked` or `denied_by_policy`: `ever_id_login` is not enabled for this installation; `instance_pending_approval` or `instance_disconnected` */
+            readonly 403: {
                 headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
                     readonly [name: string]: unknown;
                 };
                 content: {

@@ -49,7 +49,7 @@
     },
     "/rt/sse": {
       "get": {
-        "description": "Server-Sent Events. Public topics (system, profile/<handle>, listing/<id>) need no credential (any credential may be presented, an organization API key included; it reaches nothing more) and carry allow-listed fields only; org/<id> needs an active member, person/<id> that person, instance/<id> that approved instance's token. Frames: sys.hello first, then events (data: {id, topic, seq, type, ts, data}), sys.resync {reason, since} when the snapshot must be re-read, sys.closed {reason} when the stream ends (access_revoked: do not reconnect; reauthenticate: reconnect with a fresh credential and Last-Event-ID); a keep-alive comment every 20 s. Open streams are capped per replica (503 realtime_busy) and per caller (429 too_many_streams), both with Retry-After. Off by default (503 realtime_disabled).",
+        "description": "Server-Sent Events. Public topics (system, profile/<handle>, listing/<id>) need no credential (any credential may be presented, an organization API key included; it reaches nothing more) and carry allow-listed fields only; org/<id> needs an active member, person/<id> that person, instance/<id> that approved instance's token. Frames: sys.hello first, then events (data: {id, topic, seq, type, ts, data}), sys.resync {reason, since} when the snapshot must be re-read, sys.closed {reason} when the stream ends (access_revoked: do not reconnect; reauthenticate: reconnect with a fresh credential and Last-Event-ID; slow_consumer: the client did not read what was written in time, reconnect with Last-Event-ID); a keep-alive comment every 20 s. Open streams are capped per replica (503 realtime_busy) and per caller (429 too_many_streams), both with Retry-After. Off by default (503 realtime_disabled).",
         "summary": "Opens a live stream over the requested topics.",
         "tags": [
           "realtime"
@@ -592,16 +592,13 @@
     },
     "/v1/identity/resolve": {
       "post": {
+        "summary": "Resolves an Ever ID subject to its context for this installation: organizations with an\nactive tenant link on it and only its links (product backends that hold only the subject).",
         "tags": [
           "identity"
         ],
-        "summary": "Resolve an Ever ID subject to its context (product backends)",
-        "description": "For backends that hold only an ID token. `links` are restricted to the calling instance. Sign-in in the product never blocks on this call.",
-        "x-ever-phase": 2,
-        "x-ever-auth": "instance",
         "x-ever-integration": "ever_id_login",
+        "x-ever-max-body-bytes": 8192,
         "x-ever-rate-limit": "instance",
-        "x-ever-idempotent": false,
         "operationId": "resolveIdentity",
         "security": [
           {
@@ -609,86 +606,68 @@
           }
         ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/IdentityResolveRequest"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
-            "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Context"
                 }
               }
-            }
+            },
+            "description": "The context, scoped to this installation (`Cache-Control: private, no-store`)"
           },
-          "403": {
-            "description": "Principal lacks the role, scope, integration or entitlement, or the operation needs a fresh sign-in (`forbidden_role`, `forbidden_scope`, `integration_disabled`, `integration_revoked`, `instance_pending_approval`, `entitlement_required`, `tier_required`, `sso_required`, `reauth_required`, `session_required`: an Ever ID token issued to a product, installation or App client used anywhere except the two `everIdTokenRead` reads and the in-product consent write; `step_up_required`: that consent write without a sign-in in the last 300 s; `not_connection_owner`: an installation-wide integration changed by an organization that does not own the installation).",
+          "401": {
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found, or the module that serves this route is disabled on this deployment (`not_found`, `module_disabled`).",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "Any other error, as a problem document.",
-            "headers": {
-              "x-request-id": {
-                "description": "The request id (generated or echoed). Quote it in support requests.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "RateLimit-Limit": {
-                "description": "IETF RateLimit header; requests allowed in the current window for this principal class.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Remaining": {
-                "description": "IETF RateLimit header; requests remaining in the current window.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Reset": {
-                "description": "IETF RateLimit header; seconds until the window resets.",
-                "schema": {
-                  "type": "integer"
                 }
               }
             },
+            "description": "No valid instance token"
+          },
+          "403": {
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
-            }
+            },
+            "description": "`integration_disabled`, `integration_revoked` or `denied_by_policy`: `ever_id_login` is not enabled for this installation"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`not_found`, the same for an unknown subject and one this installation holds no link for"
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`unavailable`: an `id_token` cannot be checked right now; retry"
           }
         },
-        "x-ever-row": 22,
-        "x-ever-availability": "not_in_v1",
-        "x-ever-availability-note": "Identity resolution comes with Ever ID sign-in for installations, which is not offered yet."
+        "x-ever-row": 22
       }
     },
     "/v1/installs/{install}/status": {
@@ -871,15 +850,12 @@
     },
     "/v1/instances/me/ack": {
       "post": {
+        "summary": "A connected instance answers the receipt of a person's deletion or export it was asked for.",
         "tags": [
           "provisioning"
         ],
-        "summary": "Product receipt for a deletion or export request",
-        "description": "Each connected product removes its own `(issuer, subject)` rows and\napplies its own account policy to the accounts Ever controls, then\nanswers honestly (`deleted`, `anonymised`, `retained_legal`,\n`no_account`, `failed`, or `exported` with a signed URL of its own\nexport). For an account held by another controller (a self-hosted or\npartner instance, an Ever Cloud tenant with other members) it removes\nonly its link rows, notifies that controller and answers\n`forwarded_to_controller` with `detail.controller_kind` and\n`detail.notified_at`. Unacknowledged requests are flagged to\nsupport after 7 days; the job continues. Idempotent by `(job_id,\ninstance)`.\n",
-        "x-ever-phase": 2,
-        "x-ever-auth": "instance",
+        "x-ever-max-body-bytes": 4096,
         "x-ever-rate-limit": "instance",
-        "x-ever-idempotent": false,
         "operationId": "instanceAckRequest",
         "security": [
           {
@@ -887,87 +863,61 @@
           }
         ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AckRequest"
+                "$ref": "#/components/schemas/InstanceAck"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "204": {
-            "description": "Success with no body.",
-            "headers": {
-              "x-request-id": {
-                "description": "The request id (generated or echoed). Quote it in support requests.",
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
+            "description": "Recorded (also when the receipt already held this very answer)"
           },
-          "404": {
-            "description": "Not found, or the module that serves this route is disabled on this deployment (`not_found`, `module_disabled`).",
+          "401": {
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation failed; unknown fields are rejected on writes (`validation_failed`, `schema_violation`, `code_invalid`, `idempotency_mismatch`, `mirror_owned_field`, `limit_exceeded`).",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "Any other error, as a problem document.",
-            "headers": {
-              "x-request-id": {
-                "description": "The request id (generated or echoed). Quote it in support requests.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "RateLimit-Limit": {
-                "description": "IETF RateLimit header; requests allowed in the current window for this principal class.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Remaining": {
-                "description": "IETF RateLimit header; requests remaining in the current window.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Reset": {
-                "description": "IETF RateLimit header; seconds until the window resets.",
-                "schema": {
-                  "type": "integer"
                 }
               }
             },
+            "description": "No valid instance token"
+          },
+          "404": {
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
-            }
+            },
+            "description": "This instance was not asked for this job"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`receipt_final`: the receipt already holds another final answer"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`legal_basis_required`: `retained_legal` without `legal_basis`; `validation_failed`: a result that does not answer this kind of request, or a malformed field"
           }
         },
-        "x-ever-row": 20,
-        "x-ever-availability": "not_in_v1",
-        "x-ever-availability-note": "Installations do not acknowledge deletion and export requests through the API yet."
+        "x-ever-row": 20
       }
     },
     "/v1/instances/me/billing-links": {
@@ -2116,12 +2066,10 @@
     },
     "/v1/instances/me/oidc-client": {
       "get": {
+        "summary": "The installation's Ever ID client; the secret is in the first `ready` answer only.",
         "tags": [
-          "identity"
+          "registry"
         ],
-        "summary": "Poll the OIDC client creation",
-        "x-ever-phase": 2,
-        "x-ever-auth": "instance",
         "x-ever-integration": "ever_id_login",
         "x-ever-rate-limit": "instance",
         "operationId": "instanceGetOidcClient",
@@ -2132,185 +2080,105 @@
         ],
         "responses": {
           "200": {
-            "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/OidcClient"
                 }
               }
-            }
+            },
+            "description": "The client (`Cache-Control: no-store`)"
           },
-          "404": {
-            "description": "Not found, or the module that serves this route is disabled on this deployment (`not_found`, `module_disabled`).",
+          "403": {
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "Any other error, as a problem document.",
-            "headers": {
-              "x-request-id": {
-                "description": "The request id (generated or echoed). Quote it in support requests.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "RateLimit-Limit": {
-                "description": "IETF RateLimit header; requests allowed in the current window for this principal class.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Remaining": {
-                "description": "IETF RateLimit header; requests remaining in the current window.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Reset": {
-                "description": "IETF RateLimit header; seconds until the window resets.",
-                "schema": {
-                  "type": "integer"
                 }
               }
             },
+            "description": "`integration_disabled`, `integration_revoked` or `denied_by_policy`"
+          },
+          "404": {
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
-            }
+            },
+            "description": "No client was asked for"
           }
         },
-        "x-ever-row": 14,
-        "x-ever-availability": "not_in_v1",
-        "x-ever-availability-note": "Ever ID sign-in clients for installations are not offered yet."
+        "x-ever-row": 14
       },
       "post": {
+        "summary": "Asks for the installation's Ever ID client (integration `ever_id_login`); it is made shortly\nafter: poll `GET`.",
         "tags": [
-          "identity"
+          "registry"
         ],
-        "summary": "Request an OIDC client for \"Sign in with Ever ID\"",
-        "description": "Requires integration `ever_id_login`. The client is created asynchronously; poll with `GET`. The secret is returned exactly once.",
-        "x-ever-phase": 2,
-        "x-ever-auth": "instance",
         "x-ever-integration": "ever_id_login",
+        "x-ever-max-body-bytes": 8192,
         "x-ever-rate-limit": "instance",
-        "x-ever-idempotent": true,
         "operationId": "instanceRequestOidcClient",
         "security": [
           {
             "instanceToken": []
           }
         ],
-        "parameters": [
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "description": "Client-generated key, unique per principal, <= 128 characters. See the `Idempotency` schema.",
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 128
-            }
-          }
-        ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/OidcClientRequest"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "202": {
-            "description": "Creation queued.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/OidcClient"
                 }
               }
-            }
+            },
+            "description": "Queued: poll GET for the client"
           },
           "403": {
-            "description": "Principal lacks the role, scope, integration or entitlement, or the operation needs a fresh sign-in (`forbidden_role`, `forbidden_scope`, `integration_disabled`, `integration_revoked`, `instance_pending_approval`, `entitlement_required`, `tier_required`, `sso_required`, `reauth_required`, `session_required`: an Ever ID token issued to a product, installation or App client used anywhere except the two `everIdTokenRead` reads and the in-product consent write; `step_up_required`: that consent write without a sign-in in the last 300 s; `not_connection_owner`: an installation-wide integration changed by an organization that does not own the installation).",
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
-            }
+            },
+            "description": "`integration_disabled`, `integration_revoked` or `denied_by_policy`: `ever_id_login` is not enabled for this installation; `instance_pending_approval` or `instance_disconnected`"
           },
           "409": {
-            "description": "State conflict (`handle_taken`, `already_exists`, `key_mismatch`, `idempotency_in_progress`, `illegal_transition`, `billing_active`, `job_in_progress` when another job for the same subject is running).",
-            "headers": {
-              "Retry-After": {
-                "description": "Seconds to wait before retrying.",
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            },
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
-            }
+            },
+            "description": "`oidc_client_exists`: a client is pending or ready already"
           },
-          "default": {
-            "description": "Any other error, as a problem document.",
-            "headers": {
-              "x-request-id": {
-                "description": "The request id (generated or echoed). Quote it in support requests.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "RateLimit-Limit": {
-                "description": "IETF RateLimit header; requests allowed in the current window for this principal class.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Remaining": {
-                "description": "IETF RateLimit header; requests remaining in the current window.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Reset": {
-                "description": "IETF RateLimit header; seconds until the window resets.",
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            },
+          "422": {
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
-            }
+            },
+            "description": "`redirect_uri_invalid`: not an exact `https` URI, or the two are not one origin; `product_not_supported`: this deployment makes no client for the product"
           }
         },
-        "x-ever-row": 14,
-        "x-ever-availability": "not_in_v1",
-        "x-ever-availability-note": "Ever ID sign-in clients for installations are not offered yet."
+        "x-ever-row": 14
       }
     },
     "/v1/instances/me/org-profile": {
@@ -2428,118 +2296,82 @@
     },
     "/v1/instances/me/person-links": {
       "post": {
+        "summary": "Reports that a local user of the installation linked an Ever ID (integration `ever_id_login`).\nDeletion and export requests for that person later reach this installation.",
         "tags": [
           "registry"
         ],
-        "summary": "Report that a local user linked an Ever ID",
-        "x-ever-phase": 2,
-        "x-ever-auth": "instance",
         "x-ever-integration": "ever_id_login",
+        "x-ever-max-body-bytes": 4096,
         "x-ever-rate-limit": "instance",
-        "x-ever-idempotent": true,
         "operationId": "instanceCreatePersonLink",
         "security": [
           {
             "instanceToken": []
           }
         ],
-        "parameters": [
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "description": "Client-generated key, unique per principal, <= 128 characters. See the `Idempotency` schema.",
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 128
-            }
-          }
-        ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/PersonLinkCreate"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "201": {
-            "description": "Recorded.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PersonLink"
                 }
               }
-            }
+            },
+            "description": "Recorded (also when the same report was already recorded)"
           },
           "403": {
-            "description": "Principal lacks the role, scope, integration or entitlement, or the operation needs a fresh sign-in (`forbidden_role`, `forbidden_scope`, `integration_disabled`, `integration_revoked`, `instance_pending_approval`, `entitlement_required`, `tier_required`, `sso_required`, `reauth_required`, `session_required`: an Ever ID token issued to a product, installation or App client used anywhere except the two `everIdTokenRead` reads and the in-product consent write; `step_up_required`: that consent write without a sign-in in the last 300 s; `not_connection_owner`: an installation-wide integration changed by an organization that does not own the installation).",
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "Any other error, as a problem document.",
-            "headers": {
-              "x-request-id": {
-                "description": "The request id (generated or echoed). Quote it in support requests.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "RateLimit-Limit": {
-                "description": "IETF RateLimit header; requests allowed in the current window for this principal class.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Remaining": {
-                "description": "IETF RateLimit header; requests remaining in the current window.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Reset": {
-                "description": "IETF RateLimit header; seconds until the window resets.",
-                "schema": {
-                  "type": "integer"
                 }
               }
             },
+            "description": "`integration_disabled`, `integration_revoked` or `denied_by_policy`: `ever_id_login` is not enabled for this installation; `instance_pending_approval` or `instance_disconnected`"
+          },
+          "422": {
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
-            }
+            },
+            "description": "`subject_unknown`: no active Ever ID identity has this subject (nothing written); `link_not_found`: `tenant_link_id` is not an active tenant link of this installation; `schema_violation`: an e-mail address as `display_name`; `validation_failed` naming the field"
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`unavailable`: the identity lookup is not available on this deployment"
           }
         },
-        "x-ever-row": 19,
-        "x-ever-availability": "not_in_v1",
-        "x-ever-availability-note": "Person links come with Ever ID sign-in for installations, which is not offered yet."
+        "x-ever-row": 19
       }
     },
     "/v1/instances/me/person-links/{ref}": {
       "delete": {
+        "summary": "Reports that a local user of the installation unlinked their Ever ID (`204`, also when nothing\nwas linked).",
         "tags": [
           "registry"
         ],
-        "summary": "Report that a local user unlinked their Ever ID",
-        "x-ever-phase": 2,
-        "x-ever-auth": "instance",
         "x-ever-integration": "ever_id_login",
         "x-ever-rate-limit": "instance",
-        "x-ever-idempotent": false,
         "operationId": "instanceDeletePersonLink",
         "security": [
           {
@@ -2548,68 +2380,31 @@
         ],
         "parameters": [
           {
-            "name": "ref",
-            "in": "path",
-            "required": true,
             "description": "The product user reference given at creation.",
+            "in": "path",
+            "name": "ref",
+            "required": true,
             "schema": {
-              "type": "string",
-              "maxLength": 128
+              "type": "string"
             }
           }
         ],
         "responses": {
           "204": {
-            "description": "Success with no body.",
-            "headers": {
-              "x-request-id": {
-                "description": "The request id (generated or echoed). Quote it in support requests.",
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
+            "description": "Unlinked"
           },
-          "default": {
-            "description": "Any other error, as a problem document.",
-            "headers": {
-              "x-request-id": {
-                "description": "The request id (generated or echoed). Quote it in support requests.",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "RateLimit-Limit": {
-                "description": "IETF RateLimit header; requests allowed in the current window for this principal class.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Remaining": {
-                "description": "IETF RateLimit header; requests remaining in the current window.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "RateLimit-Reset": {
-                "description": "IETF RateLimit header; seconds until the window resets.",
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            },
+          "403": {
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 }
               }
-            }
+            },
+            "description": "`integration_disabled`, `integration_revoked` or `denied_by_policy`: `ever_id_login` is not enabled for this installation; `instance_pending_approval` or `instance_disconnected`"
           }
         },
-        "x-ever-row": 19,
-        "x-ever-availability": "not_in_v1",
-        "x-ever-availability-note": "Person links come with Ever ID sign-in for installations, which is not offered yet."
+        "x-ever-row": 19
       }
     },
     "/v1/instances/me/provider-grants/{grant}": {
@@ -5366,41 +5161,28 @@
       }
     },
     "schemas": {
-      "AckRequest": {
-        "type": "object",
-        "description": "Receipt from a product for a deletion or export request it received on the feed or by webhook.",
-        "required": [
-          "job_id",
-          "result"
-        ],
+      "AckDetail": {
         "additionalProperties": false,
+        "description": "Non-identifying detail of an instance's answer: machine tokens and times only (no free text,\nno personal data).",
         "properties": {
-          "job_id": {
-            "$ref": "#/components/schemas/Ulid"
+          "controller_kind": {
+            "description": "For `forwarded_to_controller`: who controls the account, `operator` (the instance's\noperator) or `tenant` (the tenant's admins).",
+            "example": "tenant",
+            "type": "string"
           },
-          "result": {
-            "type": "string",
-            "description": "Deletion receipts (`deleted | anonymised | retained_legal | no_account | forwarded_to_controller | failed`) are stored in `p_provisioning.deletion_receipt`; export receipts (`exported | no_account | forwarded_to_controller`) in `p_provisioning.export_receipt`, chosen by the kind of `job_id`. `forwarded_to_controller` means the product removed the person's link rows and served the erasure or access notice to the account's controller (`detail.controller_kind` = `operator` or `tenant`, `detail.notified_at`); `failed` means an Ever-controlled account could not be deleted and keeps the job open.",
-            "enum": [
-              "deleted",
-              "anonymised",
-              "retained_legal",
-              "no_account",
-              "forwarded_to_controller",
-              "failed",
-              "exported"
-            ]
+          "notified_at": {
+            "description": "For `forwarded_to_controller`: when the erasure or access notice went out.",
+            "format": "date-time",
+            "type": "string"
           },
-          "detail": {
-            "type": "object",
-            "description": "Non-identifying detail (for example a retention reason code)."
-          },
-          "export_url": {
-            "type": "string",
-            "format": "uri",
-            "description": "For export receipts, a signed URL of the product's own export."
+          "reason_code": {
+            "description": "Why a `failed` answer failed, a machine token (`^[a-z_]{1,64}$`), for example\n`account_deletion_pending`.",
+            "example": "account_deletion_pending",
+            "pattern": "^[a-z_]{1,64}$",
+            "type": "string"
           }
-        }
+        },
+        "type": "object"
       },
       "BillingLink": {
         "type": "object",
@@ -6113,6 +5895,10 @@
           "not_connection_owner",
           "integration_disabled",
           "integration_revoked",
+          "subject_unknown",
+          "link_not_found",
+          "oidc_client_exists",
+          "redirect_uri_invalid",
           "denied_by_policy",
           "integration_not_available",
           "entitlement_required",
@@ -6141,6 +5927,8 @@
           "illegal_transition",
           "already_exists",
           "already_completed",
+          "legal_basis_required",
+          "receipt_final",
           "billing_active",
           "sso_required",
           "reauth_required",
@@ -6565,26 +6353,29 @@
         "type": "object"
       },
       "IdentityResolveRequest": {
-        "type": "object",
-        "description": "For product backends that hold only an ID token. Returns the context shape; `orgs`, `orgs_filtered` and `links` are scoped to the calling instance (organizations with an active tenant_link on it; the caller filter).",
+        "additionalProperties": false,
+        "description": "The subject to resolve.",
+        "properties": {
+          "id_token": {
+            "description": "An ID token issued to this installation's own Ever ID client (verified; it must name\n`issuer` and `subject`; omitted when the product holds none, never `null`).",
+            "type": "string"
+          },
+          "issuer": {
+            "description": "The Ever ID issuer (this deployment's).",
+            "example": "https://auth.ever.co",
+            "type": "string"
+          },
+          "subject": {
+            "description": "The Ever ID subject.",
+            "maxLength": 128,
+            "type": "string"
+          }
+        },
         "required": [
           "issuer",
           "subject"
         ],
-        "additionalProperties": false,
-        "properties": {
-          "issuer": {
-            "type": "string",
-            "format": "uri"
-          },
-          "subject": {
-            "type": "string"
-          },
-          "id_token": {
-            "type": "string",
-            "description": "When present it is verified and must match `issuer`/`subject`."
-          }
-        }
+        "type": "object"
       },
       "Install": {
         "type": "object",
@@ -6845,6 +6636,43 @@
           "last_seen_bucket",
           "connected_at",
           "version_row"
+        ],
+        "type": "object"
+      },
+      "InstanceAck": {
+        "additionalProperties": false,
+        "description": "A connected instance's answer to a person's deletion or export request it received on its feed\nor by webhook.",
+        "properties": {
+          "detail": {
+            "$ref": "#/components/schemas/AckDetail",
+            "description": "Non-identifying detail."
+          },
+          "export_url": {
+            "description": "For `exported`: the `https` URL of the product's own export (stored, linked to the\nperson, never fetched by the platform).",
+            "example": "https://gauzy.example.com/exports/abc",
+            "maxLength": 2048,
+            "type": "string"
+          },
+          "job_id": {
+            "description": "The request's `job_id`.",
+            "example": "01K6A7S2ABCDEFGHJKMNPQRSTV",
+            "type": "string"
+          },
+          "legal_basis": {
+            "description": "The legal obligation a `retained_legal` answer keeps the data under (a statute or a\ncontract clause, never personal data; 1 to 200 characters).",
+            "example": "HGB 257 (commercial records, 10 years)",
+            "maxLength": 200,
+            "type": "string"
+          },
+          "result": {
+            "description": "A deletion: `deleted`, `anonymised`, `retained_legal`, `no_account`,\n`forwarded_to_controller` or `failed`. An export: `exported`, `no_account`,\n`forwarded_to_controller` or `failed`. `failed` keeps the receipt open for a later final\nanswer; every other answer is final.",
+            "example": "deleted",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "result"
         ],
         "type": "object"
       },
@@ -8305,62 +8133,69 @@
         "type": "object"
       },
       "OidcClient": {
-        "type": "object",
-        "required": [
-          "status"
-        ],
+        "description": "The installation's Ever ID client.",
         "properties": {
-          "status": {
-            "type": "string",
-            "enum": [
-              "pending",
-              "ready",
-              "failed",
-              "revoked"
-            ]
-          },
-          "job_id": {
-            "$ref": "#/components/schemas/Ulid"
-          },
-          "issuer": {
-            "type": "string",
-            "format": "uri"
-          },
           "client_id": {
-            "type": "string"
-          },
-          "client_secret": {
-            "type": "string",
-            "description": "Returned exactly once, on the first `ready` read."
-          },
-          "created_at": {
+            "description": "The OIDC client id, when ready.",
             "type": [
               "string",
               "null"
-            ],
-            "format": "date-time"
+            ]
+          },
+          "client_secret": {
+            "description": "The client secret: in the first `ready` answer only (store it; it is never shown again).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "issuer": {
+            "description": "The Ever ID issuer, when ready.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "job_id": {
+            "description": "The request it was made for.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "description": "`pending`, `ready`, `failed` or `revoked`.",
+            "example": "ready",
+            "type": "string"
           }
-        }
+        },
+        "required": [
+          "status"
+        ],
+        "type": "object"
       },
       "OidcClientRequest": {
-        "type": "object",
-        "description": "Ask the platform to create the OIDC client that lets this instance offer \"Sign in with Ever ID\" (integration `ever_id_login`).",
+        "additionalProperties": false,
+        "description": "The installation's sign-in endpoints for its Ever ID client.",
+        "properties": {
+          "logout_uri": {
+            "description": "The installation's back-channel logout endpoint (exact, `https`, the same origin).",
+            "example": "https://gauzy.acme.example/auth/ever-id/logout",
+            "maxLength": 2048,
+            "type": "string"
+          },
+          "redirect_uri": {
+            "description": "Where Ever ID returns the person after sign-in (exact, `https`).",
+            "example": "https://gauzy.acme.example/auth/ever-id/callback",
+            "maxLength": 2048,
+            "type": "string"
+          }
+        },
         "required": [
           "redirect_uri",
           "logout_uri"
         ],
-        "additionalProperties": false,
-        "properties": {
-          "redirect_uri": {
-            "type": "string",
-            "format": "uri"
-          },
-          "logout_uri": {
-            "type": "string",
-            "format": "uri",
-            "description": "Back-channel logout endpoint of the instance."
-          }
-        }
+        "type": "object"
       },
       "OrgProfilePush": {
         "type": "object",
@@ -8441,7 +8276,34 @@
         }
       },
       "PersonLink": {
-        "type": "object",
+        "description": "A person link as the installation sees it.",
+        "properties": {
+          "id": {
+            "description": "The link.",
+            "type": "string"
+          },
+          "instance_id": {
+            "description": "The installation.",
+            "type": "string"
+          },
+          "link_method": {
+            "description": "How it was linked.",
+            "type": "string"
+          },
+          "linked_at": {
+            "description": "When it was linked.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "person_id": {
+            "description": "The Ever Platform person behind the identity.",
+            "type": "string"
+          },
+          "product_user_ref": {
+            "description": "The product's user id.",
+            "type": "string"
+          }
+        },
         "required": [
           "id",
           "person_id",
@@ -8450,111 +8312,59 @@
           "link_method",
           "linked_at"
         ],
+        "type": "object"
+      },
+      "PersonLinkCreate": {
+        "additionalProperties": false,
+        "description": "A local user of the installation linked an Ever ID: identifiers only, never an e-mail or a\nperson's name.",
         "properties": {
-          "id": {
-            "$ref": "#/components/schemas/Ulid"
+          "display_name": {
+            "description": "The product tenant's display name (never a person's name or an e-mail; omitted when\nnone).",
+            "maxLength": 120,
+            "type": "string"
           },
-          "person_id": {
-            "$ref": "#/components/schemas/Ulid"
+          "identity_issuer": {
+            "description": "The Ever ID issuer of the identity (this deployment's).",
+            "example": "https://auth.ever.co",
+            "type": "string"
           },
-          "instance_id": {
-            "$ref": "#/components/schemas/Ulid"
+          "identity_subject": {
+            "description": "The Ever ID subject of the identity.",
+            "maxLength": 128,
+            "type": "string"
           },
-          "tenant_link_id": {
-            "type": [
-              "string",
-              "null"
-            ]
+          "link_method": {
+            "description": "`explicit` (the user linked it) or `confirmed` (an existing account confirmed by its\ne-mail); `provisioned` is the platform's own and never reported.",
+            "example": "explicit",
+            "type": "string"
           },
-          "product_user_ref": {
+          "product_org_id": {
+            "description": "The product organization the user belongs to (omitted when none; never `null`).",
+            "maxLength": 128,
             "type": "string"
           },
           "product_tenant_id": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "description": "The product tenant the user belongs to (omitted when none; never `null`).",
+            "maxLength": 128,
+            "type": "string"
           },
-          "product_org_id": {
-            "type": [
-              "string",
-              "null"
-            ]
+          "product_user_ref": {
+            "description": "The product's own user id (opaque to the platform).",
+            "maxLength": 128,
+            "type": "string"
           },
-          "display_name": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "link_method": {
-            "type": "string",
-            "enum": [
-              "provisioned",
-              "explicit",
-              "confirmed"
-            ]
-          },
-          "linked_at": {
-            "$ref": "#/components/schemas/Timestamp"
-          },
-          "unlinked_at": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "date-time"
+          "tenant_link_id": {
+            "description": "The tenant link the product tenant has with an organization, when it has one (an active\nlink of this installation; omitted when none, never `null`).",
+            "type": "string"
           }
-        }
-      },
-      "PersonLinkCreate": {
-        "type": "object",
-        "description": "Reported by a connected instance when a local user links an Ever ID. Identifiers only; never an e-mail.",
+        },
         "required": [
           "product_user_ref",
           "identity_issuer",
           "identity_subject",
           "link_method"
         ],
-        "additionalProperties": false,
-        "properties": {
-          "product_user_ref": {
-            "type": "string",
-            "maxLength": 128
-          },
-          "product_tenant_id": {
-            "type": "string",
-            "maxLength": 128
-          },
-          "product_org_id": {
-            "type": "string",
-            "maxLength": 128
-          },
-          "tenant_link_id": {
-            "$ref": "#/components/schemas/Ulid"
-          },
-          "display_name": {
-            "type": "string",
-            "description": "Product tenant display name (not the person's name).",
-            "maxLength": 120
-          },
-          "identity_issuer": {
-            "type": "string",
-            "format": "uri"
-          },
-          "identity_subject": {
-            "type": "string",
-            "maxLength": 128
-          },
-          "link_method": {
-            "type": "string",
-            "enum": [
-              "provisioned",
-              "explicit",
-              "confirmed"
-            ]
-          }
-        }
+        "type": "object"
       },
       "PricingModel": {
         "type": "string",
