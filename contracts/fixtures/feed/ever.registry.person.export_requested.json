@@ -18,7 +18,10 @@
       "data": {
         "person_id": "01J36SHWZTNC78Z2VM02Q6RT9R",
         "job_id": "01JJYGW8XHFZ6MKJ12H3HF4YPT",
-        "respond_by": "2026-11-02T10:00:00Z"
+        "respond_by": "2026-11-02T10:00:00Z",
+        "subject_hashes": [
+          "ebfbf4a89ae4890dad4e5d138d7c73b7fa75f1cef3fbd05f2d329a4e9602fa7b"
+        ]
       }
     }
   ],

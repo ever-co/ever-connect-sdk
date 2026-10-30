@@ -64,13 +64,26 @@ const instanceOfAzp = (state, claims) => {
   return m ? state.instances.get(m[1]) : null;
 };
 
+/** The link methods an installation reports (`provisioned` is the platform's own). */
+const LINK_METHODS = ['explicit', 'confirmed'];
+
 export const personHandlers = {
   instanceCreatePersonLink({ state, instance, body }) {
-    const id = state.ulid('person-link');
+    if (!LINK_METHODS.includes(body.link_method))
+      fail(422, 'validation_failed', 'link_method is explicit or confirmed', {
+        errors: [{ path: '/link_method', code: 'invalid', message: 'explicit or confirmed' }],
+      });
+    if (body.tenant_link_id !== undefined && instance.links[body.tenant_link_id]?.state !== 'active')
+      fail(422, 'link_not_found', 'tenant_link_id is not an active tenant link of this installation');
     const person = state.config.people.find((p) => p.issuer === body.identity_issuer && p.subject === body.identity_subject);
+    if (!person) fail(422, 'subject_unknown', 'no active Ever ID identity has this subject (nothing written)');
+    // The same report again (no idempotency key needed) answers the link already recorded.
+    const known = instance.person_links[body.product_user_ref];
+    if (known && known.person_id === person.person_id && known.link_method === body.link_method) return { status: 201, body: known };
+    const id = state.ulid('person-link');
     const link = {
       id,
-      person_id: person?.person_id ?? state.ulid('person'),
+      person_id: person.person_id,
       instance_id: instance.id,
       tenant_link_id: body.tenant_link_id ?? null,
       product_user_ref: body.product_user_ref,
@@ -85,15 +98,18 @@ export const personHandlers = {
     return { status: 201, body: link };
   },
 
+  // Unlinking is idempotent: a reference with no link (never linked, or unlinked already) is done.
   instanceDeletePersonLink({ instance, params }) {
-    if (!instance.person_links[params.ref]) fail(404, 'not_found', 'no person link with this reference');
     delete instance.person_links[params.ref];
     return { status: 204 };
   },
 
+  // Only a subject this installation holds a person link for resolves; every other one (unknown,
+  // or known but not linked here) is the same 404.
   resolveIdentity({ state, instance, body }) {
     const person = state.config.people.find((p) => p.issuer === body.issuer && p.subject === body.subject);
-    if (!person) fail(404, 'not_found', 'no Ever ID with this issuer and subject');
+    const linked = person && Object.values(instance.person_links).some((l) => l.person_id === person.person_id);
+    if (!linked) fail(404, 'not_found', 'no Ever ID with this issuer and subject linked to this installation');
     return { status: 200, body: contextBody(context(state, { iss: body.issuer, sub: body.subject }, instance)) };
   },
 

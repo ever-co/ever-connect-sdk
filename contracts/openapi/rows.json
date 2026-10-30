@@ -273,7 +273,6 @@
       "row": 14,
       "title": "Ever ID sign-in client",
       "operation_ids": ["instanceRequestOidcClient", "instanceGetOidcClient"],
-      "availability": "not_in_v1",
       "module": "connect",
       "group": "integration",
       "integration": "ever_id_login",
@@ -287,7 +286,8 @@
         [403, "integration_disabled"],
         [403, "integration_revoked"],
         [404, "not_found"],
-        [409, "already_exists"]
+        [409, "oidc_client_exists"],
+        [422, "redirect_uri_invalid"]
       ]
     },
     {
@@ -377,7 +377,6 @@
       "row": 19,
       "title": "Person links",
       "operation_ids": ["instanceCreatePersonLink", "instanceDeletePersonLink"],
-      "availability": "not_in_v1",
       "module": "connect",
       "group": "integration",
       "integration": "ever_id_login",
@@ -390,7 +389,8 @@
       "errors": [
         [403, "integration_disabled"],
         [403, "integration_revoked"],
-        [404, "not_found", "spec-gap"],
+        [422, "subject_unknown"],
+        [422, "link_not_found"],
         [422, "validation_failed", "spec-gap"]
       ]
     },
@@ -398,7 +398,6 @@
       "row": 20,
       "title": "Receipt for a deletion or export request",
       "operation_ids": ["instanceAckRequest"],
-      "availability": "not_in_v1",
       "module": "connect",
       "group": "receipt",
       "auth": "instance token",
@@ -410,6 +409,8 @@
       "phase": 2,
       "errors": [
         [404, "not_found"],
+        [409, "receipt_final"],
+        [422, "legal_basis_required"],
         [422, "validation_failed"]
       ]
     },
@@ -437,7 +438,6 @@
       "row": 22,
       "title": "Identity resolution",
       "operation_ids": ["resolveIdentity"],
-      "availability": "not_in_v1",
       "module": "connect",
       "group": "integration",
       "integration": "ever_id_login",

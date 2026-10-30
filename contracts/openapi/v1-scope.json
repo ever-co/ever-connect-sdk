@@ -87,6 +87,16 @@
       "path": "/v1/instances/me/events/ack"
     },
     {
+      "operation_id": "instanceAckRequest",
+      "method": "POST",
+      "path": "/v1/instances/me/ack"
+    },
+    {
+      "operation_id": "instanceCreatePersonLink",
+      "method": "POST",
+      "path": "/v1/instances/me/person-links"
+    },
+    {
       "operation_id": "instanceCreateTenantLink",
       "method": "POST",
       "path": "/v1/instances/me/tenant-links"
@@ -95,6 +105,11 @@
       "operation_id": "instanceCreateWebhook",
       "method": "POST",
       "path": "/v1/instances/me/webhooks"
+    },
+    {
+      "operation_id": "instanceDeletePersonLink",
+      "method": "DELETE",
+      "path": "/v1/instances/me/person-links/{ref}"
     },
     {
       "operation_id": "instanceDeletePublicUrl",
@@ -132,6 +147,11 @@
       "path": "/v1/instances/me/tenant-links/{link}/entitlement"
     },
     {
+      "operation_id": "instanceGetOidcClient",
+      "method": "GET",
+      "path": "/v1/instances/me/oidc-client"
+    },
+    {
       "operation_id": "instanceHeartbeat",
       "method": "POST",
       "path": "/v1/instances/me/heartbeat"
@@ -150,6 +170,11 @@
       "operation_id": "instancePutPublicUrl",
       "method": "PUT",
       "path": "/v1/instances/me/public-url"
+    },
+    {
+      "operation_id": "instanceRequestOidcClient",
+      "method": "POST",
+      "path": "/v1/instances/me/oidc-client"
     },
     {
       "operation_id": "instanceRotateKey",
@@ -185,6 +210,11 @@
       "operation_id": "redeliverWebhook",
       "method": "POST",
       "path": "/v1/deliveries/{delivery}/redeliver"
+    },
+    {
+      "operation_id": "resolveIdentity",
+      "method": "POST",
+      "path": "/v1/identity/resolve"
     },
     {
       "operation_id": "rotateWebhookSecret",
@@ -243,22 +273,6 @@
       "why": "The counterparty lookup is not offered yet."
     },
     {
-      "operation_id": "instanceRequestOidcClient",
-      "method": "POST",
-      "path": "/v1/instances/me/oidc-client",
-      "row": 14,
-      "integration": "ever_id_login",
-      "why": "Ever ID sign-in clients for installations are not offered yet."
-    },
-    {
-      "operation_id": "instanceGetOidcClient",
-      "method": "GET",
-      "path": "/v1/instances/me/oidc-client",
-      "row": 14,
-      "integration": "ever_id_login",
-      "why": "Ever ID sign-in clients for installations are not offered yet."
-    },
-    {
       "operation_id": "instanceMirrorApps",
       "method": "POST",
       "path": "/v1/instances/me/mirror/apps",
@@ -275,43 +289,12 @@
       "why": "The app mirror is not served yet."
     },
     {
-      "operation_id": "instanceCreatePersonLink",
-      "method": "POST",
-      "path": "/v1/instances/me/person-links",
-      "row": 19,
-      "integration": "ever_id_login",
-      "why": "Person links come with Ever ID sign-in for installations, which is not offered yet."
-    },
-    {
-      "operation_id": "instanceDeletePersonLink",
-      "method": "DELETE",
-      "path": "/v1/instances/me/person-links/{ref}",
-      "row": 19,
-      "integration": "ever_id_login",
-      "why": "Person links come with Ever ID sign-in for installations, which is not offered yet."
-    },
-    {
-      "operation_id": "instanceAckRequest",
-      "method": "POST",
-      "path": "/v1/instances/me/ack",
-      "row": 20,
-      "why": "Installations do not acknowledge deletion and export requests through the API yet."
-    },
-    {
       "operation_id": "instancePushOrgProfile",
       "method": "POST",
       "path": "/v1/instances/me/org-profile",
       "row": 21,
       "integration": "profile_import",
       "why": "Importing an organization profile is not offered yet."
-    },
-    {
-      "operation_id": "resolveIdentity",
-      "method": "POST",
-      "path": "/v1/identity/resolve",
-      "row": 22,
-      "integration": "ever_id_login",
-      "why": "Identity resolution comes with Ever ID sign-in for installations, which is not offered yet."
     },
     {
       "operation_id": "discoverSso",
