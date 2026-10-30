@@ -804,7 +804,7 @@ export const ERRORS = {
   ...integrationPairs(14, 'ever_id_login', calls.oidc),
   '14:404:not_found': async (env) =>
     env.call('GET', '/v1/instances/me/oidc-client', { token: (await connected(env, { enable: ['ever_id_login'] })).token }),
-  '14:409:already_exists': async (env) => {
+  '14:409:oidc_client_exists': async (env) => {
     const c = await connected(env, { enable: ['ever_id_login'] });
     await calls.oidc(env, c);
     return env.call('POST', '/v1/instances/me/oidc-client', {
@@ -880,8 +880,11 @@ export const ERRORS = {
       headers: idem('u-http'),
     }),
   ...integrationPairs(19, 'ever_id_login', calls.personLink),
-  '19:404:not_found': async (env) =>
-    env.call('DELETE', '/v1/instances/me/person-links/nobody', { token: (await connected(env, { enable: ['ever_id_login'] })).token }),
+  '19:422:subject_unknown': async (env) =>
+    env.call('POST', '/v1/instances/me/person-links', {
+      token: (await connected(env, { enable: ['ever_id_login'] })).token,
+      body: { product_user_ref: 'u', identity_issuer: 'https://auth.ever.co', identity_subject: '1', link_method: 'explicit' },
+    }),
   '19:422:validation_failed': async (env) =>
     env.call('POST', '/v1/instances/me/person-links', {
       token: (await connected(env, { enable: ['ever_id_login'] })).token,
@@ -899,6 +902,17 @@ export const ERRORS = {
       token: (await connected(env)).token,
       body: { job_id: '01JMQCK0RG000000000000000H', result: 'deleted' },
     }),
+  '20:409:receipt_final': async (env) => {
+    const c = await connected(env);
+    const job = await env.admin('person-request', { instance_id: c.instanceId, kind: 'deletion' });
+    await env.call('POST', '/v1/instances/me/ack', { token: c.token, body: { job_id: job.job_id, result: 'deleted' } });
+    return env.call('POST', '/v1/instances/me/ack', { token: c.token, body: { job_id: job.job_id, result: 'no_account' } });
+  },
+  '20:422:legal_basis_required': async (env) => {
+    const c = await connected(env);
+    const job = await env.admin('person-request', { instance_id: c.instanceId, kind: 'deletion' });
+    return env.call('POST', '/v1/instances/me/ack', { token: c.token, body: { job_id: job.job_id, result: 'retained_legal' } });
+  },
   '20:422:validation_failed': async (env) =>
     env.call('POST', '/v1/instances/me/ack', {
       token: (await connected(env)).token,

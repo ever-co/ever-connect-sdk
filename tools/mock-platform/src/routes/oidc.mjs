@@ -6,8 +6,8 @@ import { fail } from '../problem.mjs';
 
 export const oidcHandlers = {
   instanceRequestOidcClient({ state, instance }) {
-    if (instance.oidc && instance.oidc.status !== 'revoked')
-      fail(409, 'already_exists', 'this installation already has its sign-in client');
+    if (instance.oidc && ['pending', 'ready'].includes(instance.oidc.status))
+      fail(409, 'oidc_client_exists', 'this installation already has its sign-in client (pending or ready)');
     instance.oidc = {
       status: 'pending',
       job_id: state.ulid('job'),

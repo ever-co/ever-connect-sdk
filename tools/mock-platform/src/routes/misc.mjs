@@ -105,6 +105,9 @@ export function normalisedPublicUrl(raw) {
   return u.href;
 }
 
+const DELETION_ANSWERS = ['deleted', 'anonymised', 'retained_legal', 'no_account', 'forwarded_to_controller', 'failed'];
+const EXPORT_ANSWERS = ['exported', 'no_account', 'forwarded_to_controller', 'failed'];
+
 export const miscHandlers = {
   instancePutPublicUrl({ instance, body }) {
     const base_url = normalisedPublicUrl(body.base_url);
@@ -117,9 +120,20 @@ export const miscHandlers = {
     return { status: 204 };
   },
 
+  // Row 20 as the platform answers it: the answer must fit the request (a deletion or an export),
+  // `retained_legal` names its basis, `failed` keeps the receipt open, and a final answer is
+  // immutable (the same one again is a replay, another one a conflict).
   instanceAckRequest({ instance, body }) {
     const job = instance.jobs[body.job_id];
     if (!job) fail(404, 'not_found', 'no deletion or export request with this job id');
+    const fits = job.type.endsWith('export_requested') ? EXPORT_ANSWERS : DELETION_ANSWERS;
+    if (!fits.includes(body.result)) fail(422, 'validation_failed', 'this answer does not answer this kind of request');
+    if (body.result === 'retained_legal' && !body.legal_basis)
+      fail(422, 'legal_basis_required', 'retained_legal names the legal obligation it keeps the data under');
+    if (job.result && job.result !== 'failed') {
+      if (job.result === body.result) return { status: 204 };
+      fail(409, 'receipt_final', 'the receipt already holds another final answer');
+    }
     job.result = body.result;
     return { status: 204 };
   },

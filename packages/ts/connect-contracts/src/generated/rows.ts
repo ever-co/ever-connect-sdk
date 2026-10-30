@@ -1728,7 +1728,7 @@ export const ROW_COVERAGE: readonly RowCoverage[] = [
       },
       {
         "status": 409,
-        "code": "already_exists",
+        "code": "oidc_client_exists",
         "documented": true
       }
     ]
@@ -1939,9 +1939,9 @@ export const ROW_COVERAGE: readonly RowCoverage[] = [
         "documented": true
       },
       {
-        "status": 404,
-        "code": "not_found",
-        "documented": false
+        "status": 422,
+        "code": "subject_unknown",
+        "documented": true
       },
       {
         "status": 422,
@@ -1966,6 +1966,16 @@ export const ROW_COVERAGE: readonly RowCoverage[] = [
       {
         "status": 404,
         "code": "not_found",
+        "documented": true
+      },
+      {
+        "status": 409,
+        "code": "receipt_final",
+        "documented": true
+      },
+      {
+        "status": 422,
+        "code": "legal_basis_required",
         "documented": true
       },
       {

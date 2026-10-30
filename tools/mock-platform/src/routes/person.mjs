@@ -66,11 +66,15 @@ const instanceOfAzp = (state, claims) => {
 
 export const personHandlers = {
   instanceCreatePersonLink({ state, instance, body }) {
-    const id = state.ulid('person-link');
     const person = state.config.people.find((p) => p.issuer === body.identity_issuer && p.subject === body.identity_subject);
+    if (!person) fail(422, 'subject_unknown', 'no active Ever ID identity has this subject (nothing written)');
+    // The same report again (no idempotency key needed) answers the link already recorded.
+    const known = instance.person_links[body.product_user_ref];
+    if (known && known.person_id === person.person_id && known.link_method === body.link_method) return { status: 201, body: known };
+    const id = state.ulid('person-link');
     const link = {
       id,
-      person_id: person?.person_id ?? state.ulid('person'),
+      person_id: person.person_id,
       instance_id: instance.id,
       tenant_link_id: body.tenant_link_id ?? null,
       product_user_ref: body.product_user_ref,
@@ -85,8 +89,8 @@ export const personHandlers = {
     return { status: 201, body: link };
   },
 
+  // Unlinking is idempotent: a reference with no link (never linked, or unlinked already) is done.
   instanceDeletePersonLink({ instance, params }) {
-    if (!instance.person_links[params.ref]) fail(404, 'not_found', 'no person link with this reference');
     delete instance.person_links[params.ref];
     return { status: 204 };
   },

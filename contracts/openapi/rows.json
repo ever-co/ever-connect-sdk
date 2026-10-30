@@ -286,7 +286,7 @@
         [403, "integration_disabled"],
         [403, "integration_revoked"],
         [404, "not_found"],
-        [409, "already_exists"]
+        [409, "oidc_client_exists"]
       ]
     },
     {
@@ -388,7 +388,7 @@
       "errors": [
         [403, "integration_disabled"],
         [403, "integration_revoked"],
-        [404, "not_found", "spec-gap"],
+        [422, "subject_unknown"],
         [422, "validation_failed", "spec-gap"]
       ]
     },
@@ -407,6 +407,8 @@
       "phase": 2,
       "errors": [
         [404, "not_found"],
+        [409, "receipt_final"],
+        [422, "legal_basis_required"],
         [422, "validation_failed"]
       ]
     },
