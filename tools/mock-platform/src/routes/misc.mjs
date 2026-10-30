@@ -124,7 +124,9 @@ export const miscHandlers = {
   // `retained_legal` names its basis, `failed` keeps the receipt open, and a final answer is
   // immutable (the same one again is a replay, another one a conflict).
   instanceAckRequest({ instance, body }) {
-    const job = instance.jobs[body.job_id];
+    // An own entry only: a job id like `constructor` or `__proto__` names no request (404, not a
+    // property of the object the jobs are kept in).
+    const job = Object.hasOwn(instance.jobs, body.job_id) ? instance.jobs[body.job_id] : undefined;
     if (!job) fail(404, 'not_found', 'no deletion or export request with this job id');
     const fits = job.type.endsWith('export_requested') ? EXPORT_ANSWERS : DELETION_ANSWERS;
     if (!fits.includes(body.result)) fail(422, 'validation_failed', 'this answer does not answer this kind of request');
