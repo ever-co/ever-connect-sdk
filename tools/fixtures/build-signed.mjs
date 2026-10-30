@@ -1063,7 +1063,8 @@ function consentScreens(constants, integrations) {
         })),
         platform_keeps: d.scope.map((r) => ({ field: r.field_path, retention: r.retention })),
         how_often: [...new Set(d.scope.map((r) => FREQUENCY[r.frequency]))],
-        where_to_change: 'Integrations & data in this product, or Instances in app.ever.co; turning it off stops the data at once.',
+        where_to_change:
+          'Integrations & data in this product, or Instances in app.ever.co; turning it off refuses new requests at once; the revoke effect says what else changes and when.',
         revoke_effect: d.revoke_effect,
         legal: { ...LEGAL },
         authorisation: 'I am authorised to enable this for {organization}',

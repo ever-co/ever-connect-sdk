@@ -85,7 +85,7 @@
     "how_often": [
       "only when you act"
     ],
-    "where_to_change": "Integrations & data in this product, or Instances in app.ever.co; turning it off stops the data at once.",
+    "where_to_change": "Integrations & data in this product, or Instances in app.ever.co; turning it off refuses new requests at once; the revoke effect says what else changes and when.",
     "revoke_effect": "Nothing further is copied. Profile fields you already published stay until you edit them.",
     "legal": {
       "terms_url": "https://ever.co/legal/terms",

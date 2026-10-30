@@ -71,7 +71,7 @@
       "only when you act",
       "when the value changes"
     ],
-    "where_to_change": "Integrations & data in this product, or Instances in app.ever.co; turning it off stops the data at once.",
+    "where_to_change": "Integrations & data in this product, or Instances in app.ever.co; turning it off refuses new requests at once; the revoke effect says what else changes and when.",
     "revoke_effect": "Install requests are no longer delivered. Installed apps stay installed.",
     "legal": {
       "terms_url": "https://ever.co/legal/terms",

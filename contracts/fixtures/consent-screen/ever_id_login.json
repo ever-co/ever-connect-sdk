@@ -191,7 +191,7 @@
       "only when you act",
       "as events happen"
     ],
-    "where_to_change": "Integrations & data in this product, or Instances in app.ever.co; turning it off stops the data at once.",
+    "where_to_change": "Integrations & data in this product, or Instances in app.ever.co; turning it off refuses new requests at once; the revoke effect says what else changes and when.",
     "revoke_effect": "Ever refuses this installation's Ever ID requests at once (its client, its users' links, lookups). The identity provider stops signing people in through the installation's client once Ever deactivates it, shortly after and retried until it succeeds; until then a sign-in still completes, and for about a minute after the revocation (a cache) it may still carry this installation's organization data from Ever, then none. The client is never deleted: enabling the integration again reuses it with a new secret. Its users' links are marked unlinked, so deletion and export requests no longer reach it. Sign-in tokens already issued stay valid until they expire. Local accounts and sessions are not affected.",
     "legal": {
       "terms_url": "https://ever.co/legal/terms",
