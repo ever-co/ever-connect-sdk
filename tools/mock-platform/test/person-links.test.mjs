@@ -105,6 +105,55 @@ describe('person links', () => {
     expect(moved.body.display_name).toBe('Acme');
   });
 
+  it('keeps one link per Ever ID subject of the same user reference', async () => {
+    env = await startMock({
+      people: [
+        { issuer: 'https://auth.ever.co', subject: '275396402232829475', person_id: '01JMQCKPERS0N00000000000P1', org_role: 'owner' },
+        { issuer: 'https://auth.ever.co', subject: '275396402232829476', person_id: '01JMQCKPERS0N00000000000P1', org_role: 'owner' },
+      ],
+    });
+    const c = await env.connect();
+    await env.admin('consent', { integration: 'ever_id_login' });
+    const a = await env.call('POST', '/v1/instances/me/person-links', { token: c.token, body: report });
+    const b = await env.call('POST', '/v1/instances/me/person-links', {
+      token: c.token,
+      body: { ...report, identity_subject: '275396402232829476' },
+    });
+    expect(b.body.id, 'another subject is another link').not.toBe(a.body.id);
+    const again = await env.call('POST', '/v1/instances/me/person-links', { token: c.token, body: report });
+    expect(again.body.id, 'the first link is still there').toBe(a.body.id);
+    for (const subject of ['275396402232829475', '275396402232829476']) {
+      const r = await env.call('POST', '/v1/identity/resolve', { token: c.token, body: { issuer: 'https://auth.ever.co', subject } });
+      expect(r.status, subject).toBe(200);
+    }
+    // Unlinking the user reference removes both.
+    await env.call('DELETE', `/v1/instances/me/person-links/${report.product_user_ref}`, { token: c.token });
+    const gone = await env.call('POST', '/v1/identity/resolve', {
+      token: c.token,
+      body: { issuer: 'https://auth.ever.co', subject: '275396402232829476' },
+    });
+    expect(gone.status).toBe(404);
+  });
+
+  it('compares the issuer too: the same subject under another issuer resolves only once reported', async () => {
+    env = await startMock({
+      people: [
+        { issuer: 'https://auth.ever.co', subject: '275396402232829475', person_id: '01JMQCKPERS0N00000000000P1', org_role: 'owner' },
+        { issuer: 'https://id.example', subject: '275396402232829475', person_id: '01JMQCKPERS0N00000000000P1', org_role: 'owner' },
+      ],
+    });
+    const c = await env.connect();
+    await env.admin('consent', { integration: 'ever_id_login' });
+    await env.call('POST', '/v1/instances/me/person-links', { token: c.token, body: report });
+    const other = { issuer: 'https://id.example', subject: '275396402232829475' };
+    expect((await env.call('POST', '/v1/identity/resolve', { token: c.token, body: other })).status).toBe(404);
+    await env.call('POST', '/v1/instances/me/person-links', {
+      token: c.token,
+      body: { ...report, identity_issuer: 'https://id.example' },
+    });
+    expect((await env.call('POST', '/v1/identity/resolve', { token: c.token, body: other })).status).toBe(200);
+  });
+
   it('unlinking twice, or a reference never linked, answers 204', async () => {
     const c = await setup();
     await env.call('POST', '/v1/instances/me/person-links', { token: c.token, body: report });
