@@ -163,6 +163,44 @@ describe('person links', () => {
     }
   });
 
+  it('answers follow the platform: an https export_url, a forwarded answer names its controller, a null body is refused', async () => {
+    const c = await setup();
+    const exportJob = await env.admin('person-request', { instance_id: c.instanceId, kind: 'export' });
+    for (const export_url of ['http://product.example/export/1', 'not-a-url', 'https://u:p@product.example/e']) {
+      const r = await env.call('POST', '/v1/instances/me/ack', {
+        token: c.token,
+        body: { job_id: exportJob.job_id, result: 'exported', export_url },
+      });
+      expect(r.status, export_url).toBe(422);
+      expect(r.body.errors[0].path, export_url).toBe('/export_url');
+    }
+    const exported = await env.call('POST', '/v1/instances/me/ack', {
+      token: c.token,
+      body: { job_id: exportJob.job_id, result: 'exported', export_url: 'https://product.example/export/1' },
+    });
+    expect(exported.status).toBe(204);
+
+    const deletionJob = await env.admin('person-request', { instance_id: c.instanceId, kind: 'deletion' });
+    const unnamed = await env.call('POST', '/v1/instances/me/ack', {
+      token: c.token,
+      body: { job_id: deletionJob.job_id, result: 'forwarded_to_controller', detail: { notified_at: '2026-10-30T12:00:00Z' } },
+    });
+    expect(unnamed.status).toBe(422);
+    expect(unnamed.body.errors[0].path).toBe('/detail/controller_kind');
+    const badCode = await env.call('POST', '/v1/instances/me/ack', {
+      token: c.token,
+      body: { job_id: deletionJob.job_id, result: 'failed', detail: { reason_code: 'Not A Token' } },
+    });
+    expect(badCode.status).toBe(422);
+
+    const nullBody = await fetch(`${env.url}/v1/instances/me/oidc-client`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${c.token}`, 'content-type': 'application/json' },
+      body: 'null',
+    });
+    expect(nullBody.status, 'a JSON null is no body').toBe(422);
+  });
+
   it('unlinking twice, or a reference never linked, answers 204', async () => {
     const c = await setup();
     await env.call('POST', '/v1/instances/me/person-links', { token: c.token, body: report });
