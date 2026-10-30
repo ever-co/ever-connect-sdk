@@ -8480,6 +8480,9 @@ pub mod registry_person_deletion_requested_v1 {
         pub person_id: CommonUlid,
         pub respond_by: CommonDatetime,
         pub subject_hash: CommonHex64,
+        ///subject_hashes (the request to one linked instance, on instance/{instance_id}): the hash of every (iss, sub) pair that instance holds a link for; subject_hash repeats the first. Absent on the platform's own record of the request.
+        #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
+        pub subject_hashes: ::std::vec::Vec<CommonHex64>,
     }
     /// Error types.
     pub mod error {
@@ -8544,6 +8547,39 @@ pub mod registry_person_export_requested_v1 {
             Ok(Self(value.to_string()))
         }
     }
+    ///`CommonHex64`
+    #[derive(
+        ::serde::Deserialize, ::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+    )]
+    #[serde(transparent)]
+    pub struct CommonHex64(pub ::std::string::String);
+    impl ::std::ops::Deref for CommonHex64 {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<CommonHex64> for ::std::string::String {
+        fn from(value: CommonHex64) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<::std::string::String> for CommonHex64 {
+        fn from(value: ::std::string::String) -> Self {
+            Self(value)
+        }
+    }
+    impl ::std::fmt::Display for CommonHex64 {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            self.0.fmt(f)
+        }
+    }
+    impl ::std::str::FromStr for CommonHex64 {
+        type Err = ::std::convert::Infallible;
+        fn from_str(value: &str) -> ::std::result::Result<Self, Self::Err> {
+            Ok(Self(value.to_string()))
+        }
+    }
     ///`CommonUlid`
     #[derive(
         ::serde::Deserialize, ::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
@@ -8584,6 +8620,9 @@ pub mod registry_person_export_requested_v1 {
         pub job_id: CommonUlid,
         pub person_id: CommonUlid,
         pub respond_by: CommonDatetime,
+        ///subject_hashes (the request to one linked instance, on instance/{instance_id}): the hash of every (iss, sub) pair that instance holds a link for, so it finds the account to export. Absent on the platform's own record of the request.
+        #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
+        pub subject_hashes: ::std::vec::Vec<CommonHex64>,
     }
     /// Error types.
     pub mod error {

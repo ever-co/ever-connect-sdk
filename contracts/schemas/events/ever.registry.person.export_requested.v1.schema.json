@@ -19,6 +19,15 @@
     },
     "respond_by": {
       "$ref": "common.schema.json#/$defs/datetime"
+    },
+    "subject_hashes": {
+      "description": "subject_hashes (the request to one linked instance, on instance/{instance_id}): the hash of every (iss, sub) pair that instance holds a link for, so it finds the account to export. Absent on the platform's own record of the request.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "common.schema.json#/$defs/hex64"
+      }
     }
   }
 }

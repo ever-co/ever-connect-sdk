@@ -64,36 +64,67 @@ const instanceOfAzp = (state, claims) => {
   return m ? state.instances.get(m[1]) : null;
 };
 
+/** A person link's natural key on its installation: the user reference and the Ever ID subject. */
+const linkKey = (ref, subject) => `${ref}\u0000${subject}`;
+
+/** The link methods an installation reports (`provisioned` is the platform's own). */
+const LINK_METHODS = ['explicit', 'confirmed'];
+
 export const personHandlers = {
   instanceCreatePersonLink({ state, instance, body }) {
-    const id = state.ulid('person-link');
+    if (!LINK_METHODS.includes(body.link_method))
+      fail(422, 'validation_failed', 'link_method is explicit or confirmed', {
+        errors: [{ path: '/link_method', code: 'invalid', message: 'explicit or confirmed' }],
+      });
+    if (body.tenant_link_id !== undefined && instance.links[body.tenant_link_id]?.state !== 'active')
+      fail(422, 'link_not_found', 'tenant_link_id is not an active tenant link of this installation');
     const person = state.config.people.find((p) => p.issuer === body.identity_issuer && p.subject === body.identity_subject);
-    const link = {
-      id,
-      person_id: person?.person_id ?? state.ulid('person'),
-      instance_id: instance.id,
+    if (!person) fail(422, 'subject_unknown', 'no active Ever ID identity has this subject (nothing written)');
+    // The platform keys a link on (user reference, Ever ID subject): the same report again (no
+    // idempotency key needed) answers the link already recorded; changed metadata (or another
+    // issuer) updates that link in place (same id, same linked_at); another subject of the same user
+    // reference is another link. Each entry keeps the link (as the contract shapes it) and its
+    // identity beside it.
+    const key = linkKey(body.product_user_ref, body.identity_subject);
+    const known = instance.person_links[key];
+    const fields = {
+      person_id: person.person_id,
       tenant_link_id: body.tenant_link_id ?? null,
-      product_user_ref: body.product_user_ref,
       product_tenant_id: body.product_tenant_id ?? null,
       product_org_id: body.product_org_id ?? null,
       display_name: body.display_name ?? null,
       link_method: body.link_method,
-      linked_at: state.iso(),
-      unlinked_at: null,
     };
-    instance.person_links[body.product_user_ref] = link;
+    if (known && known.issuer === body.identity_issuer && Object.entries(fields).every(([k, v]) => known.link[k] === v))
+      return { status: 201, body: known.link };
+    const link = known
+      ? { ...known.link, ...fields }
+      : {
+          id: state.ulid('person-link'),
+          instance_id: instance.id,
+          product_user_ref: body.product_user_ref,
+          ...fields,
+          linked_at: state.iso(),
+          unlinked_at: null,
+        };
+    instance.person_links[key] = { link, issuer: body.identity_issuer, subject: body.identity_subject };
     return { status: 201, body: link };
   },
 
+  // Unlinking is idempotent: a reference with no link (never linked, or unlinked already) is done.
+  // Every link of the user reference goes (one per Ever ID subject).
   instanceDeletePersonLink({ instance, params }) {
-    if (!instance.person_links[params.ref]) fail(404, 'not_found', 'no person link with this reference');
-    delete instance.person_links[params.ref];
+    for (const [key, entry] of Object.entries(instance.person_links))
+      if (entry.link.product_user_ref === params.ref) delete instance.person_links[key];
     return { status: 204 };
   },
 
+  // Only the very identity (issuer and subject) this installation linked resolves; every other one
+  // (unknown, known but not linked here, or another identity of a linked person) is the same 404.
   resolveIdentity({ state, instance, body }) {
     const person = state.config.people.find((p) => p.issuer === body.issuer && p.subject === body.subject);
-    if (!person) fail(404, 'not_found', 'no Ever ID with this issuer and subject');
+    const linked = person && Object.values(instance.person_links).some((e) => e.issuer === body.issuer && e.subject === body.subject);
+    if (!linked) fail(404, 'not_found', 'no Ever ID with this issuer and subject linked to this installation');
     return { status: 200, body: contextBody(context(state, { iss: body.issuer, sub: body.subject }, instance)) };
   },
 

@@ -461,19 +461,19 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "integration",
     "integration": "ever_id_login",
     "auth": "instance token",
-    "availability": "not_in_v1",
+    "availability": "v1",
     "endpoints": [
       {
         "method": "POST",
         "path": "/v1/instances/me/oidc-client",
         "operation_id": "instanceRequestOidcClient",
-        "status": "not_in_v1"
+        "status": "pinned"
       },
       {
         "method": "GET",
         "path": "/v1/instances/me/oidc-client",
         "operation_id": "instanceGetOidcClient",
-        "status": "not_in_v1"
+        "status": "pinned"
       }
     ],
     "trigger": "integration ever_id_login enabled; then a status read until the client is ready",
@@ -625,19 +625,19 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "integration",
     "integration": "ever_id_login",
     "auth": "instance token",
-    "availability": "not_in_v1",
+    "availability": "v1",
     "endpoints": [
       {
         "method": "POST",
         "path": "/v1/instances/me/person-links",
         "operation_id": "instanceCreatePersonLink",
-        "status": "not_in_v1"
+        "status": "pinned"
       },
       {
         "method": "DELETE",
         "path": "/v1/instances/me/person-links/{ref}",
         "operation_id": "instanceDeletePersonLink",
-        "status": "not_in_v1"
+        "status": "pinned"
       }
     ],
     "trigger": "a user of the installation links or unlinks Ever ID; a one-time sync of links that existed before the installation connected",
@@ -659,13 +659,13 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "receipt",
     "integration": null,
     "auth": "instance token",
-    "availability": "not_in_v1",
+    "availability": "v1",
     "endpoints": [
       {
         "method": "POST",
         "path": "/v1/instances/me/ack",
         "operation_id": "instanceAckRequest",
-        "status": "not_in_v1"
+        "status": "pinned"
       }
     ],
     "trigger": "a deletion or export request for a person arrived on the event feed and was handled",
@@ -714,13 +714,13 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "integration",
     "integration": "ever_id_login",
     "auth": "instance token",
-    "availability": "not_in_v1",
+    "availability": "v1",
     "endpoints": [
       {
         "method": "POST",
         "path": "/v1/identity/resolve",
         "operation_id": "resolveIdentity",
-        "status": "not_in_v1"
+        "status": "pinned"
       }
     ],
     "trigger": "a backend that holds only an Ever ID token needs the Ever Platform context of that sign-in",
@@ -1728,7 +1728,12 @@ export const ROW_COVERAGE: readonly RowCoverage[] = [
       },
       {
         "status": 409,
-        "code": "already_exists",
+        "code": "oidc_client_exists",
+        "documented": true
+      },
+      {
+        "status": 422,
+        "code": "redirect_uri_invalid",
         "documented": true
       }
     ]
@@ -1939,9 +1944,14 @@ export const ROW_COVERAGE: readonly RowCoverage[] = [
         "documented": true
       },
       {
-        "status": 404,
-        "code": "not_found",
-        "documented": false
+        "status": 422,
+        "code": "subject_unknown",
+        "documented": true
+      },
+      {
+        "status": 422,
+        "code": "link_not_found",
+        "documented": true
       },
       {
         "status": 422,
@@ -1966,6 +1976,16 @@ export const ROW_COVERAGE: readonly RowCoverage[] = [
       {
         "status": 404,
         "code": "not_found",
+        "documented": true
+      },
+      {
+        "status": 409,
+        "code": "receipt_final",
+        "documented": true
+      },
+      {
+        "status": 422,
+        "code": "legal_basis_required",
         "documented": true
       },
       {

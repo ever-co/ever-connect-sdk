@@ -23,6 +23,15 @@
     },
     "subject_hash": {
       "$ref": "common.schema.json#/$defs/hex64"
+    },
+    "subject_hashes": {
+      "description": "subject_hashes (the request to one linked instance, on instance/{instance_id}): the hash of every (iss, sub) pair that instance holds a link for; subject_hash repeats the first. Absent on the platform's own record of the request.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "common.schema.json#/$defs/hex64"
+      }
     }
   }
 }
