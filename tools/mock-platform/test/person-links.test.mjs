@@ -64,6 +64,47 @@ describe('person links', () => {
     expect(linked.status).toBe(200);
   });
 
+  it('resolves only the identity linked, not another identity of the same person', async () => {
+    env = await startMock({
+      people: [
+        { issuer: 'https://auth.ever.co', subject: '275396402232829475', person_id: '01JMQCKPERS0N00000000000P1', org_role: 'owner' },
+        { issuer: 'https://auth.ever.co', subject: '275396402232829476', person_id: '01JMQCKPERS0N00000000000P1', org_role: 'owner' },
+      ],
+    });
+    const c = await env.connect();
+    await env.admin('consent', { integration: 'ever_id_login' });
+    await env.call('POST', '/v1/instances/me/person-links', { token: c.token, body: report });
+    const other = await env.call('POST', '/v1/identity/resolve', {
+      token: c.token,
+      body: { issuer: 'https://auth.ever.co', subject: '275396402232829476' },
+    });
+    expect(other.status, 'another identity of the same person').toBe(404);
+    // That identity is known: once linked, it resolves.
+    await env.call('POST', '/v1/instances/me/person-links', {
+      token: c.token,
+      body: { ...report, product_user_ref: 'user-2', identity_subject: '275396402232829476' },
+    });
+    const linked = await env.call('POST', '/v1/identity/resolve', {
+      token: c.token,
+      body: { issuer: 'https://auth.ever.co', subject: '275396402232829476' },
+    });
+    expect(linked.status).toBe(200);
+  });
+
+  it('records changed workspace metadata on the same link', async () => {
+    const c = await setup();
+    const first = await env.call('POST', '/v1/instances/me/person-links', { token: c.token, body: report });
+    const moved = await env.call('POST', '/v1/instances/me/person-links', {
+      token: c.token,
+      body: { ...report, tenant_link_id: c.linkId, product_tenant_id: 't-2', display_name: 'Acme' },
+    });
+    expect(moved.status).toBe(201);
+    expect(moved.body.id, 'the same link').toBe(first.body.id);
+    expect(moved.body.tenant_link_id).toBe(c.linkId);
+    expect(moved.body.product_tenant_id).toBe('t-2');
+    expect(moved.body.display_name).toBe('Acme');
+  });
+
   it('unlinking twice, or a reference never linked, answers 204', async () => {
     const c = await setup();
     await env.call('POST', '/v1/instances/me/person-links', { token: c.token, body: report });
