@@ -184,8 +184,8 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
       "traduora"
     ],
     "status": "coming_soon",
-    "scope_version": 1,
-    "revoke_effect": "The Ever ID client for this installation is deleted and its local settings are cleared. Existing local sessions are not affected.",
+    "scope_version": 2,
+    "revoke_effect": "Ever refuses this installation's Ever ID requests at once (its client, its users' links, lookups). The identity provider stops signing people in through the installation's client once Ever deactivates it, shortly after and retried until it succeeds; until then a sign-in still completes, and for about a minute after the revocation (a cache) it may still carry this installation's organization data from Ever, then none. The client is never deleted: enabling the integration again reuses it with a new secret. Its users' links are marked unlinked, so deletion and export requests no longer reach it. Sign-in tokens already issued stay valid until they expire. Local accounts and sessions are not affected.",
     "notes": "Ever Teams signs in through its Gauzy API, so it is covered by the gauzy row.",
     "scope": [
       {
@@ -194,35 +194,80 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
         "form": "url",
         "frequency": "once",
         "required": true,
-        "purpose": "Register the sign-in callback addresses of this installation",
-        "retention": "Kept while the integration is enabled."
+        "purpose": "Register the sign-in callback address of this installation",
+        "retention": "Kept with the installation's record after the integration ends, so enabling it again reuses the client."
       },
       {
         "field_path": "instance.oidc.post_logout_uris",
         "direction": "to_ever",
         "form": "url",
         "frequency": "once",
-        "required": false,
-        "purpose": "Register the sign-out return addresses",
-        "retention": "Kept while the integration is enabled."
+        "required": true,
+        "purpose": "Register the sign-out address; Ever ID also sends its sign-out notices there (they carry the Ever ID and a session id)",
+        "retention": "Kept with the installation's record after the integration ends, so enabling it again reuses the client."
       },
       {
-        "field_path": "instance.oidc.backchannel_logout_uri",
+        "field_path": "member.product_user_ref",
         "direction": "to_ever",
-        "form": "url",
-        "frequency": "once",
-        "required": false,
-        "purpose": "Receive sign-out notices from Ever ID",
-        "retention": "Kept while the integration is enabled."
+        "form": "id",
+        "frequency": "on_change",
+        "required": true,
+        "purpose": "Link a local user to the Ever ID they signed in with (and whether the user linked it themselves or confirmed it), so that person's deletion and export requests reach this installation",
+        "retention": "Kept while linked. When the user unlinks or the integration ends, the link is marked unlinked and kept, unused, until the person's Ever account is deleted."
       },
       {
-        "field_path": "organization.display_name",
+        "field_path": "member.ever_id_subject",
+        "direction": "to_ever",
+        "form": "id",
+        "frequency": "on_change",
+        "required": true,
+        "purpose": "The Ever ID that local user signed in with",
+        "retention": "Kept while linked. When the user unlinks or the integration ends, the link is marked unlinked and kept, unused, until the person's Ever account is deleted."
+      },
+      {
+        "field_path": "member.workspace_refs",
+        "direction": "to_ever",
+        "form": "id",
+        "frequency": "on_change",
+        "required": false,
+        "purpose": "The workspace or organization that user belongs to in this installation, and its tenant link",
+        "retention": "Kept while linked. When the user unlinks or the integration ends, the link is marked unlinked and kept, unused, until the person's Ever account is deleted."
+      },
+      {
+        "field_path": "member.workspace_name",
         "direction": "to_ever",
         "form": "clear",
-        "frequency": "once",
+        "frequency": "on_change",
+        "required": false,
+        "purpose": "The name of that workspace, kept with the link (never an e-mail address)",
+        "retention": "Kept while linked. When the user unlinks or the integration ends, the link is marked unlinked and kept, unused, until the person's Ever account is deleted."
+      },
+      {
+        "field_path": "signin.id_token_check",
+        "direction": "to_ever",
+        "form": "clear",
+        "frequency": "on_action",
+        "required": false,
+        "purpose": "When the installation asks about a user, it may send the sign-in token it received for them; Ever only checks it (its issuer, this installation's client, the same Ever ID)",
+        "retention": "Not kept: checked and discarded."
+      },
+      {
+        "field_path": "result.receipt",
+        "direction": "to_ever",
+        "form": "clear",
+        "frequency": "on_action",
         "required": true,
-        "purpose": "Name shown on the Ever ID sign-in screen",
-        "retention": "Kept while the integration is enabled."
+        "purpose": "This installation's answer to a person's deletion or export request: deleted, anonymised, exported, no account, kept under a legal obligation (with its legal basis, up to 200 characters), forwarded to another controller (its kind and when it was told), or failed (with a reason code)",
+        "retention": "Kept with the person's deletion or export record."
+      },
+      {
+        "field_path": "result.export_url",
+        "direction": "to_ever",
+        "form": "url",
+        "frequency": "on_action",
+        "required": false,
+        "purpose": "Where the person downloads the export this installation made; Ever never fetches it",
+        "retention": "Kept with the person's export record."
       },
       {
         "field_path": "oidc.issuer",
@@ -231,7 +276,7 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
         "frequency": "once",
         "required": true,
         "purpose": "Ever ID issuer address for this installation",
-        "retention": "Stored in the installation's own settings."
+        "retention": "Kept with the installation's record after the integration ends, so enabling it again reuses the client."
       },
       {
         "field_path": "oidc.client_id",
@@ -240,7 +285,7 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
         "frequency": "once",
         "required": true,
         "purpose": "Client identifier for this installation",
-        "retention": "Stored in the installation's own settings."
+        "retention": "Kept with the installation's record after the integration ends, so enabling it again reuses the client."
       },
       {
         "field_path": "oidc.client_secret",
@@ -248,8 +293,35 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
         "form": "clear",
         "frequency": "once",
         "required": true,
-        "purpose": "Client secret, stored encrypted by the installation",
-        "retention": "Stored encrypted in the installation's own settings; environment variables take precedence."
+        "purpose": "Client secret, handed over once and stored encrypted by the installation",
+        "retention": "Ever holds it encrypted only until the installation first reads it, then erases its copy."
+      },
+      {
+        "field_path": "signin.id_token",
+        "direction": "from_ever",
+        "form": "clear",
+        "frequency": "on_action",
+        "required": true,
+        "purpose": "At each sign-in through this installation, Ever ID gives it the person's Ever ID, e-mail address (and whether it is verified), name, language, Ever person id, the kind of Ever ID (for a company-managed Ever ID, the id of the managing organization, even when that organization is not linked to this installation), and the organizations linked to this installation with the person's role, tenant and tier",
+        "retention": "Not kept by Ever beyond the sign-in; the installation keeps what it needs."
+      },
+      {
+        "field_path": "profile.linked_context",
+        "direction": "from_ever",
+        "form": "clear",
+        "frequency": "on_action",
+        "required": false,
+        "purpose": "When the installation asks about one of its linked users: their Ever person id, name and account status, the kind of Ever ID (for a company-managed Ever ID, the id of the managing organization, even when it is not linked to this installation), and for the organizations linked to this installation their id, handle, the person's role, tier and links (never an e-mail address)",
+        "retention": "The answer is not kept. Ever keeps the person's organization context (ids, roles, links) in its sign-in cache, refreshed at each sign-in or lookup and deleted with the person's Ever account."
+      },
+      {
+        "field_path": "event.person_requests",
+        "direction": "from_ever",
+        "form": "id",
+        "frequency": "events",
+        "required": true,
+        "purpose": "A linked person's deletion or export request, naming the person by Ever's person id and by a hash of each Ever ID this installation linked, with the request id and the date to answer by",
+        "retention": "Kept in the installation's event feed for the event retention period (90 days by default); the hashes stay with the person's deletion record."
       }
     ],
     "docs_anchor": "ever_id_login"
