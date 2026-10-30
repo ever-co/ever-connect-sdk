@@ -293,6 +293,12 @@ export function createMockPlatform(options = {}) {
             fail(422, 'validation_failed', 'the body is not JSON', { errors: [{ path: '', code: 'invalid_shape', message: 'not JSON' }] });
           }
         }
+        // A JSON `null` is no request body (only `testWebhook` takes an empty one): refused before
+        // any handler reads its fields.
+        if (ctx.body === null && route.operationId !== 'testWebhook')
+          fail(422, 'validation_failed', 'the body is not a JSON object', {
+            errors: [{ path: '', code: 'invalid_shape', message: 'a JSON object is required' }],
+          });
         const v = route.pending
           ? validatePending(route.operationId, ctx.body)
           : route.schema && ctx.body !== null
