@@ -270,7 +270,7 @@ function requestCases() {
       },
     ),
     ack: c(
-      'AckRequest',
+      'InstanceAck',
       { job_id: IDS.job, result: 'anonymised', detail: { reason_code: 'identity_unlinked' } },
       {
         'bad-result': (b) => [{ ...b, result: 'ignored' }, '/result'],
