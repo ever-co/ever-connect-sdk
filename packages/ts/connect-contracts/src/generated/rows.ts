@@ -1730,6 +1730,11 @@ export const ROW_COVERAGE: readonly RowCoverage[] = [
         "status": 409,
         "code": "oidc_client_exists",
         "documented": true
+      },
+      {
+        "status": 422,
+        "code": "redirect_uri_invalid",
+        "documented": true
       }
     ]
   },
@@ -1941,6 +1946,11 @@ export const ROW_COVERAGE: readonly RowCoverage[] = [
       {
         "status": 422,
         "code": "subject_unknown",
+        "documented": true
+      },
+      {
+        "status": 422,
+        "code": "link_not_found",
         "documented": true
       },
       {

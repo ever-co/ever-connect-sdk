@@ -4,8 +4,25 @@ import { randomBytes } from 'node:crypto';
 import { b64url } from '../crypto.mjs';
 import { fail } from '../problem.mjs';
 
+/** An exact `https` URI with a host and no credentials, query or fragment: its origin. */
+function exactOrigin(raw) {
+  let u;
+  try {
+    u = new URL(raw);
+  } catch {
+    return null;
+  }
+  if (u.protocol !== 'https:' || !u.hostname || u.username || u.password) return null;
+  if (raw.includes('?') || raw.includes('#') || u.hostname.includes('*')) return null;
+  return u.origin;
+}
+
 export const oidcHandlers = {
-  instanceRequestOidcClient({ state, instance }) {
+  instanceRequestOidcClient({ state, instance, body }) {
+    const redirect = exactOrigin(body.redirect_uri);
+    const logout = exactOrigin(body.logout_uri);
+    if (!redirect || !logout || redirect !== logout)
+      fail(422, 'redirect_uri_invalid', 'exact https URIs with a host, both on one origin, no query, fragment or credentials');
     if (instance.oidc && ['pending', 'ready'].includes(instance.oidc.status))
       fail(409, 'oidc_client_exists', 'this installation already has its sign-in client (pending or ready)');
     instance.oidc = {

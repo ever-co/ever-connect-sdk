@@ -286,6 +286,16 @@ export const OK = {
   },
   resolveIdentity: async (env) => {
     const c = await connected(env, { enable: ['ever_id_login'] });
+    // Only a subject this installation linked resolves.
+    await env.call('POST', '/v1/instances/me/person-links', {
+      token: c.token,
+      body: {
+        product_user_ref: 'user-1',
+        identity_issuer: 'https://auth.ever.co',
+        identity_subject: '275396402232829475',
+        link_method: 'explicit',
+      },
+    });
     return env.call('POST', '/v1/identity/resolve', {
       token: c.token,
       body: { issuer: 'https://auth.ever.co', subject: '275396402232829475' },
@@ -804,6 +814,11 @@ export const ERRORS = {
   ...integrationPairs(14, 'ever_id_login', calls.oidc),
   '14:404:not_found': async (env) =>
     env.call('GET', '/v1/instances/me/oidc-client', { token: (await connected(env, { enable: ['ever_id_login'] })).token }),
+  '14:422:redirect_uri_invalid': async (env) =>
+    env.call('POST', '/v1/instances/me/oidc-client', {
+      token: (await connected(env, { enable: ['ever_id_login'] })).token,
+      body: { redirect_uri: 'http://g.example.com/cb', logout_uri: 'https://g.example.com/l' },
+    }),
   '14:409:oidc_client_exists': async (env) => {
     const c = await connected(env, { enable: ['ever_id_login'] });
     await calls.oidc(env, c);
@@ -880,6 +895,17 @@ export const ERRORS = {
       headers: idem('u-http'),
     }),
   ...integrationPairs(19, 'ever_id_login', calls.personLink),
+  '19:422:link_not_found': async (env) =>
+    env.call('POST', '/v1/instances/me/person-links', {
+      token: (await connected(env, { enable: ['ever_id_login'] })).token,
+      body: {
+        product_user_ref: 'u',
+        identity_issuer: 'https://auth.ever.co',
+        identity_subject: '275396402232829475',
+        link_method: 'explicit',
+        tenant_link_id: '01JMQCK0RG000000000000000Z',
+      },
+    }),
   '19:422:subject_unknown': async (env) =>
     env.call('POST', '/v1/instances/me/person-links', {
       token: (await connected(env, { enable: ['ever_id_login'] })).token,

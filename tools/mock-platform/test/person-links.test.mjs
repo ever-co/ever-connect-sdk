@@ -33,6 +33,37 @@ describe('person links', () => {
     expect(again.body.id).toBe(first.body.id);
   });
 
+  it('refuses a link method other than explicit or confirmed, and a tenant link it does not hold', async () => {
+    const c = await setup();
+    const typo = await env.call('POST', '/v1/instances/me/person-links', {
+      token: c.token,
+      body: { ...report, link_method: 'typo' },
+    });
+    expect(typo.status).toBe(422);
+    expect(typo.body.code).toBe('validation_failed');
+    const foreign = await env.call('POST', '/v1/instances/me/person-links', {
+      token: c.token,
+      body: { ...report, tenant_link_id: '01JMQCK0RG000000000000000Z' },
+    });
+    expect(foreign.status).toBe(422);
+    expect(foreign.body.code).toBe('link_not_found');
+    const own = await env.call('POST', '/v1/instances/me/person-links', {
+      token: c.token,
+      body: { ...report, tenant_link_id: c.linkId },
+    });
+    expect(own.status).toBe(201);
+  });
+
+  it('resolves only a subject this installation linked', async () => {
+    const c = await setup();
+    const ask = { issuer: 'https://auth.ever.co', subject: report.identity_subject };
+    const unlinked = await env.call('POST', '/v1/identity/resolve', { token: c.token, body: ask });
+    expect(unlinked.status, 'known but not linked here').toBe(404);
+    await env.call('POST', '/v1/instances/me/person-links', { token: c.token, body: report });
+    const linked = await env.call('POST', '/v1/identity/resolve', { token: c.token, body: ask });
+    expect(linked.status).toBe(200);
+  });
+
   it('unlinking twice, or a reference never linked, answers 204', async () => {
     const c = await setup();
     await env.call('POST', '/v1/instances/me/person-links', { token: c.token, body: report });
