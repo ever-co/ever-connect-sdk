@@ -1233,6 +1233,12 @@ export interface components {
              */
             readonly reason_code?: string;
         };
+        /**
+         * @description The answers an instance may give (the contract's closed set; which ones fit a deletion or an
+         *     export, and what each needs, is checked when the answer is read).
+         * @enum {string}
+         */
+        readonly AckResult: "deleted" | "anonymised" | "retained_legal" | "no_account" | "forwarded_to_controller" | "exported" | "failed";
         readonly BillingLink: {
             readonly created_at: components["schemas"]["Timestamp"];
             readonly id: components["schemas"]["Ulid"];
@@ -1869,9 +1875,8 @@ export interface components {
              *     `forwarded_to_controller` or `failed`. An export: `exported`, `no_account`,
              *     `forwarded_to_controller` or `failed`. `failed` keeps the receipt open for a later final
              *     answer; every other answer is final.
-             * @example deleted
              */
-            readonly result: string;
+            readonly result: components["schemas"]["AckResult"];
         };
         /** @description A signed entitlement document as an installation receives it. */
         readonly InstanceEntitlement: {

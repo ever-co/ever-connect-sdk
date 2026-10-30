@@ -3573,6 +3573,19 @@ components:
           pattern: ^[a-z_]{1,64}$
           type: string
       type: object
+    AckResult:
+      description: |-
+        The answers an instance may give (the contract's closed set; which ones fit a deletion or an
+        export, and what each needs, is checked when the answer is read).
+      enum:
+        - deleted
+        - anonymised
+        - retained_legal
+        - no_account
+        - forwarded_to_controller
+        - exported
+        - failed
+      type: string
     BillingLink:
       type: object
       required:
@@ -4728,13 +4741,12 @@ components:
           maxLength: 200
           type: string
         result:
+          $ref: "#/components/schemas/AckResult"
           description: |-
             A deletion: `deleted`, `anonymised`, `retained_legal`, `no_account`,
             `forwarded_to_controller` or `failed`. An export: `exported`, `no_account`,
             `forwarded_to_controller` or `failed`. `failed` keeps the receipt open for a later final
             answer; every other answer is final.
-          example: deleted
-          type: string
       required:
         - job_id
         - result

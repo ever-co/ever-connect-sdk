@@ -24,6 +24,19 @@
         },
         "type": "object"
       },
+      "AckResult": {
+        "description": "The answers an instance may give (the contract's closed set; which ones fit a deletion or an\nexport, and what each needs, is checked when the answer is read).",
+        "enum": [
+          "deleted",
+          "anonymised",
+          "retained_legal",
+          "no_account",
+          "forwarded_to_controller",
+          "exported",
+          "failed"
+        ],
+        "type": "string"
+      },
       "BillingLinkCreate": {
         "type": "object",
         "description": "Reported by an Ever-operated instance under integration `billing_link` (declared field `tenant.stripeCustomerId` only).",
@@ -343,9 +356,8 @@
             "type": "string"
           },
           "result": {
-            "description": "A deletion: `deleted`, `anonymised`, `retained_legal`, `no_account`,\n`forwarded_to_controller` or `failed`. An export: `exported`, `no_account`,\n`forwarded_to_controller` or `failed`. `failed` keeps the receipt open for a later final\nanswer; every other answer is final.",
-            "example": "deleted",
-            "type": "string"
+            "$ref": "#/components/schemas/AckResult",
+            "description": "A deletion: `deleted`, `anonymised`, `retained_legal`, `no_account`,\n`forwarded_to_controller` or `failed`. An export: `exported`, `no_account`,\n`forwarded_to_controller` or `failed`. `failed` keeps the receipt open for a later final\nanswer; every other answer is final."
           }
         },
         "required": [

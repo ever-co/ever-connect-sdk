@@ -21,6 +21,78 @@ pub mod components {
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub reason_code: ::std::option::Option<::std::string::String>,
     }
+    /**The answers an instance may give (the contract's closed set; which ones fit a deletion or an
+    export, and what each needs, is checked when the answer is read).*/
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd,
+    )]
+    pub enum AckResult {
+        #[serde(rename = "deleted")]
+        Deleted,
+        #[serde(rename = "anonymised")]
+        Anonymised,
+        #[serde(rename = "retained_legal")]
+        RetainedLegal,
+        #[serde(rename = "no_account")]
+        NoAccount,
+        #[serde(rename = "forwarded_to_controller")]
+        ForwardedToController,
+        #[serde(rename = "exported")]
+        Exported,
+        #[serde(rename = "failed")]
+        Failed,
+    }
+    impl ::std::fmt::Display for AckResult {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Deleted => f.write_str("deleted"),
+                Self::Anonymised => f.write_str("anonymised"),
+                Self::RetainedLegal => f.write_str("retained_legal"),
+                Self::NoAccount => f.write_str("no_account"),
+                Self::ForwardedToController => f.write_str("forwarded_to_controller"),
+                Self::Exported => f.write_str("exported"),
+                Self::Failed => f.write_str("failed"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for AckResult {
+        type Err = self::error::ConversionError;
+        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "deleted" => Ok(Self::Deleted),
+                "anonymised" => Ok(Self::Anonymised),
+                "retained_legal" => Ok(Self::RetainedLegal),
+                "no_account" => Ok(Self::NoAccount),
+                "forwarded_to_controller" => Ok(Self::ForwardedToController),
+                "exported" => Ok(Self::Exported),
+                "failed" => Ok(Self::Failed),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for AckResult {
+        type Error = self::error::ConversionError;
+        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for AckResult {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
     ///`BillingLink`
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct BillingLink {
@@ -1588,7 +1660,7 @@ pub mod components {
         `forwarded_to_controller` or `failed`. An export: `exported`, `no_account`,
         `forwarded_to_controller` or `failed`. `failed` keeps the receipt open for a later final
         answer; every other answer is final.*/
-        pub result: ::std::string::String,
+        pub result: AckResult,
     }
     ///A signed entitlement document as an installation receives it.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]

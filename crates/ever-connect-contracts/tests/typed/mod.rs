@@ -16,6 +16,7 @@ fn rt<T: DeserializeOwned + Serialize>(value: &Value) -> Result<Value, String> {
 pub fn component(name: &str, value: &Value) -> Option<Result<Value, String>> {
     Some(match name {
         "AckDetail" => rt::<components::AckDetail>(value),
+        "AckResult" => rt::<components::AckResult>(value),
         "BillingLink" => rt::<components::BillingLink>(value),
         "BillingLinkCreate" => rt::<components::BillingLinkCreate>(value),
         "Compat" => rt::<components::Compat>(value),
