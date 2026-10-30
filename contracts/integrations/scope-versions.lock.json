@@ -10,8 +10,8 @@
       "scope_sha256": "390773fb3fbffb6d5b48d2d6f220a2a0a827fd6ff01cbd66cd3186062eabe437"
     },
     "ever_id_login": {
-      "scope_version": 1,
-      "scope_sha256": "210842e6907fe9d071074098ac8a9b81143a3031995cc00ecff5a9d882dd30bd"
+      "scope_version": 2,
+      "scope_sha256": "38f54c9ca4d9fc6f09208a38d07c0bd0bbbfd4fda1b6e9cdbe4cadc4163cd87e"
     },
     "counterparty_lookup": {
       "scope_version": 1,
