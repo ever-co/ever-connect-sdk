@@ -1,7 +1,7 @@
 {
   "description": "sha256 of every file tools/generate.mjs writes",
   "files": {
-    "contracts/generated/ever-platform.v1.json": "c12e59cca6d392931baa3b29691a88b24a6c9be3b554e3fd33043e6a404cd3d0",
+    "contracts/generated/ever-platform.v1.json": "af70d2dbc38697f6ef0d763a63f9b8639c4a68431d22ffc8600765777dfe6560",
     "contracts/generated/outbound-calls.json": "571fa3aef3e2c55fbe267654db8920d6fba1fa295712e7815203e2f0dbdf2202",
     "contracts/generated/row-coverage.json": "fb3e288ea3fde96950cb50076a43684fc46753e92060e6cc4ba7ddf5b78dd70b",
     "crates/ever-connect-contracts/src/generated/constants.rs": "7c60a0f093b767087ab0f2c07f390a98a587311d03d48080c6cde98dda638b69",
@@ -63,7 +63,7 @@
     "docs/outbound-calls.md": "79f613a4741b6357d826daf8edaa3f7007405312d626130b29b4af75a7ac1585",
     "docs/stats-schema.md": "d582150ba9c2c760c5782ced37519d95f06ee8b0ed474158f43d515d92f06611",
     "packages/ts/connect-contracts/src/generated/constants.ts": "2fbeba79e250e60b4e8582becc2403f16143af7ccdd7c473b80330dfc0e6e2e1",
-    "packages/ts/connect-contracts/src/generated/ever-platform.v1.ts": "e6ca03647c41e487041c5a69bb5658ac12b31b68820b9ef5ad92cd1081a5411c",
+    "packages/ts/connect-contracts/src/generated/ever-platform.v1.ts": "1a4a0aa4450fbeaaefc301962e9d0d10717422593ecb188d3a813eb35a73892a",
     "packages/ts/connect-contracts/src/generated/integrations.ts": "80d4c979d3d86aed4fd3252ab95a696a5fcdf36427f3ead4b08384718f752a52",
     "packages/ts/connect-contracts/src/generated/problems.ts": "cc10801f7e9d5016c9a6ad70aab8ed4c49bc6f46abd6719c2c4116a2121c0920",
     "packages/ts/connect-contracts/src/generated/rows.ts": "3f948fe47277f6248736ad990448d2ae759648b9e96bc8171946bdaeb57f4ad2",
@@ -72,7 +72,7 @@
     "tools/egress-audit/selftest/stats-sender/report.json": "78615e517bf4713ee2d557a839200ac6c3e39451fd8ef26fdf8c7dff77fd7f39",
     "tools/mock-platform/contracts/constants.json": "9052f0382aa56e6f90d0b8844663786a6024b008832498c20bb0883bce42f828",
     "tools/mock-platform/contracts/fixtures/lookup/test-vectors.json": "d76355ba62f3e18bf1d6b1a0b5dc5265c108cb9c104c0e45050594a589144b69",
-    "tools/mock-platform/contracts/generated/ever-platform.v1.json": "c12e59cca6d392931baa3b29691a88b24a6c9be3b554e3fd33043e6a404cd3d0",
+    "tools/mock-platform/contracts/generated/ever-platform.v1.json": "af70d2dbc38697f6ef0d763a63f9b8639c4a68431d22ffc8600765777dfe6560",
     "tools/mock-platform/contracts/generated/outbound-calls.json": "571fa3aef3e2c55fbe267654db8920d6fba1fa295712e7815203e2f0dbdf2202",
     "tools/mock-platform/contracts/generated/row-coverage.json": "fb3e288ea3fde96950cb50076a43684fc46753e92060e6cc4ba7ddf5b78dd70b",
     "tools/mock-platform/contracts/integrations/app_sync.json": "1fa3bfa566557109905ec0ecc6832b1ac39ec799b737d231bc95ccf54ae5b70e",

@@ -4535,7 +4535,7 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description `subject_unknown`: no active Ever ID identity has this subject (nothing written); `link_not_found`: `tenant_link_id` is not an active tenant link of this installation; `schema_violation`: an e-mail address as `display_name`; `validation_failed` naming the field */
+            /** @description `subject_unknown`: no active Ever ID identity with this subject signed in through this installation's own Ever ID client (nothing written); `link_not_found`: `tenant_link_id` is not an active tenant link of this installation; `schema_violation`: an e-mail address as `display_name`; `validation_failed` naming the field */
             readonly 422: {
                 headers: {
                     readonly [name: string]: unknown;
