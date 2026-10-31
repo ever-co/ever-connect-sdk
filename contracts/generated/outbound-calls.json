@@ -615,7 +615,7 @@
           "status": "pinned"
         }
       ],
-      "trigger": "a user of the installation links or unlinks Ever ID; a one-time sync of links that existed before the installation connected",
+      "trigger": "a user of the installation links or unlinks Ever ID; a one-time sync of links that existed before the installation connected. A link is accepted only for an Ever ID that signed in through this installation's own Ever ID client (otherwise `422 subject_unknown`, nothing stored), so report it after that sign-in",
       "payload": "product_user_ref (the product's user id), identity_issuer, identity_subject, link_method, product_tenant_id?, product_org_id?, tenant_link_id?, display_name? of the tenant; never an e-mail or a person's name",
       "cadence": "on action",
       "disable": "disable ever_id_login",
