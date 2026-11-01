@@ -449,12 +449,18 @@
           "path": "/v1/instances/me/oidc-client",
           "operation_id": "instanceGetOidcClient",
           "status": "pinned"
+        },
+        {
+          "method": "DELETE",
+          "path": "/v1/instances/me/oidc-client",
+          "operation_id": "instanceDeleteOidcClient",
+          "status": "pinned"
         }
       ],
-      "trigger": "integration ever_id_login enabled; then a status read until the client is ready",
+      "trigger": "integration ever_id_login enabled; then a status read until the client is ready; a DELETE when the installation turns its sign-in client off",
       "payload": "redirect_uri, logout_uri (the sign-in callback and back-channel logout addresses); the answer carries the client id and, once, the client secret",
       "cadence": "once per installation (one client serves every linked organization), then a read every few seconds until ready",
-      "disable": "disable ever_id_login (the client is removed on the Ever Platform side)",
+      "disable": "disable ever_id_login, or DELETE the client (either way the client is switched off on the Ever Platform side; asking again issues a new secret)",
       "products": [
         "gauzy",
         "works",

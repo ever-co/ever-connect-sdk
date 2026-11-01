@@ -211,6 +211,27 @@ export const OK = {
     if (!ready.body.client_secret || again.body.client_secret) throw new Error('the secret must be answered once');
     return ready;
   },
+  instanceDeleteOidcClient: async (env) => {
+    const c = await connected(env, { enable: ['ever_id_login'] });
+    const nothing = await env.call('DELETE', '/v1/instances/me/oidc-client', { token: c.token });
+    if (nothing.status !== 204) throw new Error(`nothing to turn off must answer 204: ${nothing.text}`);
+    await env.call('POST', '/v1/instances/me/oidc-client', {
+      token: c.token,
+      body: { redirect_uri: 'https://gauzy.example.com/cb', logout_uri: 'https://gauzy.example.com/l' },
+      headers: idem('od'),
+    });
+    await env.call('GET', '/v1/instances/me/oidc-client', { token: c.token });
+    const off = await env.call('DELETE', '/v1/instances/me/oidc-client', { token: c.token });
+    const read = await env.call('GET', '/v1/instances/me/oidc-client', { token: c.token });
+    if (read.body.status !== 'revoked') throw new Error(`a turned-off client reads revoked: ${read.text}`);
+    const again = await env.call('POST', '/v1/instances/me/oidc-client', {
+      token: c.token,
+      body: { redirect_uri: 'https://gauzy.example.com/cb', logout_uri: 'https://gauzy.example.com/l' },
+      headers: idem('od2'),
+    });
+    if (again.status !== 202) throw new Error(`asking again after a DELETE is accepted: ${again.text}`);
+    return off;
+  },
   instanceMirrorApps: async (env) => {
     const c = await connected(env, { enable: ['app_sync'] });
     return env.call('POST', '/v1/instances/me/mirror/apps', {

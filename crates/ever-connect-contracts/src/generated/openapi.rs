@@ -3235,7 +3235,8 @@ pub mod components {
         ///The request it was made for.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub job_id: ::std::option::Option<::std::string::String>,
-        ///`pending`, `ready`, `failed` or `revoked`.
+        /**`pending`, `ready`, `failed`, `revoked` or `expired` (a secret not fetched in time was
+        erased: ask again).*/
         pub status: ::std::string::String,
     }
     ///The installation's sign-in endpoints for its Ever ID client.

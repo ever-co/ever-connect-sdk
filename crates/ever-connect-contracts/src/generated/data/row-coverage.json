@@ -548,6 +548,14 @@
           "success": [
             200
           ]
+        },
+        {
+          "operation_id": "instanceDeleteOidcClient",
+          "method": "DELETE",
+          "path": "/v1/instances/me/oidc-client",
+          "success": [
+            204
+          ]
         }
       ],
       "errors": [

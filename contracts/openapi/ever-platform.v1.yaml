@@ -1486,6 +1486,28 @@ paths:
                 $ref: "#/components/schemas/Problem"
           description: "`redirect_uri_invalid`: not an exact `https` URI, or the two are not one origin; `product_not_supported`: this deployment makes no client for the product"
       x-ever-row: 14
+    delete:
+      summary: |-
+        Turns the installation's own Ever ID client off (`204`, also when there is none or it ended
+        already): `revoked`, the app deactivated shortly after; its person links stay. Ask again with
+        `POST` for a new secret.
+      tags:
+        - registry
+      x-ever-integration: ever_id_login
+      x-ever-rate-limit: instance
+      operationId: instanceDeleteOidcClient
+      security:
+        - instanceToken: []
+      responses:
+        "204":
+          description: Turned off (or there was nothing to turn off)
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "`integration_disabled`, `integration_revoked` or `denied_by_policy`: `ever_id_login` is not enabled for this installation; `instance_pending_approval` or `instance_disconnected`"
+      x-ever-row: 14
   /v1/instances/me/org-profile:
     post:
       tags:
@@ -2879,11 +2901,17 @@ paths:
         come from a sign-in at most 300 s old (`x-ever-fresh-auth-s`; else `403 step_up_required`); a
         session needs no fresh sign-in. A token a product, an installation or an App obtained (its
         `azp` is a product, `inst-*` or App client) is refused with `403 session_required` before the
-        handler runs: consenting from a product's own dialog with a product step-up token is not part
-        of contract v1, so a product sends its admin to app.ever.co with the signed link of
-        `GET /v1/instances/me/consent-url`. The caller is an owner or admin of the organization (`403
-        forbidden_role`), and an installation-wide integration is changed only by the organization that
-        connected the installation (`403 not_connection_owner`).
+        handler runs, with one exception (`everIdTokenProductUi`, the in-product consent path): a
+        step-up token (sign-in at most 300 s old) from the installation's **own** client
+        (`inst-<instance id>`, or an Ever Cloud product client configured for an installation Ever
+        operates of that product) may change that installation's integrations from the product's own
+        dialog, never `counterparty_discoverable`
+        or `instance_url`; the consent records `consent_source = product_ui` and `evidence.ui =
+        product:<product>`. Any other product token answers `403 session_required`; otherwise a product
+        sends its admin to app.ever.co with the signed link of `GET /v1/instances/me/consent-url`. The
+        caller is an owner or admin of the organization (`403 forbidden_role`), and an
+        installation-wide integration is changed only by the organization that connected the
+        installation (`403 not_connection_owner`).
 
         **Limits.** `Idempotency-Key` is required (a replay within 24 h answers the first result); the
         `person` rate class (1 200 requests a minute per person by default, `EVER_RATE_LIMIT_PERSON`;
@@ -2962,7 +2990,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-          description: "`session_required` (a token a product, an installation or an App obtained), `step_up_required` (a token from a sign-in older than 300 s), `forbidden_role` (a member), `not_connection_owner` (an installation-wide integration changed by an organization that does not own the connection, or of an installation Ever operates), `denied_by_policy`, `entitlement_required`"
+          description: "`session_required` (a token a product, an installation or an App obtained, except the installation's own client on the in-product path for its own installation and an integration other than `counterparty_discoverable` and `instance_url`), `step_up_required` (a token from a sign-in older than 300 s), `forbidden_role` (a member), `not_connection_owner` (an installation-wide integration changed by an organization that does not own the connection, or of an installation Ever operates), `denied_by_policy`, `entitlement_required`"
         "404":
           content:
             application/problem+json:
@@ -2995,7 +3023,7 @@ paths:
           description: "`unavailable`: this deployment publishes no terms (no consent can be recorded), or a key it needs is missing"
       x-ever-row: 33
       x-ever-availability: not_in_v1
-      x-ever-availability-note: "Contract v1 accepts a person's app.ever.co session or an Ever ID token of the Ever Platform project from a sign-in at most 300 s old; a token a product, an installation or an App obtained is refused with 403 session_required. Consenting from a product's own dialog with a product step-up token is not part of v1, so no installation calls this operation in v1: a product sends its admin to app.ever.co with the signed link of instanceGetConsentUrl. The operation's limits (Idempotency-Key, the person rate class, a 16 KiB body, the closed body, current scope and agreement versions) are stated in the pinned contract."
+      x-ever-availability-note: A person's app.ever.co session, an Ever ID token of the Ever Platform project from a sign-in at most 300 s old, or (the in-product consent path) a step-up Ever ID token from the installation's own client (inst-<instance id>, or an Ever Cloud product client configured for an installation Ever operates), signed in at most 300 s ago, of an owner or admin, for that installation only and never for counterparty_discoverable or instance_url; such a consent records consent_source product_ui. Any other token a product, an installation or an App obtained is refused with 403 session_required, and a product may still send its admin to app.ever.co with the signed link of instanceGetConsentUrl. No installation calls this operation with its instance token. The operation's limits (Idempotency-Key, the person rate class, a 16 KiB body, the closed body, current scope and agreement versions) are stated in the pinned contract.
   /v1/provision-intents/{jti}/complete:
     post:
       tags:
@@ -5866,7 +5894,9 @@ components:
             - string
             - "null"
         status:
-          description: "`pending`, `ready`, `failed` or `revoked`."
+          description: |-
+            `pending`, `ready`, `failed`, `revoked` or `expired` (a secret not fetched in time was
+            erased: ask again).
           example: ready
           type: string
       required:

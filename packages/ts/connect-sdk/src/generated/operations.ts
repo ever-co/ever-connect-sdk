@@ -640,6 +640,25 @@ export const OPERATIONS = {
     "rateLimit": "instance",
     "status": "pinned"
   },
+  "instanceDeleteOidcClient": {
+    "id": "instanceDeleteOidcClient",
+    "method": "DELETE",
+    "path": "/v1/instances/me/oidc-client",
+    "pathParams": [],
+    "query": [],
+    "auth": "instance",
+    "idempotencyKey": "none",
+    "linkHeader": "none",
+    "conditional": false,
+    "body": null,
+    "success": [
+      204
+    ],
+    "row": 14,
+    "integration": "ever_id_login",
+    "rateLimit": "instance",
+    "status": "pinned"
+  },
   "instancePushOrgProfile": {
     "id": "instancePushOrgProfile",
     "method": "POST",

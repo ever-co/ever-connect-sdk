@@ -372,6 +372,8 @@ export function createEverPlatformClient(o: EverPlatformClientOptions) {
         request: (req: RequestBody<'instanceRequestOidcClient'>, idempotencyKey?: string) =>
           plain('instanceRequestOidcClient', { body: req, idempotencyKey }),
         get: () => plain('instanceGetOidcClient'),
+        /** Turns this installation's own sign-in client off (204, also when there is none); a new request issues a new secret. */
+        remove: () => plain('instanceDeleteOidcClient'),
       },
       personLinks: {
         /** The platform needs no Idempotency-Key here (the same report again answers the recorded link); a given one is ignored. */
