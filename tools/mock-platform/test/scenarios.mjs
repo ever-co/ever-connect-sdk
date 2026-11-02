@@ -220,7 +220,7 @@ export const OK = {
       body: { redirect_uri: 'https://gauzy.example.com/cb', logout_uri: 'https://gauzy.example.com/l' },
       headers: idem('od'),
     });
-    await env.call('GET', '/v1/instances/me/oidc-client', { token: c.token });
+    const first = await env.call('GET', '/v1/instances/me/oidc-client', { token: c.token });
     const off = await env.call('DELETE', '/v1/instances/me/oidc-client', { token: c.token });
     const read = await env.call('GET', '/v1/instances/me/oidc-client', { token: c.token });
     if (read.body.status !== 'revoked') throw new Error(`a turned-off client reads revoked: ${read.text}`);
@@ -230,6 +230,11 @@ export const OK = {
       headers: idem('od2'),
     });
     if (again.status !== 202) throw new Error(`asking again after a DELETE is accepted: ${again.text}`);
+    // The replacement becomes ready with a NEW secret, shown once.
+    const renewed = await env.call('GET', '/v1/instances/me/oidc-client', { token: c.token });
+    if (renewed.body.status !== 'ready' || !renewed.body.client_secret)
+      throw new Error(`the replacement client is ready with its secret: ${renewed.text}`);
+    if (renewed.body.client_secret === first.body.client_secret) throw new Error('asking again after a DELETE issues a new secret');
     return off;
   },
   instanceMirrorApps: async (env) => {

@@ -2936,6 +2936,7 @@ paths:
       operationId: putIntegrationState
       security:
         - everIdToken: []
+        - everIdTokenProductUi: []
       parameters:
         - description: The organization id.
           in: path
@@ -3564,6 +3565,11 @@ components:
     everIdToken:
       bearerFormat: JWT
       description: Ever ID access token whose audience includes the Ever Platform project. Accepted only when its authorized party (`azp`) is a client registered in the Ever Platform project (app.ever.co, SDK and CLI clients). A token whose `azp` is a product, installation or App client is accepted only under `everIdTokenRead` and answers `403 session_required` on every other operation. Where an operation sets `x-ever-fresh-auth-s`, the token's `auth_time` must be that recent (`403 step_up_required`).
+      scheme: bearer
+      type: http
+    everIdTokenProductUi:
+      bearerFormat: JWT
+      description: "The same product-class Ever ID access token on the in-product consent path: listed on exactly `putIntegrationState`. Its `azp` must be the installation's own client (`inst-<instance id>`, or an Ever Cloud product client configured for an installation Ever operates), its `auth_time` at most 300 s old (`403 step_up_required`), the person an owner or admin of the organization, and the installation the one in the path; never for `counterparty_discoverable` or `instance_url`. Anything else answers `403 session_required`."
       scheme: bearer
       type: http
     everIdTokenRead:

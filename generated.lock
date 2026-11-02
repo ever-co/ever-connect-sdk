@@ -1,7 +1,7 @@
 {
   "description": "sha256 of every file tools/generate.mjs writes",
   "files": {
-    "contracts/generated/ever-platform.v1.json": "3861fd252198c31be5e14b5a6c34667ae5b3a468283eafd51f0ccda940ab7e78",
+    "contracts/generated/ever-platform.v1.json": "88cf25f33eb7fc16c1c475ed5deb75b5014ab2f0be8576e6dfa536183b0ac18d",
     "contracts/generated/outbound-calls.json": "ee61e9ae68d44f19c6684a05e0693ceba9ac83bccd09469d76aec8f30c8fa929",
     "contracts/generated/row-coverage.json": "9bc0f26495a5dcba28071605b0715fb581160051578a7b51f12d84b07f8497ed",
     "crates/ever-connect-contracts/src/generated/constants.rs": "7c60a0f093b767087ab0f2c07f390a98a587311d03d48080c6cde98dda638b69",
@@ -72,7 +72,7 @@
     "tools/egress-audit/selftest/stats-sender/report.json": "78615e517bf4713ee2d557a839200ac6c3e39451fd8ef26fdf8c7dff77fd7f39",
     "tools/mock-platform/contracts/constants.json": "9052f0382aa56e6f90d0b8844663786a6024b008832498c20bb0883bce42f828",
     "tools/mock-platform/contracts/fixtures/lookup/test-vectors.json": "d76355ba62f3e18bf1d6b1a0b5dc5265c108cb9c104c0e45050594a589144b69",
-    "tools/mock-platform/contracts/generated/ever-platform.v1.json": "3861fd252198c31be5e14b5a6c34667ae5b3a468283eafd51f0ccda940ab7e78",
+    "tools/mock-platform/contracts/generated/ever-platform.v1.json": "88cf25f33eb7fc16c1c475ed5deb75b5014ab2f0be8576e6dfa536183b0ac18d",
     "tools/mock-platform/contracts/generated/outbound-calls.json": "ee61e9ae68d44f19c6684a05e0693ceba9ac83bccd09469d76aec8f30c8fa929",
     "tools/mock-platform/contracts/generated/row-coverage.json": "9bc0f26495a5dcba28071605b0715fb581160051578a7b51f12d84b07f8497ed",
     "tools/mock-platform/contracts/integrations/app_sync.json": "1fa3bfa566557109905ec0ecc6832b1ac39ec799b737d231bc95ccf54ae5b70e",

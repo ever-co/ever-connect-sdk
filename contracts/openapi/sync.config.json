@@ -2,7 +2,9 @@
   "description": "Which operations of the Ever Platform API form the instance-facing contract, and where tools/sync-contract.mjs reads them. An operation is selected when it accepts the instanceToken scheme or is listed in include_operation_ids; staff, person-session and internal routes are never selected. The pinned spec wins over the design for every operation and schema it already defines; design operations are provisional until the pinned spec carries them.",
   "pinned": "contracts/openapi/ever-api.v1.json",
   "design": "docs/specs/api/openapi.yaml",
-  "select_security": ["instanceToken"],
+  "select_security": [
+    "instanceToken"
+  ],
   "include_operation_ids": [
     "get_key_manifest",
     "getConnectLegal",
@@ -21,16 +23,30 @@
   "exclude_operation_ids": {
     "subscribeRealtime": "the server-sent event stream serves the app.ever.co browser; installations read their events from the instance feed instead"
   },
-  "never_path_prefixes": ["/internal", "/v1/staff"],
-  "never_security": ["staffSession"],
-  "keep_security": ["instanceToken", "everIdTokenRead", "everIdStepUpToken"],
+  "never_path_prefixes": [
+    "/internal",
+    "/v1/staff"
+  ],
+  "never_security": [
+    "staffSession"
+  ],
+  "keep_security": [
+    "instanceToken",
+    "everIdTokenRead",
+    "everIdStepUpToken"
+  ],
   "keep_security_by_operation": {
     "putIntegrationState": {
-      "schemes": ["everIdToken"],
-      "why": "the pinned contract accepts an app.ever.co session or an Ever ID token of the Ever Platform project from a fresh sign-in; contract v1 serves this operation to app.ever.co only (not_in_v1 for installations), and the SDK keeps its type with the token scheme"
+      "schemes": [
+        "everIdToken",
+        "everIdTokenProductUi"
+      ],
+      "why": "the pinned contract accepts an app.ever.co session, an Ever ID token of the Ever Platform project from a fresh sign-in, or (the in-product consent path) a step-up token of the installation's own client for that installation's integrations; the SDK keeps both token schemes so a product's consent dialog can call it"
     }
   },
-  "drop_extensions": ["x-ever-key-scopes"],
+  "drop_extensions": [
+    "x-ever-key-scopes"
+  ],
   "design_operation_aliases": {
     "getKeyManifest": "get_key_manifest"
   },

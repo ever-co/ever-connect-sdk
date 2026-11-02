@@ -6,7 +6,7 @@
   },
   "openapi": {
     "target": "contracts/openapi/ever-platform.v1.yaml",
-    "sha256": "6debce258392c32561a907363acaf4e0baaf5452fb5538efea730b0964064787",
+    "sha256": "43cd8558ae6c5feb5e355e0812b6513720d09e04cc24e82946f6c519849859fd",
     "pinned": {
       "source": "contracts/openapi/ever-api.v1.json",
       "sha256": "ecbaf166dd3eee69d52fcd64e2f4fb44fb69a808f3983447b0954e829322724a"
