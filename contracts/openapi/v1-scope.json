@@ -107,6 +107,11 @@
       "path": "/v1/instances/me/webhooks"
     },
     {
+      "operation_id": "instanceDeleteOidcClient",
+      "method": "DELETE",
+      "path": "/v1/instances/me/oidc-client"
+    },
+    {
       "operation_id": "instanceDeletePersonLink",
       "method": "DELETE",
       "path": "/v1/instances/me/person-links/{ref}"
@@ -387,12 +392,10 @@
       "instance_facing": false,
       "accepted": [
         "personSession",
-        "everIdToken"
+        "everIdToken",
+        "everIdTokenProductUi"
       ],
-      "not_in_v1": [
-        "everIdStepUpToken"
-      ],
-      "why": "Contract v1 accepts a person's app.ever.co session or an Ever ID token of the Ever Platform project from a sign-in at most 300 s old; a token a product, an installation or an App obtained is refused with 403 session_required. Consenting from a product's own dialog with a product step-up token is not part of v1, so no installation calls this operation in v1: a product sends its admin to app.ever.co with the signed link of instanceGetConsentUrl. The operation's limits (Idempotency-Key, the person rate class, a 16 KiB body, the closed body, current scope and agreement versions) are stated in the pinned contract."
+      "why": "A person's app.ever.co session, an Ever ID token of the Ever Platform project from a sign-in at most 300 s old, or (the in-product consent path) a step-up Ever ID token from the installation's own client (inst-<instance id>, or an Ever Cloud product client configured for an installation Ever operates), signed in at most 300 s ago, of an owner or admin, for that installation only and never for counterparty_discoverable or instance_url; such a consent records consent_source product_ui. Any other token a product, an installation or an App obtained is refused with 403 session_required, and a product may still send its admin to app.ever.co with the signed link of instanceGetConsentUrl. No installation calls this operation with its instance token. The operation's limits (Idempotency-Key, the person rate class, a 16 KiB body, the closed body, current scope and agreement versions) are stated in the pinned contract."
     }
   },
   "rows": {
@@ -417,7 +420,7 @@
       "operations": [
         "putIntegrationState"
       ],
-      "note": "Served for app.ever.co; not called by an installation in contract v1 (see security.putIntegrationState)."
+      "note": "Served for app.ever.co and, with a person's step-up token from the installation's own client, for the product's own consent dialog; never with an instance token (see security.putIntegrationState)."
     }
   }
 }

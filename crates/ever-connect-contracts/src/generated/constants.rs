@@ -353,5 +353,9 @@ pub const PROBLEM_CODES: &[&str] = &[
     "realtime_busy",
     "too_many_streams",
     "keys_unavailable",
+    "start_disabled",
+    "turnstile_failed",
+    "invalid_request",
+    "file_rejected",
     "internal_error",
 ];

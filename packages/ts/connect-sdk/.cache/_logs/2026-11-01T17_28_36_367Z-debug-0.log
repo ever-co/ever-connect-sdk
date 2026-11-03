@@ -1,0 +1,24 @@
+0 verbose cli C:\Program Files\nodejs\node.exe C:\Nvm\v24.13.0\node_modules\npm\bin\npm-cli.js
+1 info using npm@11.6.2
+2 info using node@v24.13.0
+3 silly config load:file:C:\Nvm\v24.13.0\node_modules\npm\npmrc
+4 silly config load:file:C:\Coding\ever-connect-sdk\packages\ts\connect-sdk\.npmrc
+5 silly config load:file:C:\Users\evere\.npmrc
+6 silly config load:file:C:\Program Files\nodejs\etc\npmrc
+7 verbose title npm exec vitest run test/mock-flow/sample-flow.test.ts
+8 verbose argv "exec" "--" "vitest" "run" "test/mock-flow/sample-flow.test.ts"
+9 verbose logfile logs-max:10 dir:C:\Coding\ever-connect-sdk\packages\ts\connect-sdk\.cache\_logs\2026-11-01T17_28_36_367Z-
+10 verbose logfile C:\Coding\ever-connect-sdk\packages\ts\connect-sdk\.cache\_logs\2026-11-01T17_28_36_367Z-debug-0.log
+11 silly logfile done cleaning log files
+12 http fetch GET 200 https://registry.npmjs.org/npm 798ms
+13 verbose cwd C:\Coding\ever-connect-sdk\packages\ts\connect-sdk
+14 verbose os Windows_NT 10.0.26300
+15 verbose node v24.13.0
+16 verbose npm  v11.6.2
+17 notice
+17 notice New minor version of npm available! 11.6.2 -> 11.21.1
+17 notice Changelog: https://github.com/npm/cli/releases/tag/v11.21.1
+17 notice To update run: npm install -g npm@11.21.1
+17 notice  { force: true, Symbol(proc-log.meta): true }
+18 verbose exit 1
+19 verbose code 1

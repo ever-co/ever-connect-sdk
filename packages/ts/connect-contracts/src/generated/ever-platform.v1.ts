@@ -538,7 +538,12 @@ export interface paths {
          *     after: poll `GET`.
          */
         readonly post: operations["instanceRequestOidcClient"];
-        readonly delete?: never;
+        /**
+         * Turns the installation's own Ever ID client off (`204`, also when there is none or it ended
+         *     already): `revoked`, the app deactivated shortly after; its person links stay. Ask again with
+         *     `POST` for a new secret.
+         */
+        readonly delete: operations["instanceDeleteOidcClient"];
         readonly options?: never;
         readonly head?: never;
         readonly patch?: never;
@@ -1033,11 +1038,17 @@ export interface paths {
          *     come from a sign-in at most 300 s old (`x-ever-fresh-auth-s`; else `403 step_up_required`); a
          *     session needs no fresh sign-in. A token a product, an installation or an App obtained (its
          *     `azp` is a product, `inst-*` or App client) is refused with `403 session_required` before the
-         *     handler runs: consenting from a product's own dialog with a product step-up token is not part
-         *     of contract v1, so a product sends its admin to app.ever.co with the signed link of
-         *     `GET /v1/instances/me/consent-url`. The caller is an owner or admin of the organization (`403
-         *     forbidden_role`), and an installation-wide integration is changed only by the organization that
-         *     connected the installation (`403 not_connection_owner`).
+         *     handler runs, with one exception (`everIdTokenProductUi`, the in-product consent path): a
+         *     step-up token (sign-in at most 300 s old) from the installation's **own** client
+         *     (`inst-<instance id>`, or an Ever Cloud product client configured for an installation Ever
+         *     operates of that product) may change that installation's integrations from the product's own
+         *     dialog, never `counterparty_discoverable`
+         *     or `instance_url`; the consent records `consent_source = product_ui` and `evidence.ui =
+         *     product:<product>`. Any other product token answers `403 session_required`; otherwise a product
+         *     sends its admin to app.ever.co with the signed link of `GET /v1/instances/me/consent-url`. The
+         *     caller is an owner or admin of the organization (`403 forbidden_role`), and an
+         *     installation-wide integration is changed only by the organization that connected the
+         *     installation (`403 not_connection_owner`).
          *
          *     **Limits.** `Idempotency-Key` is required (a replay within 24 h answers the first result); the
          *     `person` rate class (1 200 requests a minute per person by default, `EVER_RATE_LIMIT_PERSON`;
@@ -1535,7 +1546,7 @@ export interface components {
          *     unknown code by its HTTP status.
          * @enum {string}
          */
-        readonly ErrorCode: "validation_failed" | "not_found" | "unauthorized" | "forbidden_role" | "forbidden_scope" | "ambiguous_credentials" | "credential_revoked" | "instance_disconnected" | "instance_pending_approval" | "not_connection_owner" | "integration_disabled" | "integration_revoked" | "subject_unknown" | "link_not_found" | "oidc_client_exists" | "redirect_uri_invalid" | "denied_by_policy" | "integration_not_available" | "entitlement_required" | "tier_required" | "limit_exceeded" | "rate_limited" | "idempotency_mismatch" | "idempotency_in_progress" | "stale_version" | "module_disabled" | "handle_taken" | "handle_reserved" | "handle_retired" | "handle_invalid" | "handle_held" | "handle_held_by_you" | "code_invalid" | "code_expired" | "product_mismatch" | "product_not_supported" | "key_mismatch" | "signature_invalid" | "unlinked_org" | "schema_violation" | "mirror_owned_field" | "illegal_transition" | "already_exists" | "already_completed" | "legal_basis_required" | "receipt_final" | "billing_active" | "sso_required" | "reauth_required" | "session_required" | "step_up_required" | "session_bound" | "authorization_pending" | "slow_down" | "expired_token" | "already_connected" | "already_linked" | "already_claimed" | "claim_locked" | "invalid_client" | "public_jwk_invalid" | "identifier_claimed" | "salt_version_unknown" | "salt_version_retired" | "hashes_invalid" | "lookup_key_required" | "required_component" | "resync_required" | "last_owner" | "last_auth_method" | "instances_linked" | "install_in_progress" | "slug_reserved" | "checklist_incomplete" | "scope_version_outdated" | "method_not_allowed" | "payload_too_large" | "unsupported_media_type" | "gone" | "unavailable" | "upstream" | "database_absent" | "database_unreachable" | "topic_private" | "realtime_disabled" | "topic_forbidden" | "topic_invalid" | "realtime_busy" | "too_many_streams" | "keys_unavailable" | "internal_error";
+        readonly ErrorCode: "validation_failed" | "not_found" | "unauthorized" | "forbidden_role" | "forbidden_scope" | "ambiguous_credentials" | "credential_revoked" | "instance_disconnected" | "instance_pending_approval" | "not_connection_owner" | "integration_disabled" | "integration_revoked" | "subject_unknown" | "link_not_found" | "oidc_client_exists" | "redirect_uri_invalid" | "denied_by_policy" | "integration_not_available" | "entitlement_required" | "tier_required" | "limit_exceeded" | "rate_limited" | "idempotency_mismatch" | "idempotency_in_progress" | "stale_version" | "module_disabled" | "handle_taken" | "handle_reserved" | "handle_retired" | "handle_invalid" | "handle_held" | "handle_held_by_you" | "code_invalid" | "code_expired" | "product_mismatch" | "product_not_supported" | "key_mismatch" | "signature_invalid" | "unlinked_org" | "schema_violation" | "mirror_owned_field" | "illegal_transition" | "already_exists" | "already_completed" | "legal_basis_required" | "receipt_final" | "billing_active" | "sso_required" | "reauth_required" | "session_required" | "step_up_required" | "session_bound" | "authorization_pending" | "slow_down" | "expired_token" | "already_connected" | "already_linked" | "already_claimed" | "claim_locked" | "invalid_client" | "public_jwk_invalid" | "identifier_claimed" | "salt_version_unknown" | "salt_version_retired" | "hashes_invalid" | "lookup_key_required" | "required_component" | "resync_required" | "last_owner" | "last_auth_method" | "instances_linked" | "install_in_progress" | "slug_reserved" | "checklist_incomplete" | "scope_version_outdated" | "method_not_allowed" | "payload_too_large" | "unsupported_media_type" | "gone" | "unavailable" | "upstream" | "database_absent" | "database_unreachable" | "topic_private" | "realtime_disabled" | "topic_forbidden" | "topic_invalid" | "realtime_busy" | "too_many_streams" | "keys_unavailable" | "start_disabled" | "turnstile_failed" | "invalid_request" | "file_rejected" | "internal_error";
         /**
          * @description One event on a webhook, the installation feed or SSE. Payloads carry identifiers and status
          *     only, never records; delivery is at-least-once: dedupe on `id`.
@@ -2434,7 +2445,8 @@ export interface components {
             /** @description The request it was made for. */
             readonly job_id?: string | null;
             /**
-             * @description `pending`, `ready`, `failed` or `revoked`.
+             * @description `pending`, `ready`, `failed`, `revoked` or `expired` (a secret not fetched in time was
+             *     erased: ask again).
              * @example ready
              */
             readonly status: string;
@@ -4442,6 +4454,33 @@ export interface operations {
             };
         };
     };
+    readonly instanceDeleteOidcClient: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Turned off (or there was nothing to turn off) */
+            readonly 204: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `integration_disabled`, `integration_revoked` or `denied_by_policy`: `ever_id_login` is not enabled for this installation; `instance_pending_approval` or `instance_disconnected` */
+            readonly 403: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     readonly instancePushOrgProfile: {
         readonly parameters: {
             readonly query?: never;
@@ -5733,7 +5772,7 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description `session_required` (a token a product, an installation or an App obtained), `step_up_required` (a token from a sign-in older than 300 s), `forbidden_role` (a member), `not_connection_owner` (an installation-wide integration changed by an organization that does not own the connection, or of an installation Ever operates), `denied_by_policy`, `entitlement_required` */
+            /** @description `session_required` (a token a product, an installation or an App obtained, except the installation's own client on the in-product path for its own installation and an integration other than `counterparty_discoverable` and `instance_url`), `step_up_required` (a token from a sign-in older than 300 s), `forbidden_role` (a member), `not_connection_owner` (an installation-wide integration changed by an organization that does not own the connection, or of an installation Ever operates), `denied_by_policy`, `entitlement_required` */
             readonly 403: {
                 headers: {
                     readonly [name: string]: unknown;

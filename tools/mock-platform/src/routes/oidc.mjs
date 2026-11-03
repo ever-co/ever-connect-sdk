@@ -1,5 +1,6 @@
 // Row 14: the one Ever ID sign-in client of an installation: requested once (202), then read
-// until ready; the secret is answered on the first ready read only.
+// until ready; the secret is answered on the first ready read only; the installation may turn it
+// off (DELETE, 204) and ask again for a new one.
 import { randomBytes } from 'node:crypto';
 import { b64url } from '../crypto.mjs';
 import { fail } from '../problem.mjs';
@@ -49,5 +50,15 @@ export const oidcHandlers = {
       }
     }
     return { status: 200, body };
+  },
+
+  instanceDeleteOidcClient({ instance }) {
+    // The installation turns its own client off: 204 whether or not there was one; the client
+    // reads `revoked` afterwards and a new request issues a new secret.
+    if (instance.oidc && instance.oidc.status !== 'revoked') {
+      instance.oidc.status = 'revoked';
+      instance.oidc.secret_shown = true;
+    }
+    return { status: 204 };
   },
 };

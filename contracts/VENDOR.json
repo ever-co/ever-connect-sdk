@@ -2,24 +2,24 @@
   "description": "Where every contract file of this repository comes from. Written by tools/sync-contract.mjs; checked by tools/check-schema-drift.mjs. `provisional` sources are drafts the platform has not published yet: tools/check-schema-drift.mjs --strict refuses them.",
   "platform": {
     "repository": "ever-co/platform",
-    "commit": "06c986ba557773e421c15d5e3f434b4295beec42"
+    "commit": "e6fe5d3b37cb7e7cc7bb95c4e4b6f9afb0c4c059"
   },
   "openapi": {
     "target": "contracts/openapi/ever-platform.v1.yaml",
-    "sha256": "49dc5f1b12eecae1462705bb37cf35bc3684054625347eaf11e4a80f65f072f5",
+    "sha256": "c1fe08b7326534df40444c0405966fe05c0d405c9aa80c2dc53f0cf999d27010",
     "pinned": {
       "source": "contracts/openapi/ever-api.v1.json",
-      "sha256": "14fd605b7f29951c1d95342588175285ceb01eeba37313f2545e84535e4e0d5e"
+      "sha256": "8865ab3513e48fee5e5e65e3474d048cd8e35031ac092e95ed191f81c706ccc8"
     },
     "design": {
       "source": "docs/specs/api",
-      "sha256": "c4e2e2ae71f66f06b5959867a9bf79ec0105566ed8872c3d94b2898d260cc583",
+      "sha256": "35f44d8b84c32dc998725f3697c4aca9374007ce78ad1f274d832c075228808e",
       "files": 21
     },
-    "operations": 59,
+    "operations": 60,
     "scope": {
       "source": "contracts/openapi/v1-scope.json",
-      "sha256": "e6588e7bbea40d84a5e3fac45212f53bd7f6e0b2f286b3f3fac53549880d93ac",
+      "sha256": "7a1c1be55195f64b0bdf2b64151bfe3c05027412ce5ce9dc867b67f06902f72a",
       "version": "1.0.0"
     },
     "provisional_operations": [],
@@ -65,8 +65,8 @@
   },
   "events": {
     "source": "contracts/events/catalog.json",
-    "version": "1.4",
-    "sha256": "bd8d2a923d495930739a137ec2abe1ea20d49ca6fa3793c1a1c795fb2c7e4154",
+    "version": "1.5",
+    "sha256": "d6822f0ddba99877c07b0b1e553821d8527c3b058e1189e42b56a8838232265a",
     "instance_types": [
       "ever.consent.consent.granted",
       "ever.consent.consent.revoked",
@@ -163,8 +163,8 @@
     {
       "path": "contracts/openapi/v1-scope.json",
       "source": "contracts/openapi/v1-scope.json",
-      "source_sha256": "e6588e7bbea40d84a5e3fac45212f53bd7f6e0b2f286b3f3fac53549880d93ac",
-      "sha256": "e6588e7bbea40d84a5e3fac45212f53bd7f6e0b2f286b3f3fac53549880d93ac",
+      "source_sha256": "7a1c1be55195f64b0bdf2b64151bfe3c05027412ce5ce9dc867b67f06902f72a",
+      "sha256": "7a1c1be55195f64b0bdf2b64151bfe3c05027412ce5ce9dc867b67f06902f72a",
       "transform": null,
       "provisional": false,
       "upstream": null

@@ -415,3 +415,26 @@ describe('entitlement reads (rate class instance-entitlement: a bucket of 6 per 
     expect(f.calls.filter((x) => x.url.endsWith('/v1/instances/me/integrations'))).toHaveLength(8);
   });
 });
+
+describe('installation sign-in client removal (DELETE /v1/instances/me/oidc-client)', () => {
+  it('sends an authenticated DELETE with no body and no Idempotency-Key; a 204 resolves to undefined', async () => {
+    const f = platform(() => new Response(null, { status: 204 }));
+    const c = client(f);
+    await expect(c.instances.oidcClient.remove()).resolves.toBeUndefined();
+    const del = f.calls.filter((x) => x.url.endsWith('/v1/instances/me/oidc-client'));
+    expect(del).toHaveLength(1);
+    expect(del[0]?.method).toBe('DELETE');
+    expect(del[0]?.headers.authorization).toBe(`Bearer ${TOKEN}`);
+    expect(del[0]?.body).toBeNull();
+    expect(del[0]?.headers['idempotency-key']).toBeUndefined();
+    expect(del[0]?.headers['content-type']).toBeUndefined();
+  });
+  it('a problem answer becomes a ProblemError (the consent gate refuses it like the other client calls)', async () => {
+    const f = platform(() => json(403, { code: 'integration_disabled', title: 'Integration disabled', status: 403 }));
+    await expect(client(f).instances.oidcClient.remove()).rejects.toMatchObject({
+      name: 'ProblemError',
+      status: 403,
+      code: 'integration_disabled',
+    });
+  });
+});
