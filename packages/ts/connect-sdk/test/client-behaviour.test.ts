@@ -431,6 +431,10 @@ describe('installation sign-in client removal (DELETE /v1/instances/me/oidc-clie
   });
   it('a problem answer becomes a ProblemError (the consent gate refuses it like the other client calls)', async () => {
     const f = platform(() => json(403, { code: 'integration_disabled', title: 'Integration disabled', status: 403 }));
-    await expect(client(f).instances.oidcClient.remove()).rejects.toMatchObject({ name: 'ProblemError', status: 403, code: 'integration_disabled' });
+    await expect(client(f).instances.oidcClient.remove()).rejects.toMatchObject({
+      name: 'ProblemError',
+      status: 403,
+      code: 'integration_disabled',
+    });
   });
 });
