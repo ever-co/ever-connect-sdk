@@ -423,6 +423,31 @@ describe('row 29: device-first connect', () => {
     expectProblem(expect, await start({ serves_products: ['gauzy', 'demand'] }), 422, 'product_not_supported');
     expectOk(expect, await start({}), 200, 'connectDevice');
   });
+
+  it('the device start refuses every key an installation held, however long ago', async () => {
+    env = await startMock();
+    const { instanceId, token } = await env.connect();
+    const original = testKey('connect');
+    const first = testKey('connectNext');
+    const second = testKey('stranger');
+    const start = (key) =>
+      env.call('POST', '/v1/connect/device', {
+        body: { product: 'gauzy', version: '1.0.0', install_source: 'self-hosted', public_jwk: { kty: 'OKP', crv: 'Ed25519', x: key.x } },
+      });
+    expectProblem(expect, await start(original), 422, 'public_jwk_invalid');
+    const rotate = (current, next, n) =>
+      env.call('POST', '/v1/instances/me/keys', {
+        token,
+        body: env.rotation(instanceId, { current, next }),
+        headers: { 'idempotency-key': `held-${n}` },
+      });
+    expectOk(expect, await rotate(original, first, 1), 200, 'instanceRotateKey');
+    // Two rotations later the first key is neither the current one nor the previous one.
+    expectOk(expect, await rotate(first, second, 2), 200, 'instanceRotateKey');
+    expectProblem(expect, await start(original), 422, 'public_jwk_invalid');
+    expectProblem(expect, await start(first), 422, 'public_jwk_invalid');
+    expectProblem(expect, await start(second), 422, 'public_jwk_invalid');
+  });
 });
 
 describe('rows 6-10 and 16', () => {

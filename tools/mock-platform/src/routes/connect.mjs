@@ -145,8 +145,7 @@ function checkDeviceBody(state, body) {
   if (serves.length > 5) field('/serves_products', 'out_of_range', 'at most five products');
   if (serves.includes('demand')) fail(422, 'product_not_supported');
   if (!validJwk(body.public_jwk) || 'd' in body.public_jwk) fail(422, 'public_jwk_invalid');
-  const held = [...state.instances.values()].some((i) => i.current_key.x === body.public_jwk.x || i.previous_key?.x === body.public_jwk.x);
-  if (held) fail(422, 'public_jwk_invalid');
+  if (state.heldKeys.has(body.public_jwk.x)) fail(422, 'public_jwk_invalid');
 }
 
 /** Polls answered `slow_down` in a row before the device code is revoked (as the platform). */
