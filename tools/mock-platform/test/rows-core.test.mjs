@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { verifyEntitlement, verifyManifest } from '../../test/lib/reference-verify.mjs';
-import { b64url, instanceKid, signBytes } from '../src/crypto.mjs';
+import { b64url, instanceKid, sha256, signBytes } from '../src/crypto.mjs';
 import { testKey, testRootEntry } from '../src/keys.mjs';
 import { expectOk, expectProblem, ISSUER, startMock } from './helpers.mjs';
 
@@ -358,7 +358,12 @@ describe('row 29: device-first connect', () => {
       env.call('POST', '/v1/connect/token', {
         body: {
           device_code: start.body.device_code,
-          client_assertion: env.assertion({ key: k, instanceId: kid, audience: `${ISSUER}/v1/connect/token` }),
+          client_assertion: env.assertion({
+            key: k,
+            instanceId: kid,
+            audience: `${ISSUER}/v1/connect/token`,
+            extra: { device_code_hash: b64url(sha256(start.body.device_code)) },
+          }),
         },
       });
     expectProblem(expect, await poll(), 400, 'authorization_pending');

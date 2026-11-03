@@ -1580,7 +1580,7 @@ export const REQUEST_SCHEMAS: { readonly [key: string]: unknown } = {
       },
       "DeviceTokenRequest": {
         "additionalProperties": false,
-        "description": "One poll of the device-first connect (RFC 8628 section 3.4 with an RFC 7523 assertion): the\ndevice code and an assertion signed with the parked connect key, `iss = sub = <kid>` (the key\nid the platform assigns, the same as `kid` in the answer), `aud = <api origin>/v1/connect/token`,\na random `jti`, `iat`, and `exp` at most 300 s after `iat`.",
+        "description": "One poll of the device-first connect (RFC 8628 section 3.4 with an RFC 7523 assertion): the\ndevice code and an assertion signed with the parked connect key, `iss = sub = <kid>` (the key\nid the platform assigns, the same as `kid` in the answer), `aud = <api origin>/v1/connect/token`,\n`device_code_hash` = base64url (no padding) of the SHA-256 of this device code, a random `jti`\n(used once), `iat`, and `exp` at most 300 s after `iat`. Sign a fresh assertion for every poll.",
         "properties": {
           "client_assertion": {
             "description": "The signed assertion.",

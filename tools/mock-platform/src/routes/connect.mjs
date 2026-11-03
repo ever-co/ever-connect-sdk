@@ -2,7 +2,7 @@
 // and the device-first connect.
 import { randomBytes } from 'node:crypto';
 import { verifyAssertion } from '../assertion.mjs';
-import { b64url, decodeJws, instanceKid, publicKeyFromX, verifyBytes } from '../crypto.mjs';
+import { b64url, decodeJws, instanceKid, publicKeyFromX, sha256, verifyBytes } from '../crypto.mjs';
 import { manifestEntry, signManifest, testKey } from '../keys.mjs';
 import { createInstance, createLink, linkedTenantView } from '../model.mjs';
 import { fail } from '../problem.mjs';
@@ -321,7 +321,9 @@ export const connectHandlers = {
       !Number.isInteger(p.exp) ||
       p.exp <= now ||
       p.exp - p.iat > 300 ||
-      typeof p.jti !== 'string'
+      typeof p.jti !== 'string' ||
+      // Bound to this device code (base64url of its SHA-256), as the platform requires.
+      p.device_code_hash !== b64url(sha256(body.device_code))
     )
       fail(401, 'invalid_client');
     // Spent per parked key, not per code: an assertion names only the key.
