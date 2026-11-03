@@ -834,6 +834,14 @@ pub mod components {
         TooManyStreams,
         #[serde(rename = "keys_unavailable")]
         KeysUnavailable,
+        #[serde(rename = "start_disabled")]
+        StartDisabled,
+        #[serde(rename = "turnstile_failed")]
+        TurnstileFailed,
+        #[serde(rename = "invalid_request")]
+        InvalidRequest,
+        #[serde(rename = "file_rejected")]
+        FileRejected,
         #[serde(rename = "internal_error")]
         InternalError,
     }
@@ -930,6 +938,10 @@ pub mod components {
                 Self::RealtimeBusy => f.write_str("realtime_busy"),
                 Self::TooManyStreams => f.write_str("too_many_streams"),
                 Self::KeysUnavailable => f.write_str("keys_unavailable"),
+                Self::StartDisabled => f.write_str("start_disabled"),
+                Self::TurnstileFailed => f.write_str("turnstile_failed"),
+                Self::InvalidRequest => f.write_str("invalid_request"),
+                Self::FileRejected => f.write_str("file_rejected"),
                 Self::InternalError => f.write_str("internal_error"),
             }
         }
@@ -1028,6 +1040,10 @@ pub mod components {
                 "realtime_busy" => Ok(Self::RealtimeBusy),
                 "too_many_streams" => Ok(Self::TooManyStreams),
                 "keys_unavailable" => Ok(Self::KeysUnavailable),
+                "start_disabled" => Ok(Self::StartDisabled),
+                "turnstile_failed" => Ok(Self::TurnstileFailed),
+                "invalid_request" => Ok(Self::InvalidRequest),
+                "file_rejected" => Ok(Self::FileRejected),
                 "internal_error" => Ok(Self::InternalError),
                 _ => Err("invalid value".into()),
             }

@@ -2,14 +2,14 @@
   "description": "Where every contract file of this repository comes from. Written by tools/sync-contract.mjs; checked by tools/check-schema-drift.mjs. `provisional` sources are drafts the platform has not published yet: tools/check-schema-drift.mjs --strict refuses them.",
   "platform": {
     "repository": "ever-co/platform",
-    "commit": "edc9eaf79d8e387e0d1dc7e2176a7170d1965018"
+    "commit": "e6fe5d3b37cb7e7cc7bb95c4e4b6f9afb0c4c059"
   },
   "openapi": {
     "target": "contracts/openapi/ever-platform.v1.yaml",
-    "sha256": "43cd8558ae6c5feb5e355e0812b6513720d09e04cc24e82946f6c519849859fd",
+    "sha256": "c1fe08b7326534df40444c0405966fe05c0d405c9aa80c2dc53f0cf999d27010",
     "pinned": {
       "source": "contracts/openapi/ever-api.v1.json",
-      "sha256": "ecbaf166dd3eee69d52fcd64e2f4fb44fb69a808f3983447b0954e829322724a"
+      "sha256": "8865ab3513e48fee5e5e65e3474d048cd8e35031ac092e95ed191f81c706ccc8"
     },
     "design": {
       "source": "docs/specs/api",
@@ -65,8 +65,8 @@
   },
   "events": {
     "source": "contracts/events/catalog.json",
-    "version": "1.4",
-    "sha256": "bd8d2a923d495930739a137ec2abe1ea20d49ca6fa3793c1a1c795fb2c7e4154",
+    "version": "1.5",
+    "sha256": "d6822f0ddba99877c07b0b1e553821d8527c3b058e1189e42b56a8838232265a",
     "instance_types": [
       "ever.consent.consent.granted",
       "ever.consent.consent.revoked",
