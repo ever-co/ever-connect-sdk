@@ -450,6 +450,55 @@ describe('row 29: device-first connect', () => {
   });
 });
 
+describe('row 26: a provisioning hand-off', () => {
+  const complete = (token, jti, body) => env.call('POST', `/v1/provision-intents/${jti}/complete`, { token, body });
+
+  it('an answer is final: a repeat by the same installation is answered, whatever it says and however late', async () => {
+    env = await startMock();
+    const { instanceId, token } = await env.connect();
+    const { jti } = await env.admin('provision-intent', { expires_in_s: 60 });
+    const first = await complete(token, jti, { instance_id: instanceId, product_tenant_id: 'tenant-1', result: 'created' });
+    expectOk(expect, first, 200, 'completeProvisionIntent');
+    expect(first.body.status).toBe('completed');
+    for (const repeat of [
+      { instance_id: instanceId, product_tenant_id: 'tenant-2', result: 'refused' },
+      { instance_id: instanceId, product_tenant_id: 'tenant-1', result: 'created' },
+    ]) {
+      const again = await complete(token, jti, repeat);
+      expectOk(expect, again, 200, 'completeProvisionIntent');
+      expect(again.body).toEqual({ status: 'already_completed', tenant_link_id: first.body.tenant_link_id, job_id: first.body.job_id });
+    }
+    await env.admin('clock', { advance: 120 });
+    const late = await complete(token, jti, { instance_id: instanceId, product_tenant_id: 'tenant-1', result: 'created' });
+    expectOk(expect, late, 200, 'completeProvisionIntent');
+    expect(late.body.status).toBe('already_completed');
+  });
+
+  it('an unsupported result is refused and consumes nothing', async () => {
+    env = await startMock();
+    const { instanceId, token } = await env.connect();
+    const { jti } = await env.admin('provision-intent', {});
+    const body = { instance_id: instanceId, product_tenant_id: 'tenant-1' };
+    expectProblem(expect, await complete(token, jti, { ...body, result: 'bogus' }), 422, 'validation_failed');
+    const answer = await complete(token, jti, { ...body, result: 'created' });
+    expectOk(expect, answer, 200, 'completeProvisionIntent');
+    expect(answer.body.status).toBe('completed');
+  });
+
+  it('a body over 4 KiB is refused', async () => {
+    env = await startMock();
+    const { instanceId, token } = await env.connect();
+    const { jti } = await env.admin('provision-intent', {});
+    const padded = await complete(token, jti, {
+      instance_id: instanceId,
+      product_tenant_id: 'tenant-1',
+      result: 'created',
+      refusal_reason: 'x'.repeat(4096),
+    });
+    expect(padded.status).toBe(413);
+  });
+});
+
 describe('rows 6-10 and 16', () => {
   it('heartbeat: once a minute, then 429 with Retry-After', async () => {
     env = await startMock();

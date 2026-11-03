@@ -305,7 +305,10 @@ function requestCases() {
     'intent-complete': c(
       'IntentComplete',
       { instance_id: IDS.instance, product_tenant_id: 'tenant-3', product_org_id: 'org-3', product_user_ref: 'user-3', result: 'created' },
-      { 'null-id': (b) => [{ ...b, product_org_id: null }, '/product_org_id'], 'extra-field': (b) => [extra(b), '/unexpected_field'] },
+      {
+        'null-id': (b) => [{ ...b, product_tenant_id: null }, '/product_tenant_id'],
+        'extra-field': (b) => [extra(b), '/unexpected_field'],
+      },
     ),
     'install-status': c(
       'InstallStatus',

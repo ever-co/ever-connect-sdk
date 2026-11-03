@@ -218,7 +218,10 @@ export const miscHandlers = {
   completeProvisionIntent({ state, instance, params, body }) {
     // As the platform: the caller's own installation only; an intent answered once is answered, for
     // that installation, whatever a repeat says; expired or replaced answers 410.
-    if (body.instance_id !== instance.id) fail(403, 'forbidden_role', 'instance_id must be the token\'s own installation');
+    if (body.instance_id !== instance.id) fail(403, 'forbidden_role', "instance_id must be the token's own installation");
+    if (!['created', 'already_linked', 'refused'].includes(body.result)) {
+      fail(422, 'validation_failed', 'result is `created`, `already_linked` or `refused`');
+    }
     const intent = state.intents.get(params.jti);
     if (!intent) fail(404, 'not_found', 'no provisioning intent with this id');
     if (intent.completed) {
