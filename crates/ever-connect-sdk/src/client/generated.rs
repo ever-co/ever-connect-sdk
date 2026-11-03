@@ -1015,7 +1015,7 @@ pub const OPERATIONS: &[Operation] = &[
         row: 26,
         integration: None,
         rate_limit: Some("instance"),
-        status: "not_in_v1",
+        status: "pinned",
     },
     Operation {
         id: "discoverSso",

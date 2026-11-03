@@ -1230,7 +1230,7 @@ export const OPERATIONS = {
     "row": 26,
     "integration": null,
     "rateLimit": "instance",
-    "status": "not_in_v1"
+    "status": "pinned"
   },
   "discoverSso": {
     "id": "discoverSso",
@@ -1463,6 +1463,27 @@ export const REQUEST_SCHEMAS: { readonly [key: string]: unknown } = {
             "type": "string"
           }
         }
+      },
+      "CompletionUrls": {
+        "additionalProperties": false,
+        "description": "URLs the product reports.",
+        "properties": {
+          "api": {
+            "description": "The product's API.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "app": {
+            "description": "The product's web app.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
       },
       "ConnectKind": {
         "description": "The kind of deployment an installation is.",
@@ -1859,53 +1880,65 @@ export const REQUEST_SCHEMAS: { readonly [key: string]: unknown } = {
         "type": "object"
       },
       "IntentComplete": {
-        "type": "object",
-        "description": "Callback from the product after a consented hand-off completed its part of the provisioning intent. Idempotent by `jti`.",
+        "additionalProperties": false,
+        "description": "A product's answer to a provision intent.",
+        "properties": {
+          "instance_id": {
+            "description": "The installation answering (the token's own).",
+            "type": "string"
+          },
+          "product_org_id": {
+            "description": "The product's organization.",
+            "maxLength": 200,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "product_tenant_id": {
+            "description": "The product's tenant (`none` with `refused`).",
+            "maxLength": 200,
+            "type": "string"
+          },
+          "product_user_ref": {
+            "description": "The product user that owns the tenant (opaque).",
+            "maxLength": 200,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "refusal_reason": {
+            "description": "Why it refused: a machine token (`^[a-z0-9_]{1,64}$`, `user_declined`); anything else is\nnot kept (a step's error holds no free text).",
+            "maxLength": 200,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "result": {
+            "description": "`created`, `already_linked` or `refused`.",
+            "example": "created",
+            "type": "string"
+          },
+          "urls": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CompletionUrls",
+                "description": "The product's addresses."
+              }
+            ]
+          }
+        },
         "required": [
           "instance_id",
           "product_tenant_id",
           "result"
         ],
-        "additionalProperties": false,
-        "properties": {
-          "instance_id": {
-            "$ref": "#/components/schemas/Ulid"
-          },
-          "product_tenant_id": {
-            "type": "string"
-          },
-          "product_org_id": {
-            "type": "string"
-          },
-          "product_user_ref": {
-            "type": "string"
-          },
-          "urls": {
-            "type": "object",
-            "properties": {
-              "app": {
-                "type": "string",
-                "format": "uri"
-              },
-              "api": {
-                "type": "string",
-                "format": "uri"
-              }
-            }
-          },
-          "result": {
-            "type": "string",
-            "enum": [
-              "created",
-              "already_linked",
-              "refused"
-            ]
-          },
-          "refusal_reason": {
-            "type": "string",
-            "maxLength": 200
-          }
-        }
+        "type": "object"
       },
       "KeyRotate": {
         "additionalProperties": false,

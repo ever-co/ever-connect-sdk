@@ -1088,12 +1088,9 @@ export interface paths {
         readonly get?: never;
         readonly put?: never;
         /**
-         * Product callback after a consented hand-off (creates the tenant link)
-         * @description Called by the product with its instance token after the person signed
-         *     in with Ever ID in the product and confirmed. One-time per `jti`: a
-         *     repeat answers `200 {status: already_completed}` (idempotent by `jti`,
-         *     no `Idempotency-Key`). `result: refused` marks the step abandoned; the
-         *     person can retry, which mints a new intent.
+         * A product's answer after the person confirmed (or declined) a provision intent in it: the
+         *     registry then links the organization to the product's new tenant. One-time per intent; a
+         *     repeat by the same installation answers `already_completed`.
          */
         readonly post: operations["completeProvisionIntent"];
         readonly delete?: never;
@@ -1279,6 +1276,13 @@ export interface components {
             readonly product: components["schemas"]["ProductCode"];
             /** @description semver range. */
             readonly version_range: string;
+        };
+        /** @description URLs the product reports. */
+        readonly CompletionUrls: {
+            /** @description The product's API. */
+            readonly api?: string | null;
+            /** @description The product's web app. */
+            readonly app?: string | null;
         };
         /**
          * @description The kind of deployment an installation is.
@@ -1623,7 +1627,7 @@ export interface components {
          *     unknown code by its HTTP status.
          * @enum {string}
          */
-        readonly ErrorCode: "validation_failed" | "not_found" | "unauthorized" | "forbidden_role" | "forbidden_scope" | "ambiguous_credentials" | "credential_revoked" | "instance_disconnected" | "instance_pending_approval" | "not_connection_owner" | "integration_disabled" | "integration_revoked" | "subject_unknown" | "link_not_found" | "oidc_client_exists" | "redirect_uri_invalid" | "denied_by_policy" | "integration_not_available" | "entitlement_required" | "tier_required" | "limit_exceeded" | "rate_limited" | "idempotency_mismatch" | "idempotency_in_progress" | "stale_version" | "module_disabled" | "handle_taken" | "handle_reserved" | "handle_retired" | "handle_invalid" | "handle_held" | "handle_held_by_you" | "code_invalid" | "code_expired" | "product_mismatch" | "product_not_supported" | "key_mismatch" | "signature_invalid" | "unlinked_org" | "schema_violation" | "mirror_owned_field" | "illegal_transition" | "already_exists" | "already_completed" | "legal_basis_required" | "receipt_final" | "billing_active" | "sso_required" | "reauth_required" | "session_required" | "step_up_required" | "session_bound" | "authorization_pending" | "slow_down" | "expired_token" | "already_connected" | "already_linked" | "already_claimed" | "claim_locked" | "invalid_client" | "public_jwk_invalid" | "identifier_claimed" | "salt_version_unknown" | "salt_version_retired" | "hashes_invalid" | "lookup_key_required" | "required_component" | "resync_required" | "last_owner" | "last_auth_method" | "instances_linked" | "install_in_progress" | "slug_reserved" | "checklist_incomplete" | "scope_version_outdated" | "method_not_allowed" | "payload_too_large" | "unsupported_media_type" | "gone" | "unavailable" | "upstream" | "database_absent" | "database_unreachable" | "topic_private" | "realtime_disabled" | "topic_forbidden" | "topic_invalid" | "realtime_busy" | "too_many_streams" | "keys_unavailable" | "start_disabled" | "turnstile_failed" | "invalid_request" | "file_rejected" | "internal_error";
+        readonly ErrorCode: "validation_failed" | "not_found" | "unauthorized" | "forbidden_role" | "forbidden_scope" | "ambiguous_credentials" | "credential_revoked" | "instance_disconnected" | "instance_pending_approval" | "not_connection_owner" | "integration_disabled" | "integration_revoked" | "subject_unknown" | "link_not_found" | "oidc_client_exists" | "redirect_uri_invalid" | "denied_by_policy" | "integration_not_available" | "entitlement_required" | "tier_required" | "limit_exceeded" | "rate_limited" | "idempotency_mismatch" | "idempotency_in_progress" | "stale_version" | "module_disabled" | "handle_taken" | "handle_reserved" | "handle_retired" | "handle_invalid" | "handle_held" | "handle_held_by_you" | "code_invalid" | "code_expired" | "product_mismatch" | "product_not_supported" | "product_not_provisionable" | "job_in_progress" | "intent_expired" | "intent_consumed" | "key_mismatch" | "signature_invalid" | "unlinked_org" | "schema_violation" | "mirror_owned_field" | "illegal_transition" | "already_exists" | "already_completed" | "legal_basis_required" | "receipt_final" | "billing_active" | "sso_required" | "reauth_required" | "session_required" | "step_up_required" | "session_bound" | "authorization_pending" | "slow_down" | "expired_token" | "already_connected" | "already_linked" | "already_claimed" | "claim_locked" | "invalid_client" | "public_jwk_invalid" | "identifier_claimed" | "salt_version_unknown" | "salt_version_retired" | "hashes_invalid" | "lookup_key_required" | "required_component" | "resync_required" | "last_owner" | "last_auth_method" | "instances_linked" | "install_in_progress" | "slug_reserved" | "checklist_incomplete" | "scope_version_outdated" | "method_not_allowed" | "payload_too_large" | "unsupported_media_type" | "gone" | "unavailable" | "upstream" | "database_absent" | "database_unreachable" | "topic_private" | "realtime_disabled" | "topic_forbidden" | "topic_invalid" | "realtime_busy" | "too_many_streams" | "keys_unavailable" | "start_disabled" | "turnstile_failed" | "invalid_request" | "file_rejected" | "internal_error";
         /**
          * @description One event on a webhook, the installation feed or SSE. Payloads carry identifiers and status
          *     only, never records; delivery is at-least-once: dedupe on `id`.
@@ -2103,26 +2107,38 @@ export interface components {
              */
             readonly state: string;
         };
-        /** @description Callback from the product after a consented hand-off completed its part of the provisioning intent. Idempotent by `jti`. */
+        /** @description A product's answer to a provision intent. */
         readonly IntentComplete: {
-            readonly instance_id: components["schemas"]["Ulid"];
-            readonly product_org_id?: string;
+            /** @description The installation answering (the token's own). */
+            readonly instance_id: string;
+            /** @description The product's organization. */
+            readonly product_org_id?: string | null;
+            /** @description The product's tenant (`none` with `refused`). */
             readonly product_tenant_id: string;
-            readonly product_user_ref?: string;
-            readonly refusal_reason?: string;
-            /** @enum {string} */
-            readonly result: "created" | "already_linked" | "refused";
-            readonly urls?: {
-                /** Format: uri */
-                readonly api?: string;
-                /** Format: uri */
-                readonly app?: string;
-            };
+            /** @description The product user that owns the tenant (opaque). */
+            readonly product_user_ref?: string | null;
+            /**
+             * @description Why it refused: a machine token (`^[a-z0-9_]{1,64}$`, `user_declined`); anything else is
+             *     not kept (a step's error holds no free text).
+             */
+            readonly refusal_reason?: string | null;
+            /**
+             * @description `created`, `already_linked` or `refused`.
+             * @example created
+             */
+            readonly result: string;
+            readonly urls?: null | components["schemas"]["CompletionUrls"];
         };
+        /** @description The callback's answer. */
         readonly IntentCompleteResponse: {
+            /** @description The job. */
             readonly job_id?: string | null;
-            /** @enum {string} */
-            readonly status: "completed" | "already_completed";
+            /**
+             * @description `completed` or `already_completed`.
+             * @example completed
+             */
+            readonly status: string;
+            /** @description The tenant link written (the first, when Ever Teams came too). */
             readonly tenant_link_id?: string | null;
         };
         /** @description The body of `GET /.well-known/ever-keys.json`. */
@@ -5855,7 +5871,7 @@ export interface operations {
             readonly query?: never;
             readonly header?: never;
             readonly path: {
-                /** @description The `jti` of the signed provisioning intent the product verified. */
+                /** @description The intent's `jti` */
                 readonly jti: string;
             };
             readonly cookie?: never;
@@ -5866,7 +5882,7 @@ export interface operations {
             };
         };
         readonly responses: {
-            /** @description Completed (or already completed). */
+            /** @description Completed, or already completed by this installation */
             readonly 200: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -5875,7 +5891,16 @@ export interface operations {
                     readonly "application/json": components["schemas"]["IntentCompleteResponse"];
                 };
             };
-            /** @description Principal lacks the role, scope, integration or entitlement, or the operation needs a fresh sign-in (`forbidden_role`, `forbidden_scope`, `integration_disabled`, `integration_revoked`, `instance_pending_approval`, `entitlement_required`, `tier_required`, `sso_required`, `reauth_required`, `session_required`: an Ever ID token issued to a product, installation or App client used anywhere except the two `everIdTokenRead` reads and the in-product consent write; `step_up_required`: that consent write without a sign-in in the last 300 s; `not_connection_owner`: an installation-wide integration changed by an organization that does not own the installation). */
+            /** @description No valid instance token */
+            readonly 401: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `forbidden_role`: `instance_id` is not the token's installation */
             readonly 403: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -5884,7 +5909,7 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Not found, or the module that serves this route is disabled on this deployment (`not_found`, `module_disabled`). */
+            /** @description No such intent */
             readonly 404: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -5893,18 +5918,16 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description State conflict (`handle_taken`, `already_exists`, `key_mismatch`, `idempotency_in_progress`, `illegal_transition`, `billing_active`, `job_in_progress` when another job for the same subject is running). */
+            /** @description `intent_consumed`: another installation answered it */
             readonly 409: {
                 headers: {
-                    /** @description Seconds to wait before retrying. */
-                    readonly "Retry-After"?: number;
                     readonly [name: string]: unknown;
                 };
                 content: {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description The resource was retired. For handles the body is empty and carries no reason. */
+            /** @description `intent_expired`: it expired or was replaced; the person retries from app.ever.co */
             readonly 410: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -5913,26 +5936,9 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Validation failed; unknown fields are rejected on writes (`validation_failed`, `schema_violation`, `code_invalid`, `idempotency_mismatch`, `mirror_owned_field`, `limit_exceeded`). */
+            /** @description `product_mismatch`: the answer is not the one the intent asked for; `validation_failed` */
             readonly 422: {
                 headers: {
-                    readonly [name: string]: unknown;
-                };
-                content: {
-                    readonly "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description Any other error, as a problem document. */
-            readonly default: {
-                headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
                     readonly [name: string]: unknown;
                 };
                 content: {

@@ -216,13 +216,20 @@ export const miscHandlers = {
   },
 
   completeProvisionIntent({ state, instance, params, body }) {
+    // As the platform: the caller's own installation only; an intent answered once is answered, for
+    // that installation, whatever a repeat says; expired or replaced answers 410.
+    if (body.instance_id !== instance.id) fail(403, 'forbidden_role', "instance_id must be the token's own installation");
+    if (!['created', 'already_linked', 'refused'].includes(body.result)) {
+      fail(422, 'validation_failed', 'result is `created`, `already_linked` or `refused`');
+    }
     const intent = state.intents.get(params.jti);
-    if (!intent || intent.instance_id !== instance.id) fail(404, 'not_found', 'no provisioning intent with this id');
-    if (intent.expires_at <= state.now() && !intent.completed) fail(410, 'gone', 'the intent expired');
+    if (!intent) fail(404, 'not_found', 'no provisioning intent with this id');
     if (intent.completed) {
-      if (intent.result !== body.result) fail(409, 'illegal_transition', 'the intent was completed with another result');
+      if (intent.instance_id !== instance.id) fail(409, 'intent_consumed', 'another installation answered this intent');
       return { status: 200, body: { status: 'already_completed', tenant_link_id: intent.tenant_link_id, job_id: intent.job_id } };
     }
+    if (intent.expires_at <= state.now()) fail(410, 'intent_expired', 'this intent expired or was replaced');
+    if (intent.instance_id !== instance.id) fail(422, 'product_mismatch', 'the intent names another installation');
     Object.assign(intent, {
       completed: true,
       result: body.result,

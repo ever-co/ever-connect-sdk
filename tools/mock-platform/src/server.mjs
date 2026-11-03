@@ -44,7 +44,7 @@ const HANDLERS = {
   ...realtimeHandlers,
 };
 
-const MAX_BODY = { ingestStatsReport: 16 * 1024, instanceMirrorApps: 4 * 1024 * 1024 };
+const MAX_BODY = { ingestStatsReport: 16 * 1024, instanceMirrorApps: 4 * 1024 * 1024, completeProvisionIntent: 4 * 1024 };
 const DEFAULT_MAX_BODY = 1024 * 1024;
 
 function compile(template) {

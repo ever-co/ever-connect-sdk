@@ -511,7 +511,6 @@
       "row": 26,
       "title": "Complete a provisioning hand-off",
       "operation_ids": ["completeProvisionIntent"],
-      "availability": "not_in_v1",
       "module": "connect",
       "group": "connection",
       "auth": "instance token",
@@ -522,9 +521,11 @@
       "products": ["gauzy", "works", "rec", "traduora"],
       "phase": 3,
       "errors": [
+        [403, "forbidden_role"],
         [404, "not_found"],
-        [409, "illegal_transition"],
-        [410, "gone"],
+        [409, "intent_consumed"],
+        [410, "intent_expired"],
+        [422, "product_mismatch"],
         [422, "validation_failed"]
       ]
     },

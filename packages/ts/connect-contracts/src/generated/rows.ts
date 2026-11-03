@@ -835,13 +835,13 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "connection",
     "integration": null,
     "auth": "instance token",
-    "availability": "not_in_v1",
+    "availability": "v1",
     "endpoints": [
       {
         "method": "POST",
         "path": "/v1/provision-intents/{jti}/complete",
         "operation_id": "completeProvisionIntent",
-        "status": "not_in_v1"
+        "status": "pinned"
       }
     ],
     "trigger": "a provisioning hand-off the person confirmed on a product screen",
@@ -2166,18 +2166,28 @@ export const ROW_COVERAGE: readonly RowCoverage[] = [
     ],
     "errors": [
       {
+        "status": 403,
+        "code": "forbidden_role",
+        "documented": true
+      },
+      {
         "status": 404,
         "code": "not_found",
         "documented": true
       },
       {
         "status": 409,
-        "code": "illegal_transition",
+        "code": "intent_consumed",
         "documented": true
       },
       {
         "status": 410,
-        "code": "gone",
+        "code": "intent_expired",
+        "documented": true
+      },
+      {
+        "status": 422,
+        "code": "product_mismatch",
         "documented": true
       },
       {

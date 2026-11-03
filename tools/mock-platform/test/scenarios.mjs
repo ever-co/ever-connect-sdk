@@ -1008,24 +1008,46 @@ export const ERRORS = {
       headers: { ...idem('bv'), 'ever-link-id': c.linkId },
     });
   },
-  '26:404:not_found': async (env) =>
-    env.call('POST', '/v1/provision-intents/01JMQCK0RG000000000000000J/complete', {
-      token: (await connected(env)).token,
+  '26:403:forbidden_role': async (env) => {
+    const c = await connected(env);
+    const { jti } = await env.admin('provision-intent', {});
+    return env.call('POST', `/v1/provision-intents/${jti}/complete`, {
+      token: c.token,
       body: { instance_id: '01JMQCK0RG000000000000000K', product_tenant_id: 't', result: 'created' },
-    }),
-  '26:409:illegal_transition': async (env) => {
+    });
+  },
+  '26:404:not_found': async (env) => {
+    const c = await connected(env);
+    return env.call('POST', '/v1/provision-intents/01JMQCK0RG000000000000000J/complete', {
+      token: c.token,
+      body: { instance_id: c.instanceId, product_tenant_id: 't', result: 'created' },
+    });
+  },
+  '26:409:intent_consumed': async (env) => {
     const c = await connected(env);
     const { jti } = await env.admin('provision-intent', {});
     await env.call('POST', `/v1/provision-intents/${jti}/complete`, {
       token: c.token,
       body: { instance_id: c.instanceId, product_tenant_id: 't', result: 'created' },
     });
+    await env.admin('codes', { code: 'EVC-TEST-0000-0009' });
+    const other = await env.connect({ code: 'EVC-TEST-0000-0009', key: testKey('stranger'), tenant: { product_tenant_id: 'tenant-9' } });
     return env.call('POST', `/v1/provision-intents/${jti}/complete`, {
-      token: c.token,
-      body: { instance_id: c.instanceId, product_tenant_id: 't', result: 'refused' },
+      token: other.token,
+      body: { instance_id: other.instanceId, product_tenant_id: 't', result: 'created' },
     });
   },
-  '26:410:gone': async (env) => {
+  '26:422:product_mismatch': async (env) => {
+    await connected(env);
+    const { jti } = await env.admin('provision-intent', {});
+    await env.admin('codes', { code: 'EVC-TEST-0000-0009' });
+    const other = await env.connect({ code: 'EVC-TEST-0000-0009', key: testKey('stranger'), tenant: { product_tenant_id: 'tenant-9' } });
+    return env.call('POST', `/v1/provision-intents/${jti}/complete`, {
+      token: other.token,
+      body: { instance_id: other.instanceId, product_tenant_id: 't', result: 'created' },
+    });
+  },
+  '26:410:intent_expired': async (env) => {
     const c = await connected(env);
     const { jti } = await env.admin('provision-intent', { expires_in_s: 60 });
     await env.admin('clock', { advance: 120 });

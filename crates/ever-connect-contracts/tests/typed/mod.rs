@@ -20,6 +20,7 @@ pub fn component(name: &str, value: &Value) -> Option<Result<Value, String>> {
         "BillingLink" => rt::<components::BillingLink>(value),
         "BillingLinkCreate" => rt::<components::BillingLinkCreate>(value),
         "Compat" => rt::<components::Compat>(value),
+        "CompletionUrls" => rt::<components::CompletionUrls>(value),
         "ConnectKind" => rt::<components::ConnectKind>(value),
         "ConsentInput" => rt::<components::ConsentInput>(value),
         "ConsentUrl" => rt::<components::ConsentUrl>(value),
