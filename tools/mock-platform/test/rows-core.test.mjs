@@ -400,7 +400,7 @@ describe('row 29: device-first connect', () => {
       });
     const poll = (code = start.body.device_code, jti) =>
       env.call('POST', '/v1/connect/token', { body: { device_code: code, client_assertion: assertion(code, jti) } });
-    expectProblem(expect, await poll(), 400, 'authorization_pending');
+    expectProblem(expect, await poll(undefined, 'jti-reused-after-reset-0001'), 400, 'authorization_pending');
     for (let i = 0; i < 3; i += 1) expectProblem(expect, await poll(), 400, 'slow_down');
     await env.admin('clock', { advance: 60 });
     await env.admin('approve', { user_code: start.body.user_code });
