@@ -2,29 +2,28 @@
   "description": "Where every contract file of this repository comes from. Written by tools/sync-contract.mjs; checked by tools/check-schema-drift.mjs. `provisional` sources are drafts the platform has not published yet: tools/check-schema-drift.mjs --strict refuses them.",
   "platform": {
     "repository": "ever-co/platform",
-    "commit": "93409e4daaf24778b89e529146fe95f249c7f43b"
+    "commit": "ad56f9dcbbfc692ebc9a5ec3bd0ad6d517a1b307"
   },
   "openapi": {
     "target": "contracts/openapi/ever-platform.v1.yaml",
-    "sha256": "36bceadd935a5a013b3f386d3b6a25e3269e09a2d2cb4bb20357d2fbca57d212",
+    "sha256": "90e5b0cce800065e3aa8cd75d2f0a033edc930a303eb7b163f0e27e131578b59",
     "pinned": {
       "source": "contracts/openapi/ever-api.v1.json",
-      "sha256": "9069039d26b77a85de69c13a39a92748336a326221d67640f52630379c83e08a"
+      "sha256": "9749d5141f49233a80ef82f45bcd0de2f122fe3ad6babf9490c7beaefb733582"
     },
     "design": {
       "source": "docs/specs/api",
-      "sha256": "35f44d8b84c32dc998725f3697c4aca9374007ce78ad1f274d832c075228808e",
-      "files": 21
+      "sha256": "9bf79b567d56237b62e937bb3e39219bd46f94721bb44417fe5261dd95468e73",
+      "files": 20
     },
     "operations": 60,
     "scope": {
       "source": "contracts/openapi/v1-scope.json",
-      "sha256": "7e88f8ee406742fc921d04b3e6ffdad2d8eaf4a0171b7ef38e84b34278d7cc00",
-      "version": "1.1.0"
+      "sha256": "54936d946e17136c6a248a98e89ef1cb36b549adccc9ee99b15f19b88f2eb82c",
+      "version": "1.2.0"
     },
     "provisional_operations": [],
     "not_in_v1_operations": [
-      "completeProvisionIntent",
       "discoverSso",
       "getLookupSalt",
       "instanceCreateBillingLink",
@@ -154,8 +153,8 @@
     {
       "path": "contracts/openapi/v1-scope.json",
       "source": "contracts/openapi/v1-scope.json",
-      "source_sha256": "7e88f8ee406742fc921d04b3e6ffdad2d8eaf4a0171b7ef38e84b34278d7cc00",
-      "sha256": "7e88f8ee406742fc921d04b3e6ffdad2d8eaf4a0171b7ef38e84b34278d7cc00",
+      "source_sha256": "54936d946e17136c6a248a98e89ef1cb36b549adccc9ee99b15f19b88f2eb82c",
+      "sha256": "54936d946e17136c6a248a98e89ef1cb36b549adccc9ee99b15f19b88f2eb82c",
       "transform": null,
       "provisional": false,
       "upstream": null

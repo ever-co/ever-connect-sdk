@@ -117,6 +117,17 @@ pub mod components {
         ///semver range.
         pub version_range: ::std::string::String,
     }
+    ///URLs the product reports.
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, Default)]
+    #[serde(deny_unknown_fields)]
+    pub struct CompletionUrls {
+        ///The product's API.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub api: ::std::option::Option<::std::string::String>,
+        ///The product's web app.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub app: ::std::option::Option<::std::string::String>,
+    }
     ///The kind of deployment an installation is.
     #[derive(
         ::serde::Deserialize,
@@ -623,6 +634,14 @@ pub mod components {
         ProductMismatch,
         #[serde(rename = "product_not_supported")]
         ProductNotSupported,
+        #[serde(rename = "product_not_provisionable")]
+        ProductNotProvisionable,
+        #[serde(rename = "job_in_progress")]
+        JobInProgress,
+        #[serde(rename = "intent_expired")]
+        IntentExpired,
+        #[serde(rename = "intent_consumed")]
+        IntentConsumed,
         #[serde(rename = "key_mismatch")]
         KeyMismatch,
         #[serde(rename = "signature_invalid")]
@@ -781,6 +800,10 @@ pub mod components {
                 Self::CodeExpired => f.write_str("code_expired"),
                 Self::ProductMismatch => f.write_str("product_mismatch"),
                 Self::ProductNotSupported => f.write_str("product_not_supported"),
+                Self::ProductNotProvisionable => f.write_str("product_not_provisionable"),
+                Self::JobInProgress => f.write_str("job_in_progress"),
+                Self::IntentExpired => f.write_str("intent_expired"),
+                Self::IntentConsumed => f.write_str("intent_consumed"),
                 Self::KeyMismatch => f.write_str("key_mismatch"),
                 Self::SignatureInvalid => f.write_str("signature_invalid"),
                 Self::UnlinkedOrg => f.write_str("unlinked_org"),
@@ -883,6 +906,10 @@ pub mod components {
                 "code_expired" => Ok(Self::CodeExpired),
                 "product_mismatch" => Ok(Self::ProductMismatch),
                 "product_not_supported" => Ok(Self::ProductNotSupported),
+                "product_not_provisionable" => Ok(Self::ProductNotProvisionable),
+                "job_in_progress" => Ok(Self::JobInProgress),
+                "intent_expired" => Ok(Self::IntentExpired),
+                "intent_consumed" => Ok(Self::IntentConsumed),
                 "key_mismatch" => Ok(Self::KeyMismatch),
                 "signature_invalid" => Ok(Self::SignatureInvalid),
                 "unlinked_org" => Ok(Self::UnlinkedOrg),
@@ -1679,144 +1706,40 @@ pub mod components {
         `pending_operator` (waiting for the installation operator's local accept) or `coming_soon`.*/
         pub state: ::std::string::String,
     }
-    ///Callback from the product after a consented hand-off completed its part of the provisioning intent. Idempotent by `jti`.
+    ///A product's answer to a provision intent.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct IntentComplete {
-        pub instance_id: Ulid,
+        ///The installation answering (the token's own).
+        pub instance_id: ::std::string::String,
+        ///The product's organization.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub product_org_id: ::std::option::Option<::std::string::String>,
+        ///The product's tenant (`none` with `refused`).
         pub product_tenant_id: ::std::string::String,
+        ///The product user that owns the tenant (opaque).
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub product_user_ref: ::std::option::Option<::std::string::String>,
+        /**Why it refused: a machine token (`^[a-z0-9_]{1,64}$`, `user_declined`); anything else is
+        not kept (a step's error holds no free text).*/
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub refusal_reason: ::std::option::Option<::std::string::String>,
-        pub result: IntentCompleteResult,
+        ///`created`, `already_linked` or `refused`.
+        pub result: ::std::string::String,
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub urls: ::std::option::Option<IntentCompleteUrls>,
+        pub urls: ::std::option::Option<CompletionUrls>,
     }
-    ///`IntentCompleteResponse`
+    ///The callback's answer.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct IntentCompleteResponse {
+        ///The job.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub job_id: ::std::option::Option<::std::string::String>,
-        pub status: IntentCompleteResponseStatus,
+        ///`completed` or `already_completed`.
+        pub status: ::std::string::String,
+        ///The tenant link written (the first, when Ever Teams came too).
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub tenant_link_id: ::std::option::Option<::std::string::String>,
-    }
-    ///`IntentCompleteResponseStatus`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum IntentCompleteResponseStatus {
-        #[serde(rename = "completed")]
-        Completed,
-        #[serde(rename = "already_completed")]
-        AlreadyCompleted,
-    }
-    impl ::std::fmt::Display for IntentCompleteResponseStatus {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Completed => f.write_str("completed"),
-                Self::AlreadyCompleted => f.write_str("already_completed"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for IntentCompleteResponseStatus {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "completed" => Ok(Self::Completed),
-                "already_completed" => Ok(Self::AlreadyCompleted),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for IntentCompleteResponseStatus {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for IntentCompleteResponseStatus {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    ///`IntentCompleteResult`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum IntentCompleteResult {
-        #[serde(rename = "created")]
-        Created,
-        #[serde(rename = "already_linked")]
-        AlreadyLinked,
-        #[serde(rename = "refused")]
-        Refused,
-    }
-    impl ::std::fmt::Display for IntentCompleteResult {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Created => f.write_str("created"),
-                Self::AlreadyLinked => f.write_str("already_linked"),
-                Self::Refused => f.write_str("refused"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for IntentCompleteResult {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "created" => Ok(Self::Created),
-                "already_linked" => Ok(Self::AlreadyLinked),
-                "refused" => Ok(Self::Refused),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for IntentCompleteResult {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for IntentCompleteResult {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    ///`IntentCompleteUrls`
-    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, Default)]
-    pub struct IntentCompleteUrls {
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub api: ::std::option::Option<::std::string::String>,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub app: ::std::option::Option<::std::string::String>,
     }
     ///The body of `GET /.well-known/ever-keys.json`.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]

@@ -243,7 +243,7 @@
     "intent-complete.invalid-null-id.json": {
       "schema": "IntentComplete",
       "valid": false,
-      "path": "/product_org_id"
+      "path": "/product_tenant_id"
     },
     "intent-complete.invalid-extra-field.json": {
       "schema": "IntentComplete",
