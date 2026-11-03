@@ -48,7 +48,14 @@ export interface paths {
         };
         readonly get?: never;
         readonly put?: never;
-        /** Device-first connect (instance asks for a code) */
+        /**
+         * Starts a device-first connect: the installation receives a device code to poll with and an
+         *     `EVC-` user code to show its operator. An owner or admin of an organization types the user code
+         *     on `verification_uri` (or opens `verification_uri_complete`) within `expires_in` seconds; the
+         *     installation polls `POST /v1/connect/token` every `interval` seconds meanwhile. The presented
+         *     key is parked with the code: only an assertion signed with it completes the connect. A key that
+         *     already holds a connection answers `422 public_jwk_invalid`.
+         */
         readonly post: operations["connectDevice"];
         readonly delete?: never;
         readonly options?: never;
@@ -113,8 +120,14 @@ export interface paths {
         readonly get?: never;
         readonly put?: never;
         /**
-         * Device-first poll for the instance token
-         * @description Poll at least every `interval` seconds. Pending approval answers `400 authorization_pending`; polling too fast `400 slow_down` (add 5 s); an expired code `400 expired_token`. On approval the assertion is verified against the parked key and the instance is created.
+         * Polls a device-first connect (RFC 8628 section 3.4, with an RFC 7523 assertion signed with the
+         *     key parked at `POST /v1/connect/device`: `iss = sub = <kid>`,
+         *     `aud = <api origin>/v1/connect/token`). Before the approval: `400 authorization_pending`;
+         *     sooner than the interval: `400 slow_down` (wait 5 s longer; the third in a row revokes the
+         *     code); an unknown, expired, revoked or used device code: `400 expired_token` (start over).
+         *     After the approval, the first poll signed with the parked key connects the installation
+         *     (`active`) and answers its first instance token; an assertion signed with another key answers
+         *     `409 key_mismatch` and connects nothing.
          */
         readonly post: operations["connectDeviceToken"];
         readonly delete?: never;
@@ -1267,8 +1280,6 @@ export interface components {
             /** @description semver range. */
             readonly version_range: string;
         };
-        /** @description Connect code `EVC-XXXX-XXXX-XXXX` (Crockford base32, no I L O U; case-insensitive on input). */
-        readonly ConnectCodeValue: string;
         /**
          * @description The kind of deployment an installation is.
          * @enum {string}
@@ -1465,50 +1476,116 @@ export interface components {
             /** @description The cursor of the next page, `null` on the last. */
             readonly next_cursor?: string | null;
         };
-        /** @description Device-first connect; the instance shows the user code and polls for the token. */
+        /**
+         * @description Device-first connect: the installation asks for a code with its own Ed25519 connect
+         *     key, shows the `user_code` to its operator, and polls `POST /v1/connect/token` until an owner
+         *     or admin of an organization approves the code on app.ever.co `/connect`. The key is parked
+         *     with the code: only an assertion signed with it completes the connect. The body carries no
+         *     address or any other field outside this schema.
+         */
         readonly DeviceRequest: {
-            readonly install_source: components["schemas"]["InstallSource"];
             /**
-             * @default self_hosted
-             * @enum {string}
+             * @description Where it was installed from, read from its environment (`self-hosted`, `ever.sh`,
+             *     `partner:<slug>`, ...); never inferred.
+             * @example self-hosted
              */
-            readonly kind: "cloud" | "self_hosted" | "works_app";
-            readonly product: components["schemas"]["ProductCode"];
-            readonly public_jwk: components["schemas"]["Jwk"];
-            readonly serves_products?: readonly components["schemas"]["ProductCode"][];
-            readonly version: components["schemas"]["SemVer"];
+            readonly install_source: string;
+            readonly kind?: null | components["schemas"]["ConnectKind"];
+            /**
+             * @description The product the installation runs.
+             * @example gauzy
+             */
+            readonly product: string;
+            /**
+             * @description Its connect key: an Ed25519 public JWK (`kty: OKP`, `crv: Ed25519`, `x`); the platform
+             *     assigns its `kid`.
+             */
+            readonly public_jwk: Record<string, never>;
+            /** @description The products it serves besides its own (at most five). */
+            readonly serves_products?: readonly string[] | null;
+            /**
+             * @description Its version (`major.minor.patch[-suffix]`).
+             * @example 96.1.0
+             */
+            readonly version: string;
         };
+        /** @description A device code and the code to show (RFC 8628 section 3.2). `Cache-Control: no-store`. */
         readonly DeviceResponse: {
-            /** @description 32 random bytes, base64url; held by the instance only. */
+            /** @description 32 random bytes, base64url: held by the installation only, sent with every poll. */
             readonly device_code: string;
-            /** @constant */
-            readonly expires_in: 900;
-            /** @default 5 */
-            readonly interval: number;
-            readonly user_code: components["schemas"]["ConnectCodeValue"];
             /**
-             * Format: uri
-             * @constant
+             * Format: int64
+             * @description Seconds until the codes stop working.
+             * @example 900
              */
-            readonly verification_uri: "https://app.ever.co/connect";
-            /** Format: uri */
+            readonly expires_in: number;
+            /**
+             * Format: int64
+             * @description The least number of seconds between two polls.
+             * @example 5
+             */
+            readonly interval: number;
+            /**
+             * @description The key id the platform assigned to the parked key: the `iss`, `sub` and `kid` of the
+             *     poll's assertion, and the instance's `kid` once it is connected.
+             */
+            readonly kid: string;
+            /**
+             * @description `EVC-XXXX-XXXX-XXXX`: what the installation shows its operator, typed by an owner or
+             *     admin on the verification page.
+             */
+            readonly user_code: string;
+            /**
+             * @description The verification page (the portal's `/connect`).
+             * @example https://app.ever.co/connect
+             */
+            readonly verification_uri: string;
+            /** @description The verification page with the code filled in (`?user_code=`). */
             readonly verification_uri_complete: string;
         };
+        /**
+         * @description One poll of the device-first connect (RFC 8628 section 3.4 with an RFC 7523 assertion): the
+         *     device code and an assertion signed with the parked connect key, `iss = sub = <kid>` (the key
+         *     id the platform assigns, the same as `kid` in the answer), `aud = <api origin>/v1/connect/token`,
+         *     `device_code_hash` = base64url (no padding) of the SHA-256 of this device code, a random `jti`
+         *     (used once), `iat`, and `exp` at most 300 s after `iat`. Sign a fresh assertion for every poll.
+         */
         readonly DeviceTokenRequest: {
-            /** @description RFC 7523 assertion signed by the key presented at `POST /v1/connect/device`. */
+            /** @description The signed assertion. */
             readonly client_assertion: string;
+            /** @description The device code `POST /v1/connect/device` answered. */
             readonly device_code: string;
         };
-        readonly DeviceTokenResponse: components["schemas"]["TokenResponse"] & {
-            /** Format: uri */
+        /** @description The connected installation, its first token and where it calls next. */
+        readonly DeviceTokenResponse: {
+            /** @description `evit_...`: opaque, one hour; keep it in memory only. */
+            readonly access_token: string;
+            /** @description The entitlement document. */
             readonly entitlement_endpoint: string;
-            /** Format: uri */
+            /**
+             * Format: int64
+             * @description Seconds the token lives.
+             * @example 3600
+             */
+            readonly expires_in: number;
+            /** @description The event feed. */
             readonly feed_endpoint: string;
-            readonly instance_id: components["schemas"]["Ulid"];
-            readonly keys?: components["schemas"]["KeyManifest"];
+            /** @description The instance id: the `iss` and `sub` of its assertions from now on. */
+            readonly instance_id: string;
+            /** @description The key manifest as `/.well-known/ever-keys.json` serves it. */
+            readonly keys?: Record<string, never> | null;
+            /** @description The key id of its connect key (the assertion's `kid`). */
             readonly kid: string;
-            /** @enum {string} */
-            readonly status: "active" | "pending_approval";
+            readonly link?: null | components["schemas"]["LinkedTenant"];
+            /** @description `active`. */
+            readonly status: string;
+            /** @description `POST` an instance assertion here for the next tokens. */
+            readonly token_endpoint: string;
+            /**
+             * @description `Bearer`.
+             * @example Bearer
+             */
+            readonly token_type: string;
         };
         /**
          * @description Additive vocabulary of what a discoverable organization advertises to counterparties.
@@ -1765,13 +1842,6 @@ export interface components {
         };
         /** @enum {string} */
         readonly InstallMechanism: "works_blueprint" | "provision_product" | "instance_plugin" | "external_link" | "partner_referral";
-        /**
-         * @description How the instance was installed; set only through the template's environment, never by fingerprinting.
-         * @example self-hosted
-         * @example ever.sh
-         * @example partner:railway
-         */
-        readonly InstallSource: string;
         /** @description Reported by the instance that performed an `instance_plugin` install. */
         readonly InstallStatus: {
             readonly detail?: string;
@@ -2055,40 +2125,6 @@ export interface components {
             readonly status: "completed" | "already_completed";
             readonly tenant_link_id?: string | null;
         };
-        /** @description Ed25519 public key in JWK form. */
-        readonly Jwk: {
-            /** @constant */
-            readonly alg?: "EdDSA";
-            /** @constant */
-            readonly crv: "Ed25519";
-            /** @description Key id. For instance keys `kid = base64url(sha256(pub)[0:8])`. */
-            readonly kid?: string;
-            /** @constant */
-            readonly kty: "OKP";
-            /** @constant */
-            readonly use?: "sig";
-            /** @description base64url-encoded 32-byte public key. */
-            readonly x: string;
-        };
-        /**
-         * @description `GET /.well-known/ever-keys.json`. A JWKS of Ed25519 keys wrapped in a
-         *     manifest signed by the long-lived root key that every SDK release pins.
-         *     Verifiers trust an `entitlement`, `assertion` or `intent` key only through
-         *     a valid manifest. Keys rotate every 90 days with a 30-day overlap.
-         */
-        readonly KeyManifest: {
-            readonly keys: readonly components["schemas"]["ManifestKey"][];
-            /**
-             * @description Compact JWS signed by a pinned root key. Header
-             *     `{"alg":"EdDSA","kid":"<root kid>","typ":"ever-key-manifest+jwt"}`;
-             *     payload `{"iss":"https://api.ever.co","iat":<unix s>,"exp":<iat + 30 d>,
-             *     "keys_sha256":"<hex sha256 of the RFC 8785 canonical keys array>",
-             *     "root_kid":"<root kid>"}` (see the entitlement document format).
-             *     Validity is the payload's `iat`/`exp`; there are no separate
-             *     timestamps in the response.
-             */
-            readonly manifest: string;
-        };
         /** @description The body of `GET /.well-known/ever-keys.json`. */
         readonly KeyManifestBody: {
             /** @description The keys the manifest vouches for. */
@@ -2270,15 +2306,6 @@ export interface components {
             /** @enum {string} */
             readonly status: "accepted" | "running" | "succeeded" | "failed";
             readonly version?: components["schemas"]["SemVer"];
-        };
-        readonly ManifestKey: components["schemas"]["Jwk"] & {
-            /** @enum {string} */
-            readonly ever_purpose: "assertion" | "intent" | "entitlement";
-            /** Format: date-time */
-            readonly not_after?: string | null;
-            readonly not_before?: components["schemas"]["Timestamp"];
-            /** @enum {string} */
-            readonly state: "active" | "previous";
         };
         /** @description One key of the published key set. */
         readonly ManifestKeyBody: {
@@ -3147,7 +3174,7 @@ export interface operations {
             };
         };
         readonly responses: {
-            /** @description Code issued; show `user_code` and poll `POST /v1/connect/token`. */
+            /** @description The codes (`Cache-Control: no-store`): show `user_code`, poll with `device_code` */
             readonly 200: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -3156,7 +3183,16 @@ export interface operations {
                     readonly "application/json": components["schemas"]["DeviceResponse"];
                 };
             };
-            /** @description Validation failed; unknown fields are rejected on writes (`validation_failed`, `schema_violation`, `code_invalid`, `idempotency_mismatch`, `mirror_owned_field`, `limit_exceeded`). */
+            /** @description The device-first connect is not served on this deployment */
+            readonly 404: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `product_not_supported`, `public_jwk_invalid` (not an Ed25519 public key, or a key that already holds a connection), or the body does not validate */
             readonly 422: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -3165,34 +3201,9 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Rate limit exceeded for this principal class (`rate_limited`). */
+            /** @description `rate_limited`: too many device codes from this caller (`Retry-After`) */
             readonly 429: {
                 headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description Seconds to wait before retrying. */
-                    readonly "Retry-After"?: number;
-                    readonly [name: string]: unknown;
-                };
-                content: {
-                    readonly "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description Any other error, as a problem document. */
-            readonly default: {
-                headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
                     readonly [name: string]: unknown;
                 };
                 content: {
@@ -3310,7 +3321,7 @@ export interface operations {
             };
         };
         readonly responses: {
-            /** @description Approved; token and endpoints. */
+            /** @description Connected: the instance, its first token and its endpoints (`Cache-Control: no-store`) */
             readonly 200: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -3319,7 +3330,7 @@ export interface operations {
                     readonly "application/json": components["schemas"]["DeviceTokenResponse"];
                 };
             };
-            /** @description Malformed request or ambiguous credentials (`ambiguous_credentials`: two authentication schemes on one request). */
+            /** @description `authorization_pending`, `slow_down` or `expired_token` (`Cache-Control: no-store`) */
             readonly 400: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -3328,34 +3339,45 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Rate limit exceeded for this principal class (`rate_limited`). */
-            readonly 429: {
+            /** @description `invalid_client`: the assertion was not accepted */
+            readonly 401: {
                 headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description Seconds to wait before retrying. */
-                    readonly "Retry-After"?: number;
                     readonly [name: string]: unknown;
                 };
                 content: {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Any other error, as a problem document. */
-            readonly default: {
+            /** @description The device-first connect is not served on this deployment */
+            readonly 404: {
                 headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `key_mismatch`: the assertion is not signed with the parked key */
+            readonly 409: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The body does not validate */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `rate_limited` (`Retry-After`) */
+            readonly 429: {
+                headers: {
                     readonly [name: string]: unknown;
                 };
                 content: {

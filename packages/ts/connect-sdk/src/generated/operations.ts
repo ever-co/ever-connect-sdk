@@ -90,7 +90,7 @@ export const OPERATIONS = {
     "row": 29,
     "integration": null,
     "rateLimit": "connect",
-    "status": "not_in_v1"
+    "status": "pinned"
   },
   "getConnectLegal": {
     "id": "getConnectLegal",
@@ -156,8 +156,8 @@ export const OPERATIONS = {
     ],
     "row": 29,
     "integration": null,
-    "rateLimit": "connect",
-    "status": "not_in_v1"
+    "rateLimit": null,
+    "status": "pinned"
   },
   "redeliverWebhook": {
     "id": "redeliverWebhook",
@@ -1526,61 +1526,76 @@ export const REQUEST_SCHEMAS: { readonly [key: string]: unknown } = {
         ]
       },
       "DeviceRequest": {
-        "type": "object",
-        "description": "Device-first connect; the instance shows the user code and polls for the token.",
+        "additionalProperties": false,
+        "description": "Device-first connect: the installation asks for a code with its own Ed25519 connect\nkey, shows the `user_code` to its operator, and polls `POST /v1/connect/token` until an owner\nor admin of an organization approves the code on app.ever.co `/connect`. The key is parked\nwith the code: only an assertion signed with it completes the connect. The body carries no\naddress or any other field outside this schema.",
+        "properties": {
+          "install_source": {
+            "description": "Where it was installed from, read from its environment (`self-hosted`, `ever.sh`,\n`partner:<slug>`, ...); never inferred.",
+            "example": "self-hosted",
+            "type": "string"
+          },
+          "kind": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ConnectKind",
+                "description": "Its kind (default `self_hosted`)."
+              }
+            ]
+          },
+          "product": {
+            "description": "The product the installation runs.",
+            "example": "gauzy",
+            "type": "string"
+          },
+          "public_jwk": {
+            "description": "Its connect key: an Ed25519 public JWK (`kty: OKP`, `crv: Ed25519`, `x`); the platform\nassigns its `kid`.",
+            "type": "object"
+          },
+          "serves_products": {
+            "description": "The products it serves besides its own (at most five).",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "version": {
+            "description": "Its version (`major.minor.patch[-suffix]`).",
+            "example": "96.1.0",
+            "type": "string"
+          }
+        },
         "required": [
           "product",
           "version",
           "install_source",
           "public_jwk"
         ],
-        "additionalProperties": false,
-        "properties": {
-          "product": {
-            "$ref": "#/components/schemas/ProductCode"
-          },
-          "version": {
-            "$ref": "#/components/schemas/SemVer"
-          },
-          "install_source": {
-            "$ref": "#/components/schemas/InstallSource"
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "cloud",
-              "self_hosted",
-              "works_app"
-            ],
-            "default": "self_hosted"
-          },
-          "serves_products": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ProductCode"
-            }
-          },
-          "public_jwk": {
-            "$ref": "#/components/schemas/Jwk"
-          }
-        }
+        "type": "object"
       },
       "DeviceTokenRequest": {
-        "type": "object",
+        "additionalProperties": false,
+        "description": "One poll of the device-first connect (RFC 8628 section 3.4 with an RFC 7523 assertion): the\ndevice code and an assertion signed with the parked connect key, `iss = sub = <kid>` (the key\nid the platform assigns, the same as `kid` in the answer), `aud = <api origin>/v1/connect/token`,\n`device_code_hash` = base64url (no padding) of the SHA-256 of this device code, a random `jti`\n(used once), `iat`, and `exp` at most 300 s after `iat`. Sign a fresh assertion for every poll.",
+        "properties": {
+          "client_assertion": {
+            "description": "The signed assertion.",
+            "type": "string"
+          },
+          "device_code": {
+            "description": "The device code `POST /v1/connect/device` answered.",
+            "type": "string"
+          }
+        },
         "required": [
           "device_code",
           "client_assertion"
         ],
-        "additionalProperties": false,
-        "properties": {
-          "device_code": {
-            "type": "string"
-          },
-          "client_assertion": {
-            "type": "string",
-            "description": "RFC 7523 assertion signed by the key presented at `POST /v1/connect/device`."
-          }
-        }
+        "type": "object"
       },
       "FeedAck": {
         "additionalProperties": false,
@@ -1703,16 +1718,6 @@ export const REQUEST_SCHEMAS: { readonly [key: string]: unknown } = {
           "subject"
         ],
         "type": "object"
-      },
-      "InstallSource": {
-        "type": "string",
-        "description": "How the instance was installed; set only through the template's environment, never by fingerprinting.",
-        "pattern": "^(cloud|self-hosted|ever\\.sh|works_app|desktop|partner:[a-z0-9-]{2,32})$",
-        "examples": [
-          "self-hosted",
-          "ever.sh",
-          "partner:railway"
-        ]
       },
       "InstallStatus": {
         "type": "object",
@@ -1899,41 +1904,6 @@ export const REQUEST_SCHEMAS: { readonly [key: string]: unknown } = {
           "refusal_reason": {
             "type": "string",
             "maxLength": 200
-          }
-        }
-      },
-      "Jwk": {
-        "type": "object",
-        "description": "Ed25519 public key in JWK form.",
-        "required": [
-          "kty",
-          "crv",
-          "x"
-        ],
-        "properties": {
-          "kty": {
-            "type": "string",
-            "const": "OKP"
-          },
-          "crv": {
-            "type": "string",
-            "const": "Ed25519"
-          },
-          "x": {
-            "type": "string",
-            "description": "base64url-encoded 32-byte public key."
-          },
-          "kid": {
-            "type": "string",
-            "description": "Key id. For instance keys `kid = base64url(sha256(pub)[0:8])`."
-          },
-          "use": {
-            "type": "string",
-            "const": "sig"
-          },
-          "alg": {
-            "type": "string",
-            "const": "EdDSA"
           }
         }
       },
@@ -2379,18 +2349,6 @@ export const REQUEST_SCHEMAS: { readonly [key: string]: unknown } = {
           "link_method"
         ],
         "type": "object"
-      },
-      "ProductCode": {
-        "type": "string",
-        "description": "The Ever product a record belongs to. `demand` is listed with status `soon` and accepts no connections.",
-        "enum": [
-          "gauzy",
-          "teams",
-          "works",
-          "rec",
-          "traduora",
-          "demand"
-        ]
       },
       "ProviderGrantStatus": {
         "type": "object",

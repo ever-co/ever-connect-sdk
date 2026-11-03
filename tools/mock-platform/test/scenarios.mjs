@@ -4,7 +4,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { fromB64url, instanceKid, sha256Hex, signBytes } from '../src/crypto.mjs';
+import { b64url, fromB64url, instanceKid, sha256, sha256Hex, signBytes } from '../src/crypto.mjs';
 import { signStatsLinkStatement, testKey } from '../src/keys.mjs';
 import { ISSUER } from './helpers.mjs';
 
@@ -384,13 +384,7 @@ export const OK = {
   connectDeviceToken: async (env) => {
     const start = await OK.connectDevice(env);
     await env.admin('approve', { user_code: start.body.user_code });
-    const kid = instanceKid(testKey('connect').x);
-    return env.call('POST', '/v1/connect/token', {
-      body: {
-        device_code: start.body.device_code,
-        client_assertion: env.assertion({ instanceId: kid, audience: `${ISSUER}/v1/connect/token` }),
-      },
-    });
+    return env.call('POST', '/v1/connect/token', { body: devicePoll(env, start) });
   },
   instanceCreateWebhook: async (env) => {
     const c = await connected(env, { enable: ['webhooks'] });
@@ -559,6 +553,19 @@ const integrationPairs = (row, integration, call) => ({
   [`${row}:403:integration_disabled`]: disabledFor(call),
   [`${row}:403:integration_revoked`]: revokedFor(integration, call),
 });
+
+/** A device poll signed with the parked key, bound to its device code (a fresh `jti` each time). */
+function devicePoll(env, start) {
+  return {
+    device_code: start.body.device_code,
+    client_assertion: env.assertion({
+      key: testKey('connect'),
+      instanceId: instanceKid(testKey('connect').x),
+      audience: `${ISSUER}/v1/connect/token`,
+      extra: { device_code_hash: b64url(sha256(start.body.device_code)) },
+    }),
+  };
+}
 
 export const ERRORS = {
   '2:503:unavailable': async (env) => {
@@ -1064,12 +1071,12 @@ export const ERRORS = {
   },
   '29:400:authorization_pending': async (env) => {
     const start = await OK.connectDevice(env);
-    return env.call('POST', '/v1/connect/token', { body: { device_code: start.body.device_code, client_assertion: 'a.b.c' } });
+    return env.call('POST', '/v1/connect/token', { body: devicePoll(env, start) });
   },
   '29:400:slow_down': async (env) => {
     const start = await OK.connectDevice(env);
-    await env.call('POST', '/v1/connect/token', { body: { device_code: start.body.device_code, client_assertion: 'a.b.c' } });
-    return env.call('POST', '/v1/connect/token', { body: { device_code: start.body.device_code, client_assertion: 'a.b.c' } });
+    await env.call('POST', '/v1/connect/token', { body: devicePoll(env, start) });
+    return env.call('POST', '/v1/connect/token', { body: devicePoll(env, start) });
   },
   '29:400:expired_token': (env) =>
     env.call('POST', '/v1/connect/token', { body: { device_code: 'unknown-device-code', client_assertion: 'a.b.c' } }),
@@ -1081,6 +1088,18 @@ export const ERRORS = {
       body: {
         device_code: start.body.device_code,
         client_assertion: env.assertion({ key: testKey('stranger'), instanceId: kid, audience: `${ISSUER}/v1/connect/token` }),
+      },
+    });
+  },
+  '29:401:invalid_client': async (env) => {
+    // Signed with the parked key, but for another audience (the instance token endpoint).
+    const start = await OK.connectDevice(env);
+    await env.admin('approve', { user_code: start.body.user_code });
+    const kid = instanceKid(testKey('connect').x);
+    return env.call('POST', '/v1/connect/token', {
+      body: {
+        device_code: start.body.device_code,
+        client_assertion: env.assertion({ key: testKey('connect'), instanceId: kid, audience: `${ISSUER}/v1/instances/token` }),
       },
     });
   },

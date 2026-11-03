@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { verifyEntitlement, verifyManifest } from '../../test/lib/reference-verify.mjs';
-import { b64url, instanceKid, signBytes } from '../src/crypto.mjs';
+import { b64url, instanceKid, sha256, signBytes } from '../src/crypto.mjs';
 import { testKey, testRootEntry } from '../src/keys.mjs';
 import { expectOk, expectProblem, ISSUER, startMock } from './helpers.mjs';
 
@@ -358,7 +358,12 @@ describe('row 29: device-first connect', () => {
       env.call('POST', '/v1/connect/token', {
         body: {
           device_code: start.body.device_code,
-          client_assertion: env.assertion({ key: k, instanceId: kid, audience: `${ISSUER}/v1/connect/token` }),
+          client_assertion: env.assertion({
+            key: k,
+            instanceId: kid,
+            audience: `${ISSUER}/v1/connect/token`,
+            extra: { device_code_hash: b64url(sha256(start.body.device_code)) },
+          }),
         },
       });
     expectProblem(expect, await poll(), 400, 'authorization_pending');
@@ -371,6 +376,77 @@ describe('row 29: device-first connect', () => {
     expectOk(expect, ok, 200, 'connectDeviceToken');
     expect(ok.body.access_token).toMatch(/^evit_/);
     expectProblem(expect, await poll(), 400, 'expired_token');
+  });
+
+  it('three slow_down answers in a row revoke the code; a reset forgets the used assertion ids', async () => {
+    env = await startMock();
+    const key = testKey('connect');
+    const body = {
+      product: 'gauzy',
+      version: '1.0.0',
+      install_source: 'self-hosted',
+      public_jwk: { kty: 'OKP', crv: 'Ed25519', x: key.x },
+    };
+    const start = await env.call('POST', '/v1/connect/device', { body });
+    expectOk(expect, start, 200, 'connectDevice');
+    const kid = instanceKid(key.x);
+    const assertion = (code, jti) =>
+      env.assertion({
+        key,
+        instanceId: kid,
+        audience: `${ISSUER}/v1/connect/token`,
+        jti,
+        extra: { device_code_hash: b64url(sha256(code)) },
+      });
+    const poll = (code = start.body.device_code, jti) =>
+      env.call('POST', '/v1/connect/token', { body: { device_code: code, client_assertion: assertion(code, jti) } });
+    expectProblem(expect, await poll(undefined, 'jti-reused-after-reset-0001'), 400, 'authorization_pending');
+    for (let i = 0; i < 3; i += 1) expectProblem(expect, await poll(), 400, 'slow_down');
+    await env.admin('clock', { advance: 60 });
+    await env.admin('approve', { user_code: start.body.user_code });
+    expectProblem(expect, await poll(), 400, 'expired_token');
+    // After a reset the same assertion id may be used again (a fresh device code).
+    await env.admin('reset');
+    const again = await env.call('POST', '/v1/connect/device', { body });
+    expectOk(expect, again, 200, 'connectDevice');
+    expectProblem(expect, await poll(again.body.device_code, 'jti-reused-after-reset-0001'), 400, 'authorization_pending');
+  });
+
+  it('the device start checks the body as the redeem does', async () => {
+    env = await startMock();
+    const key = testKey('connect');
+    const ok = { product: 'gauzy', version: '1.0.0', install_source: 'self-hosted', public_jwk: { kty: 'OKP', crv: 'Ed25519', x: key.x } };
+    const start = (patch) => env.call('POST', '/v1/connect/device', { body: { ...ok, ...patch } });
+    expectProblem(expect, await start({ product: 'not-a-product' }), 422, 'validation_failed');
+    expectProblem(expect, await start({ version: 'v1' }), 422, 'validation_failed');
+    expectProblem(expect, await start({ install_source: 'somewhere' }), 422, 'validation_failed');
+    expectProblem(expect, await start({ serves_products: ['gauzy', 'demand'] }), 422, 'product_not_supported');
+    expectOk(expect, await start({}), 200, 'connectDevice');
+  });
+
+  it('the device start refuses every key an installation held, however long ago', async () => {
+    env = await startMock();
+    const { instanceId, token } = await env.connect();
+    const original = testKey('connect');
+    const first = testKey('connectNext');
+    const second = testKey('stranger');
+    const start = (key) =>
+      env.call('POST', '/v1/connect/device', {
+        body: { product: 'gauzy', version: '1.0.0', install_source: 'self-hosted', public_jwk: { kty: 'OKP', crv: 'Ed25519', x: key.x } },
+      });
+    expectProblem(expect, await start(original), 422, 'public_jwk_invalid');
+    const rotate = (current, next, n) =>
+      env.call('POST', '/v1/instances/me/keys', {
+        token,
+        body: env.rotation(instanceId, { current, next }),
+        headers: { 'idempotency-key': `held-${n}` },
+      });
+    expectOk(expect, await rotate(original, first, 1), 200, 'instanceRotateKey');
+    // Two rotations later the first key is neither the current one nor the previous one.
+    expectOk(expect, await rotate(first, second, 2), 200, 'instanceRotateKey');
+    expectProblem(expect, await start(original), 422, 'public_jwk_invalid');
+    expectProblem(expect, await start(first), 422, 'public_jwk_invalid');
+    expectProblem(expect, await start(second), 422, 'public_jwk_invalid');
   });
 });
 

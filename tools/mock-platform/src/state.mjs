@@ -124,6 +124,8 @@ export class MockState {
     this.jti = new Map();
     this.wrongCodes = new Map();
     this.devices = new Map();
+    // Device poll assertion ids already used, per parked key (`<kid>|<jti>`).
+    this.deviceJtis = new Set();
     this.statsPins = new Map();
     this.heldKeys = new Set();
     this.statsReports = [];

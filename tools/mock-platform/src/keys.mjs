@@ -123,7 +123,7 @@ export function signStatsLinkStatement({ statsInstanceId, statsKey = testKey('st
 }
 
 /** An RFC 7523 client assertion signed with an installation's connect key. */
-export function signClientAssertion({ key = testKey('connect'), instanceId, audience, iat, ttl = 300, jti, header = {} }) {
+export function signClientAssertion({ key = testKey('connect'), instanceId, audience, iat, ttl = 300, jti, header = {}, extra = {} }) {
   const claims = {
     iss: instanceId,
     sub: instanceId,
@@ -131,6 +131,7 @@ export function signClientAssertion({ key = testKey('connect'), instanceId, audi
     jti: jti ?? b64url(sha256(`${instanceId}:${iat}:${audience}`).subarray(0, 16)),
     iat,
     exp: iat + ttl,
+    ...extra,
   };
   return signJws(key.privateKey, { kid: key.kid, typ: 'JWT', ...header }, claims);
 }

@@ -2,7 +2,7 @@
 // and the device-first connect.
 import { randomBytes } from 'node:crypto';
 import { verifyAssertion } from '../assertion.mjs';
-import { b64url, decodeJws, instanceKid, publicKeyFromX, verifyBytes } from '../crypto.mjs';
+import { b64url, decodeJws, instanceKid, publicKeyFromX, sha256, verifyBytes } from '../crypto.mjs';
 import { manifestEntry, signManifest, testKey } from '../keys.mjs';
 import { createInstance, createLink, linkedTenantView } from '../model.mjs';
 import { fail } from '../problem.mjs';
@@ -128,6 +128,28 @@ function checkRedeemBody(body) {
   if (!validJwk(body.public_jwk) || 'd' in body.public_jwk) fail(422, 'public_jwk_invalid');
   return origins;
 }
+
+/**
+ * The device start's body, checked as the platform checks it: the redeem's product, version,
+ * install source and served-products rules (a served product must accept connections), and a
+ * public Ed25519 key that no instance holds or held.
+ */
+function checkDeviceBody(state, body) {
+  const field = (path, code, message) => fail(422, 'validation_failed', undefined, { errors: [{ path, code, message }] });
+  if (!PRODUCTS.has(body.product)) field('/product', 'invalid', 'not a product code');
+  if (body.product === 'demand') fail(422, 'product_not_supported');
+  if (!VERSION.test(String(body.version).trim())) field('/version', 'invalid_shape', 'a `major.minor.patch[-suffix]` version');
+  if (!INSTALL_SOURCE.test(String(body.install_source).trim())) field('/install_source', 'invalid', 'not an install source');
+  const serves = body.serves_products ?? [];
+  if (serves.some((p) => !PRODUCTS.has(p))) field('/serves_products', 'invalid', 'not a product code');
+  if (serves.length > 5) field('/serves_products', 'out_of_range', 'at most five products');
+  if (serves.includes('demand')) fail(422, 'product_not_supported');
+  if (!validJwk(body.public_jwk) || 'd' in body.public_jwk) fail(422, 'public_jwk_invalid');
+  if (state.heldKeys.has(body.public_jwk.x)) fail(422, 'public_jwk_invalid');
+}
+
+/** Polls answered `slow_down` in a row before the device code is revoked (as the platform). */
+const MAX_SLOW_DOWNS = 3;
 
 function endpoints(issuer) {
   return {
@@ -273,8 +295,7 @@ export const connectHandlers = {
   connectDevice({ state, body, req }) {
     const wait = state.hit(`device-starts|${req.socket.remoteAddress}`, state.config.limits.device_starts_per_hour, 3600);
     if (wait > 0) fail(429, 'rate_limited', undefined, { retry_after_s: wait });
-    if (body.product === 'demand') fail(422, 'product_not_supported');
-    if (!validJwk(body.public_jwk)) fail(422, 'public_jwk_invalid');
+    checkDeviceBody(state, body);
     const deviceCode = b64url(randomBytes(32));
     const letters = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
     const group = () => Array.from(randomBytes(4), (b) => letters[b % 32]).join('');
@@ -286,15 +307,17 @@ export const connectHandlers = {
       expires_at: state.now() + 900,
       interval: 5,
       last_poll: null,
+      slow_downs: 0,
       done: false,
     });
     return {
       status: 200,
       body: {
         device_code: deviceCode,
+        kid: instanceKid(body.public_jwk.x),
         user_code: userCode,
         verification_uri: 'https://app.ever.co/connect',
-        verification_uri_complete: `https://app.ever.co/connect?code=${userCode}`,
+        verification_uri_complete: `https://app.ever.co/connect?user_code=${userCode}`,
         expires_in: 900,
         interval: 5,
       },
@@ -305,13 +328,8 @@ export const connectHandlers = {
     const device = state.devices.get(body.device_code);
     if (!device || device.done || device.expires_at <= state.now()) fail(400, 'expired_token');
     const now = state.now();
-    if (device.last_poll !== null && now - device.last_poll < device.interval) {
-      device.interval += 5;
-      device.last_poll = now;
-      fail(400, 'slow_down');
-    }
-    device.last_poll = now;
-    if (!device.approved) fail(400, 'authorization_pending');
+    // As the platform: every poll proves the parked key with a fresh assertion before it counts,
+    // so a poll captured while pending cannot be replayed after the approval.
     const parked = device.request.public_jwk;
     const decoded = decodeJws(body.client_assertion);
     if (!decoded || decoded.header.alg !== 'EdDSA') fail(401, 'invalid_client');
@@ -324,9 +342,26 @@ export const connectHandlers = {
       p.aud !== `${issuer}/v1/connect/token` ||
       !Number.isInteger(p.exp) ||
       p.exp <= now ||
-      p.exp - p.iat > 300
+      p.exp - p.iat > 300 ||
+      typeof p.jti !== 'string' ||
+      // Bound to this device code (base64url of its SHA-256), as the platform requires.
+      p.device_code_hash !== b64url(sha256(body.device_code))
     )
       fail(401, 'invalid_client');
+    // Spent per parked key, not per code: an assertion names only the key.
+    if (state.deviceJtis.has(`${kid}|${p.jti}`)) fail(401, 'invalid_client');
+    state.deviceJtis.add(`${kid}|${p.jti}`);
+    if (device.last_poll !== null && now - device.last_poll < device.interval) {
+      device.interval += 5;
+      device.last_poll = now;
+      device.slow_downs += 1;
+      // The third slow_down in a row revokes the code: the next poll answers expired_token.
+      if (device.slow_downs >= MAX_SLOW_DOWNS) device.done = true;
+      fail(400, 'slow_down');
+    }
+    device.last_poll = now;
+    device.slow_downs = 0;
+    if (!device.approved) fail(400, 'authorization_pending');
     device.done = true;
     const instance = createInstance(state, { ...device.request, org: device.org, status: 'active' });
     connected(state, instance);
@@ -339,6 +374,7 @@ export const connectHandlers = {
         instance_id: instance.id,
         kid: instance.current_key.kid,
         status: instance.status,
+        token_endpoint: `${issuer}/v1/instances/token`,
         entitlement_endpoint: `${issuer}/v1/instances/me/entitlement`,
         feed_endpoint: `${issuer}/v1/instances/me/events`,
       },

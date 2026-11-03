@@ -43,7 +43,7 @@ export async function startMock(config = {}) {
       if (r.status >= 300) throw new Error(`/__mock/${path}: ${r.status} ${r.text}`);
       return r.body;
     },
-    assertion({ key = testKey('connect'), instanceId, ttl = 300, iat, audience = `${ISSUER}/v1/instances/token`, jti } = {}) {
+    assertion({ key = testKey('connect'), instanceId, ttl = 300, iat, audience = `${ISSUER}/v1/instances/token`, jti, extra } = {}) {
       jtiCounter += 1;
       return signClientAssertion({
         key,
@@ -52,6 +52,7 @@ export async function startMock(config = {}) {
         iat: iat ?? mock.state.now(),
         ttl,
         jti: jti ?? `test-jti-${String(jtiCounter).padStart(12, '0')}`,
+        extra,
       });
     },
     /**
