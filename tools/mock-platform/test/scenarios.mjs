@@ -560,6 +560,16 @@ const integrationPairs = (row, integration, call) => ({
   [`${row}:403:integration_revoked`]: revokedFor(integration, call),
 });
 
+/** A device poll signed with the parked key (a fresh `jti` each time). */
+const devicePoll = (env, start) => ({
+  device_code: start.body.device_code,
+  client_assertion: env.assertion({
+    key: testKey('connect'),
+    instanceId: instanceKid(testKey('connect').x),
+    audience: `${ISSUER}/v1/connect/token`,
+  }),
+});
+
 export const ERRORS = {
   '2:503:unavailable': async (env) => {
     await env.admin('faults', { legal_unavailable: true });
@@ -1064,12 +1074,12 @@ export const ERRORS = {
   },
   '29:400:authorization_pending': async (env) => {
     const start = await OK.connectDevice(env);
-    return env.call('POST', '/v1/connect/token', { body: { device_code: start.body.device_code, client_assertion: 'a.b.c' } });
+    return env.call('POST', '/v1/connect/token', { body: devicePoll(env, start) });
   },
   '29:400:slow_down': async (env) => {
     const start = await OK.connectDevice(env);
-    await env.call('POST', '/v1/connect/token', { body: { device_code: start.body.device_code, client_assertion: 'a.b.c' } });
-    return env.call('POST', '/v1/connect/token', { body: { device_code: start.body.device_code, client_assertion: 'a.b.c' } });
+    await env.call('POST', '/v1/connect/token', { body: devicePoll(env, start) });
+    return env.call('POST', '/v1/connect/token', { body: devicePoll(env, start) });
   },
   '29:400:expired_token': (env) =>
     env.call('POST', '/v1/connect/token', { body: { device_code: 'unknown-device-code', client_assertion: 'a.b.c' } }),

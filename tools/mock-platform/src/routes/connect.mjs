@@ -306,13 +306,8 @@ export const connectHandlers = {
     const device = state.devices.get(body.device_code);
     if (!device || device.done || device.expires_at <= state.now()) fail(400, 'expired_token');
     const now = state.now();
-    if (device.last_poll !== null && now - device.last_poll < device.interval) {
-      device.interval += 5;
-      device.last_poll = now;
-      fail(400, 'slow_down');
-    }
-    device.last_poll = now;
-    if (!device.approved) fail(400, 'authorization_pending');
+    // As the platform: every poll proves the parked key with a fresh assertion before it counts,
+    // so a poll captured while pending cannot be replayed after the approval.
     const parked = device.request.public_jwk;
     const decoded = decodeJws(body.client_assertion);
     if (!decoded || decoded.header.alg !== 'EdDSA') fail(401, 'invalid_client');
@@ -325,9 +320,20 @@ export const connectHandlers = {
       p.aud !== `${issuer}/v1/connect/token` ||
       !Number.isInteger(p.exp) ||
       p.exp <= now ||
-      p.exp - p.iat > 300
+      p.exp - p.iat > 300 ||
+      typeof p.jti !== 'string'
     )
       fail(401, 'invalid_client');
+    device.jtis ??= new Set();
+    if (device.jtis.has(p.jti)) fail(401, 'invalid_client');
+    device.jtis.add(p.jti);
+    if (device.last_poll !== null && now - device.last_poll < device.interval) {
+      device.interval += 5;
+      device.last_poll = now;
+      fail(400, 'slow_down');
+    }
+    device.last_poll = now;
+    if (!device.approved) fail(400, 'authorization_pending');
     device.done = true;
     const instance = createInstance(state, { ...device.request, org: device.org, status: 'active' });
     connected(state, instance);
