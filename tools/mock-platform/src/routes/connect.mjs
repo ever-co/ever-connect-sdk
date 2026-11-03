@@ -324,9 +324,10 @@ export const connectHandlers = {
       typeof p.jti !== 'string'
     )
       fail(401, 'invalid_client');
-    device.jtis ??= new Set();
-    if (device.jtis.has(p.jti)) fail(401, 'invalid_client');
-    device.jtis.add(p.jti);
+    // Spent per parked key, not per code: an assertion names only the key.
+    state.deviceJtis ??= new Set();
+    if (state.deviceJtis.has(`${kid}|${p.jti}`)) fail(401, 'invalid_client');
+    state.deviceJtis.add(`${kid}|${p.jti}`);
     if (device.last_poll !== null && now - device.last_poll < device.interval) {
       device.interval += 5;
       device.last_poll = now;
