@@ -573,7 +573,6 @@
       "row": 29,
       "title": "Device-first connect",
       "operation_ids": ["connectDevice", "connectDeviceToken"],
-      "availability": "not_in_v1",
       "module": "connect",
       "group": "connection",
       "auth": "none (device start); device code and client assertion (token poll)",
@@ -587,7 +586,8 @@
         [400, "authorization_pending"],
         [400, "slow_down"],
         [400, "expired_token"],
-        [409, "key_mismatch", "spec-gap"],
+        [401, "invalid_client"],
+        [409, "key_mismatch"],
         [422, "validation_failed"],
         [422, "product_not_supported"],
         [429, "rate_limited"]

@@ -921,19 +921,19 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "connection",
     "integration": null,
     "auth": "none (device start); device code and client assertion (token poll)",
-    "availability": "not_in_v1",
+    "availability": "v1",
     "endpoints": [
       {
         "method": "POST",
         "path": "/v1/connect/device",
         "operation_id": "connectDevice",
-        "status": "not_in_v1"
+        "status": "pinned"
       },
       {
         "method": "POST",
         "path": "/v1/connect/token",
         "operation_id": "connectDeviceToken",
-        "status": "not_in_v1"
+        "status": "pinned"
       }
     ],
     "trigger": "the operator chooses Show a code instead",
@@ -2297,9 +2297,14 @@ export const ROW_COVERAGE: readonly RowCoverage[] = [
         "documented": true
       },
       {
+        "status": 401,
+        "code": "invalid_client",
+        "documented": true
+      },
+      {
         "status": 409,
         "code": "key_mismatch",
-        "documented": false
+        "documented": true
       },
       {
         "status": 422,

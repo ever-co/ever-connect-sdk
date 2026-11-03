@@ -117,39 +117,6 @@ pub mod components {
         ///semver range.
         pub version_range: ::std::string::String,
     }
-    ///Connect code `EVC-XXXX-XXXX-XXXX` (Crockford base32, no I L O U; case-insensitive on input).
-    #[derive(
-        ::serde::Deserialize, ::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
-    )]
-    #[serde(transparent)]
-    pub struct ConnectCodeValue(pub ::std::string::String);
-    impl ::std::ops::Deref for ConnectCodeValue {
-        type Target = ::std::string::String;
-        fn deref(&self) -> &::std::string::String {
-            &self.0
-        }
-    }
-    impl ::std::convert::From<ConnectCodeValue> for ::std::string::String {
-        fn from(value: ConnectCodeValue) -> Self {
-            value.0
-        }
-    }
-    impl ::std::convert::From<::std::string::String> for ConnectCodeValue {
-        fn from(value: ::std::string::String) -> Self {
-            Self(value)
-        }
-    }
-    impl ::std::fmt::Display for ConnectCodeValue {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            self.0.fmt(f)
-        }
-    }
-    impl ::std::str::FromStr for ConnectCodeValue {
-        type Err = ::std::convert::Infallible;
-        fn from_str(value: &str) -> ::std::result::Result<Self, Self::Err> {
-            Ok(Self(value.to_string()))
-        }
-    }
     ///The kind of deployment an installation is.
     #[derive(
         ::serde::Deserialize,
@@ -401,160 +368,89 @@ pub mod components {
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub next_cursor: ::std::option::Option<::std::string::String>,
     }
-    ///Device-first connect; the instance shows the user code and polls for the token.
+    /**Device-first connect: the installation asks for a code with its own Ed25519 connect
+    key, shows the `user_code` to its operator, and polls `POST /v1/connect/token` until an owner
+    or admin of an organization approves the code on app.ever.co `/connect`. The key is parked
+    with the code: only an assertion signed with it completes the connect. The body carries no
+    address or any other field outside this schema.*/
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct DeviceRequest {
-        pub install_source: InstallSource,
+        /**Where it was installed from, read from its environment (`self-hosted`, `ever.sh`,
+        `partner:<slug>`, ...); never inferred.*/
+        pub install_source: ::std::string::String,
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub kind: ::std::option::Option<DeviceRequestKind>,
-        pub product: ProductCode,
-        pub public_jwk: Jwk,
-        #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
-        pub serves_products: ::std::vec::Vec<ProductCode>,
-        pub version: SemVer,
+        pub kind: ::std::option::Option<ConnectKind>,
+        ///The product the installation runs.
+        pub product: ::std::string::String,
+        /**Its connect key: an Ed25519 public JWK (`kty: OKP`, `crv: Ed25519`, `x`); the platform
+        assigns its `kid`.*/
+        pub public_jwk: ::serde_json::Map<::std::string::String, ::serde_json::Value>,
+        ///The products it serves besides its own (at most five).
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub serves_products: ::std::option::Option<::std::vec::Vec<::std::string::String>>,
+        ///Its version (`major.minor.patch[-suffix]`).
+        pub version: ::std::string::String,
     }
-    ///`DeviceRequestKind`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum DeviceRequestKind {
-        #[serde(rename = "cloud")]
-        Cloud,
-        #[serde(rename = "self_hosted")]
-        SelfHosted,
-        #[serde(rename = "works_app")]
-        WorksApp,
-    }
-    impl ::std::fmt::Display for DeviceRequestKind {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Cloud => f.write_str("cloud"),
-                Self::SelfHosted => f.write_str("self_hosted"),
-                Self::WorksApp => f.write_str("works_app"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for DeviceRequestKind {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "cloud" => Ok(Self::Cloud),
-                "self_hosted" => Ok(Self::SelfHosted),
-                "works_app" => Ok(Self::WorksApp),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for DeviceRequestKind {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for DeviceRequestKind {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    ///`DeviceResponse`
+    ///A device code and the code to show (RFC 8628 section 3.2). `Cache-Control: no-store`.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct DeviceResponse {
-        ///32 random bytes, base64url; held by the instance only.
+        ///32 random bytes, base64url: held by the installation only, sent with every poll.
         pub device_code: ::std::string::String,
+        ///Seconds until the codes stop working.
         pub expires_in: i64,
+        ///The least number of seconds between two polls.
         pub interval: i64,
-        pub user_code: ConnectCodeValue,
+        /**The key id the platform assigned to the parked key: the `iss`, `sub` and `kid` of the
+        poll's assertion, and the instance's `kid` once it is connected.*/
+        pub kid: ::std::string::String,
+        /**`EVC-XXXX-XXXX-XXXX`: what the installation shows its operator, typed by an owner or
+        admin on the verification page.*/
+        pub user_code: ::std::string::String,
+        ///The verification page (the portal's `/connect`).
         pub verification_uri: ::std::string::String,
+        ///The verification page with the code filled in (`?user_code=`).
         pub verification_uri_complete: ::std::string::String,
     }
-    ///`DeviceTokenRequest`
+    /**One poll of the device-first connect (RFC 8628 section 3.4 with an RFC 7523 assertion): the
+    device code and an assertion signed with the parked connect key, `iss = sub = <kid>` (the key
+    id the platform assigns, the same as `kid` in the answer), `aud = <api origin>/v1/connect/token`,
+    a random `jti`, `iat`, and `exp` at most 300 s after `iat`.*/
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct DeviceTokenRequest {
-        ///RFC 7523 assertion signed by the key presented at `POST /v1/connect/device`.
+        ///The signed assertion.
         pub client_assertion: ::std::string::String,
+        ///The device code `POST /v1/connect/device` answered.
         pub device_code: ::std::string::String,
     }
-    ///`DeviceTokenResponse`
+    ///The connected installation, its first token and where it calls next.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct DeviceTokenResponse {
-        ///`evit_…`: opaque, one hour; keep it in memory only.
+        ///`evit_...`: opaque, one hour; keep it in memory only.
         pub access_token: ::std::string::String,
+        ///The entitlement document.
         pub entitlement_endpoint: ::std::string::String,
-        ///Seconds it lives (3600).
+        ///Seconds the token lives.
         pub expires_in: i64,
+        ///The event feed.
         pub feed_endpoint: ::std::string::String,
-        pub instance_id: Ulid,
+        ///The instance id: the `iss` and `sub` of its assertions from now on.
+        pub instance_id: ::std::string::String,
+        ///The key manifest as `/.well-known/ever-keys.json` serves it.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub keys: ::std::option::Option<KeyManifest>,
+        pub keys:
+            ::std::option::Option<::serde_json::Map<::std::string::String, ::serde_json::Value>>,
+        ///The key id of its connect key (the assertion's `kid`).
         pub kid: ::std::string::String,
-        pub status: DeviceTokenResponseStatus,
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub link: ::std::option::Option<LinkedTenant>,
+        ///`active`.
+        pub status: ::std::string::String,
+        ///`POST` an instance assertion here for the next tokens.
+        pub token_endpoint: ::std::string::String,
         ///`Bearer`.
         pub token_type: ::std::string::String,
-    }
-    ///`DeviceTokenResponseStatus`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum DeviceTokenResponseStatus {
-        #[serde(rename = "active")]
-        Active,
-        #[serde(rename = "pending_approval")]
-        PendingApproval,
-    }
-    impl ::std::fmt::Display for DeviceTokenResponseStatus {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Active => f.write_str("active"),
-                Self::PendingApproval => f.write_str("pending_approval"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for DeviceTokenResponseStatus {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "active" => Ok(Self::Active),
-                "pending_approval" => Ok(Self::PendingApproval),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for DeviceTokenResponseStatus {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for DeviceTokenResponseStatus {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
     }
     ///Additive vocabulary of what a discoverable organization advertises to counterparties.
     #[derive(
@@ -1425,39 +1321,6 @@ pub mod components {
             value.parse()
         }
     }
-    ///How the instance was installed; set only through the template's environment, never by fingerprinting.
-    #[derive(
-        ::serde::Deserialize, ::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
-    )]
-    #[serde(transparent)]
-    pub struct InstallSource(pub ::std::string::String);
-    impl ::std::ops::Deref for InstallSource {
-        type Target = ::std::string::String;
-        fn deref(&self) -> &::std::string::String {
-            &self.0
-        }
-    }
-    impl ::std::convert::From<InstallSource> for ::std::string::String {
-        fn from(value: InstallSource) -> Self {
-            value.0
-        }
-    }
-    impl ::std::convert::From<::std::string::String> for InstallSource {
-        fn from(value: ::std::string::String) -> Self {
-            Self(value)
-        }
-    }
-    impl ::std::fmt::Display for InstallSource {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            self.0.fmt(f)
-        }
-    }
-    impl ::std::str::FromStr for InstallSource {
-        type Err = ::std::convert::Infallible;
-        fn from_str(value: &str) -> ::std::result::Result<Self, Self::Err> {
-            Ok(Self(value.to_string()))
-        }
-    }
     ///Same vocabulary as `p_listings.install.state` and the event `install_state`: `cancelled` = stopped before it was installed (`requested | pending_payment | installing`), `removed` = removed after `installed | delivered`.
     #[derive(
         ::serde::Deserialize,
@@ -1954,40 +1817,6 @@ pub mod components {
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub app: ::std::option::Option<::std::string::String>,
     }
-    ///Ed25519 public key in JWK form.
-    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
-    pub struct Jwk {
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub alg: ::std::option::Option<::std::string::String>,
-        pub crv: ::std::string::String,
-        ///Key id. For instance keys `kid = base64url(sha256(pub)[0:8])`.
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub kid: ::std::option::Option<::std::string::String>,
-        pub kty: ::std::string::String,
-        #[serde(rename = "use", skip_serializing_if = "::std::option::Option::is_none")]
-        pub use_: ::std::option::Option<::std::string::String>,
-        ///base64url-encoded 32-byte public key.
-        pub x: ::std::string::String,
-    }
-    /**`GET /.well-known/ever-keys.json`. A JWKS of Ed25519 keys wrapped in a
-    manifest signed by the long-lived root key that every SDK release pins.
-    Verifiers trust an `entitlement`, `assertion` or `intent` key only through
-    a valid manifest. Keys rotate every 90 days with a 30-day overlap.
-    */
-    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
-    #[serde(deny_unknown_fields)]
-    pub struct KeyManifest {
-        pub keys: ::std::vec::Vec<ManifestKey>,
-        /**Compact JWS signed by a pinned root key. Header
-        `{"alg":"EdDSA","kid":"<root kid>","typ":"ever-key-manifest+jwt"}`;
-        payload `{"iss":"https://api.ever.co","iat":<unix s>,"exp":<iat + 30 d>,
-        "keys_sha256":"<hex sha256 of the RFC 8785 canonical keys array>",
-        "root_kid":"<root kid>"}` (see the entitlement document format).
-        Validity is the payload's `iat`/`exp`; there are no separate
-        timestamps in the response.
-        */
-        pub manifest: ::std::string::String,
-    }
     ///The body of `GET /.well-known/ever-keys.json`.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct KeyManifestBody {
@@ -2228,26 +2057,6 @@ pub mod components {
             value.parse()
         }
     }
-    ///`ManifestKey`
-    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
-    pub struct ManifestKey {
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub alg: ::std::option::Option<::std::string::String>,
-        pub crv: ::std::string::String,
-        pub ever_purpose: ManifestKeyEverPurpose,
-        ///Key id. For instance keys `kid = base64url(sha256(pub)[0:8])`.
-        pub kid: ::std::string::String,
-        pub kty: ::std::string::String,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub not_after: ::std::option::Option<::std::string::String>,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub not_before: ::std::option::Option<Timestamp>,
-        pub state: ManifestKeyState,
-        #[serde(rename = "use", skip_serializing_if = "::std::option::Option::is_none")]
-        pub use_: ::std::option::Option<::std::string::String>,
-        ///base64url-encoded 32-byte public key.
-        pub x: ::std::string::String,
-    }
     ///One key of the published key set.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ManifestKeyBody {
@@ -2273,112 +2082,6 @@ pub mod components {
         pub use_: ::std::string::String,
         ///The public key (base64url).
         pub x: ::std::string::String,
-    }
-    ///`ManifestKeyEverPurpose`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum ManifestKeyEverPurpose {
-        #[serde(rename = "assertion")]
-        Assertion,
-        #[serde(rename = "intent")]
-        Intent,
-        #[serde(rename = "entitlement")]
-        Entitlement,
-    }
-    impl ::std::fmt::Display for ManifestKeyEverPurpose {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Assertion => f.write_str("assertion"),
-                Self::Intent => f.write_str("intent"),
-                Self::Entitlement => f.write_str("entitlement"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for ManifestKeyEverPurpose {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "assertion" => Ok(Self::Assertion),
-                "intent" => Ok(Self::Intent),
-                "entitlement" => Ok(Self::Entitlement),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for ManifestKeyEverPurpose {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for ManifestKeyEverPurpose {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    ///`ManifestKeyState`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum ManifestKeyState {
-        #[serde(rename = "active")]
-        Active,
-        #[serde(rename = "previous")]
-        Previous,
-    }
-    impl ::std::fmt::Display for ManifestKeyState {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Active => f.write_str("active"),
-                Self::Previous => f.write_str("previous"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for ManifestKeyState {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "active" => Ok(Self::Active),
-                "previous" => Ok(Self::Previous),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for ManifestKeyState {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for ManifestKeyState {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
     }
     ///One active tenant link of an organization.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]

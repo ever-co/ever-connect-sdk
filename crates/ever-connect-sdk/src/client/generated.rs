@@ -115,7 +115,7 @@ pub const OPERATIONS: &[Operation] = &[
         row: 29,
         integration: None,
         rate_limit: Some("connect"),
-        status: "not_in_v1",
+        status: "pinned",
     },
     Operation {
         id: "getConnectLegal",
@@ -168,8 +168,8 @@ pub const OPERATIONS: &[Operation] = &[
         success: &[200],
         row: 29,
         integration: None,
-        rate_limit: Some("connect"),
-        status: "not_in_v1",
+        rate_limit: None,
+        status: "pinned",
     },
     Operation {
         id: "redeliverWebhook",

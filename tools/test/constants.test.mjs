@@ -38,7 +38,10 @@ test('code patterns, install sources and products equal the contract schemas whe
   const codeSchema = stated('ConnectCodeValue') ?? stated('ConnectCode');
   if (codeSchema) assert.equal(constants.connect_code_pattern, codeSchema);
   if (stated('LinkCode')) assert.equal(constants.link_code_pattern, stated('LinkCode'));
-  assert.equal(constants.install_sources, s.InstallSource.pattern);
+  // The device-first connect pins the platform's own request schemas (install_source is a string
+  // the platform checks), so the design's InstallSource schema is stated only while a design
+  // operation still refers to it.
+  if (stated('InstallSource')) assert.equal(constants.install_sources, stated('InstallSource'));
   assert.ok(new RegExp(constants.link_code_pattern).test('EVL-TEST-0000-0002'));
   assert.deepEqual(constants.products, s.ProductCode.enum);
   assert.ok(constants.products.includes('demand'), 'demand is a product code (it answers product_not_supported)');

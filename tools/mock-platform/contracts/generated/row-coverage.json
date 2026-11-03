@@ -1131,9 +1131,14 @@
           "documented": true
         },
         {
+          "status": 401,
+          "code": "invalid_client",
+          "documented": true
+        },
+        {
           "status": 409,
           "code": "key_mismatch",
-          "documented": false
+          "documented": true
         },
         {
           "status": 422,

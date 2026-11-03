@@ -896,19 +896,19 @@
       "group": "connection",
       "integration": null,
       "auth": "none (device start); device code and client assertion (token poll)",
-      "availability": "not_in_v1",
+      "availability": "v1",
       "endpoints": [
         {
           "method": "POST",
           "path": "/v1/connect/device",
           "operation_id": "connectDevice",
-          "status": "not_in_v1"
+          "status": "pinned"
         },
         {
           "method": "POST",
           "path": "/v1/connect/token",
           "operation_id": "connectDeviceToken",
-          "status": "not_in_v1"
+          "status": "pinned"
         }
       ],
       "trigger": "the operator chooses Show a code instead",

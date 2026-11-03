@@ -97,83 +97,51 @@ paths:
       x-ever-row: 35
   /v1/connect/device:
     post:
+      summary: |-
+        Starts a device-first connect: the installation receives a device code to poll with and an
+        `EVC-` user code to show its operator. An owner or admin of an organization types the user code
+        on `verification_uri` (or opens `verification_uri_complete`) within `expires_in` seconds; the
+        installation polls `POST /v1/connect/token` every `interval` seconds meanwhile. The presented
+        key is parked with the code: only an assertion signed with it completes the connect. A key that
+        already holds a connection answers `422 public_jwk_invalid`.
       tags:
         - entitlements
-      summary: Device-first connect (instance asks for a code)
-      x-ever-phase: 2
-      x-ever-auth: public
       x-ever-rate-limit: connect
-      x-ever-idempotent: false
       operationId: connectDevice
-      security: []
+      security:
+        - {}
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/DeviceRequest"
+        required: true
       responses:
         "200":
-          description: Code issued; show `user_code` and poll `POST /v1/connect/token`.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/DeviceResponse"
+          description: "The codes (`Cache-Control: no-store`): show `user_code`, poll with `device_code`"
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: The device-first connect is not served on this deployment
         "422":
-          description: Validation failed; unknown fields are rejected on writes (`validation_failed`, `schema_violation`, `code_invalid`, `idempotency_mismatch`, `mirror_owned_field`, `limit_exceeded`).
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+          description: "`product_not_supported`, `public_jwk_invalid` (not an Ed25519 public key, or a key that already holds a connection), or the body does not validate"
         "429":
-          description: Rate limit exceeded for this principal class (`rate_limited`).
-          headers:
-            Retry-After:
-              description: Seconds to wait before retrying.
-              schema:
-                type: integer
-            RateLimit-Limit:
-              description: IETF RateLimit header; requests allowed in the current window for this principal class.
-              schema:
-                type: integer
-            RateLimit-Remaining:
-              description: IETF RateLimit header; requests remaining in the current window.
-              schema:
-                type: integer
-            RateLimit-Reset:
-              description: IETF RateLimit header; seconds until the window resets.
-              schema:
-                type: integer
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-        default:
-          description: Any other error, as a problem document.
-          headers:
-            x-request-id:
-              description: The request id (generated or echoed). Quote it in support requests.
-              schema:
-                type: string
-            RateLimit-Limit:
-              description: IETF RateLimit header; requests allowed in the current window for this principal class.
-              schema:
-                type: integer
-            RateLimit-Remaining:
-              description: IETF RateLimit header; requests remaining in the current window.
-              schema:
-                type: integer
-            RateLimit-Reset:
-              description: IETF RateLimit header; seconds until the window resets.
-              schema:
-                type: integer
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          description: "`rate_limited`: too many device codes from this caller (`Retry-After`)"
       x-ever-row: 29
-      x-ever-availability: not_in_v1
-      x-ever-availability-note: "The device-first connect is not offered yet: installations connect with a connect code (connectRedeem)."
   /v1/connect/legal:
     get:
       summary: |-
@@ -268,84 +236,70 @@ paths:
       x-ever-row: 3
   /v1/connect/token:
     post:
+      summary: |-
+        Polls a device-first connect (RFC 8628 section 3.4, with an RFC 7523 assertion signed with the
+        key parked at `POST /v1/connect/device`: `iss = sub = <kid>`,
+        `aud = <api origin>/v1/connect/token`). Before the approval: `400 authorization_pending`;
+        sooner than the interval: `400 slow_down` (wait 5 s longer; the third in a row revokes the
+        code); an unknown, expired, revoked or used device code: `400 expired_token` (start over).
+        After the approval, the first poll signed with the parked key connects the installation
+        (`active`) and answers its first instance token; an assertion signed with another key answers
+        `409 key_mismatch` and connects nothing.
       tags:
         - entitlements
-      summary: Device-first poll for the instance token
-      description: Poll at least every `interval` seconds. Pending approval answers `400 authorization_pending`; polling too fast `400 slow_down` (add 5 s); an expired code `400 expired_token`. On approval the assertion is verified against the parked key and the instance is created.
-      x-ever-phase: 2
-      x-ever-auth: public (device code + assertion)
-      x-ever-rate-limit: connect
-      x-ever-idempotent: false
       operationId: connectDeviceToken
-      security: []
+      security:
+        - {}
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/DeviceTokenRequest"
+        required: true
       responses:
         "200":
-          description: Approved; token and endpoints.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/DeviceTokenResponse"
+          description: "Connected: the instance, its first token and its endpoints (`Cache-Control: no-store`)"
         "400":
-          description: "Malformed request or ambiguous credentials (`ambiguous_credentials`: two authentication schemes on one request)."
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+          description: "`authorization_pending`, `slow_down` or `expired_token` (`Cache-Control: no-store`)"
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "`invalid_client`: the assertion was not accepted"
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: The device-first connect is not served on this deployment
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "`key_mismatch`: the assertion is not signed with the parked key"
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: The body does not validate
         "429":
-          description: Rate limit exceeded for this principal class (`rate_limited`).
-          headers:
-            Retry-After:
-              description: Seconds to wait before retrying.
-              schema:
-                type: integer
-            RateLimit-Limit:
-              description: IETF RateLimit header; requests allowed in the current window for this principal class.
-              schema:
-                type: integer
-            RateLimit-Remaining:
-              description: IETF RateLimit header; requests remaining in the current window.
-              schema:
-                type: integer
-            RateLimit-Reset:
-              description: IETF RateLimit header; seconds until the window resets.
-              schema:
-                type: integer
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-        default:
-          description: Any other error, as a problem document.
-          headers:
-            x-request-id:
-              description: The request id (generated or echoed). Quote it in support requests.
-              schema:
-                type: string
-            RateLimit-Limit:
-              description: IETF RateLimit header; requests allowed in the current window for this principal class.
-              schema:
-                type: integer
-            RateLimit-Remaining:
-              description: IETF RateLimit header; requests remaining in the current window.
-              schema:
-                type: integer
-            RateLimit-Reset:
-              description: IETF RateLimit header; seconds until the window resets.
-              schema:
-                type: integer
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          description: "`rate_limited` (`Retry-After`)"
       x-ever-row: 29
-      x-ever-availability: not_in_v1
-      x-ever-availability-note: "The device-first connect is not offered yet: installations connect with a connect code (connectRedeem)."
   /v1/deliveries/{delivery}/redeliver:
     post:
       summary: |-
@@ -3664,10 +3618,6 @@ components:
         version_range:
           type: string
           description: semver range.
-    ConnectCodeValue:
-      type: string
-      description: Connect code `EVC-XXXX-XXXX-XXXX` (Crockford base32, no I L O U; case-insensitive on input).
-      pattern: ^EVC(-[0-9A-HJKMNP-TV-Za-hj-kmnp-tv-z]{4}){3}$
     ConnectKind:
       description: The kind of deployment an installation is.
       enum:
@@ -3988,103 +3938,168 @@ components:
         - items
       type: object
     DeviceRequest:
-      type: object
-      description: Device-first connect; the instance shows the user code and polls for the token.
+      additionalProperties: false
+      description: |-
+        Device-first connect: the installation asks for a code with its own Ed25519 connect
+        key, shows the `user_code` to its operator, and polls `POST /v1/connect/token` until an owner
+        or admin of an organization approves the code on app.ever.co `/connect`. The key is parked
+        with the code: only an assertion signed with it completes the connect. The body carries no
+        address or any other field outside this schema.
+      properties:
+        install_source:
+          description: |-
+            Where it was installed from, read from its environment (`self-hosted`, `ever.sh`,
+            `partner:<slug>`, ...); never inferred.
+          example: self-hosted
+          type: string
+        kind:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/ConnectKind"
+              description: Its kind (default `self_hosted`).
+        product:
+          description: The product the installation runs.
+          example: gauzy
+          type: string
+        public_jwk:
+          description: |-
+            Its connect key: an Ed25519 public JWK (`kty: OKP`, `crv: Ed25519`, `x`); the platform
+            assigns its `kid`.
+          type: object
+        serves_products:
+          description: The products it serves besides its own (at most five).
+          items:
+            type: string
+          type:
+            - array
+            - "null"
+        version:
+          description: Its version (`major.minor.patch[-suffix]`).
+          example: 96.1.0
+          type: string
       required:
         - product
         - version
         - install_source
         - public_jwk
-      additionalProperties: false
-      properties:
-        product:
-          $ref: "#/components/schemas/ProductCode"
-        version:
-          $ref: "#/components/schemas/SemVer"
-        install_source:
-          $ref: "#/components/schemas/InstallSource"
-        kind:
-          type: string
-          enum:
-            - cloud
-            - self_hosted
-            - works_app
-          default: self_hosted
-        serves_products:
-          type: array
-          items:
-            $ref: "#/components/schemas/ProductCode"
-        public_jwk:
-          $ref: "#/components/schemas/Jwk"
-    DeviceResponse:
       type: object
+    DeviceResponse:
+      description: "A device code and the code to show (RFC 8628 section 3.2). `Cache-Control: no-store`."
+      properties:
+        device_code:
+          description: "32 random bytes, base64url: held by the installation only, sent with every poll."
+          type: string
+        expires_in:
+          description: Seconds until the codes stop working.
+          example: 900
+          format: int64
+          type: integer
+        interval:
+          description: The least number of seconds between two polls.
+          example: 5
+          format: int64
+          minimum: 5
+          type: integer
+        kid:
+          description: |-
+            The key id the platform assigned to the parked key: the `iss`, `sub` and `kid` of the
+            poll's assertion, and the instance's `kid` once it is connected.
+          type: string
+        user_code:
+          description: |-
+            `EVC-XXXX-XXXX-XXXX`: what the installation shows its operator, typed by an owner or
+            admin on the verification page.
+          type: string
+        verification_uri:
+          description: The verification page (the portal's `/connect`).
+          example: https://app.ever.co/connect
+          type: string
+        verification_uri_complete:
+          description: The verification page with the code filled in (`?user_code=`).
+          type: string
       required:
         - device_code
+        - kid
         - user_code
         - verification_uri
         - verification_uri_complete
         - expires_in
         - interval
-      properties:
-        device_code:
-          type: string
-          description: 32 random bytes, base64url; held by the instance only.
-        user_code:
-          $ref: "#/components/schemas/ConnectCodeValue"
-        verification_uri:
-          type: string
-          format: uri
-          const: https://app.ever.co/connect
-        verification_uri_complete:
-          type: string
-          format: uri
-        expires_in:
-          type: integer
-          const: 900
-        interval:
-          type: integer
-          minimum: 5
-          default: 5
-    DeviceTokenRequest:
       type: object
+    DeviceTokenRequest:
+      additionalProperties: false
+      description: |-
+        One poll of the device-first connect (RFC 8628 section 3.4 with an RFC 7523 assertion): the
+        device code and an assertion signed with the parked connect key, `iss = sub = <kid>` (the key
+        id the platform assigns, the same as `kid` in the answer), `aud = <api origin>/v1/connect/token`,
+        a random `jti`, `iat`, and `exp` at most 300 s after `iat`.
+      properties:
+        client_assertion:
+          description: The signed assertion.
+          type: string
+        device_code:
+          description: The device code `POST /v1/connect/device` answered.
+          type: string
       required:
         - device_code
         - client_assertion
-      additionalProperties: false
-      properties:
-        device_code:
-          type: string
-        client_assertion:
-          type: string
-          description: RFC 7523 assertion signed by the key presented at `POST /v1/connect/device`.
+      type: object
     DeviceTokenResponse:
-      allOf:
-        - $ref: "#/components/schemas/TokenResponse"
-        - type: object
-          required:
-            - instance_id
-            - kid
-            - status
-            - entitlement_endpoint
-            - feed_endpoint
-          properties:
-            instance_id:
-              $ref: "#/components/schemas/Ulid"
-            kid:
-              type: string
-            status:
-              type: string
-              enum:
-                - active
-                - pending_approval
-            entitlement_endpoint:
-              type: string
-              format: uri
-            feed_endpoint:
-              type: string
-              format: uri
-            keys:
-              $ref: "#/components/schemas/KeyManifest"
+      description: The connected installation, its first token and where it calls next.
+      properties:
+        access_token:
+          description: "`evit_...`: opaque, one hour; keep it in memory only."
+          type: string
+        entitlement_endpoint:
+          description: The entitlement document.
+          type: string
+        expires_in:
+          description: Seconds the token lives.
+          example: 3600
+          format: int64
+          type: integer
+        feed_endpoint:
+          description: The event feed.
+          type: string
+        instance_id:
+          description: "The instance id: the `iss` and `sub` of its assertions from now on."
+          type: string
+        keys:
+          description: The key manifest as `/.well-known/ever-keys.json` serves it.
+          type:
+            - object
+            - "null"
+        kid:
+          description: The key id of its connect key (the assertion's `kid`).
+          type: string
+        link:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/LinkedTenant"
+              description: |-
+                The tenant link the connect created (a single-organization product links the whole
+                installation).
+        status:
+          description: "`active`."
+          type: string
+        token_endpoint:
+          description: "`POST` an instance assertion here for the next tokens."
+          type: string
+        token_type:
+          description: "`Bearer`."
+          example: Bearer
+          type: string
+      required:
+        - access_token
+        - token_type
+        - expires_in
+        - instance_id
+        - kid
+        - status
+        - token_endpoint
+        - entitlement_endpoint
+        - feed_endpoint
+      type: object
     DiscoverableFeature:
       type: string
       description: Additive vocabulary of what a discoverable organization advertises to counterparties.
@@ -4616,14 +4631,6 @@ components:
         - instance_plugin
         - external_link
         - partner_referral
-    InstallSource:
-      type: string
-      description: How the instance was installed; set only through the template's environment, never by fingerprinting.
-      pattern: ^(cloud|self-hosted|ever\.sh|works_app|desktop|partner:[a-z0-9-]{2,32})$
-      examples:
-        - self-hosted
-        - ever.sh
-        - partner:railway
     InstallStatus:
       type: object
       description: Reported by the instance that performed an `instance_plugin` install.
@@ -5081,58 +5088,6 @@ components:
           type:
             - string
             - "null"
-    Jwk:
-      type: object
-      description: Ed25519 public key in JWK form.
-      required:
-        - kty
-        - crv
-        - x
-      properties:
-        kty:
-          type: string
-          const: OKP
-        crv:
-          type: string
-          const: Ed25519
-        x:
-          type: string
-          description: base64url-encoded 32-byte public key.
-        kid:
-          type: string
-          description: Key id. For instance keys `kid = base64url(sha256(pub)[0:8])`.
-        use:
-          type: string
-          const: sig
-        alg:
-          type: string
-          const: EdDSA
-    KeyManifest:
-      type: object
-      description: |
-        `GET /.well-known/ever-keys.json`. A JWKS of Ed25519 keys wrapped in a
-        manifest signed by the long-lived root key that every SDK release pins.
-        Verifiers trust an `entitlement`, `assertion` or `intent` key only through
-        a valid manifest. Keys rotate every 90 days with a 30-day overlap.
-      required:
-        - manifest
-        - keys
-      additionalProperties: false
-      properties:
-        manifest:
-          type: string
-          description: |
-            Compact JWS signed by a pinned root key. Header
-            `{"alg":"EdDSA","kid":"<root kid>","typ":"ever-key-manifest+jwt"}`;
-            payload `{"iss":"https://api.ever.co","iat":<unix s>,"exp":<iat + 30 d>,
-            "keys_sha256":"<hex sha256 of the RFC 8785 canonical keys array>",
-            "root_kid":"<root kid>"}` (see the entitlement document format).
-            Validity is the payload's `iat`/`exp`; there are no separate
-            timestamps in the response.
-        keys:
-          type: array
-          items:
-            $ref: "#/components/schemas/ManifestKey"
     KeyManifestBody:
       description: The body of `GET /.well-known/ever-keys.json`.
       properties:
@@ -5485,33 +5440,6 @@ components:
         - status: succeeded
           artefact_ref: bk-20261102-0100
           size_bytes: 734003200
-    ManifestKey:
-      allOf:
-        - $ref: "#/components/schemas/Jwk"
-        - type: object
-          required:
-            - kid
-            - ever_purpose
-            - state
-          properties:
-            ever_purpose:
-              type: string
-              enum:
-                - assertion
-                - intent
-                - entitlement
-            state:
-              type: string
-              enum:
-                - active
-                - previous
-            not_before:
-              $ref: "#/components/schemas/Timestamp"
-            not_after:
-              type:
-                - string
-                - "null"
-              format: date-time
     ManifestKeyBody:
       description: One key of the published key set.
       properties:

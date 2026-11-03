@@ -1084,6 +1084,18 @@ export const ERRORS = {
       },
     });
   },
+  '29:401:invalid_client': async (env) => {
+    // Signed with the parked key, but for another audience (the instance token endpoint).
+    const start = await OK.connectDevice(env);
+    await env.admin('approve', { user_code: start.body.user_code });
+    const kid = instanceKid(testKey('connect').x);
+    return env.call('POST', '/v1/connect/token', {
+      body: {
+        device_code: start.body.device_code,
+        client_assertion: env.assertion({ key: testKey('connect'), instanceId: kid, audience: `${ISSUER}/v1/instances/token` }),
+      },
+    });
+  },
   '29:422:validation_failed': (env) =>
     env.call('POST', '/v1/connect/device', { body: { product: 'gauzy', version: '1.0.0', public_jwk: jwk(testKey('connect')) } }),
   '29:422:product_not_supported': (env) =>
