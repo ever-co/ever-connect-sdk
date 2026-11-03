@@ -2,14 +2,14 @@
   "description": "Where every contract file of this repository comes from. Written by tools/sync-contract.mjs; checked by tools/check-schema-drift.mjs. `provisional` sources are drafts the platform has not published yet: tools/check-schema-drift.mjs --strict refuses them.",
   "platform": {
     "repository": "ever-co/platform",
-    "commit": "a5977f0c8119a6d5066c8a2df87bca3b1a83d41d"
+    "commit": "93409e4daaf24778b89e529146fe95f249c7f43b"
   },
   "openapi": {
     "target": "contracts/openapi/ever-platform.v1.yaml",
     "sha256": "36bceadd935a5a013b3f386d3b6a25e3269e09a2d2cb4bb20357d2fbca57d212",
     "pinned": {
       "source": "contracts/openapi/ever-api.v1.json",
-      "sha256": "c3e2221af830edf5add2317d910267b4500eeb3e054c5960430fed2baef98a36"
+      "sha256": "9069039d26b77a85de69c13a39a92748336a326221d67640f52630379c83e08a"
     },
     "design": {
       "source": "docs/specs/api",
