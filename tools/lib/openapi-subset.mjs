@@ -34,6 +34,41 @@ function pointerGet(doc, pointer) {
     .reduce((node, raw) => node?.[raw.replace(/~1/g, '/').replace(/~0/g, '~')], doc);
 }
 
+/**
+ * Parses one design file. The design is hand-written YAML, and a one-line `description:` or
+ * `summary:` whose plain value contains `: ` is not valid YAML (a strict parser reads a nested
+ * mapping there). Such a line, and only such a line, is read as the quoted string it was meant to
+ * be, with a warning naming the file and line so the source gets quoted; every other error still
+ * fails, as before. The design hash in VENDOR.json is over the bytes of the file, untouched.
+ */
+export function parseDesignYaml(text, file = '(design)', warn = (message) => process.stderr.write(`${message}\n`)) {
+  try {
+    return YAML.parse(text);
+  } catch {
+    // below: repair the one known case, or fail with the parser's own error
+  }
+  const first = YAML.parseDocument(text);
+  const lines = text.split('\n');
+  const repaired = [];
+  for (const error of first.errors) {
+    const n = error.linePos?.[0]?.line;
+    const raw = n ? lines[n - 1] : undefined;
+    const eol = raw?.endsWith('\r') ? '\r' : '';
+    const m =
+      error.code === 'BLOCK_AS_IMPLICIT_KEY' && raw !== undefined
+        ? /^(\s*(?:-\s+)?(description|summary):[ \t]+)([^'"|>&*!%@`#\s].*?)[ \t]*$/.exec(eol ? raw.slice(0, -1) : raw)
+        : null;
+    if (!m?.[3].includes(': ')) return YAML.parse(text); // not this case: fail with the parser's own error
+    if (repaired.some((r) => r.line === n)) continue;
+    lines[n - 1] = `${m[1]}${JSON.stringify(m[3])}${eol}`;
+    repaired.push({ line: n, key: m[2] });
+  }
+  const doc = YAML.parse(lines.join('\n'));
+  for (const r of repaired)
+    warn(`design ${file}:${r.line}: the plain ${r.key} contains ": "; read as a quoted string (quote it at the source)`);
+  return doc;
+}
+
 /** Multi-file YAML loader with `$ref` resolution relative to the referring file. */
 class DesignFiles {
   constructor() {
@@ -41,7 +76,7 @@ class DesignFiles {
   }
   load(file) {
     const key = resolve(file);
-    if (!this.cache.has(key)) this.cache.set(key, YAML.parse(readFileSync(key, 'utf8')));
+    if (!this.cache.has(key)) this.cache.set(key, parseDesignYaml(readFileSync(key, 'utf8'), key));
     return this.cache.get(key);
   }
   resolve(ref, fromFile) {
@@ -94,7 +129,17 @@ export function notInV1(scope) {
   return out;
 }
 
-export function buildSubset({ platform, config, rowsByOperation, version, title, description, securityOverrides = {}, scope = null }) {
+export function buildSubset({
+  platform,
+  config,
+  rowsByOperation,
+  version,
+  title,
+  description,
+  securityOverrides = {},
+  parameterOverrides = {},
+  scope = null,
+}) {
   const pinned = JSON.parse(readFileSync(join(platform, config.pinned), 'utf8'));
   const unavailable = notInV1(scope);
   const files = new DesignFiles();
@@ -289,6 +334,15 @@ export function buildSubset({ platform, config, rowsByOperation, version, title,
     const params = [...itemParams, ...(src.parameters ?? [])].map((p) =>
       source === 'pinned' ? inlinePinned(p, 'parameter') : inlineDesign(p, entry.file, 'parameter'),
     );
+    const added = parameterOverrides[operationId];
+    if (added) {
+      // A parameter the platform requires from an installation on this operation without declaring it yet.
+      for (const p of added.parameters) {
+        if (params.some((q) => q.in === p.in && q.name.toLowerCase() === p.name.toLowerCase()))
+          throw new Error(`parameter override ${operationId}: the contract declares the ${p.in} ${p.name} now; drop the override`);
+        params.push(clone(p));
+      }
+    }
     if (params.length > 0) op.parameters = params;
     if (src.requestBody)
       op.requestBody =
@@ -320,6 +374,8 @@ export function buildSubset({ platform, config, rowsByOperation, version, title,
     const unknown = Object.keys(unavailable).filter((id) => !selectedList.some((o) => o.operationId === id));
     if (unknown.length > 0) throw new Error(`v1 scope: ${unknown.join(', ')} not in v1 but not selected here`);
   }
+  const strayParameters = Object.keys(parameterOverrides).filter((id) => !selectedList.some((o) => o.operationId === id));
+  if (strayParameters.length > 0) throw new Error(`parameter override ${strayParameters.join(', ')}: no such operation in the subset`);
 
   // 4. Shape differences between a design schema and the pinned schema of the same name.
   for (const { compareWith, node, file } of queue) {

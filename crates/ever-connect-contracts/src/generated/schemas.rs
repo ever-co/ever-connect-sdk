@@ -8371,6 +8371,113 @@ pub mod registry_membership_role_changed_v1 {
     }
 }
 
+/// Data of the `ever.registry.organization.export_requested` event (`contracts/schemas/events/ever.registry.organization.export_requested.v1.schema.json`).
+pub mod registry_organization_export_requested_v1 {
+    ///`CommonDatetime`
+    #[derive(
+        ::serde::Deserialize, ::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+    )]
+    #[serde(transparent)]
+    pub struct CommonDatetime(pub ::std::string::String);
+    impl ::std::ops::Deref for CommonDatetime {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<CommonDatetime> for ::std::string::String {
+        fn from(value: CommonDatetime) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<::std::string::String> for CommonDatetime {
+        fn from(value: ::std::string::String) -> Self {
+            Self(value)
+        }
+    }
+    impl ::std::fmt::Display for CommonDatetime {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            self.0.fmt(f)
+        }
+    }
+    impl ::std::str::FromStr for CommonDatetime {
+        type Err = ::std::convert::Infallible;
+        fn from_str(value: &str) -> ::std::result::Result<Self, Self::Err> {
+            Ok(Self(value.to_string()))
+        }
+    }
+    ///`CommonUlid`
+    #[derive(
+        ::serde::Deserialize, ::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+    )]
+    #[serde(transparent)]
+    pub struct CommonUlid(pub ::std::string::String);
+    impl ::std::ops::Deref for CommonUlid {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<CommonUlid> for ::std::string::String {
+        fn from(value: CommonUlid) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<::std::string::String> for CommonUlid {
+        fn from(value: ::std::string::String) -> Self {
+            Self(value)
+        }
+    }
+    impl ::std::fmt::Display for CommonUlid {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            self.0.fmt(f)
+        }
+    }
+    impl ::std::str::FromStr for CommonUlid {
+        type Err = ::std::convert::Infallible;
+        fn from_str(value: &str) -> ::std::result::Result<Self, Self::Err> {
+            Ok(Self(value.to_string()))
+        }
+    }
+    ///fan-out to every installation holding a live tenant link of the organization; the installation answers with its own export
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct EverRegistryOrganizationExportRequestedV1 {
+        pub job_id: CommonUlid,
+        pub org_id: CommonUlid,
+        pub respond_by: CommonDatetime,
+        ///tenant_link_ids (the request to one installation, on instance/{instance_id}): the live tenant links it holds of the organization, so it finds the tenants to export. Absent on the platform's own record of the request.
+        #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
+        pub tenant_link_ids: ::std::vec::Vec<CommonUlid>,
+    }
+    /// Error types.
+    pub mod error {
+        /// Error from a `TryFrom` or `FromStr` implementation.
+        pub struct ConversionError(::std::borrow::Cow<'static, str>);
+        impl ::std::error::Error for ConversionError {}
+        impl ::std::fmt::Display for ConversionError {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> Result<(), ::std::fmt::Error> {
+                ::std::fmt::Display::fmt(&self.0, f)
+            }
+        }
+        impl ::std::fmt::Debug for ConversionError {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> Result<(), ::std::fmt::Error> {
+                ::std::fmt::Debug::fmt(&self.0, f)
+            }
+        }
+        impl From<&'static str> for ConversionError {
+            fn from(value: &'static str) -> Self {
+                Self(value.into())
+            }
+        }
+        impl From<String> for ConversionError {
+            fn from(value: String) -> Self {
+                Self(value.into())
+            }
+        }
+    }
+}
+
 /// Data of the `ever.registry.person.deletion_requested` event (`contracts/schemas/events/ever.registry.person.deletion_requested.v1.schema.json`).
 pub mod registry_person_deletion_requested_v1 {
     ///`CommonDatetime`

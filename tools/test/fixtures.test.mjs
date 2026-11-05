@@ -5,7 +5,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { REPO, readJson } from '../lib/common.mjs';
-import { verifyAssertion, verifyRotation } from '../mock-platform/src/assertion.mjs';
+import { verifyAssertion, verifyDeviceAssertion, verifyRotation } from '../mock-platform/src/assertion.mjs';
 import { fromB64url, sha256Hex, thumbprint } from '../mock-platform/src/crypto.mjs';
 import { checkStatsReport } from '../mock-platform/src/stats-ingest.mjs';
 import { validateComponent, validateEnvelope, validateEventData, validatePending, validateSchema } from '../mock-platform/src/validate.mjs';
@@ -149,7 +149,7 @@ test('consent screens: seven blocks per non-hidden key, in-product consent refus
 test('client-assertion vectors: the platform rules give each vector its expected answer', () => {
   const dir = join(F, 'connect/vectors');
   const files = readdirSync(dir)
-    .filter((f) => f.startsWith('assertion-'))
+    .filter((f) => f.startsWith('assertion-') && !f.startsWith('assertion-device-'))
     .sort();
   assert.ok(files.length >= 10);
   for (const file of files) {
@@ -163,6 +163,28 @@ test('client-assertion vectors: the platform rules give each vector its expected
       seenJti: (jti) => c.seen_jti.includes(jti),
     });
     assert.equal(r.ok ? 200 : 401, v.expected.status, `${file}: ${r.reason ?? 'ok'}`);
+  }
+});
+
+test('device-first connect vectors: the poll assertion gets the platform answer (key_mismatch for another key)', () => {
+  const dir = join(F, 'connect/vectors');
+  const files = readdirSync(dir)
+    .filter((f) => f.startsWith('assertion-device-'))
+    .sort();
+  assert.ok(files.length >= 10);
+  for (const file of files) {
+    const v = readJson(join(dir, file));
+    const c = v.context;
+    assert.equal(c.device_code_hash, Buffer.from(sha256Hex(c.device_code), 'hex').toString('base64url'), `${file}: device_code_hash`);
+    const r = verifyDeviceAssertion(v.assertion, {
+      now: c.now,
+      audience: c.audience,
+      parkedX: c.parked_key.x,
+      deviceCode: c.device_code,
+      seenJti: (_kid, jti) => c.seen_jti.includes(jti),
+    });
+    assert.equal(r.ok ? 200 : r.status, v.expected.status, `${file}: ${r.reason ?? 'ok'}`);
+    if (!r.ok) assert.equal(r.code, v.expected.code, file);
   }
 });
 

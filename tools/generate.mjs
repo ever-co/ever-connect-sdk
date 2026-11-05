@@ -382,6 +382,8 @@ export interface IntegrationScopeRow {
   readonly purpose: string;
   readonly retention: string;
   readonly group?: string;
+  /** The products this row applies to, when it is not every product of the integration. */
+  readonly products?: readonly string[];
 }
 
 /** An integration definition: the same data app.ever.co renders its consent screen from. */

@@ -1,0 +1,24 @@
+{
+  "assertion": "eyJhbGciOiJFZERTQSIsImtpZCI6IjEtSGdoTDRoT3dFIiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL2FwaS5ldmVyLnRlc3QvdjEvaW5zdGFuY2VzL3Rva2VuIiwiZGV2aWNlX2NvZGVfaGFzaCI6ImpRMnlseFkzR19HLS1tZlIwM1M0MGJxOV9IbTNuQUlvd2VrbW5mUGl5bTQiLCJleHAiOjE3OTM2MTM5MDAsImlhdCI6MTc5MzYxMzYwMCwiaXNzIjoiMS1IZ2hMNGhPd0UiLCJqdGkiOiJkZXZpY2UtanRpLTAwMDAwMDAwMDMiLCJzdWIiOiIxLUhnaEw0aE93RSJ9.gwS4DqtPi9-2i6UvlYm6rjpJPB3mgYx1Ee9ght6ADioiUbj_y2_R2OZpooG7u0eMCBFjYHoFi7RshKIVBSPnAQ",
+  "context": {
+    "api_origin": "https://api.ever.test",
+    "audience": "https://api.ever.test/v1/connect/token",
+    "device_code": "dGhpcy1pcy1hLXZlY3Rvci1kZXZpY2UtY29kZS0wMDA",
+    "device_code_hash": "jQ2ylxY3G_G--mfR03S40bq9_Hm3nAIowekmnfPiym4",
+    "now": 1793613600,
+    "parked_key": {
+      "crv": "Ed25519",
+      "kid": "1-HghL4hOwE",
+      "kty": "OKP",
+      "x": "1UIH2hlJd9z0atv-wrwudbUtWopCGE_t_cAAJPDj6No"
+    },
+    "seen_jti": [
+      "replayed-device-jti-000000"
+    ]
+  },
+  "description": "aud is the instance token endpoint, not the device token endpoint",
+  "expected": {
+    "code": "invalid_client",
+    "status": 401
+  }
+}

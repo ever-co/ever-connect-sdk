@@ -838,6 +838,11 @@ export const ERRORS = {
       headers: { 'ever-link-id': c.linkId },
     });
   },
+  // An installation names the tenant link it looks up for; without Ever-Link-Id it is refused.
+  '13:422:validation_failed': async (env) => {
+    const c = await connected(env, { enable: ['counterparty_lookup'] });
+    return env.call('POST', '/v1/lookup', { token: c.token, body: { salt_version: 1, hashes: ['c'.repeat(64)] } });
+  },
   '13:429:rate_limited': async (env) => {
     const c = await connected(env, { enable: ['counterparty_lookup'] });
     let r;

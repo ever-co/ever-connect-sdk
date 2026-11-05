@@ -221,6 +221,8 @@ export function checkDrift({ platform, strict, scope = null, vendorDoc = readJso
     );
   if (strictAll && (vendorDoc.openapi.security_overrides ?? []).length > 0)
     errors.push(`contract: the security of ${vendorDoc.openapi.security_overrides.join(', ')} is still pending upstream`);
+  if (strictAll && (vendorDoc.openapi.parameter_overrides ?? []).length > 0)
+    errors.push(`contract: parameters of ${vendorDoc.openapi.parameter_overrides.join(', ')} are still pending upstream`);
   if (strictAll && vendorDoc.openapi.pending_upstream_rows.length > 0)
     errors.push(`contract: rows ${vendorDoc.openapi.pending_upstream_rows.join(', ')} are still pending upstream`);
   return { errors, warnings };

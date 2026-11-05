@@ -83,6 +83,10 @@ export function build() {
     if (def.requires_feature !== null && !features.has(def.requires_feature))
       problems.push(`${row.key}: requires_feature ${def.requires_feature} is not a key of the entitlement features`);
     for (const p of def.products) if (!products.includes(p)) problems.push(`${row.key}: unknown product ${p}`);
+    // A scope row may apply to some of the integration's products only.
+    for (const s of def.scope)
+      for (const p of s.products ?? [])
+        if (!def.products.includes(p)) problems.push(`${row.key}: scope row ${s.field_path} names ${p}, which is not one of its products`);
     def.docs_anchor = row.key;
     files[`${INTEGRATIONS_DIR}/${row.key}.json`] = stableJson(def, { sort: false });
     keys.push(row.key);

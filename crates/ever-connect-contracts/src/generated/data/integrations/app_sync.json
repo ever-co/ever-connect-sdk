@@ -17,8 +17,8 @@
     "works"
   ],
   "status": "active",
-  "scope_version": 1,
-  "revoke_effect": "Pending updates are drained and no further updates are sent.",
+  "scope_version": 2,
+  "revoke_effect": "Pending updates are drained and no further updates are sent. The apps already listed are archived at once and their public addresses erased.",
   "scope": [
     {
       "field_path": "work.id",
@@ -27,7 +27,7 @@
       "frequency": "events",
       "required": true,
       "purpose": "Identify the app",
-      "retention": "Kept while the integration is enabled."
+      "retention": "Kept while the integration is enabled. When it ends the app is archived and shown only to your organization's members."
     },
     {
       "field_path": "work.kind",
@@ -36,7 +36,7 @@
       "frequency": "events",
       "required": true,
       "purpose": "App type",
-      "retention": "Kept while the integration is enabled."
+      "retention": "Kept while the integration is enabled. When it ends the app is archived and shown only to your organization's members."
     },
     {
       "field_path": "work.status",
@@ -45,7 +45,52 @@
       "frequency": "events",
       "required": true,
       "purpose": "App status",
-      "retention": "Kept while the integration is enabled."
+      "retention": "Kept while the integration is enabled. When it ends the app is archived and shown only to your organization's members."
+    },
+    {
+      "field_path": "work.name",
+      "direction": "to_ever",
+      "form": "clear",
+      "frequency": "events",
+      "required": true,
+      "purpose": "Show the app's name on your account pages",
+      "retention": "Kept while the integration is enabled. When it ends the app is archived and shown only to your organization's members."
+    },
+    {
+      "field_path": "work.slug",
+      "direction": "to_ever",
+      "form": "clear",
+      "frequency": "events",
+      "required": true,
+      "purpose": "Identify the app in links to Ever Works",
+      "retention": "Kept while the integration is enabled. When it ends the app is archived and shown only to your organization's members."
+    },
+    {
+      "field_path": "work.base",
+      "direction": "to_ever",
+      "form": "clear",
+      "frequency": "events",
+      "required": false,
+      "purpose": "What the app is built on: an Ever product or a public open-source project",
+      "retention": "Kept while the integration is enabled. When it ends the app is archived and shown only to your organization's members."
+    },
+    {
+      "field_path": "work.lineage",
+      "direction": "to_ever",
+      "form": "id",
+      "frequency": "events",
+      "required": false,
+      "purpose": "How the app was started: the template's id and version, the way it was created, and the marketplace install it came from",
+      "retention": "Kept while the integration is enabled. When it ends the app is archived and shown only to your organization's members."
+    },
+    {
+      "field_path": "deployment.id",
+      "direction": "to_ever",
+      "form": "id",
+      "frequency": "events",
+      "required": false,
+      "purpose": "Identify the deployment",
+      "retention": "Kept while the integration is enabled. When it ends the deployment is marked retired and shown only to your organization's members."
     },
     {
       "field_path": "deployment.target",
@@ -54,7 +99,7 @@
       "frequency": "events",
       "required": false,
       "purpose": "Where the app runs",
-      "retention": "Kept while the integration is enabled."
+      "retention": "Kept while the integration is enabled. When it ends the deployment is marked retired and shown only to your organization's members."
     },
     {
       "field_path": "deployment.provider",
@@ -63,7 +108,7 @@
       "frequency": "events",
       "required": false,
       "purpose": "Where the app runs",
-      "retention": "Kept while the integration is enabled."
+      "retention": "Kept while the integration is enabled. When it ends the deployment is marked retired and shown only to your organization's members."
     },
     {
       "field_path": "deployment.shape",
@@ -72,7 +117,7 @@
       "frequency": "events",
       "required": false,
       "purpose": "Deployment kind",
-      "retention": "Kept while the integration is enabled."
+      "retention": "Kept while the integration is enabled. When it ends the deployment is marked retired and shown only to your organization's members."
     },
     {
       "field_path": "deployment.managed_by",
@@ -81,7 +126,7 @@
       "frequency": "events",
       "required": false,
       "purpose": "Who manages the deployment",
-      "retention": "Kept while the integration is enabled."
+      "retention": "Kept while the integration is enabled. When it ends the deployment is marked retired and shown only to your organization's members."
     },
     {
       "field_path": "deployment.url",
@@ -90,7 +135,25 @@
       "frequency": "events",
       "required": false,
       "purpose": "Public address of a live app",
-      "retention": "Kept while the integration is enabled."
+      "retention": "Kept while the integration is enabled. Erased when it ends."
+    },
+    {
+      "field_path": "deployment.environment",
+      "direction": "to_ever",
+      "form": "clear",
+      "frequency": "events",
+      "required": false,
+      "purpose": "Production or preview",
+      "retention": "Kept while the integration is enabled. When it ends the deployment is marked retired and shown only to your organization's members."
+    },
+    {
+      "field_path": "deployment.status",
+      "direction": "to_ever",
+      "form": "clear",
+      "frequency": "events",
+      "required": false,
+      "purpose": "Whether the deployment is running",
+      "retention": "Kept while the integration is enabled. When it ends the deployment is marked retired and shown only to your organization's members."
     },
     {
       "field_path": "organization.id",

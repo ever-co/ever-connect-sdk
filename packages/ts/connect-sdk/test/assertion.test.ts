@@ -2,7 +2,7 @@ import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 // @ts-expect-error: a plain ES module of the repository tools (no type declarations).
-import { verifyAssertion } from '../../../../tools/mock-platform/src/assertion.mjs';
+import { verifyAssertion, verifyDeviceAssertion } from '../../../../tools/mock-platform/src/assertion.mjs';
 import {
   AssertionError,
   generateInstanceKeyPair,
@@ -19,9 +19,10 @@ import { FIXTURES, fixture } from './helpers';
 // fixed seeds: the current connect key is 32 bytes of 11, the previous one 32 bytes of 12.
 const CURRENT = makeNodeSigner(new Uint8Array(32).fill(11));
 const PREVIOUS = makeNodeSigner(new Uint8Array(32).fill(12));
-const VECTORS = readdirSync(join(FIXTURES, 'connect/vectors'))
-  .filter((f) => f.startsWith('assertion-'))
-  .sort();
+const ALL_VECTORS = readdirSync(join(FIXTURES, 'connect/vectors')).sort();
+// The instance-token assertions; the device-first connect's poll assertions have their own vectors.
+const VECTORS = ALL_VECTORS.filter((f) => f.startsWith('assertion-') && !f.startsWith('assertion-device-'));
+const DEVICE_VECTORS = ALL_VECTORS.filter((f) => f.startsWith('assertion-device-'));
 type Vector = {
   assertion: string;
   description: string;
@@ -46,6 +47,44 @@ const platformVerdict = (token: string, c: Vector['context']) =>
       iss === c.instance_id ? { current_key: c.current_key, previous_key: c.previous_key, rotated_at: c.rotated_at } : null,
     seenJti: (jti: string) => c.seen_jti.includes(jti),
   });
+
+type DeviceVector = {
+  assertion: string;
+  description: string;
+  context: {
+    audience: string;
+    device_code: string;
+    device_code_hash: string;
+    now: number;
+    parked_key: { kty: string; crv: string; kid: string; x: string };
+    seen_jti: string[];
+  };
+  expected: { status: number; code?: string };
+};
+const deviceVector = (file: string) => fixture<DeviceVector>(`connect/vectors/${file}`);
+
+describe('device-first connect: the poll assertion against the platform vectors', () => {
+  it('the vectors are there, and the parked key id is the SDK key id', () => {
+    expect(DEVICE_VECTORS.length).toBeGreaterThanOrEqual(10);
+    const c = deviceVector('assertion-device-valid.json').context;
+    expect(keyIdFromPublicJwk(c.parked_key)).toBe(c.parked_key.kid);
+  });
+  for (const file of DEVICE_VECTORS) {
+    const v = deviceVector(file);
+    it(`${file}: the mock answers as the platform (${v.expected.status}${v.expected.code ? ` ${v.expected.code}` : ''})`, () => {
+      const c = v.context;
+      const r = verifyDeviceAssertion(v.assertion, {
+        now: c.now,
+        audience: c.audience,
+        parkedX: c.parked_key.x,
+        deviceCode: c.device_code,
+        seenJti: (_kid: string, jti: string) => c.seen_jti.includes(jti),
+      });
+      expect(r.ok ? 200 : r.status, r.reason).toBe(v.expected.status);
+      if (!r.ok) expect(r.code).toBe(v.expected.code);
+    });
+  }
+});
 
 describe('client assertion against the platform vectors', () => {
   const valid = vector('assertion-valid.json');

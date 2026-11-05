@@ -242,13 +242,7 @@ export interface paths {
         };
         readonly get?: never;
         readonly put?: never;
-        /**
-         * Report the payment customer of a linked product tenant (Ever-operated cloud only)
-         * @description Declared field: the product tenant's payment customer reference only.
-         *     Accepted only from `operator=ever` instances with integration
-         *     `billing_link` enabled (consent source `cloud_terms`) on that tenant
-         *     link; lets a cloud plan show as "Included in your plan".
-         */
+        /** Reports the payment customer of the linked product tenant (Ever-operated cloud only). */
         readonly post: operations["instanceCreateBillingLink"];
         readonly delete?: never;
         readonly options?: never;
@@ -495,14 +489,13 @@ export interface paths {
         readonly get?: never;
         readonly put?: never;
         /**
-         * Report the progress or result of a managed operation
-         * @description Status and size only: `accepted`, `running`, `succeeded` or `failed`,
-         *     the product version after an update, and an opaque reference and the
-         *     size of a backup; never file names, paths, URLs, log lines or backup
-         *     content. Natural key (operation, status): a replay of the current
-         *     status is a no-op; a transition the state machine does not allow
-         *     answers `409 illegal_transition`; an operation of another instance
-         *     answers `404`. Emits `ever.registry.managed_operation.state_changed`.
+         * Reports the progress or the result of a maintenance operation this installation was asked to
+         *     run. Status and size only: `accepted`, `running`, `succeeded` or `failed`, the product version
+         *     after an update, and an opaque reference and the size of a backup; never file names, paths,
+         *     URLs, log lines or backup content. Natural key (operation, status): a replay of the current
+         *     status is a no-op; a transition the state machine does not allow answers
+         *     `409 illegal_transition`; an operation of another installation answers `404`. Emits
+         *     `ever.registry.managed_operation.state_changed`.
          */
         readonly post: operations["instanceReportManagedOperationResult"];
         readonly delete?: never;
@@ -518,16 +511,18 @@ export interface paths {
             readonly path?: never;
             readonly cookie?: never;
         };
-        /** Reconciliation read of what the platform holds for this instance */
+        /**
+         * What the platform holds for this installation: rows it pushed and that have not ended, in id
+         *     order. Each page served confirms its rows, so a finished pass keeps them from being archived as
+         *     unseen. Send what is missing or older, delete what you no longer have.
+         */
         readonly get: operations["instanceListMirroredApps"];
         readonly put?: never;
         /**
-         * Push an App/Work mirror batch
-         * @description Only apps whose source organization is linked to an Ever organization
-         *     are accepted; others are `rejected` with `unlinked_org` and nothing is
-         *     stored. Per-item idempotency by `(external_id, external_version)`; no
-         *     `Idempotency-Key`. Each applied op emits `app.mirrored` or
-         *     `app_deployment.mirrored`.
+         * Pushes a mirror batch: one result per operation, in request order. An operation of an
+         *     organization that is not linked, or of a link `app_sync` is off for, is `rejected` and stores
+         *     nothing. A lower or equal `external_version` is `ignored_stale`. An upsert never changes what
+         *     the organization owns (`public_on_profile`, `listing_id`).
          */
         readonly post: operations["instanceMirrorApps"];
         readonly delete?: never;
@@ -759,14 +754,8 @@ export interface paths {
         readonly options?: never;
         readonly head?: never;
         /**
-         * Re-key an installation-wide link to one product organization
-         * @description For a product that gained organizations after its installation was
-         *     linked as a whole (Ever Traduora: the `*` link becomes the id of the
-         *     default organization every existing project moved to). Changes
-         *     `product_tenant_id` once; the tenant link id, its consents and its
-         *     entitlement documents stay. A replay with the same value is a no-op;
-         *     a link of another instance answers `404`; a link that is not the
-         *     installation-wide `*` link answers `409 illegal_transition`. Audited.
+         * Re-keys one of the installation's own `*` links to one product organization, once. A replay
+         *     with the same value answers the link unchanged.
          */
         readonly patch: operations["instanceRekeyTenantLink"];
         readonly trace?: never;
@@ -822,7 +811,10 @@ export interface paths {
         };
         readonly get?: never;
         readonly put?: never;
-        /** Report consented meters */
+        /**
+         * Reports consented meters for the tenant link in `Ever-Link-Id`: counts only, and only the
+         *     meters an installation may report.
+         */
         readonly post: operations["instanceReportUsage"];
         readonly delete?: never;
         readonly options?: never;
@@ -918,22 +910,9 @@ export interface paths {
         readonly get?: never;
         readonly put?: never;
         /**
-         * Which of these hashed identifiers belong to discoverable organizations?
-         * @description Hashes are computed on the calling instance from the counterparty's VAT
-         *     number, registration number or e-mail with the published salt and
-         *     normalization. Only organizations that opted in (per identifier and at
-         *     organization level) are returned, with the intersection of the features
-         *     they advertise and the features they are entitled to. Unknown hashes are
-         *     simply absent; there is no negative list.
-         *
-         *     Instances need the integration `counterparty_lookup` enabled (else
-         *     `403 integration_disabled`); organization API keys need scope
-         *     `lookup:query`. Instance callers must send `Ever-Link-Id`: the caller
-         *     for limits and attribution is the tenant link (tenants of one
-         *     multi-tenant instance never share a bucket), or the API key. Limits
-         *     come from the organization's entitlement (`lookup.queries_per_min`,
-         *     default 60; `lookup.hashes_per_day`, default 6,000), at most 100 hashes
-         *     per query. Read-only: no `Idempotency-Key`; retries are safe.
+         * Asks which of up to 100 salted hashes belong to organizations that chose to be discoverable.
+         *     Only those are answered; an unknown hash is absent. Nothing asked is kept: a query leaves only a
+         *     rate-limit counter.
          */
         readonly post: operations["lookupCounterparties"];
         readonly delete?: never;
@@ -950,10 +929,9 @@ export interface paths {
             readonly cookie?: never;
         };
         /**
-         * Active salt versions and the normalization version
-         * @description The salt is public by design. A new version is added with
-         *     `active_from`; instances re-hash lazily; the previous version keeps
-         *     answering until `retire_after` (at least 180 days later).
+         * The published salts: every version that has not retired, the normalization version and where
+         *     the test vectors are. A salt is public by design: privacy comes from opt-in, the one-way hash,
+         *     the rate limits and keeping nothing a query sends.
          */
         readonly get: operations["getLookupSalt"];
         readonly put?: never;
@@ -1042,7 +1020,7 @@ export interface paths {
          * Enables an integration on an installation with an explicit consent, or disables it. Enabling
          *     writes the consent record, the state and exactly one audit row in one transaction and tells
          *     the installation (`ever.consent.integration.enabled`). An installation-wide integration
-         *     (`instance_url`, `stats_link`, `ever_id_login`, `webhooks`) is changed only by the organization
+         *     (`instance_url`, `stats_link`, `ever_id_login`, `webhooks`, `managed_operations`) is changed only by the organization
          *     that connected a customer- or partner-operated installation, and waits for the operator's local
          *     accept (`state: pending_operator`); installations Ever operates have theirs set by Ever.
          *     Disabling revokes the consent. Any plan may switch any integration off.
@@ -1260,16 +1238,27 @@ export interface components {
          * @enum {string}
          */
         readonly AckResult: "deleted" | "anonymised" | "retained_legal" | "no_account" | "forwarded_to_controller" | "exported" | "failed";
+        /** @description The link. The customer is not repeated. */
         readonly BillingLink: {
-            readonly created_at: components["schemas"]["Timestamp"];
-            readonly id: components["schemas"]["Ulid"];
-            readonly instance_id: components["schemas"]["Ulid"];
-            readonly org_id: string | null;
+            /**
+             * Format: date-time
+             * @description When it was made.
+             */
+            readonly created_at: string;
+            /** @description The billing link. */
+            readonly id: string;
+            /** @description The installation. */
+            readonly instance_id: string;
+            /** @description The organization of the tenant link. */
+            readonly org_id?: string | null;
+            /** @description The product tenant. */
             readonly product_tenant_id: string;
         };
-        /** @description Reported by an Ever-operated instance under integration `billing_link` (declared field `tenant.stripeCustomerId` only). */
+        /** @description What the installation reports: the declared field only. */
         readonly BillingLinkCreate: {
+            /** @description The provider customer (`cus_…`). */
             readonly customer_ref: string;
+            /** @description The product tenant: the tenant of the link in `Ever-Link-Id`. */
             readonly product_tenant_id: string;
         };
         readonly Compat: {
@@ -1289,6 +1278,27 @@ export interface components {
          * @enum {string}
          */
         readonly ConnectKind: "cloud" | "self_hosted" | "works_app";
+        /**
+         * @description A connect key as a public JWK (RFC 8037): the public half of the Ed25519 key pair an installation
+         *     generates. A private key (`d`) is refused. The platform assigns the key id: a `kid` sent here is
+         *     ignored, and the answer names the one to use.
+         */
+        readonly ConnectPublicJwk: {
+            /**
+             * @description `Ed25519`.
+             * @example Ed25519
+             */
+            readonly crv: string;
+            /** @description Ignored: the platform assigns the key id. */
+            readonly kid?: string | null;
+            /**
+             * @description `OKP`.
+             * @example OKP
+             */
+            readonly kty: string;
+            /** @description base64url (no padding) of the 32 public-key bytes. */
+            readonly x: string;
+        };
         /** @description The consent part of `IntegrationPut`. */
         readonly ConsentInput: {
             /** @description The explicit confirmation (`true`). */
@@ -1504,7 +1514,7 @@ export interface components {
              * @description Its connect key: an Ed25519 public JWK (`kty: OKP`, `crv: Ed25519`, `x`); the platform
              *     assigns its `kid`.
              */
-            readonly public_jwk: Record<string, never>;
+            readonly public_jwk: components["schemas"]["ConnectPublicJwk"];
             /** @description The products it serves besides its own (at most five). */
             readonly serves_products?: readonly string[] | null;
             /**
@@ -1591,11 +1601,6 @@ export interface components {
              */
             readonly token_type: string;
         };
-        /**
-         * @description Additive vocabulary of what a discoverable organization advertises to counterparties.
-         * @enum {string}
-         */
-        readonly DiscoverableFeature: "pay" | "invoice_exchange" | "listings";
         /** @description Empty JSON object body. */
         readonly Empty: Record<string, never>;
         /** @description The owner of an endpoint, as the API shows it. */
@@ -1627,7 +1632,7 @@ export interface components {
          *     unknown code by its HTTP status.
          * @enum {string}
          */
-        readonly ErrorCode: "validation_failed" | "not_found" | "unauthorized" | "forbidden_role" | "forbidden_scope" | "ambiguous_credentials" | "credential_revoked" | "instance_disconnected" | "instance_pending_approval" | "not_connection_owner" | "integration_disabled" | "integration_revoked" | "subject_unknown" | "link_not_found" | "oidc_client_exists" | "redirect_uri_invalid" | "denied_by_policy" | "integration_not_available" | "entitlement_required" | "tier_required" | "limit_exceeded" | "rate_limited" | "idempotency_mismatch" | "idempotency_in_progress" | "stale_version" | "module_disabled" | "handle_taken" | "handle_reserved" | "handle_retired" | "handle_invalid" | "handle_held" | "handle_held_by_you" | "code_invalid" | "code_expired" | "product_mismatch" | "product_not_supported" | "product_not_provisionable" | "job_in_progress" | "intent_expired" | "intent_consumed" | "key_mismatch" | "signature_invalid" | "unlinked_org" | "schema_violation" | "mirror_owned_field" | "illegal_transition" | "already_exists" | "already_completed" | "legal_basis_required" | "receipt_final" | "billing_active" | "sso_required" | "reauth_required" | "session_required" | "step_up_required" | "session_bound" | "authorization_pending" | "slow_down" | "expired_token" | "already_connected" | "already_linked" | "already_claimed" | "claim_locked" | "invalid_client" | "public_jwk_invalid" | "identifier_claimed" | "salt_version_unknown" | "salt_version_retired" | "hashes_invalid" | "lookup_key_required" | "required_component" | "resync_required" | "last_owner" | "last_auth_method" | "instances_linked" | "install_in_progress" | "slug_reserved" | "checklist_incomplete" | "scope_version_outdated" | "method_not_allowed" | "payload_too_large" | "unsupported_media_type" | "gone" | "unavailable" | "upstream" | "database_absent" | "database_unreachable" | "topic_private" | "realtime_disabled" | "topic_forbidden" | "topic_invalid" | "realtime_busy" | "too_many_streams" | "keys_unavailable" | "start_disabled" | "turnstile_failed" | "invalid_request" | "file_rejected" | "internal_error";
+        readonly ErrorCode: "validation_failed" | "not_found" | "unauthorized" | "forbidden_role" | "forbidden_scope" | "ambiguous_credentials" | "credential_revoked" | "instance_disconnected" | "instance_pending_approval" | "not_connection_owner" | "integration_disabled" | "integration_revoked" | "subject_unknown" | "link_not_found" | "oidc_client_exists" | "redirect_uri_invalid" | "denied_by_policy" | "integration_not_available" | "entitlement_required" | "publishing_unavailable" | "section_not_available" | "tier_required" | "limit_exceeded" | "rate_limited" | "idempotency_mismatch" | "idempotency_in_progress" | "stale_version" | "module_disabled" | "handle_taken" | "totp_required" | "totp_invalid" | "totp_locked" | "totp_already_enrolled" | "notice_period_running" | "handle_reserved" | "handle_retired" | "handle_invalid" | "handle_held" | "domain_denied" | "domain_taken" | "handle_held_by_you" | "hold_expired" | "hold_renewals_exhausted" | "claimant_has_handle" | "release_forbidden" | "code_invalid" | "code_expired" | "code_already_revealed" | "origin_not_allowed" | "product_mismatch" | "product_not_supported" | "product_not_provisionable" | "job_in_progress" | "not_job_owner" | "tier_not_available" | "checkout_email_mismatch" | "intent_expired" | "intent_consumed" | "key_mismatch" | "signature_invalid" | "unlinked_org" | "schema_violation" | "mirror_owned_field" | "illegal_transition" | "already_exists" | "already_completed" | "legal_basis_required" | "receipt_final" | "billing_active" | "sso_required" | "sso_bound" | "reauth_required" | "session_required" | "step_up_required" | "session_bound" | "authorization_pending" | "slow_down" | "expired_token" | "already_connected" | "already_linked" | "already_claimed" | "claim_locked" | "invalid_client" | "public_jwk_invalid" | "identifier_claimed" | "salt_version_unknown" | "salt_version_retired" | "hashes_invalid" | "lookup_key_required" | "required_component" | "resync_required" | "last_owner" | "last_auth_method" | "instances_linked" | "install_in_progress" | "slug_reserved" | "checklist_incomplete" | "scope_version_outdated" | "consent_required" | "method_not_allowed" | "payload_too_large" | "unsupported_media_type" | "gone" | "unavailable" | "upstream" | "database_absent" | "database_unreachable" | "topic_private" | "realtime_disabled" | "topic_forbidden" | "topic_invalid" | "realtime_busy" | "too_many_streams" | "keys_unavailable" | "start_disabled" | "turnstile_failed" | "invalid_request" | "file_rejected" | "internal_error";
         /**
          * @description One event on a webhook, the installation feed or SSE. Payloads carry identifiers and status
          *     only, never records; delivery is at-least-once: dedupe on `id`.
@@ -2167,7 +2172,7 @@ export interface components {
             /** @description The proof signed with the new key (the installation holds the key it installs). */
             readonly new_key_proof: string;
             /** @description The new Ed25519 public JWK (no installation may hold it yet, or have held it). */
-            readonly public_jwk: Record<string, never>;
+            readonly public_jwk: components["schemas"]["ConnectPublicJwk"];
         };
         /** @description A rotated key. */
         readonly KeyRotated: {
@@ -2242,6 +2247,15 @@ export interface components {
             readonly type: string;
             readonly vendor: components["schemas"]["Vendor"];
         };
+        /** @description One organization that matched. */
+        readonly LookupMatch: {
+            /** @description What the organization advertises that its plan grants now. */
+            readonly features: readonly string[];
+            /** @description The organization's handle: the only human-readable field an answer holds. */
+            readonly handle: string;
+            /** @description The hash asked about. */
+            readonly hash: string;
+        };
         /** @description One input that cannot be checked (never hashed, never sent). */
         readonly LookupRefused: {
             /** @description The caller's country, when the row has one. */
@@ -2253,18 +2267,24 @@ export interface components {
             /** @description `empty`, `no_country`, `no_at_sign` or `bad_domain`. */
             readonly reason: string;
         };
-        /** @description `hash = hex_lower(sha256(salt_bytes || ":" || kind || ":" || utf8(normalized)))`. Up to 100 hashes per query. */
+        /** @description The request. */
         readonly LookupRequest: {
+            /** @description 1 to 100 unique hashes, 64 lowercase hex characters each. */
             readonly hashes: readonly string[];
+            /**
+             * Format: int64
+             * @description The salt version the hashes were made with.
+             */
             readonly salt_version: number;
         };
-        /** @description Unknown hashes are absent (no negative list). `features` is the intersection of what the organization advertises and what it is entitled to. */
+        /** @description The answer. Unknown hashes are absent: there is no negative list. */
         readonly LookupResponse: {
-            readonly matches: readonly {
-                readonly features: readonly components["schemas"]["DiscoverableFeature"][];
-                readonly handle: components["schemas"]["Handle"];
-                readonly hash: string;
-            }[];
+            /** @description The matches. */
+            readonly matches: readonly components["schemas"]["LookupMatch"][];
+            /**
+             * Format: int64
+             * @description The salt version asked about.
+             */
             readonly salt_version: number;
         };
         /** @description The published vectors. */
@@ -2307,22 +2327,36 @@ export interface components {
             readonly salt_version: number;
         };
         /**
-         * @description What the instance reports for one operation. Status and size only; never file names, paths, URLs, log lines or backup content.
-         * @example {
-         *       "status": "succeeded",
-         *       "artefact_ref": "bk-20261102-0100",
-         *       "size_bytes": 734003200
-         *     }
+         * @description What the instance reports for one operation. Status and size only; never file names, paths,
+         *     URLs, log lines or backup content.
          */
         readonly ManagedOperationResult: {
-            /** @description Opaque reference of the backup in the customer's own storage. */
+            /**
+             * @description Opaque reference of the backup in the customer's own storage.
+             * @example bk-20261102-0100
+             */
             readonly artefact_ref?: string;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description The size of a backup or a health report, in bytes.
+             * @example 734003200
+             */
             readonly size_bytes?: number;
-            /** @enum {string} */
-            readonly status: "accepted" | "running" | "succeeded" | "failed";
-            readonly version?: components["schemas"]["SemVer"];
+            /** @description Where the operation stands. */
+            readonly status: components["schemas"]["ManagedResultStatus"];
+            /**
+             * @description The product version after an update.
+             * @example 0.751.0
+             */
+            readonly version?: string;
         };
+        /** @description `POST …/managed-operations/{operation}/result`'s answer: recorded. */
+        readonly ManagedResultRecorded: Record<string, never>;
+        /**
+         * @description What an installation reports about an operation.
+         * @enum {string}
+         */
+        readonly ManagedResultStatus: "accepted" | "running" | "succeeded" | "failed";
         /** @description One key of the published key set. */
         readonly ManifestKeyBody: {
             /** @description `EdDSA`. */
@@ -2360,83 +2394,159 @@ export interface components {
             readonly tenant_link_id: string;
         };
         /**
-         * @description The meter key set of the `ever.entitlement.v1` document. Credit balances are not meters; they are read from the ledger (`GET /v1/orgs/{org}/credits`).
-         * @enum {string}
+         * @description An app's fields. Repository addresses (`source_repos`) and repository names inside `lineage`
+         *     are accepted and never stored.
          */
-        readonly MeterKey: "instances.connected" | "listings.published" | "members" | "apps.registered" | "webhooks.endpoints" | "api.requests" | "lookup.queries" | "lookup.hashes" | "employees.reported" | "stats.reports";
         readonly MirrorAppData: {
-            /** @enum {string} */
-            readonly base_kind: "none" | "ever" | "oss";
+            /** @description `none`, `ever` or `oss`. */
+            readonly base_kind: string;
+            /** @description What it is based on (`ever:gauzy`, `oss:calcom/cal.diy`). */
             readonly base_ref?: string | null;
-            /** @enum {string} */
-            readonly kind: "app" | "work";
-            readonly lineage?: Record<string, never>;
+            /** @description `app` or `work`. */
+            readonly kind: string;
+            /**
+             * @description How it started: only `blueprint.id`, `blueprint.version`, `relation`, `provisioned_by`,
+             *     `app_spec_source` and `install_id` are stored.
+             */
+            readonly lineage?: Record<string, never> | null;
+            /** @description The display name, at most 200 characters. */
             readonly name: string;
-            readonly product_org_id?: string;
+            /** @description The product organization the app belongs to, when the product has them. */
+            readonly product_org_id?: string | null;
+            /** @description The product tenant the app belongs to. */
             readonly product_tenant_id: string;
+            /** @description The product's slug, at most 128 characters. */
             readonly slug: string;
-            readonly source_repos?: readonly {
-                readonly role?: string;
-                /** Format: uri */
-                readonly url?: string;
-            }[];
-            /** @enum {string} */
-            readonly status: "draft" | "registered" | "building" | "live" | "paused" | "archived" | "deleted";
+            /** @description Accepted, never stored. */
+            readonly source_repos?: readonly Record<string, never>[] | null;
+            /**
+             * @description `draft`, `registered`, `building`, `live`, `paused`, `archived` or `deleted`, or the
+             *     product's own `active` (read as `live`).
+             */
+            readonly status: string;
+            /** @description A Work's kind. */
             readonly work_kind?: string | null;
         };
-        /** @description Identifier-and-status mirror pushed by the source product's Ever Connect outbox. <= 500 ops, <= 4 MiB. Per-item idempotency by `(external_id, external_version)`. */
+        /**
+         * @description An identifier-and-status batch pushed by the source product's outbox: up to 500 operations and
+         *     4 MiB. Each operation is idempotent by its `(external_id, external_version)`.
+         */
         readonly MirrorBatch: {
+            /** @description The operations, applied in this order, each on its own. */
             readonly ops: readonly components["schemas"]["MirrorOp"][];
         };
+        /**
+         * @description A deployment's fields (an open vocabulary: `target`, `provider` and `shape` are
+         *     stored as reported).
+         */
         readonly MirrorDeploymentData: {
-            /** @enum {string} */
-            readonly environment: "production" | "preview";
-            /** @enum {string} */
-            readonly managed_by: "ever" | "customer" | "third_party";
+            /** @description `production` or `preview`. */
+            readonly environment: string;
+            /** @description `ever`, `customer` or `third_party`. */
+            readonly managed_by: string;
+            /** @description The provider. */
             readonly provider?: string | null;
+            /** @description The deploy shape. */
             readonly shape?: string | null;
-            /** @enum {string} */
-            readonly status: "pending" | "ready" | "error" | "canceled" | "timeout" | "retired";
+            /**
+             * @description `pending`, `ready`, `error`, `canceled`, `timeout` or `retired`, or the product's own state
+             *     (`READY`, `INITIALIZING`, ...).
+             */
+            readonly status: string;
+            /** @description Where it runs. */
             readonly target: string;
-            /** Format: uri */
+            /**
+             * @description Its public address, when it has one: `http` or `https`, without credentials, a query or a
+             *     fragment.
+             */
             readonly url?: string | null;
         };
-        readonly MirrorInventoryPage: components["schemas"]["Page"] & {
-            readonly items?: readonly {
-                readonly external_id: string;
-                /** Format: int64 */
-                readonly external_version: number;
-                /** @enum {string} */
-                readonly kind: "app" | "deployment";
-                readonly org_link_id?: string | null;
-            }[];
-        };
-        readonly MirrorOp: {
-            /** @description Required for `kind: deployment`. */
-            readonly app_external_id?: string;
-            readonly data?: components["schemas"]["MirrorAppData"] | components["schemas"]["MirrorDeploymentData"];
+        /** @description A row the platform holds for this installation. */
+        readonly MirrorInventoryItem: {
+            /** @description The product's id. */
             readonly external_id: string;
             /**
              * Format: int64
-             * @description Monotonic per external id; a lower or equal version is `ignored_stale`.
+             * @description The version the platform holds.
              */
             readonly external_version: number;
-            /** @enum {string} */
-            readonly kind: "app" | "deployment";
-            readonly occurred_at: components["schemas"]["Timestamp"];
-            /** @enum {string} */
-            readonly op: "upsert" | "delete";
+            /** @description `app` or `deployment`. */
+            readonly kind: components["schemas"]["MirrorSubject"];
+            /** @description The tenant link it arrived under. */
+            readonly org_link_id?: string | null;
         };
+        /**
+         * @description A page of what the platform holds for this installation. Rows the platform archived (their
+         *     integration or link ended, or the product stopped reporting them) and rows the product deleted
+         *     are not held: a product still holding one sends it again, which restores it.
+         */
+        readonly MirrorInventoryPage: {
+            /** @description The rows, in id order. */
+            readonly items: readonly components["schemas"]["MirrorInventoryItem"][];
+            /** @description The next page's cursor, when there is one. */
+            readonly next_cursor?: string | null;
+        };
+        /** @description One operation's result. */
+        readonly MirrorItemResult: {
+            /** @description The app, when the platform holds it (a deployment's result names its app). */
+            readonly app_id?: string | null;
+            /**
+             * @description Why it was refused: `unlinked_org`, `integration_disabled`, `unknown_app`, `org_mismatch`
+             *     or `schema_violation`.
+             */
+            readonly code?: string | null;
+            /** @description The operation's `external_id`. */
+            readonly external_id: string;
+            /** @description `applied`, `ignored_stale` or `rejected`. */
+            readonly outcome: components["schemas"]["MirrorOutcome"];
+        };
+        /** @description One operation. */
+        readonly MirrorOp: {
+            /** @description The app's external id: required for `kind: deployment`. */
+            readonly app_external_id?: string | null;
+            readonly data?: null | components["schemas"]["MirrorOpData"];
+            /**
+             * @description The product's id of the app or deployment: letters, digits and `._:-`, at most 64
+             *     characters (what the events carry).
+             */
+            readonly external_id: string;
+            /**
+             * Format: int64
+             * @description Monotonic per external id; a lower or equal version answers `ignored_stale`.
+             */
+            readonly external_version: number;
+            /** @description `app` or `deployment`. */
+            readonly kind: components["schemas"]["MirrorSubject"];
+            /**
+             * Format: date-time
+             * @description When the change happened in the product.
+             */
+            readonly occurred_at: string;
+            /** @description `upsert` or `delete`. */
+            readonly op: components["schemas"]["MirrorOpKind"];
+        };
+        /** @description An upsert's fields, by the operation's `kind`. */
+        readonly MirrorOpData: components["schemas"]["MirrorAppData"] | components["schemas"]["MirrorDeploymentData"];
+        /**
+         * @description What an operation does.
+         * @enum {string}
+         */
+        readonly MirrorOpKind: "upsert" | "delete";
+        /**
+         * @description What became of an operation.
+         * @enum {string}
+         */
+        readonly MirrorOutcome: "applied" | "ignored_stale" | "rejected";
+        /** @description One result per operation, in request order. */
         readonly MirrorResult: {
-            readonly results: readonly {
-                readonly app_id?: string | null;
-                /** @enum {string|null} */
-                readonly code?: "unlinked_org" | "schema_violation" | null;
-                readonly external_id: string;
-                /** @enum {string} */
-                readonly outcome: "applied" | "ignored_stale" | "rejected";
-            }[];
+            /** @description The results. */
+            readonly results: readonly components["schemas"]["MirrorItemResult"][];
         };
+        /**
+         * @description What an operation is about.
+         * @enum {string}
+         */
+        readonly MirrorSubject: "app" | "deployment";
         /** @description An amount in minor units. */
         readonly Money: {
             /**
@@ -2531,17 +2641,6 @@ export interface components {
          * @enum {string}
          */
         readonly OrgRole: "owner" | "admin" | "member";
-        /**
-         * @description Cursor pagination envelope. Every list endpoint returns `items` and
-         *     `next_cursor` (`null` when the page is the last one). Order is
-         *     `(created_at DESC, id DESC)` unless the endpoint says otherwise. There are
-         *     no offsets and no totals.
-         */
-        readonly Page: {
-            readonly items: readonly unknown[];
-            /** @description Opaque cursor to pass as `?cursor=` for the next page. */
-            readonly next_cursor: string | null;
-        };
         /** @description A person link as the installation sees it. */
         readonly PersonLink: {
             /** @description The link. */
@@ -2665,6 +2764,26 @@ export interface components {
              */
             readonly base_url: string;
         };
+        /** @description One salt version as published. */
+        readonly PublishedSalt: {
+            /**
+             * Format: date-time
+             * @description When it starts.
+             */
+            readonly active_from: string;
+            /**
+             * Format: date-time
+             * @description When it stops answering, when that is set.
+             */
+            readonly retire_after?: string | null;
+            /** @description 32 random bytes in base64url without padding. Public by design. */
+            readonly salt: string;
+            /**
+             * Format: int32
+             * @description The version.
+             */
+            readonly version: number;
+        };
         /**
          * @description Code-first connect: the installation redeems a connect code with its own Ed25519 connect
          *     key, which becomes its credential. The connect key never signs anonymous statistics (those
@@ -2690,7 +2809,7 @@ export interface components {
              */
             readonly product: string;
             /** @description Its connect key: an Ed25519 public JWK (`kty: OKP`, `crv: Ed25519`, `x`). */
-            readonly public_jwk: Record<string, never>;
+            readonly public_jwk: components["schemas"]["ConnectPublicJwk"];
             /**
              * @description The origins (`https://host[:port]`; plain `http` only on `localhost`, `127.0.0.1` or
              *     `[::1]`) the installation's consent links may return to, at most four. Only a digest of
@@ -2744,25 +2863,16 @@ export interface components {
              */
             readonly product_tenant_id?: string | null;
         };
-        /**
-         * @description Active salt versions. The salt is public by design; privacy comes from
-         *     the one-way hash, opt-in only answers, feature-scoped results, rate
-         *     limits and the rule that queried hashes are never persisted or logged.
-         *     A new version is added with `active_from`; the old one answers until
-         *     `retire_after` (>= 180 days).
-         */
-        readonly SaltSet: {
-            readonly active: readonly {
-                readonly active_from: components["schemas"]["Timestamp"];
-                /** Format: date-time */
-                readonly retire_after?: string | null;
-                /** @description 32 random bytes, base64url. */
-                readonly salt: string;
-                readonly version: number;
-            }[];
-            /** @constant */
-            readonly normalization_version: 1;
-            /** Format: uri */
+        /** @description The salts an installation hashes with. */
+        readonly SaltDocument: {
+            /** @description The versions that have not retired. */
+            readonly active: readonly components["schemas"]["PublishedSalt"][];
+            /**
+             * Format: int32
+             * @description The normalization version.
+             */
+            readonly normalization_version: number;
+            /** @description Where the test vectors are. */
             readonly test_vectors_url: string;
         };
         /** @description A rotated secret: the new one, shown once, and how long the old one keeps signing beside it. */
@@ -2775,8 +2885,6 @@ export interface components {
             /** @description The new signing secret. */
             readonly secret: string;
         };
-        /** @description Product version string as reported by the instance. */
-        readonly SemVer: string;
         readonly SsoDiscover: {
             /** Format: uri */
             readonly entry?: string;
@@ -2902,13 +3010,9 @@ export interface components {
             /** @description The product tenant's id. */
             readonly product_tenant_id: string;
         };
-        /**
-         * @description Re-key an installation-wide tenant link to one product organization, once the product gained organizations (Ever Traduora - the `*` link becomes the id of the default organization).
-         * @example {
-         *       "product_tenant_id": "5b0c2f7e-2d1a-4c3b-9e8f-0a1b2c3d4e5f"
-         *     }
-         */
+        /** @description The one product organization the installation-wide link becomes. */
         readonly TenantLinkRekey: {
+            /** @description The product organization's id (letters, digits and `._:-`; never `*`). */
             readonly product_tenant_id: string;
         };
         /** @description The body of a test (optional). */
@@ -2959,6 +3063,28 @@ export interface components {
          * @example 01JC5R7Y6K1M9E0V3Q2A8XW4TB
          */
         readonly Ulid: string;
+        /** @description The empty answer. */
+        readonly UsageAccepted: Record<string, never>;
+        /** @description One count. */
+        readonly UsageItem: {
+            /**
+             * @description A meter an installation may report (`employees.reported`, `stats.reports`).
+             * @example employees.reported
+             */
+            readonly meter_key: string;
+            /**
+             * @description `YYYY-MM` or `YYYY-MM-DD`.
+             * @example 2026-11
+             */
+            readonly period: string;
+            /** @description The product tenant, when sent: it must be the tenant of the link in `Ever-Link-Id`. */
+            readonly product_tenant_id?: string;
+            /**
+             * Format: int64
+             * @description The count.
+             */
+            readonly quantity: number;
+        };
         /** @description Push alternative to the pull probe (integration `usage_reporting`). */
         readonly UsageReadings: {
             readonly readings: readonly {
@@ -2972,15 +3098,10 @@ export interface components {
                 readonly unit: string;
             }[];
         };
-        /** @description Instance-reported meters (integration `usage_reporting`). Only meters listed in the consented configuration are accepted; anything else answers 422. */
+        /** @description What an installation reports: counts, never a name or an identifier of a person. */
         readonly UsageReport: {
-            readonly items: readonly {
-                readonly meter_key: components["schemas"]["MeterKey"];
-                readonly period: string;
-                readonly product_tenant_id?: string;
-                /** Format: int64 */
-                readonly quantity: number;
-            }[];
+            /** @description 1 to 100 counts. */
+            readonly items: readonly components["schemas"]["UsageItem"][];
         };
         readonly Vendor: {
             readonly handle: components["schemas"]["Handle"];
@@ -3676,9 +3797,13 @@ export interface operations {
         readonly parameters: {
             readonly query?: never;
             readonly header: {
-                /** @description For multi-tenant instances, the tenant link on whose behalf the instance acts. Required when the integration is enabled per link rather than instance-wide. */
-                readonly "Ever-Link-Id"?: components["schemas"]["Ulid"];
-                /** @description Client-generated key, unique per principal, <= 128 characters. See the `Idempotency` schema. */
+                /** @description The tenant link of the product tenant. */
+                readonly "Ever-Link-Id": string;
+                /**
+                 * @description Client-generated key, unique per principal, at most 128 characters; remembered 24 h.
+                 *     The same key with the same request replays the first answer (`Idempotency-Replayed:
+                 *     true`); with a different request it answers `422 idempotency_mismatch`.
+                 */
                 readonly "Idempotency-Key": string;
             };
             readonly path?: never;
@@ -3690,7 +3815,7 @@ export interface operations {
             };
         };
         readonly responses: {
-            /** @description Linked. */
+            /** @description Linked (the same customer again answers the same link) */
             readonly 201: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -3699,7 +3824,7 @@ export interface operations {
                     readonly "application/json": components["schemas"]["BillingLink"];
                 };
             };
-            /** @description Principal lacks the role, scope, integration or entitlement, or the operation needs a fresh sign-in (`forbidden_role`, `forbidden_scope`, `integration_disabled`, `integration_revoked`, `instance_pending_approval`, `entitlement_required`, `tier_required`, `sso_required`, `reauth_required`, `session_required`: an Ever ID token issued to a product, installation or App client used anywhere except the two `everIdTokenRead` reads and the in-product consent write; `step_up_required`: that consent write without a sign-in in the last 300 s; `not_connection_owner`: an installation-wide integration changed by an organization that does not own the installation). */
+            /** @description `integration_disabled`, `integration_revoked` or `denied_by_policy`: not enabled for this link, not an installation Ever operates, or not under the Ever Cloud terms */
             readonly 403: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -3708,8 +3833,8 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Validation failed; unknown fields are rejected on writes (`validation_failed`, `schema_violation`, `code_invalid`, `idempotency_mismatch`, `mirror_owned_field`, `limit_exceeded`). */
-            readonly 422: {
+            /** @description `module_disabled`: billing is not enabled on this deployment */
+            readonly 404: {
                 headers: {
                     readonly [name: string]: unknown;
                 };
@@ -3717,17 +3842,18 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Any other error, as a problem document. */
-            readonly default: {
+            /** @description `already_linked`: another tenant link holds this customer, or staff or a claim linked this tenant to another */
+            readonly 409: {
                 headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `validation_failed`: not a customer id, not the link's tenant, or a product without billing links */
+            readonly 422: {
+                headers: {
                     readonly [name: string]: unknown;
                 };
                 content: {
@@ -4225,8 +4351,8 @@ export interface operations {
             readonly query?: never;
             readonly header?: never;
             readonly path: {
-                /** @description Managed operation id (ULID) from the feed notice. */
-                readonly operation: components["schemas"]["Ulid"];
+                /** @description The managed operation id, from the feed notice. */
+                readonly operation: string;
             };
             readonly cookie?: never;
         };
@@ -4236,16 +4362,16 @@ export interface operations {
             };
         };
         readonly responses: {
-            /** @description Recorded. */
+            /** @description Recorded */
             readonly 200: {
                 headers: {
                     readonly [name: string]: unknown;
                 };
                 content: {
-                    readonly "application/json": components["schemas"]["Empty"];
+                    readonly "application/json": components["schemas"]["ManagedResultRecorded"];
                 };
             };
-            /** @description Principal lacks the role, scope, integration or entitlement, or the operation needs a fresh sign-in (`forbidden_role`, `forbidden_scope`, `integration_disabled`, `integration_revoked`, `instance_pending_approval`, `entitlement_required`, `tier_required`, `sso_required`, `reauth_required`, `session_required`: an Ever ID token issued to a product, installation or App client used anywhere except the two `everIdTokenRead` reads and the in-product consent write; `step_up_required`: that consent write without a sign-in in the last 300 s; `not_connection_owner`: an installation-wide integration changed by an organization that does not own the installation). */
+            /** @description `integration_disabled`, `integration_revoked` or `denied_by_policy`: `managed_operations` is not enabled for this installation */
             readonly 403: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -4254,7 +4380,7 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Not found, or the module that serves this route is disabled on this deployment (`not_found`, `module_disabled`). */
+            /** @description No such operation of this installation */
             readonly 404: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -4263,37 +4389,18 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description State conflict (`handle_taken`, `already_exists`, `key_mismatch`, `idempotency_in_progress`, `illegal_transition`, `billing_active`, `job_in_progress` when another job for the same subject is running). */
+            /** @description `illegal_transition`: the state machine does not allow this move */
             readonly 409: {
                 headers: {
-                    /** @description Seconds to wait before retrying. */
-                    readonly "Retry-After"?: number;
                     readonly [name: string]: unknown;
                 };
                 content: {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Validation failed; unknown fields are rejected on writes (`validation_failed`, `schema_violation`, `code_invalid`, `idempotency_mismatch`, `mirror_owned_field`, `limit_exceeded`). */
+            /** @description `validation_failed`: an unknown key, or a value outside its field (a path or a URL as `artefact_ref`) */
             readonly 422: {
                 headers: {
-                    readonly [name: string]: unknown;
-                };
-                content: {
-                    readonly "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description Any other error, as a problem document. */
-            readonly default: {
-                headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
                     readonly [name: string]: unknown;
                 };
                 content: {
@@ -4307,8 +4414,10 @@ export interface operations {
             readonly query?: {
                 /** @description Opaque cursor from a previous page's `next_cursor`. */
                 readonly cursor?: string;
-                /** @description Page size, 1..100 (default 25). */
+                /** @description Page size, 1..500 (default 100). */
                 readonly limit?: number;
+                /** @description Only the rows that arrived under this tenant link. */
+                readonly link?: string;
             };
             readonly header?: never;
             readonly path?: never;
@@ -4316,7 +4425,7 @@ export interface operations {
         };
         readonly requestBody?: never;
         readonly responses: {
-            /** @description OK */
+            /** @description A page of the inventory */
             readonly 200: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -4325,17 +4434,27 @@ export interface operations {
                     readonly "application/json": components["schemas"]["MirrorInventoryPage"];
                 };
             };
-            /** @description Any other error, as a problem document. */
-            readonly default: {
+            /** @description `integration_disabled`, `integration_revoked` or `denied_by_policy`: `app_sync` is off for every link, or for the link named; `instance_pending_approval` or `instance_disconnected` */
+            readonly 403: {
                 headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The mirror is off on this deployment */
+            readonly 404: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `validation_failed` at `?cursor`, `?limit` or `?link` */
+            readonly 422: {
+                headers: {
                     readonly [name: string]: unknown;
                 };
                 content: {
@@ -4357,7 +4476,7 @@ export interface operations {
             };
         };
         readonly responses: {
-            /** @description Per-item results. */
+            /** @description One result per operation */
             readonly 200: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -4366,7 +4485,7 @@ export interface operations {
                     readonly "application/json": components["schemas"]["MirrorResult"];
                 };
             };
-            /** @description Principal lacks the role, scope, integration or entitlement, or the operation needs a fresh sign-in (`forbidden_role`, `forbidden_scope`, `integration_disabled`, `integration_revoked`, `instance_pending_approval`, `entitlement_required`, `tier_required`, `sso_required`, `reauth_required`, `session_required`: an Ever ID token issued to a product, installation or App client used anywhere except the two `everIdTokenRead` reads and the in-product consent write; `step_up_required`: that consent write without a sign-in in the last 300 s; `not_connection_owner`: an installation-wide integration changed by an organization that does not own the installation). */
+            /** @description `integration_disabled`, `integration_revoked` or `denied_by_policy`: no link of this installation has `app_sync`; `instance_pending_approval` or `instance_disconnected` */
             readonly 403: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -4375,7 +4494,16 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Batch larger than 4 MiB or 500 ops. */
+            /** @description The mirror is off on this deployment */
+            readonly 404: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `payload_too_large`: a body over 4 MiB */
             readonly 413: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -4384,17 +4512,9 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Any other error, as a problem document. */
-            readonly default: {
+            /** @description `limit_exceeded`: more than 500 operations; `validation_failed`: no operation, or an unknown field outside `data` */
+            readonly 422: {
                 headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
                     readonly [name: string]: unknown;
                 };
                 content: {
@@ -5085,8 +5205,8 @@ export interface operations {
             readonly query?: never;
             readonly header?: never;
             readonly path: {
-                /** @description Tenant link id (ULID). */
-                readonly link: components["schemas"]["Ulid"];
+                /** @description The tenant link id. */
+                readonly link: string;
             };
             readonly cookie?: never;
         };
@@ -5096,7 +5216,7 @@ export interface operations {
             };
         };
         readonly responses: {
-            /** @description Re-keyed (or already re-keyed to this value). */
+            /** @description Re-keyed (or already re-keyed to this value) */
             readonly 200: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -5105,7 +5225,16 @@ export interface operations {
                     readonly "application/json": components["schemas"]["TenantLink"];
                 };
             };
-            /** @description Not found, or the module that serves this route is disabled on this deployment (`not_found`, `module_disabled`). */
+            /** @description `instance_pending_approval` or `instance_disconnected` */
+            readonly 403: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such link on this instance */
             readonly 404: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -5114,28 +5243,18 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description State conflict (`handle_taken`, `already_exists`, `key_mismatch`, `idempotency_in_progress`, `illegal_transition`, `billing_active`, `job_in_progress` when another job for the same subject is running). */
+            /** @description `illegal_transition`: not the active `*` link, or already re-keyed to another value; `already_linked`: this installation already has a link for that product organization */
             readonly 409: {
                 headers: {
-                    /** @description Seconds to wait before retrying. */
-                    readonly "Retry-After"?: number;
                     readonly [name: string]: unknown;
                 };
                 content: {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Any other error, as a problem document. */
-            readonly default: {
+            /** @description `validation_failed` at `/product_tenant_id` */
+            readonly 422: {
                 headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
                     readonly [name: string]: unknown;
                 };
                 content: {
@@ -5320,9 +5439,13 @@ export interface operations {
         readonly parameters: {
             readonly query?: never;
             readonly header: {
-                /** @description For multi-tenant instances, the tenant link on whose behalf the instance acts. Required when the integration is enabled per link rather than instance-wide. */
-                readonly "Ever-Link-Id"?: components["schemas"]["Ulid"];
-                /** @description Client-generated key, unique per principal, <= 128 characters. See the `Idempotency` schema. */
+                /** @description The tenant link the counts belong to. */
+                readonly "Ever-Link-Id": string;
+                /**
+                 * @description Client-generated key, unique per principal, at most 128 characters; remembered 24 h.
+                 *     The same key with the same request replays the first answer (`Idempotency-Replayed:
+                 *     true`); with a different request it answers `422 idempotency_mismatch`.
+                 */
                 readonly "Idempotency-Key": string;
             };
             readonly path?: never;
@@ -5334,16 +5457,16 @@ export interface operations {
             };
         };
         readonly responses: {
-            /** @description Accepted. */
+            /** @description Accepted */
             readonly 202: {
                 headers: {
                     readonly [name: string]: unknown;
                 };
                 content: {
-                    readonly "application/json": components["schemas"]["Empty"];
+                    readonly "application/json": components["schemas"]["UsageAccepted"];
                 };
             };
-            /** @description Principal lacks the role, scope, integration or entitlement, or the operation needs a fresh sign-in (`forbidden_role`, `forbidden_scope`, `integration_disabled`, `integration_revoked`, `instance_pending_approval`, `entitlement_required`, `tier_required`, `sso_required`, `reauth_required`, `session_required`: an Ever ID token issued to a product, installation or App client used anywhere except the two `everIdTokenRead` reads and the in-product consent write; `step_up_required`: that consent write without a sign-in in the last 300 s; `not_connection_owner`: an installation-wide integration changed by an organization that does not own the installation). */
+            /** @description `integration_disabled`, `integration_revoked` or `denied_by_policy`: `usage_reporting` is not enabled for this link */
             readonly 403: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -5352,8 +5475,8 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Validation failed; unknown fields are rejected on writes (`validation_failed`, `schema_violation`, `code_invalid`, `idempotency_mismatch`, `mirror_owned_field`, `limit_exceeded`). */
-            readonly 422: {
+            /** @description `module_disabled`: entitlements are off on this deployment */
+            readonly 404: {
                 headers: {
                     readonly [name: string]: unknown;
                 };
@@ -5361,17 +5484,9 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Any other error, as a problem document. */
-            readonly default: {
+            /** @description `validation_failed`: no count or more than 100, a meter an installation may not report, a negative count, a period not in the form or not started, or another tenant than the link's; nothing is stored */
+            readonly 422: {
                 headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
                     readonly [name: string]: unknown;
                 };
                 content: {
@@ -5557,9 +5672,9 @@ export interface operations {
     readonly lookupCounterparties: {
         readonly parameters: {
             readonly query?: never;
-            readonly header?: {
-                /** @description For multi-tenant instances, the tenant link on whose behalf the instance acts. Required when the integration is enabled per link rather than instance-wide. */
-                readonly "Ever-Link-Id"?: components["schemas"]["Ulid"];
+            readonly header: {
+                /** @description The tenant link the lookup is made for. Required from an installation: without it the platform answers `422 validation_failed` at `#Ever-Link-Id`. */
+                readonly "Ever-Link-Id": string;
             };
             readonly path?: never;
             readonly cookie?: never;
@@ -5570,23 +5685,16 @@ export interface operations {
             };
         };
         readonly responses: {
-            /** @description Matches (possibly empty). */
+            /** @description The matches (`Cache-Control: private, no-store`) */
             readonly 200: {
                 headers: {
-                    readonly "Cache-Control"?: "private, no-store";
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
                     readonly [name: string]: unknown;
                 };
                 content: {
                     readonly "application/json": components["schemas"]["LookupResponse"];
                 };
             };
-            /** @description Missing, expired or revoked credential (`unauthorized`, `credential_revoked`). */
+            /** @description No valid credential */
             readonly 401: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -5595,7 +5703,7 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Principal lacks the role, scope, integration or entitlement, or the operation needs a fresh sign-in (`forbidden_role`, `forbidden_scope`, `integration_disabled`, `integration_revoked`, `instance_pending_approval`, `entitlement_required`, `tier_required`, `sso_required`, `reauth_required`, `session_required`: an Ever ID token issued to a product, installation or App client used anywhere except the two `everIdTokenRead` reads and the in-product consent write; `step_up_required`: that consent write without a sign-in in the last 300 s; `not_connection_owner`: an installation-wide integration changed by an organization that does not own the installation). */
+            /** @description `integration_disabled`, `integration_revoked`, `denied_by_policy`, `forbidden_scope` or `entitlement_required` */
             readonly 403: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -5604,7 +5712,7 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Validation failed; unknown fields are rejected on writes (`validation_failed`, `schema_violation`, `code_invalid`, `idempotency_mismatch`, `mirror_owned_field`, `limit_exceeded`). */
+            /** @description `salt_version_unknown`, `salt_version_retired`, `hashes_invalid`, or `validation_failed` at `#Ever-Link-Id` */
             readonly 422: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -5613,34 +5721,9 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Rate limit exceeded for this principal class (`rate_limited`). */
+            /** @description `rate_limited`, with `Retry-After` and `RateLimit-*` */
             readonly 429: {
                 headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description Seconds to wait before retrying. */
-                    readonly "Retry-After"?: number;
-                    readonly [name: string]: unknown;
-                };
-                content: {
-                    readonly "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description Any other error, as a problem document. */
-            readonly default: {
-                headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
                     readonly [name: string]: unknown;
                 };
                 content: {
@@ -5658,27 +5741,18 @@ export interface operations {
         };
         readonly requestBody?: never;
         readonly responses: {
-            /** @description OK */
+            /** @description The salts (`Cache-Control: public, max-age=300, s-maxage=3600`) */
             readonly 200: {
                 headers: {
-                    readonly "Cache-Control"?: "public, max-age=300, s-maxage=3600";
                     readonly [name: string]: unknown;
                 };
                 content: {
-                    readonly "application/json": components["schemas"]["SaltSet"];
+                    readonly "application/json": components["schemas"]["SaltDocument"];
                 };
             };
-            /** @description Any other error, as a problem document. */
-            readonly default: {
+            /** @description `module_disabled`: no salt is configured here */
+            readonly 404: {
                 headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
                     readonly [name: string]: unknown;
                 };
                 content: {

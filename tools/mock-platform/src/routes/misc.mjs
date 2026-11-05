@@ -5,6 +5,10 @@ import { randomBytes } from 'node:crypto';
 import { b64url } from '../crypto.mjs';
 import { fail } from '../problem.mjs';
 
+/** The meters an installation may report (the platform's instance-reported meters). */
+const REPORTABLE_METERS = new Set(['employees.reported', 'stats.reports']);
+const USAGE_PERIOD = /^20[0-9]{2}-(0[1-9]|1[0-2])(-(0[1-9]|[12][0-9]|3[01]))?$/;
+
 const INSTALL_TRANSITIONS = {
   requested: ['installing', 'failed', 'removed'],
   installing: ['installed', 'failed'],
@@ -239,7 +243,21 @@ export const miscHandlers = {
     return { status: 200, body: { status: 'completed', tenant_link_id: intent.tenant_link_id, job_id: intent.job_id } };
   },
 
-  instanceReportUsage() {
+  // As the platform: 1 to 100 counts of meters an installation may report, for the link's own
+  // tenant when one is named, each for a period in the form that has started (a day of skew);
+  // any fault stores nothing.
+  instanceReportUsage({ state, instance, headers, body }) {
+    const field = (path, message) => fail(422, 'validation_failed', undefined, { errors: [{ path, code: 'invalid', message }] });
+    if (body.items.length < 1 || body.items.length > 100) field('/items', '1 to 100 counts');
+    const link = instance.links[String(headers['ever-link-id']).trim()];
+    const lastMonth = new Date((state.now() + 86400) * 1000).toISOString().slice(0, 7);
+    body.items.forEach((item, at) => {
+      if (!REPORTABLE_METERS.has(item.meter_key)) field(`/items/${at}/meter_key`, 'not a meter an installation may report');
+      if (item.product_tenant_id !== undefined && item.product_tenant_id !== link?.product_tenant_id)
+        field(`/items/${at}/product_tenant_id`, 'not the tenant of the link in Ever-Link-Id');
+      if (!USAGE_PERIOD.test(item.period)) field(`/items/${at}/period`, 'YYYY-MM or YYYY-MM-DD');
+      if (item.period.slice(0, 7) > lastMonth) field(`/items/${at}/period`, 'a period that has not started');
+    });
     return { status: 202, body: {} };
   },
 

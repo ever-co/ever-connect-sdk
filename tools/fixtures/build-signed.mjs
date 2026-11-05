@@ -209,13 +209,12 @@ function requestCases() {
       { hashes: [{ kind: 'vat', salt_version: 1, hash: hex64('identifier/vat') }] },
       { 'extra-field': (b) => [{ hashes: [{ ...b.hashes[0], value: 'BG123456789' }] }, '/hashes/0/value'] },
     ),
+    // The pinned body is closed; 1 to 100 unique hashes of 64 lowercase hex characters is checked
+    // by the server (422 hashes_invalid), not by the schema (the mock answers it the same way).
     lookup: c(
       'LookupRequest',
       { salt_version: 1, hashes: [hex64('lookup/1'), hex64('lookup/2')] },
-      {
-        'too-many': () => [{ salt_version: 1, hashes: Array.from({ length: 101 }, (_, i) => hex64(`lookup/many/${i}`)) }, '/hashes'],
-        'extra-field': (b) => [extra(b), '/unexpected_field'],
-      },
+      { 'extra-field': (b) => [extra(b), '/unexpected_field'] },
     ),
     'oidc-client': c(
       'OidcClientRequest',

@@ -8,7 +8,7 @@ Everything in this repository is derived from a few hand-kept files and the Ever
 |---|---|
 | `contracts/openapi/sync.config.json` | which operations of the Ever Platform API belong to the instance-facing subset |
 | `contracts/openapi/rows.json` | the outbound-call rows: title, operations, module, group, integration, trigger, payload, cadence, how to disable, products, phase and the documented `(status, code)` pairs |
-| `contracts/openapi/pending-upstream.json` | operations and problem codes the modules need before the Ever Platform API publishes them |
+| `contracts/openapi/pending-upstream.json` | operations, problem codes, and the security or parameters of an operation that the modules need before the Ever Platform API publishes them |
 | `contracts/integrations/overrides.json` | corrections applied when the vendored integration catalog disagrees with another contract |
 | `contracts/constants.json` | wire constants and defaults (the contract-derived fields are refreshed by the tools) |
 | `contracts/VERSION` | the contracts version |

@@ -394,7 +394,8 @@ export function createEverPlatformClient(o: EverPlatformClientOptions) {
       },
       mirrorApps: {
         push: (batch: RequestBody<'instanceMirrorApps'>) => plain('instanceMirrorApps', { body: batch }),
-        list: (cursor?: string, limit?: number) => plain('instanceListMirroredApps', { query: { cursor, limit } }),
+        /** A page of the mirrored inventory; `link` keeps the apps of one tenant link. */
+        list: (cursor?: string, limit?: number, link?: string) => plain('instanceListMirroredApps', { query: { cursor, limit, link } }),
       },
       managedOperationResult: (operationId: string, req: RequestBody<'instanceReportManagedOperationResult'>) =>
         plain('instanceReportManagedOperationResult', { path: { operation: operationId }, body: req }),

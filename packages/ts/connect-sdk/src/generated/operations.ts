@@ -281,7 +281,7 @@ export const OPERATIONS = {
     "query": [],
     "auth": "instance",
     "idempotencyKey": "required",
-    "linkHeader": "optional",
+    "linkHeader": "required",
     "conditional": false,
     "body": {
       "schema": {
@@ -295,7 +295,7 @@ export const OPERATIONS = {
     "row": 25,
     "integration": "billing_link",
     "rateLimit": "instance",
-    "status": "not_in_v1"
+    "status": "pinned"
   },
   "instanceGetConsentUrl": {
     "id": "instanceGetConsentUrl",
@@ -549,7 +549,7 @@ export const OPERATIONS = {
     "row": 34,
     "integration": "managed_operations",
     "rateLimit": "instance",
-    "status": "not_in_v1"
+    "status": "pinned"
   },
   "instanceListMirroredApps": {
     "id": "instanceListMirroredApps",
@@ -558,7 +558,8 @@ export const OPERATIONS = {
     "pathParams": [],
     "query": [
       "cursor",
-      "limit"
+      "limit",
+      "link"
     ],
     "auth": "instance",
     "idempotencyKey": "none",
@@ -571,7 +572,7 @@ export const OPERATIONS = {
     "row": 15,
     "integration": "app_sync",
     "rateLimit": "instance",
-    "status": "not_in_v1"
+    "status": "pinned"
   },
   "instanceMirrorApps": {
     "id": "instanceMirrorApps",
@@ -595,7 +596,7 @@ export const OPERATIONS = {
     "row": 15,
     "integration": "app_sync",
     "rateLimit": "instance",
-    "status": "not_in_v1"
+    "status": "pinned"
   },
   "instanceGetOidcClient": {
     "id": "instanceGetOidcClient",
@@ -911,7 +912,7 @@ export const OPERATIONS = {
     "row": 5,
     "integration": null,
     "rateLimit": "instance",
-    "status": "not_in_v1"
+    "status": "pinned"
   },
   "instanceGetLinkEntitlement": {
     "id": "instanceGetLinkEntitlement",
@@ -990,7 +991,7 @@ export const OPERATIONS = {
     "query": [],
     "auth": "instance",
     "idempotencyKey": "required",
-    "linkHeader": "optional",
+    "linkHeader": "required",
     "conditional": false,
     "body": {
       "schema": {
@@ -1004,7 +1005,7 @@ export const OPERATIONS = {
     "row": 27,
     "integration": "usage_reporting",
     "rateLimit": "instance",
-    "status": "not_in_v1"
+    "status": "pinned"
   },
   "instanceReportUsageReadings": {
     "id": "instanceReportUsageReadings",
@@ -1086,7 +1087,7 @@ export const OPERATIONS = {
     "query": [],
     "auth": "instance",
     "idempotencyKey": "none",
-    "linkHeader": "optional",
+    "linkHeader": "required",
     "conditional": false,
     "body": {
       "schema": {
@@ -1100,7 +1101,7 @@ export const OPERATIONS = {
     "row": 13,
     "integration": "counterparty_lookup",
     "rateLimit": "lookup",
-    "status": "not_in_v1"
+    "status": "pinned"
   },
   "getLookupSalt": {
     "id": "getLookupSalt",
@@ -1119,7 +1120,7 @@ export const OPERATIONS = {
     "row": 13,
     "integration": null,
     "rateLimit": "public-read",
-    "status": "not_in_v1"
+    "status": "pinned"
   },
   "getLookupTestVectors": {
     "id": "getLookupTestVectors",
@@ -1448,21 +1449,23 @@ export const REQUEST_SCHEMAS: { readonly [key: string]: unknown } = {
         "type": "string"
       },
       "BillingLinkCreate": {
-        "type": "object",
-        "description": "Reported by an Ever-operated instance under integration `billing_link` (declared field `tenant.stripeCustomerId` only).",
+        "additionalProperties": false,
+        "description": "What the installation reports: the declared field only.",
+        "properties": {
+          "customer_ref": {
+            "description": "The provider customer (`cus_…`).",
+            "type": "string"
+          },
+          "product_tenant_id": {
+            "description": "The product tenant: the tenant of the link in `Ever-Link-Id`.",
+            "type": "string"
+          }
+        },
         "required": [
           "product_tenant_id",
           "customer_ref"
         ],
-        "additionalProperties": false,
-        "properties": {
-          "product_tenant_id": {
-            "type": "string"
-          },
-          "customer_ref": {
-            "type": "string"
-          }
-        }
+        "type": "object"
       },
       "CompletionUrls": {
         "additionalProperties": false,
@@ -1493,6 +1496,39 @@ export const REQUEST_SCHEMAS: { readonly [key: string]: unknown } = {
           "works_app"
         ],
         "type": "string"
+      },
+      "ConnectPublicJwk": {
+        "description": "A connect key as a public JWK (RFC 8037): the public half of the Ed25519 key pair an installation\ngenerates. A private key (`d`) is refused. The platform assigns the key id: a `kid` sent here is\nignored, and the answer names the one to use.",
+        "properties": {
+          "crv": {
+            "description": "`Ed25519`.",
+            "example": "Ed25519",
+            "type": "string"
+          },
+          "kid": {
+            "description": "Ignored: the platform assigns the key id.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "kty": {
+            "description": "`OKP`.",
+            "example": "OKP",
+            "type": "string"
+          },
+          "x": {
+            "description": "base64url (no padding) of the 32 public-key bytes.",
+            "pattern": "^[A-Za-z0-9_-]{43}$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kty",
+          "crv",
+          "x"
+        ],
+        "type": "object"
       },
       "ConsentInput": {
         "additionalProperties": false,
@@ -1572,8 +1608,8 @@ export const REQUEST_SCHEMAS: { readonly [key: string]: unknown } = {
             "type": "string"
           },
           "public_jwk": {
-            "description": "Its connect key: an Ed25519 public JWK (`kty: OKP`, `crv: Ed25519`, `x`); the platform\nassigns its `kid`.",
-            "type": "object"
+            "$ref": "#/components/schemas/ConnectPublicJwk",
+            "description": "Its connect key: an Ed25519 public JWK (`kty: OKP`, `crv: Ed25519`, `x`); the platform\nassigns its `kid`."
           },
           "serves_products": {
             "description": "The products it serves besides its own (at most five).",
@@ -1953,8 +1989,8 @@ export const REQUEST_SCHEMAS: { readonly [key: string]: unknown } = {
             "type": "string"
           },
           "public_jwk": {
-            "description": "The new Ed25519 public JWK (no installation may hold it yet, or have held it).",
-            "type": "object"
+            "$ref": "#/components/schemas/ConnectPublicJwk",
+            "description": "The new Ed25519 public JWK (no installation may hold it yet, or have held it)."
           }
         },
         "required": [
@@ -1965,87 +2001,142 @@ export const REQUEST_SCHEMAS: { readonly [key: string]: unknown } = {
         "type": "object"
       },
       "LookupRequest": {
-        "type": "object",
-        "description": "`hash = hex_lower(sha256(salt_bytes || \":\" || kind || \":\" || utf8(normalized)))`. Up to 100 hashes per query.",
+        "additionalProperties": false,
+        "description": "The request.",
+        "properties": {
+          "hashes": {
+            "description": "1 to 100 unique hashes, 64 lowercase hex characters each.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "salt_version": {
+            "description": "The salt version the hashes were made with.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
         "required": [
           "salt_version",
           "hashes"
         ],
-        "additionalProperties": false,
-        "properties": {
-          "salt_version": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "hashes": {
-            "type": "array",
-            "minItems": 1,
-            "maxItems": 100,
-            "uniqueItems": true,
-            "items": {
-              "type": "string",
-              "pattern": "^[0-9a-f]{64}$"
-            }
-          }
-        }
+        "type": "object"
       },
       "ManagedOperationResult": {
-        "type": "object",
-        "description": "What the instance reports for one operation. Status and size only; never file names, paths, URLs, log lines or backup content.",
+        "additionalProperties": false,
+        "description": "What the instance reports for one operation. Status and size only; never file names, paths,\nURLs, log lines or backup content.",
+        "properties": {
+          "artefact_ref": {
+            "description": "Opaque reference of the backup in the customer's own storage.",
+            "example": "bk-20261102-0100",
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9._:-]{1,64}$",
+            "type": "string"
+          },
+          "size_bytes": {
+            "description": "The size of a backup or a health report, in bytes.",
+            "example": 734003200,
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ManagedResultStatus",
+            "description": "Where the operation stands."
+          },
+          "version": {
+            "description": "The product version after an update.",
+            "example": "0.751.0",
+            "maxLength": 32,
+            "pattern": "^[0-9]{1,4}\\.[0-9]{1,4}\\.[0-9]{1,4}(-[0-9A-Za-z.]{1,16})?$",
+            "type": "string"
+          }
+        },
         "required": [
           "status"
         ],
-        "additionalProperties": false,
-        "properties": {
-          "status": {
-            "type": "string",
-            "enum": [
-              "accepted",
-              "running",
-              "succeeded",
-              "failed"
-            ]
-          },
-          "version": {
-            "$ref": "#/components/schemas/SemVer"
-          },
-          "artefact_ref": {
-            "type": "string",
-            "pattern": "^[A-Za-z0-9._:-]{1,64}$",
-            "description": "Opaque reference of the backup in the customer's own storage."
-          },
-          "size_bytes": {
-            "type": "integer",
-            "format": "int64",
-            "minimum": 0
-          }
-        },
-        "examples": [
-          {
-            "status": "succeeded",
-            "artefact_ref": "bk-20261102-0100",
-            "size_bytes": 734003200
-          }
-        ]
+        "type": "object"
       },
-      "MeterKey": {
-        "type": "string",
-        "description": "The meter key set of the `ever.entitlement.v1` document. Credit balances are not meters; they are read from the ledger (`GET /v1/orgs/{org}/credits`).",
+      "ManagedResultStatus": {
+        "description": "What an installation reports about an operation.",
         "enum": [
-          "instances.connected",
-          "listings.published",
-          "members",
-          "apps.registered",
-          "webhooks.endpoints",
-          "api.requests",
-          "lookup.queries",
-          "lookup.hashes",
-          "employees.reported",
-          "stats.reports"
-        ]
+          "accepted",
+          "running",
+          "succeeded",
+          "failed"
+        ],
+        "type": "string"
       },
       "MirrorAppData": {
-        "type": "object",
+        "additionalProperties": false,
+        "description": "An app's fields. Repository addresses (`source_repos`) and repository names inside `lineage`\nare accepted and never stored.",
+        "properties": {
+          "base_kind": {
+            "description": "`none`, `ever` or `oss`.",
+            "type": "string"
+          },
+          "base_ref": {
+            "description": "What it is based on (`ever:gauzy`, `oss:calcom/cal.diy`).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "kind": {
+            "description": "`app` or `work`.",
+            "type": "string"
+          },
+          "lineage": {
+            "description": "How it started: only `blueprint.id`, `blueprint.version`, `relation`, `provisioned_by`,\n`app_spec_source` and `install_id` are stored.",
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "name": {
+            "description": "The display name, at most 200 characters.",
+            "maxLength": 200,
+            "type": "string"
+          },
+          "product_org_id": {
+            "description": "The product organization the app belongs to, when the product has them.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "product_tenant_id": {
+            "description": "The product tenant the app belongs to.",
+            "type": "string"
+          },
+          "slug": {
+            "description": "The product's slug, at most 128 characters.",
+            "maxLength": 128,
+            "type": "string"
+          },
+          "source_repos": {
+            "description": "Accepted, never stored.",
+            "items": {
+              "type": "object"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "status": {
+            "description": "`draft`, `registered`, `building`, `live`, `paused`, `archived` or `deleted`, or the\nproduct's own `active` (read as `live`).",
+            "type": "string"
+          },
+          "work_kind": {
+            "description": "A Work's kind.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
         "required": [
           "product_tenant_id",
           "kind",
@@ -2054,161 +2145,123 @@ export const REQUEST_SCHEMAS: { readonly [key: string]: unknown } = {
           "base_kind",
           "status"
         ],
-        "additionalProperties": false,
-        "properties": {
-          "product_tenant_id": {
-            "type": "string"
-          },
-          "product_org_id": {
-            "type": "string"
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "app",
-              "work"
-            ]
-          },
-          "work_kind": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "name": {
-            "type": "string",
-            "maxLength": 200
-          },
-          "slug": {
-            "type": "string",
-            "maxLength": 128
-          },
-          "base_kind": {
-            "type": "string",
-            "enum": [
-              "none",
-              "ever",
-              "oss"
-            ]
-          },
-          "base_ref": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "draft",
-              "registered",
-              "building",
-              "live",
-              "paused",
-              "archived",
-              "deleted"
-            ]
-          },
-          "lineage": {
-            "type": "object"
-          },
-          "source_repos": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "role": {
-                  "type": "string"
-                },
-                "url": {
-                  "type": "string",
-                  "format": "uri"
-                }
-              }
-            }
-          }
-        }
+        "type": "object"
       },
       "MirrorBatch": {
-        "type": "object",
-        "description": "Identifier-and-status mirror pushed by the source product's Ever Connect outbox. <= 500 ops, <= 4 MiB. Per-item idempotency by `(external_id, external_version)`.",
+        "additionalProperties": false,
+        "description": "An identifier-and-status batch pushed by the source product's outbox: up to 500 operations and\n4 MiB. Each operation is idempotent by its `(external_id, external_version)`.",
+        "properties": {
+          "ops": {
+            "description": "The operations, applied in this order, each on its own.",
+            "items": {
+              "$ref": "#/components/schemas/MirrorOp"
+            },
+            "maxItems": 500,
+            "minItems": 1,
+            "type": "array"
+          }
+        },
         "required": [
           "ops"
         ],
-        "additionalProperties": false,
-        "properties": {
-          "ops": {
-            "type": "array",
-            "minItems": 1,
-            "maxItems": 500,
-            "items": {
-              "$ref": "#/components/schemas/MirrorOp"
-            }
-          }
-        }
+        "type": "object"
       },
       "MirrorDeploymentData": {
-        "type": "object",
-        "required": [
-          "target",
-          "managed_by",
-          "environment",
-          "status"
-        ],
         "additionalProperties": false,
+        "description": "A deployment's fields (an open vocabulary: `target`, `provider` and `shape` are\nstored as reported).",
         "properties": {
-          "target": {
+          "environment": {
+            "description": "`production` or `preview`.",
+            "type": "string"
+          },
+          "managed_by": {
+            "description": "`ever`, `customer` or `third_party`.",
             "type": "string"
           },
           "provider": {
+            "description": "The provider.",
             "type": [
               "string",
               "null"
             ]
           },
           "shape": {
+            "description": "The deploy shape.",
             "type": [
               "string",
               "null"
             ]
-          },
-          "managed_by": {
-            "type": "string",
-            "enum": [
-              "ever",
-              "customer",
-              "third_party"
-            ]
-          },
-          "environment": {
-            "type": "string",
-            "enum": [
-              "production",
-              "preview"
-            ]
-          },
-          "url": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "uri"
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "pending",
-              "ready",
-              "error",
-              "canceled",
-              "timeout",
-              "retired"
+            "description": "`pending`, `ready`, `error`, `canceled`, `timeout` or `retired`, or the product's own state\n(`READY`, `INITIALIZING`, ...).",
+            "type": "string"
+          },
+          "target": {
+            "description": "Where it runs.",
+            "type": "string"
+          },
+          "url": {
+            "description": "Its public address, when it has one: `http` or `https`, without credentials, a query or a\nfragment.",
+            "type": [
+              "string",
+              "null"
             ]
           }
-        }
+        },
+        "required": [
+          "target",
+          "managed_by",
+          "environment",
+          "status"
+        ],
+        "type": "object"
       },
       "MirrorOp": {
-        "type": "object",
+        "additionalProperties": false,
+        "description": "One operation.",
+        "properties": {
+          "app_external_id": {
+            "description": "The app's external id: required for `kind: deployment`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "data": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MirrorOpData",
+                "description": "What an upsert sets; a delete carries none."
+              }
+            ]
+          },
+          "external_id": {
+            "description": "The product's id of the app or deployment: letters, digits and `._:-`, at most 64\ncharacters (what the events carry).",
+            "maxLength": 64,
+            "type": "string"
+          },
+          "external_version": {
+            "description": "Monotonic per external id; a lower or equal version answers `ignored_stale`.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/MirrorSubject",
+            "description": "`app` or `deployment`."
+          },
+          "occurred_at": {
+            "description": "When the change happened in the product.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "op": {
+            "$ref": "#/components/schemas/MirrorOpKind",
+            "description": "`upsert` or `delete`."
+          }
+        },
         "required": [
           "op",
           "kind",
@@ -2216,49 +2269,36 @@ export const REQUEST_SCHEMAS: { readonly [key: string]: unknown } = {
           "external_version",
           "occurred_at"
         ],
-        "additionalProperties": false,
-        "properties": {
-          "op": {
-            "type": "string",
-            "enum": [
-              "upsert",
-              "delete"
-            ]
+        "type": "object"
+      },
+      "MirrorOpData": {
+        "description": "An upsert's fields, by the operation's `kind`.",
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/MirrorAppData",
+            "description": "For `kind: app`."
           },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "app",
-              "deployment"
-            ]
-          },
-          "external_id": {
-            "type": "string",
-            "maxLength": 128
-          },
-          "external_version": {
-            "type": "integer",
-            "format": "int64",
-            "description": "Monotonic per external id; a lower or equal version is `ignored_stale`."
-          },
-          "occurred_at": {
-            "$ref": "#/components/schemas/Timestamp"
-          },
-          "app_external_id": {
-            "type": "string",
-            "description": "Required for `kind: deployment`."
-          },
-          "data": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/MirrorAppData"
-              },
-              {
-                "$ref": "#/components/schemas/MirrorDeploymentData"
-              }
-            ]
+          {
+            "$ref": "#/components/schemas/MirrorDeploymentData",
+            "description": "For `kind: deployment`."
           }
-        }
+        ]
+      },
+      "MirrorOpKind": {
+        "description": "What an operation does.",
+        "enum": [
+          "upsert",
+          "delete"
+        ],
+        "type": "string"
+      },
+      "MirrorSubject": {
+        "description": "What an operation is about.",
+        "enum": [
+          "app",
+          "deployment"
+        ],
+        "type": "string"
       },
       "OidcClientRequest": {
         "additionalProperties": false,
@@ -2454,8 +2494,8 @@ export const REQUEST_SCHEMAS: { readonly [key: string]: unknown } = {
             "type": "string"
           },
           "public_jwk": {
-            "description": "Its connect key: an Ed25519 public JWK (`kty: OKP`, `crv: Ed25519`, `x`).",
-            "type": "object"
+            "$ref": "#/components/schemas/ConnectPublicJwk",
+            "description": "Its connect key: an Ed25519 public JWK (`kty: OKP`, `crv: Ed25519`, `x`)."
           },
           "return_origins": {
             "description": "The origins (`https://host[:port]`; plain `http` only on `localhost`, `127.0.0.1` or\n`[::1]`) the installation's consent links may return to, at most four. Only a digest of\neach is kept, never the address; a consent link naming another host is refused. Absent or\nempty: the installation's consent links carry no return address. A reconnect replaces\nthem when it names any.",
@@ -2535,12 +2575,6 @@ export const REQUEST_SCHEMAS: { readonly [key: string]: unknown } = {
           }
         },
         "type": "object"
-      },
-      "SemVer": {
-        "type": "string",
-        "description": "Product version string as reported by the instance.",
-        "pattern": "^[0-9]{1,4}\\.[0-9]{1,4}\\.[0-9]{1,4}(-[0-9A-Za-z.]{1,16})?$",
-        "maxLength": 32
       },
       "StatsLinkCreate": {
         "additionalProperties": false,
@@ -2637,23 +2671,19 @@ export const REQUEST_SCHEMAS: { readonly [key: string]: unknown } = {
         "type": "object"
       },
       "TenantLinkRekey": {
-        "type": "object",
-        "description": "Re-key an installation-wide tenant link to one product organization, once the product gained organizations (Ever Traduora - the `*` link becomes the id of the default organization).",
+        "additionalProperties": false,
+        "description": "The one product organization the installation-wide link becomes.",
+        "properties": {
+          "product_tenant_id": {
+            "description": "The product organization's id (letters, digits and `._:-`; never `*`).",
+            "maxLength": 64,
+            "type": "string"
+          }
+        },
         "required": [
           "product_tenant_id"
         ],
-        "additionalProperties": false,
-        "properties": {
-          "product_tenant_id": {
-            "type": "string",
-            "maxLength": 128
-          }
-        },
-        "examples": [
-          {
-            "product_tenant_id": "5b0c2f7e-2d1a-4c3b-9e8f-0a1b2c3d4e5f"
-          }
-        ]
+        "type": "object"
       },
       "TestDelivery": {
         "additionalProperties": false,
@@ -2711,6 +2741,38 @@ export const REQUEST_SCHEMAS: { readonly [key: string]: unknown } = {
           "01JC5R7Y6K1M9E0V3Q2A8XW4TB"
         ]
       },
+      "UsageItem": {
+        "additionalProperties": false,
+        "description": "One count.",
+        "properties": {
+          "meter_key": {
+            "description": "A meter an installation may report (`employees.reported`, `stats.reports`).",
+            "example": "employees.reported",
+            "type": "string"
+          },
+          "period": {
+            "description": "`YYYY-MM` or `YYYY-MM-DD`.",
+            "example": "2026-11",
+            "type": "string"
+          },
+          "product_tenant_id": {
+            "description": "The product tenant, when sent: it must be the tenant of the link in `Ever-Link-Id`.",
+            "type": "string"
+          },
+          "quantity": {
+            "description": "The count.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "meter_key",
+          "quantity",
+          "period"
+        ],
+        "type": "object"
+      },
       "UsageReadings": {
         "type": "object",
         "description": "Push alternative to the pull probe (integration `usage_reporting`).",
@@ -2759,45 +2821,21 @@ export const REQUEST_SCHEMAS: { readonly [key: string]: unknown } = {
         }
       },
       "UsageReport": {
-        "type": "object",
-        "description": "Instance-reported meters (integration `usage_reporting`). Only meters listed in the consented configuration are accepted; anything else answers 422.",
+        "additionalProperties": false,
+        "description": "What an installation reports: counts, never a name or an identifier of a person.",
+        "properties": {
+          "items": {
+            "description": "1 to 100 counts.",
+            "items": {
+              "$ref": "#/components/schemas/UsageItem"
+            },
+            "type": "array"
+          }
+        },
         "required": [
           "items"
         ],
-        "additionalProperties": false,
-        "properties": {
-          "items": {
-            "type": "array",
-            "minItems": 1,
-            "maxItems": 100,
-            "items": {
-              "type": "object",
-              "required": [
-                "meter_key",
-                "quantity",
-                "period"
-              ],
-              "additionalProperties": false,
-              "properties": {
-                "meter_key": {
-                  "$ref": "#/components/schemas/MeterKey"
-                },
-                "quantity": {
-                  "type": "integer",
-                  "format": "int64",
-                  "minimum": 0
-                },
-                "period": {
-                  "type": "string",
-                  "pattern": "^20[0-9]{2}-(0[1-9]|1[0-2])(-(0[1-9]|[12][0-9]|3[01]))?$"
-                },
-                "product_tenant_id": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        }
+        "type": "object"
       },
       "WebhookCreate": {
         "additionalProperties": false,

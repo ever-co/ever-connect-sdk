@@ -1,8 +1,8 @@
 // Rows 1-4 and 29: the key manifest, the legal texts, redeeming a connect code, the instance token
 // and the device-first connect.
 import { randomBytes } from 'node:crypto';
-import { verifyAssertion } from '../assertion.mjs';
-import { b64url, decodeJws, instanceKid, publicKeyFromX, sha256, verifyBytes } from '../crypto.mjs';
+import { verifyAssertion, verifyDeviceAssertion } from '../assertion.mjs';
+import { b64url, decodeJws, instanceKid, publicKeyFromX } from '../crypto.mjs';
 import { manifestEntry, signManifest, testKey } from '../keys.mjs';
 import { createInstance, createLink, linkedTenantView } from '../model.mjs';
 import { fail } from '../problem.mjs';
@@ -330,27 +330,15 @@ export const connectHandlers = {
     const now = state.now();
     // As the platform: every poll proves the parked key with a fresh assertion before it counts,
     // so a poll captured while pending cannot be replayed after the approval.
-    const parked = device.request.public_jwk;
-    const decoded = decodeJws(body.client_assertion);
-    if (!decoded || decoded.header.alg !== 'EdDSA') fail(401, 'invalid_client');
-    if (!verifyBytes(parked.x, decoded.signingInput, decoded.signature)) fail(409, 'key_mismatch');
-    const kid = instanceKid(parked.x);
-    const p = decoded.payload;
-    if (
-      p.iss !== kid ||
-      p.sub !== kid ||
-      p.aud !== `${issuer}/v1/connect/token` ||
-      !Number.isInteger(p.exp) ||
-      p.exp <= now ||
-      p.exp - p.iat > 300 ||
-      typeof p.jti !== 'string' ||
-      // Bound to this device code (base64url of its SHA-256), as the platform requires.
-      p.device_code_hash !== b64url(sha256(body.device_code))
-    )
-      fail(401, 'invalid_client');
-    // Spent per parked key, not per code: an assertion names only the key.
-    if (state.deviceJtis.has(`${kid}|${p.jti}`)) fail(401, 'invalid_client');
-    state.deviceJtis.add(`${kid}|${p.jti}`);
+    const checked = verifyDeviceAssertion(body.client_assertion, {
+      now,
+      audience: `${issuer}/v1/connect/token`,
+      parkedX: device.request.public_jwk.x,
+      deviceCode: body.device_code,
+      seenJti: (kid, jti) => state.deviceJtis.has(`${kid}|${jti}`),
+    });
+    if (!checked.ok) fail(checked.status, checked.code);
+    state.deviceJtis.add(`${checked.kid}|${checked.jti}`);
     if (device.last_poll !== null && now - device.last_poll < device.interval) {
       device.interval += 5;
       device.last_poll = now;
