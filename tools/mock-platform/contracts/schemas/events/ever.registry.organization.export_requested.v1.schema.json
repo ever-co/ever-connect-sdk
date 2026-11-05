@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://api.ever.co/v1/events/catalog/schemas/ever.registry.organization.export_requested.v1.schema.json",
+  "title": "ever.registry.organization.export_requested v1 data",
+  "description": "fan-out to every installation holding a live tenant link of the organization; the installation answers with its own export",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "org_id",
+    "job_id",
+    "respond_by"
+  ],
+  "properties": {
+    "org_id": {
+      "$ref": "common.schema.json#/$defs/ulid"
+    },
+    "job_id": {
+      "$ref": "common.schema.json#/$defs/ulid"
+    },
+    "respond_by": {
+      "$ref": "common.schema.json#/$defs/datetime"
+    },
+    "tenant_link_ids": {
+      "description": "tenant_link_ids (the request to one installation, on instance/{instance_id}): the live tenant links it holds of the organization, so it finds the tenants to export. Absent on the platform's own record of the request.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "common.schema.json#/$defs/ulid"
+      }
+    }
+  }
+}

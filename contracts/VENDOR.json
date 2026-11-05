@@ -2,61 +2,55 @@
   "description": "Where every contract file of this repository comes from. Written by tools/sync-contract.mjs; checked by tools/check-schema-drift.mjs. `provisional` sources are drafts the platform has not published yet: tools/check-schema-drift.mjs --strict refuses them.",
   "platform": {
     "repository": "ever-co/platform",
-    "commit": "ad56f9dcbbfc692ebc9a5ec3bd0ad6d517a1b307"
+    "commit": "3c30a957174b5914995a5cb781ce7fc8aaa45979"
   },
   "openapi": {
     "target": "contracts/openapi/ever-platform.v1.yaml",
-    "sha256": "90e5b0cce800065e3aa8cd75d2f0a033edc930a303eb7b163f0e27e131578b59",
+    "sha256": "84eb0b490e27e29f3670fa5a62e903747e5b313bd7ebdeb3eb1f2c3c3ecb7c56",
     "pinned": {
       "source": "contracts/openapi/ever-api.v1.json",
-      "sha256": "9749d5141f49233a80ef82f45bcd0de2f122fe3ad6babf9490c7beaefb733582"
+      "sha256": "623066aeaa4a39527fb02742fcbd2f5d189dac19a3837edc5b6fa58f84d7c788"
     },
     "design": {
       "source": "docs/specs/api",
-      "sha256": "9bf79b567d56237b62e937bb3e39219bd46f94721bb44417fe5261dd95468e73",
-      "files": 20
+      "sha256": "4744cf4e06ea44268e330b1404e2baf66a6c63de742b40571f4498ed404f5f72",
+      "files": 18
     },
     "operations": 60,
     "scope": {
       "source": "contracts/openapi/v1-scope.json",
-      "sha256": "54936d946e17136c6a248a98e89ef1cb36b549adccc9ee99b15f19b88f2eb82c",
-      "version": "1.2.0"
+      "sha256": "4cb0b66d2d76105283ff237db16073974eb7369200d273f2ae333b7fbebbb10f",
+      "version": "1.3.0"
     },
     "provisional_operations": [],
     "not_in_v1_operations": [
       "discoverSso",
-      "getLookupSalt",
-      "instanceCreateBillingLink",
       "instanceDeleteLinkIdentifiers",
       "instanceGetProviderGrant",
-      "instanceListMirroredApps",
-      "instanceMirrorApps",
       "instancePushOrgProfile",
       "instancePutLinkIdentifiers",
-      "instanceRekeyTenantLink",
       "instanceReportInstallStatus",
-      "instanceReportManagedOperationResult",
       "instanceReportProviderGrantStatus",
-      "instanceReportUsage",
       "instanceReportUsageReadings",
-      "lookupCounterparties",
       "putIntegrationState"
     ],
     "shape_differences": [
       "Identifier",
       "Money",
-      "Problem",
-      "TenantLink"
+      "Problem"
     ],
     "renamed_schemas": [],
     "schema_overrides": [],
     "security_overrides": [],
+    "parameter_overrides": [
+      "lookupCounterparties"
+    ],
     "pending_upstream_rows": []
   },
   "events": {
     "source": "contracts/events/catalog.json",
-    "version": "1.5",
-    "sha256": "d6822f0ddba99877c07b0b1e553821d8527c3b058e1189e42b56a8838232265a",
+    "version": "1.6",
+    "sha256": "7be5372ef8dcd32376d7cbf3b86e31fd0088814c316a7b64ea363d18fc2afa5e",
     "instance_types": [
       "ever.consent.consent.granted",
       "ever.consent.consent.revoked",
@@ -77,6 +71,7 @@
       "ever.registry.membership.created",
       "ever.registry.membership.removed",
       "ever.registry.membership.role_changed",
+      "ever.registry.organization.export_requested",
       "ever.registry.person.deletion_requested",
       "ever.registry.person.export_requested",
       "ever.registry.tenant_link.created",
@@ -117,8 +112,8 @@
     {
       "path": "contracts/integrations/catalog.v1.json",
       "source": "contracts/integrations/catalog.v1.json",
-      "source_sha256": "75c6fc5995d270a3081e06a23a61dd5e8516e9a88f9930852dccaf9b8dab95ed",
-      "sha256": "75c6fc5995d270a3081e06a23a61dd5e8516e9a88f9930852dccaf9b8dab95ed",
+      "source_sha256": "28cb18190521e5acd4fe4d9f0ffd6ac6d6c149a1ec4baded41c22858c2393a78",
+      "sha256": "28cb18190521e5acd4fe4d9f0ffd6ac6d6c149a1ec4baded41c22858c2393a78",
       "transform": null,
       "provisional": false,
       "upstream": null
@@ -153,8 +148,8 @@
     {
       "path": "contracts/openapi/v1-scope.json",
       "source": "contracts/openapi/v1-scope.json",
-      "source_sha256": "54936d946e17136c6a248a98e89ef1cb36b549adccc9ee99b15f19b88f2eb82c",
-      "sha256": "54936d946e17136c6a248a98e89ef1cb36b549adccc9ee99b15f19b88f2eb82c",
+      "source_sha256": "4cb0b66d2d76105283ff237db16073974eb7369200d273f2ae333b7fbebbb10f",
+      "sha256": "4cb0b66d2d76105283ff237db16073974eb7369200d273f2ae333b7fbebbb10f",
       "transform": null,
       "provisional": false,
       "upstream": null
@@ -349,6 +344,15 @@
       "upstream": null
     },
     {
+      "path": "contracts/schemas/events/ever.registry.organization.export_requested.v1.schema.json",
+      "source": "contracts/events/schemas/ever.registry.organization.export_requested.v1.schema.json",
+      "source_sha256": "dc0ddf48a09a8f84166a289940d4f863c32236bb376bded186d4710aecb1eaa1",
+      "sha256": "dc0ddf48a09a8f84166a289940d4f863c32236bb376bded186d4710aecb1eaa1",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
       "path": "contracts/schemas/events/ever.registry.person.deletion_requested.v1.schema.json",
       "source": "contracts/events/schemas/ever.registry.person.deletion_requested.v1.schema.json",
       "source_sha256": "fcacefa11245438abbad53c872c2ca8fa9abea8ab79ae1eefc91d5dfbfc0c7a4",
@@ -416,6 +420,96 @@
       "source": "contracts/connect/vectors/assertion-alg-none.json",
       "source_sha256": "eff756a7132c7072d662ddb0256035ad07eed09cd6c8f75272e6bc49651e6764",
       "sha256": "eff756a7132c7072d662ddb0256035ad07eed09cd6c8f75272e6bc49651e6764",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/connect/vectors/assertion-device-exp-too-far.json",
+      "source": "contracts/connect/vectors/assertion-device-exp-too-far.json",
+      "source_sha256": "f1121c82c6cd7f201323e9e1188ce70fbe060e250038457dc21cf80555302f87",
+      "sha256": "f1121c82c6cd7f201323e9e1188ce70fbe060e250038457dc21cf80555302f87",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/connect/vectors/assertion-device-expired.json",
+      "source": "contracts/connect/vectors/assertion-device-expired.json",
+      "source_sha256": "3a48fa6c1ccb68e16df20170e458f5466e1a8f8721f0e4e4dd99dd638daecd21",
+      "sha256": "3a48fa6c1ccb68e16df20170e458f5466e1a8f8721f0e4e4dd99dd638daecd21",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/connect/vectors/assertion-device-iss-not-parked-kid.json",
+      "source": "contracts/connect/vectors/assertion-device-iss-not-parked-kid.json",
+      "source_sha256": "53b976768d985ec2904fd2fcd10119b9ee69ffe5734d62e1dd94cd375cd5ee4a",
+      "sha256": "53b976768d985ec2904fd2fcd10119b9ee69ffe5734d62e1dd94cd375cd5ee4a",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/connect/vectors/assertion-device-other-device-code.json",
+      "source": "contracts/connect/vectors/assertion-device-other-device-code.json",
+      "source_sha256": "3ff51b864e894f1390351a0e6f7332ce74ec697117b29f5a62112aa9a1c738df",
+      "sha256": "3ff51b864e894f1390351a0e6f7332ce74ec697117b29f5a62112aa9a1c738df",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/connect/vectors/assertion-device-other-key.json",
+      "source": "contracts/connect/vectors/assertion-device-other-key.json",
+      "source_sha256": "0d916b85c2dd48877596483a87e4ef3e66b4c08009c447488b1241bfc9b0538e",
+      "sha256": "0d916b85c2dd48877596483a87e4ef3e66b4c08009c447488b1241bfc9b0538e",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/connect/vectors/assertion-device-replayed-jti.json",
+      "source": "contracts/connect/vectors/assertion-device-replayed-jti.json",
+      "source_sha256": "a5a2ec3668473dfc6254008d426d8792135bf53557274d88ffba4aaef9ad8c96",
+      "sha256": "a5a2ec3668473dfc6254008d426d8792135bf53557274d88ffba4aaef9ad8c96",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/connect/vectors/assertion-device-sub-differs.json",
+      "source": "contracts/connect/vectors/assertion-device-sub-differs.json",
+      "source_sha256": "eda72b15029480a7364726f6fd55014923c91a8e09429536eca7d44f75ff97f9",
+      "sha256": "eda72b15029480a7364726f6fd55014923c91a8e09429536eca7d44f75ff97f9",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/connect/vectors/assertion-device-unbound.json",
+      "source": "contracts/connect/vectors/assertion-device-unbound.json",
+      "source_sha256": "e7f1820e860a1093fbaf8d2eca9b34b4145201d59c49d49a1d2f313f89dc835c",
+      "sha256": "e7f1820e860a1093fbaf8d2eca9b34b4145201d59c49d49a1d2f313f89dc835c",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/connect/vectors/assertion-device-valid.json",
+      "source": "contracts/connect/vectors/assertion-device-valid.json",
+      "source_sha256": "9fd46f1c1735e439e8c1c145215801ca9ecfbf6b960ead5b2b59ad809475599f",
+      "sha256": "9fd46f1c1735e439e8c1c145215801ca9ecfbf6b960ead5b2b59ad809475599f",
+      "transform": null,
+      "provisional": false,
+      "upstream": null
+    },
+    {
+      "path": "contracts/fixtures/connect/vectors/assertion-device-wrong-aud.json",
+      "source": "contracts/connect/vectors/assertion-device-wrong-aud.json",
+      "source_sha256": "a72585ebe81745a8c2b4426f948f73615a0f7dfe3761fbd131b011df88a83a36",
+      "sha256": "a72585ebe81745a8c2b4426f948f73615a0f7dfe3761fbd131b011df88a83a36",
       "transform": null,
       "provisional": false,
       "upstream": null

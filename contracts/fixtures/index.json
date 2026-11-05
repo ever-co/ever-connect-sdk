@@ -219,6 +219,13 @@
       "typed": true
     },
     {
+      "file": "feed/ever.registry.organization.export_requested.json",
+      "kind": "feed",
+      "schema": "ever.registry.organization.export_requested",
+      "valid": true,
+      "typed": true
+    },
+    {
       "file": "feed/ever.registry.person.deletion_requested.json",
       "kind": "feed",
       "schema": "ever.registry.person.deletion_requested",
@@ -591,13 +598,6 @@
     },
     {
       "file": "requests/lookup.invalid-extra-field.json",
-      "kind": "component",
-      "schema": "LookupRequest",
-      "valid": false,
-      "typed": false
-    },
-    {
-      "file": "requests/lookup.invalid-too-many.json",
       "kind": "component",
       "schema": "LookupRequest",
       "valid": false,

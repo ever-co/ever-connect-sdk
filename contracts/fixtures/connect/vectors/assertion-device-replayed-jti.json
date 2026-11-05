@@ -1,0 +1,24 @@
+{
+  "assertion": "eyJhbGciOiJFZERTQSIsImtpZCI6IjEtSGdoTDRoT3dFIiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL2FwaS5ldmVyLnRlc3QvdjEvY29ubmVjdC90b2tlbiIsImRldmljZV9jb2RlX2hhc2giOiJqUTJ5bHhZM0dfRy0tbWZSMDNTNDBicTlfSG0zbkFJb3dla21uZlBpeW00IiwiZXhwIjoxNzkzNjEzOTAwLCJpYXQiOjE3OTM2MTM2MDAsImlzcyI6IjEtSGdoTDRoT3dFIiwianRpIjoicmVwbGF5ZWQtZGV2aWNlLWp0aS0wMDAwMDAiLCJzdWIiOiIxLUhnaEw0aE93RSJ9.p04vECZiiDA4MRRk8nftAVFp0_h-oMV8zF2NvTPbNCbmDcRobErWvLLc9ZVFF730YlJfEVZ7rVGdxQcPhQw3DA",
+  "context": {
+    "api_origin": "https://api.ever.test",
+    "audience": "https://api.ever.test/v1/connect/token",
+    "device_code": "dGhpcy1pcy1hLXZlY3Rvci1kZXZpY2UtY29kZS0wMDA",
+    "device_code_hash": "jQ2ylxY3G_G--mfR03S40bq9_Hm3nAIowekmnfPiym4",
+    "now": 1793613600,
+    "parked_key": {
+      "crv": "Ed25519",
+      "kid": "1-HghL4hOwE",
+      "kty": "OKP",
+      "x": "1UIH2hlJd9z0atv-wrwudbUtWopCGE_t_cAAJPDj6No"
+    },
+    "seen_jti": [
+      "replayed-device-jti-000000"
+    ]
+  },
+  "description": "its jti was spent on an earlier poll with this key",
+  "expected": {
+    "code": "invalid_client",
+    "status": 401
+  }
+}

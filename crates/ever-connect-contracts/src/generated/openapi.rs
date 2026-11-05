@@ -93,21 +93,28 @@ pub mod components {
             value.parse()
         }
     }
-    ///`BillingLink`
+    ///The link. The customer is not repeated.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct BillingLink {
-        pub created_at: Timestamp,
-        pub id: Ulid,
-        pub instance_id: Ulid,
-        #[serde(deserialize_with = "::std::option::Option::deserialize")]
+        ///When it was made.
+        pub created_at: ::std::string::String,
+        ///The billing link.
+        pub id: ::std::string::String,
+        ///The installation.
+        pub instance_id: ::std::string::String,
+        ///The organization of the tenant link.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub org_id: ::std::option::Option<::std::string::String>,
+        ///The product tenant.
         pub product_tenant_id: ::std::string::String,
     }
-    ///Reported by an Ever-operated instance under integration `billing_link` (declared field `tenant.stripeCustomerId` only).
+    ///What the installation reports: the declared field only.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct BillingLinkCreate {
+        ///The provider customer (`cus_…`).
         pub customer_ref: ::std::string::String,
+        ///The product tenant: the tenant of the link in `Ever-Link-Id`.
         pub product_tenant_id: ::std::string::String,
     }
     ///`Compat`
@@ -182,6 +189,21 @@ pub mod components {
         ) -> ::std::result::Result<Self, self::error::ConversionError> {
             value.parse()
         }
+    }
+    /**A connect key as a public JWK (RFC 8037): the public half of the Ed25519 key pair an installation
+    generates. A private key (`d`) is refused. The platform assigns the key id: a `kid` sent here is
+    ignored, and the answer names the one to use.*/
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct ConnectPublicJwk {
+        ///`Ed25519`.
+        pub crv: ::std::string::String,
+        ///Ignored: the platform assigns the key id.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub kid: ::std::option::Option<::std::string::String>,
+        ///`OKP`.
+        pub kty: ::std::string::String,
+        ///base64url (no padding) of the 32 public-key bytes.
+        pub x: ::std::string::String,
     }
     ///The consent part of `IntegrationPut`.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
@@ -396,7 +418,7 @@ pub mod components {
         pub product: ::std::string::String,
         /**Its connect key: an Ed25519 public JWK (`kty: OKP`, `crv: Ed25519`, `x`); the platform
         assigns its `kid`.*/
-        pub public_jwk: ::serde_json::Map<::std::string::String, ::serde_json::Value>,
+        pub public_jwk: ConnectPublicJwk,
         ///The products it serves besides its own (at most five).
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub serves_products: ::std::option::Option<::std::vec::Vec<::std::string::String>>,
@@ -463,61 +485,6 @@ pub mod components {
         pub token_endpoint: ::std::string::String,
         ///`Bearer`.
         pub token_type: ::std::string::String,
-    }
-    ///Additive vocabulary of what a discoverable organization advertises to counterparties.
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum DiscoverableFeature {
-        #[serde(rename = "pay")]
-        Pay,
-        #[serde(rename = "invoice_exchange")]
-        InvoiceExchange,
-        #[serde(rename = "listings")]
-        Listings,
-    }
-    impl ::std::fmt::Display for DiscoverableFeature {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Pay => f.write_str("pay"),
-                Self::InvoiceExchange => f.write_str("invoice_exchange"),
-                Self::Listings => f.write_str("listings"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for DiscoverableFeature {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "pay" => Ok(Self::Pay),
-                "invoice_exchange" => Ok(Self::InvoiceExchange),
-                "listings" => Ok(Self::Listings),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for DiscoverableFeature {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for DiscoverableFeature {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
     }
     ///Empty JSON object body.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, Default)]
@@ -600,6 +567,10 @@ pub mod components {
         IntegrationNotAvailable,
         #[serde(rename = "entitlement_required")]
         EntitlementRequired,
+        #[serde(rename = "publishing_unavailable")]
+        PublishingUnavailable,
+        #[serde(rename = "section_not_available")]
+        SectionNotAvailable,
         #[serde(rename = "tier_required")]
         TierRequired,
         #[serde(rename = "limit_exceeded")]
@@ -616,6 +587,16 @@ pub mod components {
         ModuleDisabled,
         #[serde(rename = "handle_taken")]
         HandleTaken,
+        #[serde(rename = "totp_required")]
+        TotpRequired,
+        #[serde(rename = "totp_invalid")]
+        TotpInvalid,
+        #[serde(rename = "totp_locked")]
+        TotpLocked,
+        #[serde(rename = "totp_already_enrolled")]
+        TotpAlreadyEnrolled,
+        #[serde(rename = "notice_period_running")]
+        NoticePeriodRunning,
         #[serde(rename = "handle_reserved")]
         HandleReserved,
         #[serde(rename = "handle_retired")]
@@ -624,12 +605,28 @@ pub mod components {
         HandleInvalid,
         #[serde(rename = "handle_held")]
         HandleHeld,
+        #[serde(rename = "domain_denied")]
+        DomainDenied,
+        #[serde(rename = "domain_taken")]
+        DomainTaken,
         #[serde(rename = "handle_held_by_you")]
         HandleHeldByYou,
+        #[serde(rename = "hold_expired")]
+        HoldExpired,
+        #[serde(rename = "hold_renewals_exhausted")]
+        HoldRenewalsExhausted,
+        #[serde(rename = "claimant_has_handle")]
+        ClaimantHasHandle,
+        #[serde(rename = "release_forbidden")]
+        ReleaseForbidden,
         #[serde(rename = "code_invalid")]
         CodeInvalid,
         #[serde(rename = "code_expired")]
         CodeExpired,
+        #[serde(rename = "code_already_revealed")]
+        CodeAlreadyRevealed,
+        #[serde(rename = "origin_not_allowed")]
+        OriginNotAllowed,
         #[serde(rename = "product_mismatch")]
         ProductMismatch,
         #[serde(rename = "product_not_supported")]
@@ -638,6 +635,12 @@ pub mod components {
         ProductNotProvisionable,
         #[serde(rename = "job_in_progress")]
         JobInProgress,
+        #[serde(rename = "not_job_owner")]
+        NotJobOwner,
+        #[serde(rename = "tier_not_available")]
+        TierNotAvailable,
+        #[serde(rename = "checkout_email_mismatch")]
+        CheckoutEmailMismatch,
         #[serde(rename = "intent_expired")]
         IntentExpired,
         #[serde(rename = "intent_consumed")]
@@ -666,6 +669,8 @@ pub mod components {
         BillingActive,
         #[serde(rename = "sso_required")]
         SsoRequired,
+        #[serde(rename = "sso_bound")]
+        SsoBound,
         #[serde(rename = "reauth_required")]
         ReauthRequired,
         #[serde(rename = "session_required")]
@@ -720,6 +725,8 @@ pub mod components {
         ChecklistIncomplete,
         #[serde(rename = "scope_version_outdated")]
         ScopeVersionOutdated,
+        #[serde(rename = "consent_required")]
+        ConsentRequired,
         #[serde(rename = "method_not_allowed")]
         MethodNotAllowed,
         #[serde(rename = "payload_too_large")]
@@ -783,6 +790,8 @@ pub mod components {
                 Self::DeniedByPolicy => f.write_str("denied_by_policy"),
                 Self::IntegrationNotAvailable => f.write_str("integration_not_available"),
                 Self::EntitlementRequired => f.write_str("entitlement_required"),
+                Self::PublishingUnavailable => f.write_str("publishing_unavailable"),
+                Self::SectionNotAvailable => f.write_str("section_not_available"),
                 Self::TierRequired => f.write_str("tier_required"),
                 Self::LimitExceeded => f.write_str("limit_exceeded"),
                 Self::RateLimited => f.write_str("rate_limited"),
@@ -791,17 +800,33 @@ pub mod components {
                 Self::StaleVersion => f.write_str("stale_version"),
                 Self::ModuleDisabled => f.write_str("module_disabled"),
                 Self::HandleTaken => f.write_str("handle_taken"),
+                Self::TotpRequired => f.write_str("totp_required"),
+                Self::TotpInvalid => f.write_str("totp_invalid"),
+                Self::TotpLocked => f.write_str("totp_locked"),
+                Self::TotpAlreadyEnrolled => f.write_str("totp_already_enrolled"),
+                Self::NoticePeriodRunning => f.write_str("notice_period_running"),
                 Self::HandleReserved => f.write_str("handle_reserved"),
                 Self::HandleRetired => f.write_str("handle_retired"),
                 Self::HandleInvalid => f.write_str("handle_invalid"),
                 Self::HandleHeld => f.write_str("handle_held"),
+                Self::DomainDenied => f.write_str("domain_denied"),
+                Self::DomainTaken => f.write_str("domain_taken"),
                 Self::HandleHeldByYou => f.write_str("handle_held_by_you"),
+                Self::HoldExpired => f.write_str("hold_expired"),
+                Self::HoldRenewalsExhausted => f.write_str("hold_renewals_exhausted"),
+                Self::ClaimantHasHandle => f.write_str("claimant_has_handle"),
+                Self::ReleaseForbidden => f.write_str("release_forbidden"),
                 Self::CodeInvalid => f.write_str("code_invalid"),
                 Self::CodeExpired => f.write_str("code_expired"),
+                Self::CodeAlreadyRevealed => f.write_str("code_already_revealed"),
+                Self::OriginNotAllowed => f.write_str("origin_not_allowed"),
                 Self::ProductMismatch => f.write_str("product_mismatch"),
                 Self::ProductNotSupported => f.write_str("product_not_supported"),
                 Self::ProductNotProvisionable => f.write_str("product_not_provisionable"),
                 Self::JobInProgress => f.write_str("job_in_progress"),
+                Self::NotJobOwner => f.write_str("not_job_owner"),
+                Self::TierNotAvailable => f.write_str("tier_not_available"),
+                Self::CheckoutEmailMismatch => f.write_str("checkout_email_mismatch"),
                 Self::IntentExpired => f.write_str("intent_expired"),
                 Self::IntentConsumed => f.write_str("intent_consumed"),
                 Self::KeyMismatch => f.write_str("key_mismatch"),
@@ -816,6 +841,7 @@ pub mod components {
                 Self::ReceiptFinal => f.write_str("receipt_final"),
                 Self::BillingActive => f.write_str("billing_active"),
                 Self::SsoRequired => f.write_str("sso_required"),
+                Self::SsoBound => f.write_str("sso_bound"),
                 Self::ReauthRequired => f.write_str("reauth_required"),
                 Self::SessionRequired => f.write_str("session_required"),
                 Self::StepUpRequired => f.write_str("step_up_required"),
@@ -843,6 +869,7 @@ pub mod components {
                 Self::SlugReserved => f.write_str("slug_reserved"),
                 Self::ChecklistIncomplete => f.write_str("checklist_incomplete"),
                 Self::ScopeVersionOutdated => f.write_str("scope_version_outdated"),
+                Self::ConsentRequired => f.write_str("consent_required"),
                 Self::MethodNotAllowed => f.write_str("method_not_allowed"),
                 Self::PayloadTooLarge => f.write_str("payload_too_large"),
                 Self::UnsupportedMediaType => f.write_str("unsupported_media_type"),
@@ -889,6 +916,8 @@ pub mod components {
                 "denied_by_policy" => Ok(Self::DeniedByPolicy),
                 "integration_not_available" => Ok(Self::IntegrationNotAvailable),
                 "entitlement_required" => Ok(Self::EntitlementRequired),
+                "publishing_unavailable" => Ok(Self::PublishingUnavailable),
+                "section_not_available" => Ok(Self::SectionNotAvailable),
                 "tier_required" => Ok(Self::TierRequired),
                 "limit_exceeded" => Ok(Self::LimitExceeded),
                 "rate_limited" => Ok(Self::RateLimited),
@@ -897,17 +926,33 @@ pub mod components {
                 "stale_version" => Ok(Self::StaleVersion),
                 "module_disabled" => Ok(Self::ModuleDisabled),
                 "handle_taken" => Ok(Self::HandleTaken),
+                "totp_required" => Ok(Self::TotpRequired),
+                "totp_invalid" => Ok(Self::TotpInvalid),
+                "totp_locked" => Ok(Self::TotpLocked),
+                "totp_already_enrolled" => Ok(Self::TotpAlreadyEnrolled),
+                "notice_period_running" => Ok(Self::NoticePeriodRunning),
                 "handle_reserved" => Ok(Self::HandleReserved),
                 "handle_retired" => Ok(Self::HandleRetired),
                 "handle_invalid" => Ok(Self::HandleInvalid),
                 "handle_held" => Ok(Self::HandleHeld),
+                "domain_denied" => Ok(Self::DomainDenied),
+                "domain_taken" => Ok(Self::DomainTaken),
                 "handle_held_by_you" => Ok(Self::HandleHeldByYou),
+                "hold_expired" => Ok(Self::HoldExpired),
+                "hold_renewals_exhausted" => Ok(Self::HoldRenewalsExhausted),
+                "claimant_has_handle" => Ok(Self::ClaimantHasHandle),
+                "release_forbidden" => Ok(Self::ReleaseForbidden),
                 "code_invalid" => Ok(Self::CodeInvalid),
                 "code_expired" => Ok(Self::CodeExpired),
+                "code_already_revealed" => Ok(Self::CodeAlreadyRevealed),
+                "origin_not_allowed" => Ok(Self::OriginNotAllowed),
                 "product_mismatch" => Ok(Self::ProductMismatch),
                 "product_not_supported" => Ok(Self::ProductNotSupported),
                 "product_not_provisionable" => Ok(Self::ProductNotProvisionable),
                 "job_in_progress" => Ok(Self::JobInProgress),
+                "not_job_owner" => Ok(Self::NotJobOwner),
+                "tier_not_available" => Ok(Self::TierNotAvailable),
+                "checkout_email_mismatch" => Ok(Self::CheckoutEmailMismatch),
                 "intent_expired" => Ok(Self::IntentExpired),
                 "intent_consumed" => Ok(Self::IntentConsumed),
                 "key_mismatch" => Ok(Self::KeyMismatch),
@@ -922,6 +967,7 @@ pub mod components {
                 "receipt_final" => Ok(Self::ReceiptFinal),
                 "billing_active" => Ok(Self::BillingActive),
                 "sso_required" => Ok(Self::SsoRequired),
+                "sso_bound" => Ok(Self::SsoBound),
                 "reauth_required" => Ok(Self::ReauthRequired),
                 "session_required" => Ok(Self::SessionRequired),
                 "step_up_required" => Ok(Self::StepUpRequired),
@@ -949,6 +995,7 @@ pub mod components {
                 "slug_reserved" => Ok(Self::SlugReserved),
                 "checklist_incomplete" => Ok(Self::ChecklistIncomplete),
                 "scope_version_outdated" => Ok(Self::ScopeVersionOutdated),
+                "consent_required" => Ok(Self::ConsentRequired),
                 "method_not_allowed" => Ok(Self::MethodNotAllowed),
                 "payload_too_large" => Ok(Self::PayloadTooLarge),
                 "unsupported_media_type" => Ok(Self::UnsupportedMediaType),
@@ -1764,7 +1811,7 @@ pub mod components {
         ///The proof signed with the new key (the installation holds the key it installs).
         pub new_key_proof: ::std::string::String,
         ///The new Ed25519 public JWK (no installation may hold it yet, or have held it).
-        pub public_jwk: ::serde_json::Map<::std::string::String, ::serde_json::Value>,
+        pub public_jwk: ConnectPublicJwk,
     }
     ///A rotated key.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
@@ -1843,6 +1890,16 @@ pub mod components {
         pub type_: ::std::string::String,
         pub vendor: Vendor,
     }
+    ///One organization that matched.
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct LookupMatch {
+        ///What the organization advertises that its plan grants now.
+        pub features: ::std::vec::Vec<::std::string::String>,
+        ///The organization's handle: the only human-readable field an answer holds.
+        pub handle: ::std::string::String,
+        ///The hash asked about.
+        pub hash: ::std::string::String,
+    }
     ///One input that cannot be checked (never hashed, never sent).
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct LookupRefused {
@@ -1856,25 +1913,22 @@ pub mod components {
         ///`empty`, `no_country`, `no_at_sign` or `bad_domain`.
         pub reason: ::std::string::String,
     }
-    ///`hash = hex_lower(sha256(salt_bytes || ":" || kind || ":" || utf8(normalized)))`. Up to 100 hashes per query.
+    ///The request.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct LookupRequest {
+        ///1 to 100 unique hashes, 64 lowercase hex characters each.
         pub hashes: ::std::vec::Vec<::std::string::String>,
+        ///The salt version the hashes were made with.
         pub salt_version: i64,
     }
-    ///Unknown hashes are absent (no negative list). `features` is the intersection of what the organization advertises and what it is entitled to.
+    ///The answer. Unknown hashes are absent: there is no negative list.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct LookupResponse {
-        pub matches: ::std::vec::Vec<LookupResponseMatchesItem>,
+        ///The matches.
+        pub matches: ::std::vec::Vec<LookupMatch>,
+        ///The salt version asked about.
         pub salt_version: i64,
-    }
-    ///`LookupResponseMatchesItem`
-    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
-    pub struct LookupResponseMatchesItem {
-        pub features: ::std::vec::Vec<DiscoverableFeature>,
-        pub handle: Handle,
-        pub hash: ::std::string::String,
     }
     ///The published vectors.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
@@ -1909,20 +1963,50 @@ pub mod components {
         ///The salt version the hash was computed with (the test salt, `0`).
         pub salt_version: i64,
     }
-    ///What the instance reports for one operation. Status and size only; never file names, paths, URLs, log lines or backup content.
+    /**What the instance reports for one operation. Status and size only; never file names, paths,
+    URLs, log lines or backup content.*/
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct ManagedOperationResult {
         ///Opaque reference of the backup in the customer's own storage.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub artefact_ref: ::std::option::Option<::std::string::String>,
+        ///The size of a backup or a health report, in bytes.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub size_bytes: ::std::option::Option<i64>,
-        pub status: ManagedOperationResultStatus,
+        ///Where the operation stands.
+        pub status: ManagedResultStatus,
+        ///The product version after an update.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub version: ::std::option::Option<SemVer>,
+        pub version: ::std::option::Option<::std::string::String>,
     }
-    ///`ManagedOperationResultStatus`
+    ///`POST …/managed-operations/{operation}/result`'s answer: recorded.
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(transparent)]
+    pub struct ManagedResultRecorded(
+        pub ::serde_json::Map<::std::string::String, ::serde_json::Value>,
+    );
+    impl ::std::ops::Deref for ManagedResultRecorded {
+        type Target = ::serde_json::Map<::std::string::String, ::serde_json::Value>;
+        fn deref(&self) -> &::serde_json::Map<::std::string::String, ::serde_json::Value> {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<ManagedResultRecorded>
+        for ::serde_json::Map<::std::string::String, ::serde_json::Value>
+    {
+        fn from(value: ManagedResultRecorded) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<::serde_json::Map<::std::string::String, ::serde_json::Value>>
+        for ManagedResultRecorded
+    {
+        fn from(value: ::serde_json::Map<::std::string::String, ::serde_json::Value>) -> Self {
+            Self(value)
+        }
+    }
+    ///What an installation reports about an operation.
     #[derive(
         ::serde::Deserialize,
         ::serde::Serialize,
@@ -1935,7 +2019,7 @@ pub mod components {
         PartialEq,
         PartialOrd,
     )]
-    pub enum ManagedOperationResultStatus {
+    pub enum ManagedResultStatus {
         #[serde(rename = "accepted")]
         Accepted,
         #[serde(rename = "running")]
@@ -1945,7 +2029,7 @@ pub mod components {
         #[serde(rename = "failed")]
         Failed,
     }
-    impl ::std::fmt::Display for ManagedOperationResultStatus {
+    impl ::std::fmt::Display for ManagedResultStatus {
         fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
             match *self {
                 Self::Accepted => f.write_str("accepted"),
@@ -1955,7 +2039,7 @@ pub mod components {
             }
         }
     }
-    impl ::std::str::FromStr for ManagedOperationResultStatus {
+    impl ::std::str::FromStr for ManagedResultStatus {
         type Err = self::error::ConversionError;
         fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
             match value {
@@ -1967,13 +2051,13 @@ pub mod components {
             }
         }
     }
-    impl ::std::convert::TryFrom<&str> for ManagedOperationResultStatus {
+    impl ::std::convert::TryFrom<&str> for ManagedResultStatus {
         type Error = self::error::ConversionError;
         fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
             value.parse()
         }
     }
-    impl ::std::convert::TryFrom<::std::string::String> for ManagedOperationResultStatus {
+    impl ::std::convert::TryFrom<::std::string::String> for ManagedResultStatus {
         type Error = self::error::ConversionError;
         fn try_from(
             value: ::std::string::String,
@@ -2022,574 +2106,138 @@ pub mod components {
         ///The link.
         pub tenant_link_id: ::std::string::String,
     }
-    ///The meter key set of the `ever.entitlement.v1` document. Credit balances are not meters; they are read from the ledger (`GET /v1/orgs/{org}/credits`).
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum MeterKey {
-        #[serde(rename = "instances.connected")]
-        InstancesConnected,
-        #[serde(rename = "listings.published")]
-        ListingsPublished,
-        #[serde(rename = "members")]
-        Members,
-        #[serde(rename = "apps.registered")]
-        AppsRegistered,
-        #[serde(rename = "webhooks.endpoints")]
-        WebhooksEndpoints,
-        #[serde(rename = "api.requests")]
-        ApiRequests,
-        #[serde(rename = "lookup.queries")]
-        LookupQueries,
-        #[serde(rename = "lookup.hashes")]
-        LookupHashes,
-        #[serde(rename = "employees.reported")]
-        EmployeesReported,
-        #[serde(rename = "stats.reports")]
-        StatsReports,
-    }
-    impl ::std::fmt::Display for MeterKey {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::InstancesConnected => f.write_str("instances.connected"),
-                Self::ListingsPublished => f.write_str("listings.published"),
-                Self::Members => f.write_str("members"),
-                Self::AppsRegistered => f.write_str("apps.registered"),
-                Self::WebhooksEndpoints => f.write_str("webhooks.endpoints"),
-                Self::ApiRequests => f.write_str("api.requests"),
-                Self::LookupQueries => f.write_str("lookup.queries"),
-                Self::LookupHashes => f.write_str("lookup.hashes"),
-                Self::EmployeesReported => f.write_str("employees.reported"),
-                Self::StatsReports => f.write_str("stats.reports"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for MeterKey {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "instances.connected" => Ok(Self::InstancesConnected),
-                "listings.published" => Ok(Self::ListingsPublished),
-                "members" => Ok(Self::Members),
-                "apps.registered" => Ok(Self::AppsRegistered),
-                "webhooks.endpoints" => Ok(Self::WebhooksEndpoints),
-                "api.requests" => Ok(Self::ApiRequests),
-                "lookup.queries" => Ok(Self::LookupQueries),
-                "lookup.hashes" => Ok(Self::LookupHashes),
-                "employees.reported" => Ok(Self::EmployeesReported),
-                "stats.reports" => Ok(Self::StatsReports),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for MeterKey {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for MeterKey {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    ///`MirrorAppData`
+    /**An app's fields. Repository addresses (`source_repos`) and repository names inside `lineage`
+    are accepted and never stored.*/
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct MirrorAppData {
-        pub base_kind: MirrorAppDataBaseKind,
+        ///`none`, `ever` or `oss`.
+        pub base_kind: ::std::string::String,
+        ///What it is based on (`ever:gauzy`, `oss:calcom/cal.diy`).
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub base_ref: ::std::option::Option<::std::string::String>,
-        pub kind: MirrorAppDataKind,
-        #[serde(default, skip_serializing_if = "::serde_json::Map::is_empty")]
-        pub lineage: ::serde_json::Map<::std::string::String, ::serde_json::Value>,
+        ///`app` or `work`.
+        pub kind: ::std::string::String,
+        /**How it started: only `blueprint.id`, `blueprint.version`, `relation`, `provisioned_by`,
+        `app_spec_source` and `install_id` are stored.*/
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub lineage:
+            ::std::option::Option<::serde_json::Map<::std::string::String, ::serde_json::Value>>,
+        ///The display name, at most 200 characters.
         pub name: ::std::string::String,
+        ///The product organization the app belongs to, when the product has them.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub product_org_id: ::std::option::Option<::std::string::String>,
+        ///The product tenant the app belongs to.
         pub product_tenant_id: ::std::string::String,
+        ///The product's slug, at most 128 characters.
         pub slug: ::std::string::String,
-        #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
-        pub source_repos: ::std::vec::Vec<MirrorAppDataSourceReposItem>,
-        pub status: MirrorAppDataStatus,
+        ///Accepted, never stored.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub source_repos: ::std::option::Option<
+            ::std::vec::Vec<::serde_json::Map<::std::string::String, ::serde_json::Value>>,
+        >,
+        /**`draft`, `registered`, `building`, `live`, `paused`, `archived` or `deleted`, or the
+        product's own `active` (read as `live`).*/
+        pub status: ::std::string::String,
+        ///A Work's kind.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub work_kind: ::std::option::Option<::std::string::String>,
     }
-    ///`MirrorAppDataBaseKind`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum MirrorAppDataBaseKind {
-        #[serde(rename = "none")]
-        None,
-        #[serde(rename = "ever")]
-        Ever,
-        #[serde(rename = "oss")]
-        Oss,
-    }
-    impl ::std::fmt::Display for MirrorAppDataBaseKind {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::None => f.write_str("none"),
-                Self::Ever => f.write_str("ever"),
-                Self::Oss => f.write_str("oss"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for MirrorAppDataBaseKind {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "none" => Ok(Self::None),
-                "ever" => Ok(Self::Ever),
-                "oss" => Ok(Self::Oss),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for MirrorAppDataBaseKind {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for MirrorAppDataBaseKind {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    ///`MirrorAppDataKind`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum MirrorAppDataKind {
-        #[serde(rename = "app")]
-        App,
-        #[serde(rename = "work")]
-        Work,
-    }
-    impl ::std::fmt::Display for MirrorAppDataKind {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::App => f.write_str("app"),
-                Self::Work => f.write_str("work"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for MirrorAppDataKind {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "app" => Ok(Self::App),
-                "work" => Ok(Self::Work),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for MirrorAppDataKind {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for MirrorAppDataKind {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    ///`MirrorAppDataSourceReposItem`
-    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, Default)]
-    pub struct MirrorAppDataSourceReposItem {
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub role: ::std::option::Option<::std::string::String>,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub url: ::std::option::Option<::std::string::String>,
-    }
-    ///`MirrorAppDataStatus`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum MirrorAppDataStatus {
-        #[serde(rename = "draft")]
-        Draft,
-        #[serde(rename = "registered")]
-        Registered,
-        #[serde(rename = "building")]
-        Building,
-        #[serde(rename = "live")]
-        Live,
-        #[serde(rename = "paused")]
-        Paused,
-        #[serde(rename = "archived")]
-        Archived,
-        #[serde(rename = "deleted")]
-        Deleted,
-    }
-    impl ::std::fmt::Display for MirrorAppDataStatus {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Draft => f.write_str("draft"),
-                Self::Registered => f.write_str("registered"),
-                Self::Building => f.write_str("building"),
-                Self::Live => f.write_str("live"),
-                Self::Paused => f.write_str("paused"),
-                Self::Archived => f.write_str("archived"),
-                Self::Deleted => f.write_str("deleted"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for MirrorAppDataStatus {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "draft" => Ok(Self::Draft),
-                "registered" => Ok(Self::Registered),
-                "building" => Ok(Self::Building),
-                "live" => Ok(Self::Live),
-                "paused" => Ok(Self::Paused),
-                "archived" => Ok(Self::Archived),
-                "deleted" => Ok(Self::Deleted),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for MirrorAppDataStatus {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for MirrorAppDataStatus {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    ///Identifier-and-status mirror pushed by the source product's Ever Connect outbox. <= 500 ops, <= 4 MiB. Per-item idempotency by `(external_id, external_version)`.
+    /**An identifier-and-status batch pushed by the source product's outbox: up to 500 operations and
+    4 MiB. Each operation is idempotent by its `(external_id, external_version)`.*/
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct MirrorBatch {
+        ///The operations, applied in this order, each on its own.
         pub ops: ::std::vec::Vec<MirrorOp>,
     }
-    ///`MirrorDeploymentData`
+    /**A deployment's fields (an open vocabulary: `target`, `provider` and `shape` are
+    stored as reported).*/
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct MirrorDeploymentData {
-        pub environment: MirrorDeploymentDataEnvironment,
-        pub managed_by: MirrorDeploymentDataManagedBy,
+        ///`production` or `preview`.
+        pub environment: ::std::string::String,
+        ///`ever`, `customer` or `third_party`.
+        pub managed_by: ::std::string::String,
+        ///The provider.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub provider: ::std::option::Option<::std::string::String>,
+        ///The deploy shape.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub shape: ::std::option::Option<::std::string::String>,
-        pub status: MirrorDeploymentDataStatus,
+        /**`pending`, `ready`, `error`, `canceled`, `timeout` or `retired`, or the product's own state
+        (`READY`, `INITIALIZING`, ...).*/
+        pub status: ::std::string::String,
+        ///Where it runs.
         pub target: ::std::string::String,
+        /**Its public address, when it has one: `http` or `https`, without credentials, a query or a
+        fragment.*/
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub url: ::std::option::Option<::std::string::String>,
     }
-    ///`MirrorDeploymentDataEnvironment`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum MirrorDeploymentDataEnvironment {
-        #[serde(rename = "production")]
-        Production,
-        #[serde(rename = "preview")]
-        Preview,
-    }
-    impl ::std::fmt::Display for MirrorDeploymentDataEnvironment {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Production => f.write_str("production"),
-                Self::Preview => f.write_str("preview"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for MirrorDeploymentDataEnvironment {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "production" => Ok(Self::Production),
-                "preview" => Ok(Self::Preview),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for MirrorDeploymentDataEnvironment {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for MirrorDeploymentDataEnvironment {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    ///`MirrorDeploymentDataManagedBy`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum MirrorDeploymentDataManagedBy {
-        #[serde(rename = "ever")]
-        Ever,
-        #[serde(rename = "customer")]
-        Customer,
-        #[serde(rename = "third_party")]
-        ThirdParty,
-    }
-    impl ::std::fmt::Display for MirrorDeploymentDataManagedBy {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Ever => f.write_str("ever"),
-                Self::Customer => f.write_str("customer"),
-                Self::ThirdParty => f.write_str("third_party"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for MirrorDeploymentDataManagedBy {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "ever" => Ok(Self::Ever),
-                "customer" => Ok(Self::Customer),
-                "third_party" => Ok(Self::ThirdParty),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for MirrorDeploymentDataManagedBy {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for MirrorDeploymentDataManagedBy {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    ///`MirrorDeploymentDataStatus`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum MirrorDeploymentDataStatus {
-        #[serde(rename = "pending")]
-        Pending,
-        #[serde(rename = "ready")]
-        Ready,
-        #[serde(rename = "error")]
-        Error,
-        #[serde(rename = "canceled")]
-        Canceled,
-        #[serde(rename = "timeout")]
-        Timeout,
-        #[serde(rename = "retired")]
-        Retired,
-    }
-    impl ::std::fmt::Display for MirrorDeploymentDataStatus {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Pending => f.write_str("pending"),
-                Self::Ready => f.write_str("ready"),
-                Self::Error => f.write_str("error"),
-                Self::Canceled => f.write_str("canceled"),
-                Self::Timeout => f.write_str("timeout"),
-                Self::Retired => f.write_str("retired"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for MirrorDeploymentDataStatus {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "pending" => Ok(Self::Pending),
-                "ready" => Ok(Self::Ready),
-                "error" => Ok(Self::Error),
-                "canceled" => Ok(Self::Canceled),
-                "timeout" => Ok(Self::Timeout),
-                "retired" => Ok(Self::Retired),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for MirrorDeploymentDataStatus {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for MirrorDeploymentDataStatus {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    ///`MirrorInventoryPage`
+    ///A row the platform holds for this installation.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
-    pub struct MirrorInventoryPage {
-        pub items: ::std::vec::Vec<MirrorInventoryPageItemsItem>,
-        ///Opaque cursor to pass as `?cursor=` for the next page.
-        #[serde(deserialize_with = "::std::option::Option::deserialize")]
-        pub next_cursor: ::std::option::Option<::std::string::String>,
-    }
-    ///`MirrorInventoryPageItemsItem`
-    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
-    pub struct MirrorInventoryPageItemsItem {
+    pub struct MirrorInventoryItem {
+        ///The product's id.
         pub external_id: ::std::string::String,
+        ///The version the platform holds.
         pub external_version: i64,
-        pub kind: MirrorInventoryPageItemsItemKind,
+        ///`app` or `deployment`.
+        pub kind: MirrorSubject,
+        ///The tenant link it arrived under.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub org_link_id: ::std::option::Option<::std::string::String>,
     }
-    ///`MirrorInventoryPageItemsItemKind`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum MirrorInventoryPageItemsItemKind {
-        #[serde(rename = "app")]
-        App,
-        #[serde(rename = "deployment")]
-        Deployment,
+    /**A page of what the platform holds for this installation. Rows the platform archived (their
+    integration or link ended, or the product stopped reporting them) and rows the product deleted
+    are not held: a product still holding one sends it again, which restores it.*/
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct MirrorInventoryPage {
+        ///The rows, in id order.
+        pub items: ::std::vec::Vec<MirrorInventoryItem>,
+        ///The next page's cursor, when there is one.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub next_cursor: ::std::option::Option<::std::string::String>,
     }
-    impl ::std::fmt::Display for MirrorInventoryPageItemsItemKind {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::App => f.write_str("app"),
-                Self::Deployment => f.write_str("deployment"),
-            }
-        }
+    ///One operation's result.
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct MirrorItemResult {
+        ///The app, when the platform holds it (a deployment's result names its app).
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub app_id: ::std::option::Option<::std::string::String>,
+        /**Why it was refused: `unlinked_org`, `integration_disabled`, `unknown_app`, `org_mismatch`
+        or `schema_violation`.*/
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub code: ::std::option::Option<::std::string::String>,
+        ///The operation's `external_id`.
+        pub external_id: ::std::string::String,
+        ///`applied`, `ignored_stale` or `rejected`.
+        pub outcome: MirrorOutcome,
     }
-    impl ::std::str::FromStr for MirrorInventoryPageItemsItemKind {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "app" => Ok(Self::App),
-                "deployment" => Ok(Self::Deployment),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for MirrorInventoryPageItemsItemKind {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for MirrorInventoryPageItemsItemKind {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    ///`MirrorOp`
+    ///One operation.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct MirrorOp {
-        ///Required for `kind: deployment`.
+        ///The app's external id: required for `kind: deployment`.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub app_external_id: ::std::option::Option<::std::string::String>,
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub data: ::std::option::Option<MirrorOpData>,
+        pub data: ::std::option::Option<MirrorOpDataValue>,
+        /**The product's id of the app or deployment: letters, digits and `._:-`, at most 64
+        characters (what the events carry).*/
         pub external_id: ::std::string::String,
-        ///Monotonic per external id; a lower or equal version is `ignored_stale`.
+        ///Monotonic per external id; a lower or equal version answers `ignored_stale`.
         pub external_version: i64,
-        pub kind: MirrorOpKind,
-        pub occurred_at: Timestamp,
-        pub op: MirrorOpOp,
+        ///`app` or `deployment`.
+        pub kind: MirrorSubject,
+        ///When the change happened in the product.
+        pub occurred_at: ::std::string::String,
+        ///`upsert` or `delete`.
+        pub op: MirrorOpKind,
     }
-    ///`MirrorOpData`
+    ///An upsert's fields, by the operation's `kind`.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(untagged)]
     pub enum MirrorOpData {
@@ -2606,7 +2254,27 @@ pub mod components {
             Self::DeploymentData(value)
         }
     }
-    ///`MirrorOpKind`
+    ///`MirrorOpDataValue`
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(transparent)]
+    pub struct MirrorOpDataValue(pub ::std::option::Option<MirrorOpData>);
+    impl ::std::ops::Deref for MirrorOpDataValue {
+        type Target = ::std::option::Option<MirrorOpData>;
+        fn deref(&self) -> &::std::option::Option<MirrorOpData> {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<MirrorOpDataValue> for ::std::option::Option<MirrorOpData> {
+        fn from(value: MirrorOpDataValue) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<::std::option::Option<MirrorOpData>> for MirrorOpDataValue {
+        fn from(value: ::std::option::Option<MirrorOpData>) -> Self {
+            Self(value)
+        }
+    }
+    ///What an operation does.
     #[derive(
         ::serde::Deserialize,
         ::serde::Serialize,
@@ -2620,16 +2288,16 @@ pub mod components {
         PartialOrd,
     )]
     pub enum MirrorOpKind {
-        #[serde(rename = "app")]
-        App,
-        #[serde(rename = "deployment")]
-        Deployment,
+        #[serde(rename = "upsert")]
+        Upsert,
+        #[serde(rename = "delete")]
+        Delete,
     }
     impl ::std::fmt::Display for MirrorOpKind {
         fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
             match *self {
-                Self::App => f.write_str("app"),
-                Self::Deployment => f.write_str("deployment"),
+                Self::Upsert => f.write_str("upsert"),
+                Self::Delete => f.write_str("delete"),
             }
         }
     }
@@ -2637,8 +2305,8 @@ pub mod components {
         type Err = self::error::ConversionError;
         fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
             match value {
-                "app" => Ok(Self::App),
-                "deployment" => Ok(Self::Deployment),
+                "upsert" => Ok(Self::Upsert),
+                "delete" => Ok(Self::Delete),
                 _ => Err("invalid value".into()),
             }
         }
@@ -2657,7 +2325,7 @@ pub mod components {
             value.parse()
         }
     }
-    ///`MirrorOpOp`
+    ///What became of an operation.
     #[derive(
         ::serde::Deserialize,
         ::serde::Serialize,
@@ -2670,124 +2338,7 @@ pub mod components {
         PartialEq,
         PartialOrd,
     )]
-    pub enum MirrorOpOp {
-        #[serde(rename = "upsert")]
-        Upsert,
-        #[serde(rename = "delete")]
-        Delete,
-    }
-    impl ::std::fmt::Display for MirrorOpOp {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Upsert => f.write_str("upsert"),
-                Self::Delete => f.write_str("delete"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for MirrorOpOp {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "upsert" => Ok(Self::Upsert),
-                "delete" => Ok(Self::Delete),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for MirrorOpOp {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for MirrorOpOp {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    ///`MirrorResult`
-    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
-    pub struct MirrorResult {
-        pub results: ::std::vec::Vec<MirrorResultResultsItem>,
-    }
-    ///`MirrorResultResultsItem`
-    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
-    pub struct MirrorResultResultsItem {
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub app_id: ::std::option::Option<::std::string::String>,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub code: ::std::option::Option<MirrorResultResultsItemCode>,
-        pub external_id: ::std::string::String,
-        pub outcome: MirrorResultResultsItemOutcome,
-    }
-    ///`MirrorResultResultsItemCode`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum MirrorResultResultsItemCode {
-        #[serde(rename = "unlinked_org")]
-        UnlinkedOrg,
-        #[serde(rename = "schema_violation")]
-        SchemaViolation,
-    }
-    impl ::std::fmt::Display for MirrorResultResultsItemCode {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::UnlinkedOrg => f.write_str("unlinked_org"),
-                Self::SchemaViolation => f.write_str("schema_violation"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for MirrorResultResultsItemCode {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "unlinked_org" => Ok(Self::UnlinkedOrg),
-                "schema_violation" => Ok(Self::SchemaViolation),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for MirrorResultResultsItemCode {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for MirrorResultResultsItemCode {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    ///`MirrorResultResultsItemOutcome`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum MirrorResultResultsItemOutcome {
+    pub enum MirrorOutcome {
         #[serde(rename = "applied")]
         Applied,
         #[serde(rename = "ignored_stale")]
@@ -2795,7 +2346,7 @@ pub mod components {
         #[serde(rename = "rejected")]
         Rejected,
     }
-    impl ::std::fmt::Display for MirrorResultResultsItemOutcome {
+    impl ::std::fmt::Display for MirrorOutcome {
         fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
             match *self {
                 Self::Applied => f.write_str("applied"),
@@ -2804,7 +2355,7 @@ pub mod components {
             }
         }
     }
-    impl ::std::str::FromStr for MirrorResultResultsItemOutcome {
+    impl ::std::str::FromStr for MirrorOutcome {
         type Err = self::error::ConversionError;
         fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
             match value {
@@ -2815,13 +2366,70 @@ pub mod components {
             }
         }
     }
-    impl ::std::convert::TryFrom<&str> for MirrorResultResultsItemOutcome {
+    impl ::std::convert::TryFrom<&str> for MirrorOutcome {
         type Error = self::error::ConversionError;
         fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
             value.parse()
         }
     }
-    impl ::std::convert::TryFrom<::std::string::String> for MirrorResultResultsItemOutcome {
+    impl ::std::convert::TryFrom<::std::string::String> for MirrorOutcome {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    ///One result per operation, in request order.
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct MirrorResult {
+        ///The results.
+        pub results: ::std::vec::Vec<MirrorItemResult>,
+    }
+    ///What an operation is about.
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd,
+    )]
+    pub enum MirrorSubject {
+        #[serde(rename = "app")]
+        App,
+        #[serde(rename = "deployment")]
+        Deployment,
+    }
+    impl ::std::fmt::Display for MirrorSubject {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::App => f.write_str("app"),
+                Self::Deployment => f.write_str("deployment"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for MirrorSubject {
+        type Err = self::error::ConversionError;
+        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "app" => Ok(Self::App),
+                "deployment" => Ok(Self::Deployment),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for MirrorSubject {
+        type Error = self::error::ConversionError;
+        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for MirrorSubject {
         type Error = self::error::ConversionError;
         fn try_from(
             value: ::std::string::String,
@@ -2971,18 +2579,6 @@ pub mod components {
         ) -> ::std::result::Result<Self, self::error::ConversionError> {
             value.parse()
         }
-    }
-    /**Cursor pagination envelope. Every list endpoint returns `items` and
-    `next_cursor` (`null` when the page is the last one). Order is
-    `(created_at DESC, id DESC)` unless the endpoint says otherwise. There are
-    no offsets and no totals.
-    */
-    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
-    pub struct Page {
-        pub items: ::std::vec::Vec<::serde_json::Value>,
-        ///Opaque cursor to pass as `?cursor=` for the next page.
-        #[serde(deserialize_with = "::std::option::Option::deserialize")]
-        pub next_cursor: ::std::option::Option<::std::string::String>,
     }
     ///A person link as the installation sees it.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
@@ -3412,6 +3008,19 @@ pub mod components {
         no query, no fragment, at most 2 048 characters.*/
         pub base_url: ::std::string::String,
     }
+    ///One salt version as published.
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct PublishedSalt {
+        ///When it starts.
+        pub active_from: ::std::string::String,
+        ///When it stops answering, when that is set.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub retire_after: ::std::option::Option<::std::string::String>,
+        ///32 random bytes in base64url without padding. Public by design.
+        pub salt: ::std::string::String,
+        ///The version.
+        pub version: i64,
+    }
     /**Code-first connect: the installation redeems a connect code with its own Ed25519 connect
     key, which becomes its credential. The connect key never signs anonymous statistics (those
     have a key of their own). The body carries no address or any other field outside this
@@ -3432,7 +3041,7 @@ pub mod components {
         ///The product the installation runs.
         pub product: ::std::string::String,
         ///Its connect key: an Ed25519 public JWK (`kty: OKP`, `crv: Ed25519`, `x`).
-        pub public_jwk: ::serde_json::Map<::std::string::String, ::serde_json::Value>,
+        pub public_jwk: ConnectPublicJwk,
         /**The origins (`https://host[:port]`; plain `http` only on `localhost`, `127.0.0.1` or
         `[::1]`) the installation's consent links may return to, at most four. Only a digest of
         each is kept, never the address; a consent link naming another host is refused. Absent or
@@ -3486,27 +3095,15 @@ pub mod components {
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub product_tenant_id: ::std::option::Option<::std::string::String>,
     }
-    /**Active salt versions. The salt is public by design; privacy comes from
-    the one-way hash, opt-in only answers, feature-scoped results, rate
-    limits and the rule that queried hashes are never persisted or logged.
-    A new version is added with `active_from`; the old one answers until
-    `retire_after` (>= 180 days).
-    */
+    ///The salts an installation hashes with.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
-    pub struct SaltSet {
-        pub active: ::std::vec::Vec<SaltSetActiveItem>,
+    pub struct SaltDocument {
+        ///The versions that have not retired.
+        pub active: ::std::vec::Vec<PublishedSalt>,
+        ///The normalization version.
         pub normalization_version: i64,
+        ///Where the test vectors are.
         pub test_vectors_url: ::std::string::String,
-    }
-    ///`SaltSetActiveItem`
-    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
-    pub struct SaltSetActiveItem {
-        pub active_from: Timestamp,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub retire_after: ::std::option::Option<::std::string::String>,
-        ///32 random bytes, base64url.
-        pub salt: ::std::string::String,
-        pub version: i64,
     }
     ///A rotated secret: the new one, shown once, and how long the old one keeps signing beside it.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
@@ -3516,39 +3113,6 @@ pub mod components {
         pub previous_valid_until: ::std::option::Option<::std::string::String>,
         ///The new signing secret.
         pub secret: ::std::string::String,
-    }
-    ///Product version string as reported by the instance.
-    #[derive(
-        ::serde::Deserialize, ::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
-    )]
-    #[serde(transparent)]
-    pub struct SemVer(pub ::std::string::String);
-    impl ::std::ops::Deref for SemVer {
-        type Target = ::std::string::String;
-        fn deref(&self) -> &::std::string::String {
-            &self.0
-        }
-    }
-    impl ::std::convert::From<SemVer> for ::std::string::String {
-        fn from(value: SemVer) -> Self {
-            value.0
-        }
-    }
-    impl ::std::convert::From<::std::string::String> for SemVer {
-        fn from(value: ::std::string::String) -> Self {
-            Self(value)
-        }
-    }
-    impl ::std::fmt::Display for SemVer {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            self.0.fmt(f)
-        }
-    }
-    impl ::std::str::FromStr for SemVer {
-        type Err = ::std::convert::Infallible;
-        fn from_str(value: &str) -> ::std::result::Result<Self, Self::Err> {
-            Ok(Self(value.to_string()))
-        }
     }
     ///`SsoDiscover`
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
@@ -3679,10 +3243,11 @@ pub mod components {
         ///The product tenant's id.
         pub product_tenant_id: ::std::string::String,
     }
-    ///Re-key an installation-wide tenant link to one product organization, once the product gained organizations (Ever Traduora - the `*` link becomes the id of the default organization).
+    ///The one product organization the installation-wide link becomes.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct TenantLinkRekey {
+        ///The product organization's id (letters, digits and `._:-`; never `*`).
         pub product_tenant_id: ::std::string::String,
     }
     ///The body of a test (optional).
@@ -3783,6 +3348,44 @@ pub mod components {
             Ok(Self(value.to_string()))
         }
     }
+    ///The empty answer.
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(transparent)]
+    pub struct UsageAccepted(pub ::serde_json::Map<::std::string::String, ::serde_json::Value>);
+    impl ::std::ops::Deref for UsageAccepted {
+        type Target = ::serde_json::Map<::std::string::String, ::serde_json::Value>;
+        fn deref(&self) -> &::serde_json::Map<::std::string::String, ::serde_json::Value> {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<UsageAccepted>
+        for ::serde_json::Map<::std::string::String, ::serde_json::Value>
+    {
+        fn from(value: UsageAccepted) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<::serde_json::Map<::std::string::String, ::serde_json::Value>>
+        for UsageAccepted
+    {
+        fn from(value: ::serde_json::Map<::std::string::String, ::serde_json::Value>) -> Self {
+            Self(value)
+        }
+    }
+    ///One count.
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct UsageItem {
+        ///A meter an installation may report (`employees.reported`, `stats.reports`).
+        pub meter_key: ::std::string::String,
+        ///`YYYY-MM` or `YYYY-MM-DD`.
+        pub period: ::std::string::String,
+        ///The product tenant, when sent: it must be the tenant of the link in `Ever-Link-Id`.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub product_tenant_id: ::std::option::Option<::std::string::String>,
+        ///The count.
+        pub quantity: i64,
+    }
     ///Push alternative to the pull probe (integration `usage_reporting`).
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
@@ -3804,21 +3407,12 @@ pub mod components {
         pub quantity: i64,
         pub unit: ::std::string::String,
     }
-    ///Instance-reported meters (integration `usage_reporting`). Only meters listed in the consented configuration are accepted; anything else answers 422.
+    ///What an installation reports: counts, never a name or an identifier of a person.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct UsageReport {
-        pub items: ::std::vec::Vec<UsageReportItemsItem>,
-    }
-    ///`UsageReportItemsItem`
-    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
-    #[serde(deny_unknown_fields)]
-    pub struct UsageReportItemsItem {
-        pub meter_key: MeterKey,
-        pub period: ::std::string::String,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub product_tenant_id: ::std::option::Option<::std::string::String>,
-        pub quantity: i64,
+        ///1 to 100 counts.
+        pub items: ::std::vec::Vec<UsageItem>,
     }
     ///`Vendor`
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]

@@ -3,5 +3,19 @@
   "operations": [],
   "problem_codes": [],
   "schema_overrides": {},
-  "security_overrides": {}
+  "security_overrides": {},
+  "parameter_overrides": {
+    "lookupCounterparties": {
+      "why": "counterparty_lookup is consented per tenant link, so the platform refuses an installation's lookup without Ever-Link-Id (422 validation_failed at #Ever-Link-Id); the pinned operation also accepts an organization key, which sends no link, and does not declare the header yet",
+      "parameters": [
+        {
+          "name": "Ever-Link-Id",
+          "in": "header",
+          "required": true,
+          "description": "The tenant link the lookup is made for. Required from an installation: without it the platform answers `422 validation_failed` at `#Ever-Link-Id`.",
+          "schema": { "type": "string" }
+        }
+      ]
+    }
+  }
 }

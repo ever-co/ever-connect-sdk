@@ -565,88 +565,71 @@ paths:
       x-ever-row: 20
   /v1/instances/me/billing-links:
     post:
+      summary: Reports the payment customer of the linked product tenant (Ever-operated cloud only).
       tags:
         - billing
-      summary: Report the payment customer of a linked product tenant (Ever-operated cloud only)
-      description: |
-        Declared field: the product tenant's payment customer reference only.
-        Accepted only from `operator=ever` instances with integration
-        `billing_link` enabled (consent source `cloud_terms`) on that tenant
-        link; lets a cloud plan show as "Included in your plan".
-      x-ever-phase: 2
-      x-ever-auth: instance
+      x-ever-idempotent: true
       x-ever-integration: billing_link
       x-ever-rate-limit: instance
-      x-ever-idempotent: true
       operationId: instanceCreateBillingLink
       security:
         - instanceToken: []
       parameters:
-        - name: Idempotency-Key
+        - description: |-
+            Client-generated key, unique per principal, at most 128 characters; remembered 24 h.
+            The same key with the same request replays the first answer (`Idempotency-Replayed:
+            true`); with a different request it answers `422 idempotency_mismatch`.
           in: header
+          name: Idempotency-Key
           required: true
-          description: Client-generated key, unique per principal, <= 128 characters. See the `Idempotency` schema.
+          schema:
+            maxLength: 128
+            minLength: 1
+            type: string
+        - description: The tenant link of the product tenant.
+          in: header
+          name: Ever-Link-Id
+          required: true
           schema:
             type: string
-            minLength: 1
-            maxLength: 128
-        - name: Ever-Link-Id
-          in: header
-          required: false
-          description: For multi-tenant instances, the tenant link on whose behalf the instance acts. Required when the integration is enabled per link rather than instance-wide.
-          schema:
-            $ref: "#/components/schemas/Ulid"
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/BillingLinkCreate"
+        required: true
       responses:
         "201":
-          description: Linked.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BillingLink"
+          description: Linked (the same customer again answers the same link)
         "403":
-          description: "Principal lacks the role, scope, integration or entitlement, or the operation needs a fresh sign-in (`forbidden_role`, `forbidden_scope`, `integration_disabled`, `integration_revoked`, `instance_pending_approval`, `entitlement_required`, `tier_required`, `sso_required`, `reauth_required`, `session_required`: an Ever ID token issued to a product, installation or App client used anywhere except the two `everIdTokenRead` reads and the in-product consent write; `step_up_required`: that consent write without a sign-in in the last 300 s; `not_connection_owner`: an installation-wide integration changed by an organization that does not own the installation)."
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+          description: "`integration_disabled`, `integration_revoked` or `denied_by_policy`: not enabled for this link, not an installation Ever operates, or not under the Ever Cloud terms"
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "`module_disabled`: billing is not enabled on this deployment"
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "`already_linked`: another tenant link holds this customer, or staff or a claim linked this tenant to another"
         "422":
-          description: Validation failed; unknown fields are rejected on writes (`validation_failed`, `schema_violation`, `code_invalid`, `idempotency_mismatch`, `mirror_owned_field`, `limit_exceeded`).
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-        default:
-          description: Any other error, as a problem document.
-          headers:
-            x-request-id:
-              description: The request id (generated or echoed). Quote it in support requests.
-              schema:
-                type: string
-            RateLimit-Limit:
-              description: IETF RateLimit header; requests allowed in the current window for this principal class.
-              schema:
-                type: integer
-            RateLimit-Remaining:
-              description: IETF RateLimit header; requests remaining in the current window.
-              schema:
-                type: integer
-            RateLimit-Reset:
-              description: IETF RateLimit header; seconds until the window resets.
-              schema:
-                type: integer
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          description: "`validation_failed`: not a customer id, not the link's tenant, or a product without billing links"
       x-ever-row: 25
-      x-ever-availability: not_in_v1
-      x-ever-availability-note: Cloud billing links are not served yet.
   /v1/instances/me/consent-url:
     get:
       summary: |-
@@ -1141,231 +1124,180 @@ paths:
       x-ever-row: 16
   /v1/instances/me/managed-operations/{operation}/result:
     post:
+      summary: |-
+        Reports the progress or the result of a maintenance operation this installation was asked to
+        run. Status and size only: `accepted`, `running`, `succeeded` or `failed`, the product version
+        after an update, and an opaque reference and the size of a backup; never file names, paths,
+        URLs, log lines or backup content. Natural key (operation, status): a replay of the current
+        status is a no-op; a transition the state machine does not allow answers
+        `409 illegal_transition`; an operation of another installation answers `404`. Emits
+        `ever.registry.managed_operation.state_changed`.
       tags:
         - registry
-      summary: Report the progress or result of a managed operation
-      description: |
-        Status and size only: `accepted`, `running`, `succeeded` or `failed`,
-        the product version after an update, and an opaque reference and the
-        size of a backup; never file names, paths, URLs, log lines or backup
-        content. Natural key (operation, status): a replay of the current
-        status is a no-op; a transition the state machine does not allow
-        answers `409 illegal_transition`; an operation of another instance
-        answers `404`. Emits `ever.registry.managed_operation.state_changed`.
-      x-ever-phase: 2
-      x-ever-auth: instance
       x-ever-integration: managed_operations
+      x-ever-max-body-bytes: 1024
       x-ever-rate-limit: instance
-      x-ever-idempotent: false
       operationId: instanceReportManagedOperationResult
       security:
         - instanceToken: []
       parameters:
-        - name: operation
+        - description: The managed operation id, from the feed notice.
           in: path
+          name: operation
           required: true
-          description: Managed operation id (ULID) from the feed notice.
           schema:
-            $ref: "#/components/schemas/Ulid"
+            type: string
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/ManagedOperationResult"
+        required: true
       responses:
         "200":
-          description: Recorded.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Empty"
+                $ref: "#/components/schemas/ManagedResultRecorded"
+          description: Recorded
         "403":
-          description: "Principal lacks the role, scope, integration or entitlement, or the operation needs a fresh sign-in (`forbidden_role`, `forbidden_scope`, `integration_disabled`, `integration_revoked`, `instance_pending_approval`, `entitlement_required`, `tier_required`, `sso_required`, `reauth_required`, `session_required`: an Ever ID token issued to a product, installation or App client used anywhere except the two `everIdTokenRead` reads and the in-product consent write; `step_up_required`: that consent write without a sign-in in the last 300 s; `not_connection_owner`: an installation-wide integration changed by an organization that does not own the installation)."
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+          description: "`integration_disabled`, `integration_revoked` or `denied_by_policy`: `managed_operations` is not enabled for this installation"
         "404":
-          description: Not found, or the module that serves this route is disabled on this deployment (`not_found`, `module_disabled`).
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+          description: No such operation of this installation
         "409":
-          description: State conflict (`handle_taken`, `already_exists`, `key_mismatch`, `idempotency_in_progress`, `illegal_transition`, `billing_active`, `job_in_progress` when another job for the same subject is running).
-          headers:
-            Retry-After:
-              description: Seconds to wait before retrying.
-              schema:
-                type: integer
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+          description: "`illegal_transition`: the state machine does not allow this move"
         "422":
-          description: Validation failed; unknown fields are rejected on writes (`validation_failed`, `schema_violation`, `code_invalid`, `idempotency_mismatch`, `mirror_owned_field`, `limit_exceeded`).
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-        default:
-          description: Any other error, as a problem document.
-          headers:
-            x-request-id:
-              description: The request id (generated or echoed). Quote it in support requests.
-              schema:
-                type: string
-            RateLimit-Limit:
-              description: IETF RateLimit header; requests allowed in the current window for this principal class.
-              schema:
-                type: integer
-            RateLimit-Remaining:
-              description: IETF RateLimit header; requests remaining in the current window.
-              schema:
-                type: integer
-            RateLimit-Reset:
-              description: IETF RateLimit header; seconds until the window resets.
-              schema:
-                type: integer
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          description: "`validation_failed`: an unknown key, or a value outside its field (a path or a URL as `artefact_ref`)"
       x-ever-row: 34
-      x-ever-availability: not_in_v1
-      x-ever-availability-note: Maintenance operations are not offered yet.
   /v1/instances/me/mirror/apps:
     get:
+      summary: |-
+        What the platform holds for this installation: rows it pushed and that have not ended, in id
+        order. Each page served confirms its rows, so a finished pass keeps them from being archived as
+        unseen. Send what is missing or older, delete what you no longer have.
       tags:
         - registry
-      summary: Reconciliation read of what the platform holds for this instance
-      x-ever-phase: 2
-      x-ever-auth: instance
       x-ever-integration: app_sync
       x-ever-rate-limit: instance
       operationId: instanceListMirroredApps
       security:
         - instanceToken: []
       parameters:
-        - name: cursor
+        - description: Opaque cursor from a previous page's `next_cursor`.
           in: query
+          name: cursor
           required: false
-          description: Opaque cursor from a previous page's `next_cursor`.
           schema:
             type: string
-            maxLength: 512
-        - name: limit
+        - description: Page size, 1..500 (default 100).
           in: query
+          name: limit
           required: false
-          description: Page size, 1..100 (default 25).
           schema:
-            type: integer
+            format: int32
+            maximum: 500
             minimum: 1
-            maximum: 100
-            default: 25
+            type: integer
+        - description: Only the rows that arrived under this tenant link.
+          in: query
+          name: link
+          required: false
+          schema:
+            type: string
       responses:
         "200":
-          description: OK
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/MirrorInventoryPage"
-        default:
-          description: Any other error, as a problem document.
-          headers:
-            x-request-id:
-              description: The request id (generated or echoed). Quote it in support requests.
-              schema:
-                type: string
-            RateLimit-Limit:
-              description: IETF RateLimit header; requests allowed in the current window for this principal class.
-              schema:
-                type: integer
-            RateLimit-Remaining:
-              description: IETF RateLimit header; requests remaining in the current window.
-              schema:
-                type: integer
-            RateLimit-Reset:
-              description: IETF RateLimit header; seconds until the window resets.
-              schema:
-                type: integer
+          description: A page of the inventory
+        "403":
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+          description: "`integration_disabled`, `integration_revoked` or `denied_by_policy`: `app_sync` is off for every link, or for the link named; `instance_pending_approval` or `instance_disconnected`"
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: The mirror is off on this deployment
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "`validation_failed` at `?cursor`, `?limit` or `?link`"
       x-ever-row: 15
-      x-ever-availability: not_in_v1
-      x-ever-availability-note: The app mirror is not served yet.
     post:
+      summary: |-
+        Pushes a mirror batch: one result per operation, in request order. An operation of an
+        organization that is not linked, or of a link `app_sync` is off for, is `rejected` and stores
+        nothing. A lower or equal `external_version` is `ignored_stale`. An upsert never changes what
+        the organization owns (`public_on_profile`, `listing_id`).
       tags:
         - registry
-      summary: Push an App/Work mirror batch
-      description: |
-        Only apps whose source organization is linked to an Ever organization
-        are accepted; others are `rejected` with `unlinked_org` and nothing is
-        stored. Per-item idempotency by `(external_id, external_version)`; no
-        `Idempotency-Key`. Each applied op emits `app.mirrored` or
-        `app_deployment.mirrored`.
-      x-ever-phase: 2
-      x-ever-auth: instance
       x-ever-integration: app_sync
+      x-ever-max-body-bytes: 4194304
       x-ever-rate-limit: instance
-      x-ever-idempotent: false
       operationId: instanceMirrorApps
       security:
         - instanceToken: []
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/MirrorBatch"
+        required: true
       responses:
         "200":
-          description: Per-item results.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/MirrorResult"
+          description: One result per operation
         "403":
-          description: "Principal lacks the role, scope, integration or entitlement, or the operation needs a fresh sign-in (`forbidden_role`, `forbidden_scope`, `integration_disabled`, `integration_revoked`, `instance_pending_approval`, `entitlement_required`, `tier_required`, `sso_required`, `reauth_required`, `session_required`: an Ever ID token issued to a product, installation or App client used anywhere except the two `everIdTokenRead` reads and the in-product consent write; `step_up_required`: that consent write without a sign-in in the last 300 s; `not_connection_owner`: an installation-wide integration changed by an organization that does not own the installation)."
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+          description: "`integration_disabled`, `integration_revoked` or `denied_by_policy`: no link of this installation has `app_sync`; `instance_pending_approval` or `instance_disconnected`"
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: The mirror is off on this deployment
         "413":
-          description: Batch larger than 4 MiB or 500 ops.
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-        default:
-          description: Any other error, as a problem document.
-          headers:
-            x-request-id:
-              description: The request id (generated or echoed). Quote it in support requests.
-              schema:
-                type: string
-            RateLimit-Limit:
-              description: IETF RateLimit header; requests allowed in the current window for this principal class.
-              schema:
-                type: integer
-            RateLimit-Remaining:
-              description: IETF RateLimit header; requests remaining in the current window.
-              schema:
-                type: integer
-            RateLimit-Reset:
-              description: IETF RateLimit header; seconds until the window resets.
-              schema:
-                type: integer
+          description: "`payload_too_large`: a body over 4 MiB"
+        "422":
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+          description: "`limit_exceeded`: more than 500 operations; `validation_failed`: no operation, or an unknown field outside `data`"
       x-ever-row: 15
-      x-ever-availability: not_in_v1
-      x-ever-availability-note: The app mirror is not served yet.
   /v1/instances/me/oidc-client:
     get:
       summary: The installation's Ever ID client; the secret is in the first `ready` answer only.
@@ -2039,87 +1971,60 @@ paths:
           description: No such link on this instance
       x-ever-row: 5
     patch:
+      summary: |-
+        Re-keys one of the installation's own `*` links to one product organization, once. A replay
+        with the same value answers the link unchanged.
       tags:
         - registry
-      summary: Re-key an installation-wide link to one product organization
-      description: |
-        For a product that gained organizations after its installation was
-        linked as a whole (Ever Traduora: the `*` link becomes the id of the
-        default organization every existing project moved to). Changes
-        `product_tenant_id` once; the tenant link id, its consents and its
-        entitlement documents stay. A replay with the same value is a no-op;
-        a link of another instance answers `404`; a link that is not the
-        installation-wide `*` link answers `409 illegal_transition`. Audited.
-      x-ever-phase: 3
-      x-ever-auth: instance
       x-ever-rate-limit: instance
-      x-ever-idempotent: false
       operationId: instanceRekeyTenantLink
       security:
         - instanceToken: []
       parameters:
-        - name: link
+        - description: The tenant link id.
           in: path
+          name: link
           required: true
-          description: Tenant link id (ULID).
           schema:
-            $ref: "#/components/schemas/Ulid"
+            type: string
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/TenantLinkRekey"
+        required: true
       responses:
         "200":
-          description: Re-keyed (or already re-keyed to this value).
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/TenantLink"
+          description: Re-keyed (or already re-keyed to this value)
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "`instance_pending_approval` or `instance_disconnected`"
         "404":
-          description: Not found, or the module that serves this route is disabled on this deployment (`not_found`, `module_disabled`).
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+          description: No such link on this instance
         "409":
-          description: State conflict (`handle_taken`, `already_exists`, `key_mismatch`, `idempotency_in_progress`, `illegal_transition`, `billing_active`, `job_in_progress` when another job for the same subject is running).
-          headers:
-            Retry-After:
-              description: Seconds to wait before retrying.
-              schema:
-                type: integer
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-        default:
-          description: Any other error, as a problem document.
-          headers:
-            x-request-id:
-              description: The request id (generated or echoed). Quote it in support requests.
-              schema:
-                type: string
-            RateLimit-Limit:
-              description: IETF RateLimit header; requests allowed in the current window for this principal class.
-              schema:
-                type: integer
-            RateLimit-Remaining:
-              description: IETF RateLimit header; requests remaining in the current window.
-              schema:
-                type: integer
-            RateLimit-Reset:
-              description: IETF RateLimit header; seconds until the window resets.
-              schema:
-                type: integer
+          description: "`illegal_transition`: not the active `*` link, or already re-keyed to another value; `already_linked`: this installation already has a link for that product organization"
+        "422":
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+          description: "`validation_failed` at `/product_tenant_id`"
       x-ever-row: 5
-      x-ever-availability: not_in_v1
-      x-ever-availability-note: Re-keying an installation-wide tenant link to one product organization is not offered yet.
   /v1/instances/me/tenant-links/{link}/entitlement:
     get:
       summary: |-
@@ -2312,83 +2217,67 @@ paths:
       x-ever-availability-note: Being discoverable to other installations is not offered yet.
   /v1/instances/me/usage:
     post:
+      summary: |-
+        Reports consented meters for the tenant link in `Ever-Link-Id`: counts only, and only the
+        meters an installation may report.
       tags:
         - entitlements
-      summary: Report consented meters
-      x-ever-phase: 2
-      x-ever-auth: instance
+      x-ever-idempotent: true
       x-ever-integration: usage_reporting
       x-ever-rate-limit: instance
-      x-ever-idempotent: true
       operationId: instanceReportUsage
       security:
         - instanceToken: []
       parameters:
-        - name: Idempotency-Key
+        - description: |-
+            Client-generated key, unique per principal, at most 128 characters; remembered 24 h.
+            The same key with the same request replays the first answer (`Idempotency-Replayed:
+            true`); with a different request it answers `422 idempotency_mismatch`.
           in: header
+          name: Idempotency-Key
           required: true
-          description: Client-generated key, unique per principal, <= 128 characters. See the `Idempotency` schema.
+          schema:
+            maxLength: 128
+            minLength: 1
+            type: string
+        - description: The tenant link the counts belong to.
+          in: header
+          name: Ever-Link-Id
+          required: true
           schema:
             type: string
-            minLength: 1
-            maxLength: 128
-        - name: Ever-Link-Id
-          in: header
-          required: false
-          description: For multi-tenant instances, the tenant link on whose behalf the instance acts. Required when the integration is enabled per link rather than instance-wide.
-          schema:
-            $ref: "#/components/schemas/Ulid"
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/UsageReport"
+        required: true
       responses:
         "202":
-          description: Accepted.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Empty"
+                $ref: "#/components/schemas/UsageAccepted"
+          description: Accepted
         "403":
-          description: "Principal lacks the role, scope, integration or entitlement, or the operation needs a fresh sign-in (`forbidden_role`, `forbidden_scope`, `integration_disabled`, `integration_revoked`, `instance_pending_approval`, `entitlement_required`, `tier_required`, `sso_required`, `reauth_required`, `session_required`: an Ever ID token issued to a product, installation or App client used anywhere except the two `everIdTokenRead` reads and the in-product consent write; `step_up_required`: that consent write without a sign-in in the last 300 s; `not_connection_owner`: an installation-wide integration changed by an organization that does not own the installation)."
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+          description: "`integration_disabled`, `integration_revoked` or `denied_by_policy`: `usage_reporting` is not enabled for this link"
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "`module_disabled`: entitlements are off on this deployment"
         "422":
-          description: Validation failed; unknown fields are rejected on writes (`validation_failed`, `schema_violation`, `code_invalid`, `idempotency_mismatch`, `mirror_owned_field`, `limit_exceeded`).
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-        default:
-          description: Any other error, as a problem document.
-          headers:
-            x-request-id:
-              description: The request id (generated or echoed). Quote it in support requests.
-              schema:
-                type: string
-            RateLimit-Limit:
-              description: IETF RateLimit header; requests allowed in the current window for this principal class.
-              schema:
-                type: integer
-            RateLimit-Remaining:
-              description: IETF RateLimit header; requests remaining in the current window.
-              schema:
-                type: integer
-            RateLimit-Reset:
-              description: IETF RateLimit header; seconds until the window resets.
-              schema:
-                type: integer
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          description: "`validation_failed`: no count or more than 100, a meter an installation may not report, a negative count, a period not in the form or not started, or another tenant than the link's; nothing is stored"
       x-ever-row: 27
-      x-ever-availability: not_in_v1
-      x-ever-availability-note: Usage reports are not served yet.
   /v1/instances/me/usage-readings:
     post:
       tags:
@@ -2592,189 +2481,91 @@ paths:
       x-ever-row: 4
   /v1/lookup:
     post:
+      summary: |-
+        Asks which of up to 100 salted hashes belong to organizations that chose to be discoverable.
+        Only those are answered; an unknown hash is absent. Nothing asked is kept: a query leaves only a
+        rate-limit counter.
       tags:
         - lookup
-      summary: Which of these hashed identifiers belong to discoverable organizations?
-      description: |
-        Hashes are computed on the calling instance from the counterparty's VAT
-        number, registration number or e-mail with the published salt and
-        normalization. Only organizations that opted in (per identifier and at
-        organization level) are returned, with the intersection of the features
-        they advertise and the features they are entitled to. Unknown hashes are
-        simply absent; there is no negative list.
-
-        Instances need the integration `counterparty_lookup` enabled (else
-        `403 integration_disabled`); organization API keys need scope
-        `lookup:query`. Instance callers must send `Ever-Link-Id`: the caller
-        for limits and attribution is the tenant link (tenants of one
-        multi-tenant instance never share a bucket), or the API key. Limits
-        come from the organization's entitlement (`lookup.queries_per_min`,
-        default 60; `lookup.hashes_per_day`, default 6,000), at most 100 hashes
-        per query. Read-only: no `Idempotency-Key`; retries are safe.
-      x-ever-phase: 4
-      x-ever-auth: instance or key lookup:query
       x-ever-integration: counterparty_lookup
+      x-ever-integration-principals:
+        - instanceToken
+      x-ever-phase: 4
       x-ever-rate-limit: lookup
-      x-ever-idempotent: false
       operationId: lookupCounterparties
       security:
         - instanceToken: []
       parameters:
         - name: Ever-Link-Id
           in: header
-          required: false
-          description: For multi-tenant instances, the tenant link on whose behalf the instance acts. Required when the integration is enabled per link rather than instance-wide.
+          required: true
+          description: "The tenant link the lookup is made for. Required from an installation: without it the platform answers `422 validation_failed` at `#Ever-Link-Id`."
           schema:
-            $ref: "#/components/schemas/Ulid"
+            type: string
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/LookupRequest"
+        required: true
       responses:
         "200":
-          description: Matches (possibly empty).
-          headers:
-            Cache-Control:
-              schema:
-                type: string
-                const: private, no-store
-            RateLimit-Limit:
-              description: IETF RateLimit header; requests allowed in the current window for this principal class.
-              schema:
-                type: integer
-            RateLimit-Remaining:
-              description: IETF RateLimit header; requests remaining in the current window.
-              schema:
-                type: integer
-            RateLimit-Reset:
-              description: IETF RateLimit header; seconds until the window resets.
-              schema:
-                type: integer
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/LookupResponse"
+          description: "The matches (`Cache-Control: private, no-store`)"
         "401":
-          description: Missing, expired or revoked credential (`unauthorized`, `credential_revoked`).
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+          description: No valid credential
         "403":
-          description: "Principal lacks the role, scope, integration or entitlement, or the operation needs a fresh sign-in (`forbidden_role`, `forbidden_scope`, `integration_disabled`, `integration_revoked`, `instance_pending_approval`, `entitlement_required`, `tier_required`, `sso_required`, `reauth_required`, `session_required`: an Ever ID token issued to a product, installation or App client used anywhere except the two `everIdTokenRead` reads and the in-product consent write; `step_up_required`: that consent write without a sign-in in the last 300 s; `not_connection_owner`: an installation-wide integration changed by an organization that does not own the installation)."
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+          description: "`integration_disabled`, `integration_revoked`, `denied_by_policy`, `forbidden_scope` or `entitlement_required`"
         "422":
-          description: Validation failed; unknown fields are rejected on writes (`validation_failed`, `schema_violation`, `code_invalid`, `idempotency_mismatch`, `mirror_owned_field`, `limit_exceeded`).
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+          description: "`salt_version_unknown`, `salt_version_retired`, `hashes_invalid`, or `validation_failed` at `#Ever-Link-Id`"
         "429":
-          description: Rate limit exceeded for this principal class (`rate_limited`).
-          headers:
-            Retry-After:
-              description: Seconds to wait before retrying.
-              schema:
-                type: integer
-            RateLimit-Limit:
-              description: IETF RateLimit header; requests allowed in the current window for this principal class.
-              schema:
-                type: integer
-            RateLimit-Remaining:
-              description: IETF RateLimit header; requests remaining in the current window.
-              schema:
-                type: integer
-            RateLimit-Reset:
-              description: IETF RateLimit header; seconds until the window resets.
-              schema:
-                type: integer
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-        default:
-          description: Any other error, as a problem document.
-          headers:
-            x-request-id:
-              description: The request id (generated or echoed). Quote it in support requests.
-              schema:
-                type: string
-            RateLimit-Limit:
-              description: IETF RateLimit header; requests allowed in the current window for this principal class.
-              schema:
-                type: integer
-            RateLimit-Remaining:
-              description: IETF RateLimit header; requests remaining in the current window.
-              schema:
-                type: integer
-            RateLimit-Reset:
-              description: IETF RateLimit header; seconds until the window resets.
-              schema:
-                type: integer
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          description: "`rate_limited`, with `Retry-After` and `RateLimit-*`"
       x-ever-row: 13
-      x-ever-availability: not_in_v1
-      x-ever-availability-note: The counterparty lookup is not offered yet.
   /v1/lookup/salt:
     get:
+      summary: |-
+        The published salts: every version that has not retired, the normalization version and where
+        the test vectors are. A salt is public by design: privacy comes from opt-in, the one-way hash,
+        the rate limits and keeping nothing a query sends.
       tags:
         - lookup
-      summary: Active salt versions and the normalization version
-      description: |
-        The salt is public by design. A new version is added with
-        `active_from`; instances re-hash lazily; the previous version keeps
-        answering until `retire_after` (at least 180 days later).
-      x-ever-phase: 2
-      x-ever-auth: public
+      x-ever-phase: 4
       x-ever-rate-limit: public-read
       operationId: getLookupSalt
       security: []
       responses:
         "200":
-          description: OK
-          headers:
-            Cache-Control:
-              schema:
-                type: string
-                const: public, max-age=300, s-maxage=3600
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SaltSet"
-        default:
-          description: Any other error, as a problem document.
-          headers:
-            x-request-id:
-              description: The request id (generated or echoed). Quote it in support requests.
-              schema:
-                type: string
-            RateLimit-Limit:
-              description: IETF RateLimit header; requests allowed in the current window for this principal class.
-              schema:
-                type: integer
-            RateLimit-Remaining:
-              description: IETF RateLimit header; requests remaining in the current window.
-              schema:
-                type: integer
-            RateLimit-Reset:
-              description: IETF RateLimit header; seconds until the window resets.
-              schema:
-                type: integer
+                $ref: "#/components/schemas/SaltDocument"
+          description: "The salts (`Cache-Control: public, max-age=300, s-maxage=3600`)"
+        "404":
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+          description: "`module_disabled`: no salt is configured here"
       x-ever-row: 13
-      x-ever-availability: not_in_v1
-      x-ever-availability-note: "The counterparty lookup is not offered yet. Its normalisation and test vectors are published already: getLookupTestVectors and contracts/lookup/test-vectors.json."
   /v1/lookup/test-vectors:
     get:
       summary: |-
@@ -2877,7 +2668,7 @@ paths:
         Enables an integration on an installation with an explicit consent, or disables it. Enabling
         writes the consent record, the state and exactly one audit row in one transaction and tells
         the installation (`ever.consent.integration.enabled`). An installation-wide integration
-        (`instance_url`, `stats_link`, `ever_id_login`, `webhooks`) is changed only by the organization
+        (`instance_url`, `stats_link`, `ever_id_login`, `webhooks`, `managed_operations`) is changed only by the organization
         that connected a customer- or partner-operated installation, and waits for the operator's local
         accept (`state: pending_operator`); installations Ever operates have theirs set by Ever.
         Disabling revokes the consent. Any plan may switch any integration off.
@@ -3546,38 +3337,46 @@ components:
         - failed
       type: string
     BillingLink:
-      type: object
+      description: The link. The customer is not repeated.
+      properties:
+        created_at:
+          description: When it was made.
+          format: date-time
+          type: string
+        id:
+          description: The billing link.
+          type: string
+        instance_id:
+          description: The installation.
+          type: string
+        org_id:
+          description: The organization of the tenant link.
+          type:
+            - string
+            - "null"
+        product_tenant_id:
+          description: The product tenant.
+          type: string
       required:
         - id
         - instance_id
         - product_tenant_id
-        - org_id
         - created_at
-      properties:
-        id:
-          $ref: "#/components/schemas/Ulid"
-        instance_id:
-          $ref: "#/components/schemas/Ulid"
-        product_tenant_id:
-          type: string
-        org_id:
-          type:
-            - string
-            - "null"
-        created_at:
-          $ref: "#/components/schemas/Timestamp"
-    BillingLinkCreate:
       type: object
-      description: Reported by an Ever-operated instance under integration `billing_link` (declared field `tenant.stripeCustomerId` only).
+    BillingLinkCreate:
+      additionalProperties: false
+      description: "What the installation reports: the declared field only."
+      properties:
+        customer_ref:
+          description: The provider customer (`cus_…`).
+          type: string
+        product_tenant_id:
+          description: "The product tenant: the tenant of the link in `Ever-Link-Id`."
+          type: string
       required:
         - product_tenant_id
         - customer_ref
-      additionalProperties: false
-      properties:
-        product_tenant_id:
-          type: string
-        customer_ref:
-          type: string
+      type: object
     Compat:
       type: object
       required:
@@ -3611,6 +3410,34 @@ components:
         - self_hosted
         - works_app
       type: string
+    ConnectPublicJwk:
+      description: |-
+        A connect key as a public JWK (RFC 8037): the public half of the Ed25519 key pair an installation
+        generates. A private key (`d`) is refused. The platform assigns the key id: a `kid` sent here is
+        ignored, and the answer names the one to use.
+      properties:
+        crv:
+          description: "`Ed25519`."
+          example: Ed25519
+          type: string
+        kid:
+          description: "Ignored: the platform assigns the key id."
+          type:
+            - string
+            - "null"
+        kty:
+          description: "`OKP`."
+          example: OKP
+          type: string
+        x:
+          description: base64url (no padding) of the 32 public-key bytes.
+          pattern: ^[A-Za-z0-9_-]{43}$
+          type: string
+      required:
+        - kty
+        - crv
+        - x
+      type: object
     ConsentInput:
       additionalProperties: false
       description: The consent part of `IntegrationPut`.
@@ -3948,10 +3775,10 @@ components:
           example: gauzy
           type: string
         public_jwk:
+          $ref: "#/components/schemas/ConnectPublicJwk"
           description: |-
             Its connect key: an Ed25519 public JWK (`kty: OKP`, `crv: Ed25519`, `x`); the platform
             assigns its `kid`.
-          type: object
         serves_products:
           description: The products it serves besides its own (at most five).
           items:
@@ -4087,13 +3914,6 @@ components:
         - entitlement_endpoint
         - feed_endpoint
       type: object
-    DiscoverableFeature:
-      type: string
-      description: Additive vocabulary of what a discoverable organization advertises to counterparties.
-      enum:
-        - pay
-        - invoice_exchange
-        - listings
     Empty:
       type: object
       description: Empty JSON object body.
@@ -4162,6 +3982,8 @@ components:
         - denied_by_policy
         - integration_not_available
         - entitlement_required
+        - publishing_unavailable
+        - section_not_available
         - tier_required
         - limit_exceeded
         - rate_limited
@@ -4170,17 +3992,33 @@ components:
         - stale_version
         - module_disabled
         - handle_taken
+        - totp_required
+        - totp_invalid
+        - totp_locked
+        - totp_already_enrolled
+        - notice_period_running
         - handle_reserved
         - handle_retired
         - handle_invalid
         - handle_held
+        - domain_denied
+        - domain_taken
         - handle_held_by_you
+        - hold_expired
+        - hold_renewals_exhausted
+        - claimant_has_handle
+        - release_forbidden
         - code_invalid
         - code_expired
+        - code_already_revealed
+        - origin_not_allowed
         - product_mismatch
         - product_not_supported
         - product_not_provisionable
         - job_in_progress
+        - not_job_owner
+        - tier_not_available
+        - checkout_email_mismatch
         - intent_expired
         - intent_consumed
         - key_mismatch
@@ -4195,6 +4033,7 @@ components:
         - receipt_final
         - billing_active
         - sso_required
+        - sso_bound
         - reauth_required
         - session_required
         - step_up_required
@@ -4222,6 +4061,7 @@ components:
         - slug_reserved
         - checklist_incomplete
         - scope_version_outdated
+        - consent_required
         - method_not_allowed
         - payload_too_large
         - unsupported_media_type
@@ -5126,8 +4966,8 @@ components:
           description: The proof signed with the new key (the installation holds the key it installs).
           type: string
         public_jwk:
+          $ref: "#/components/schemas/ConnectPublicJwk"
           description: The new Ed25519 public JWK (no installation may hold it yet, or have held it).
-          type: object
       required:
         - public_jwk
         - current_key_proof
@@ -5278,6 +5118,25 @@ components:
             - string
             - "null"
           format: date-time
+    LookupMatch:
+      description: One organization that matched.
+      properties:
+        features:
+          description: What the organization advertises that its plan grants now.
+          items:
+            type: string
+          type: array
+        handle:
+          description: "The organization's handle: the only human-readable field an answer holds."
+          type: string
+        hash:
+          description: The hash asked about.
+          type: string
+      required:
+        - hash
+        - handle
+        - features
+      type: object
     LookupRefused:
       description: One input that cannot be checked (never hashed, never sent).
       properties:
@@ -5301,51 +5160,38 @@ components:
         - reason
       type: object
     LookupRequest:
-      type: object
-      description: '`hash = hex_lower(sha256(salt_bytes || ":" || kind || ":" || utf8(normalized)))`. Up to 100 hashes per query.'
+      additionalProperties: false
+      description: The request.
+      properties:
+        hashes:
+          description: 1 to 100 unique hashes, 64 lowercase hex characters each.
+          items:
+            type: string
+          type: array
+        salt_version:
+          description: The salt version the hashes were made with.
+          format: int64
+          type: integer
       required:
         - salt_version
         - hashes
-      additionalProperties: false
-      properties:
-        salt_version:
-          type: integer
-          minimum: 1
-        hashes:
-          type: array
-          minItems: 1
-          maxItems: 100
-          uniqueItems: true
-          items:
-            type: string
-            pattern: ^[0-9a-f]{64}$
-    LookupResponse:
       type: object
-      description: Unknown hashes are absent (no negative list). `features` is the intersection of what the organization advertises and what it is entitled to.
+    LookupResponse:
+      description: "The answer. Unknown hashes are absent: there is no negative list."
+      properties:
+        matches:
+          description: The matches.
+          items:
+            $ref: "#/components/schemas/LookupMatch"
+          type: array
+        salt_version:
+          description: The salt version asked about.
+          format: int64
+          type: integer
       required:
         - salt_version
         - matches
-      properties:
-        salt_version:
-          type: integer
-        matches:
-          type: array
-          items:
-            type: object
-            required:
-              - hash
-              - handle
-              - features
-            properties:
-              hash:
-                type: string
-                pattern: ^[0-9a-f]{64}$
-              handle:
-                $ref: "#/components/schemas/Handle"
-              features:
-                type: array
-                items:
-                  $ref: "#/components/schemas/DiscoverableFeature"
+      type: object
     LookupTestVectors:
       description: The published vectors.
       properties:
@@ -5416,33 +5262,46 @@ components:
         - hash
       type: object
     ManagedOperationResult:
-      type: object
-      description: What the instance reports for one operation. Status and size only; never file names, paths, URLs, log lines or backup content.
-      required:
-        - status
       additionalProperties: false
+      description: |-
+        What the instance reports for one operation. Status and size only; never file names, paths,
+        URLs, log lines or backup content.
       properties:
-        status:
-          type: string
-          enum:
-            - accepted
-            - running
-            - succeeded
-            - failed
-        version:
-          $ref: "#/components/schemas/SemVer"
         artefact_ref:
-          type: string
-          pattern: ^[A-Za-z0-9._:-]{1,64}$
           description: Opaque reference of the backup in the customer's own storage.
+          example: bk-20261102-0100
+          maxLength: 64
+          pattern: ^[A-Za-z0-9._:-]{1,64}$
+          type: string
         size_bytes:
-          type: integer
+          description: The size of a backup or a health report, in bytes.
+          example: 734003200
           format: int64
           minimum: 0
-      examples:
-        - status: succeeded
-          artefact_ref: bk-20261102-0100
-          size_bytes: 734003200
+          type: integer
+        status:
+          $ref: "#/components/schemas/ManagedResultStatus"
+          description: Where the operation stands.
+        version:
+          description: The product version after an update.
+          example: 0.751.0
+          maxLength: 32
+          pattern: ^[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}(-[0-9A-Za-z.]{1,16})?$
+          type: string
+      required:
+        - status
+      type: object
+    ManagedResultRecorded:
+      description: "`POST …/managed-operations/{operation}/result`'s answer: recorded."
+      type: object
+    ManagedResultStatus:
+      description: What an installation reports about an operation.
+      enum:
+        - accepted
+        - running
+        - succeeded
+        - failed
+      type: string
     ManifestKeyBody:
       description: One key of the published key set.
       properties:
@@ -5515,22 +5374,63 @@ components:
         - product
         - product_tenant_id
       type: object
-    MeterKey:
-      type: string
-      description: The meter key set of the `ever.entitlement.v1` document. Credit balances are not meters; they are read from the ledger (`GET /v1/orgs/{org}/credits`).
-      enum:
-        - instances.connected
-        - listings.published
-        - members
-        - apps.registered
-        - webhooks.endpoints
-        - api.requests
-        - lookup.queries
-        - lookup.hashes
-        - employees.reported
-        - stats.reports
     MirrorAppData:
-      type: object
+      additionalProperties: false
+      description: |-
+        An app's fields. Repository addresses (`source_repos`) and repository names inside `lineage`
+        are accepted and never stored.
+      properties:
+        base_kind:
+          description: "`none`, `ever` or `oss`."
+          type: string
+        base_ref:
+          description: What it is based on (`ever:gauzy`, `oss:calcom/cal.diy`).
+          type:
+            - string
+            - "null"
+        kind:
+          description: "`app` or `work`."
+          type: string
+        lineage:
+          description: |-
+            How it started: only `blueprint.id`, `blueprint.version`, `relation`, `provisioned_by`,
+            `app_spec_source` and `install_id` are stored.
+          type:
+            - object
+            - "null"
+        name:
+          description: The display name, at most 200 characters.
+          maxLength: 200
+          type: string
+        product_org_id:
+          description: The product organization the app belongs to, when the product has them.
+          type:
+            - string
+            - "null"
+        product_tenant_id:
+          description: The product tenant the app belongs to.
+          type: string
+        slug:
+          description: The product's slug, at most 128 characters.
+          maxLength: 128
+          type: string
+        source_repos:
+          description: Accepted, never stored.
+          items:
+            type: object
+          type:
+            - array
+            - "null"
+        status:
+          description: |-
+            `draft`, `registered`, `building`, `live`, `paused`, `archived` or `deleted`, or the
+            product's own `active` (read as `live`).
+          type: string
+        work_kind:
+          description: A Work's kind.
+          type:
+            - string
+            - "null"
       required:
         - product_tenant_id
         - kind
@@ -5538,213 +5438,211 @@ components:
         - slug
         - base_kind
         - status
+      type: object
+    MirrorBatch:
       additionalProperties: false
+      description: |-
+        An identifier-and-status batch pushed by the source product's outbox: up to 500 operations and
+        4 MiB. Each operation is idempotent by its `(external_id, external_version)`.
       properties:
-        product_tenant_id:
+        ops:
+          description: The operations, applied in this order, each on its own.
+          items:
+            $ref: "#/components/schemas/MirrorOp"
+          maxItems: 500
+          minItems: 1
+          type: array
+      required:
+        - ops
+      type: object
+    MirrorDeploymentData:
+      additionalProperties: false
+      description: |-
+        A deployment's fields (an open vocabulary: `target`, `provider` and `shape` are
+        stored as reported).
+      properties:
+        environment:
+          description: "`production` or `preview`."
           type: string
-        product_org_id:
+        managed_by:
+          description: "`ever`, `customer` or `third_party`."
           type: string
-        kind:
-          type: string
-          enum:
-            - app
-            - work
-        work_kind:
+        provider:
+          description: The provider.
           type:
             - string
             - "null"
-        name:
-          type: string
-          maxLength: 200
-        slug:
-          type: string
-          maxLength: 128
-        base_kind:
-          type: string
-          enum:
-            - none
-            - ever
-            - oss
-        base_ref:
+        shape:
+          description: The deploy shape.
           type:
             - string
             - "null"
         status:
+          description: |-
+            `pending`, `ready`, `error`, `canceled`, `timeout` or `retired`, or the product's own state
+            (`READY`, `INITIALIZING`, ...).
           type: string
-          enum:
-            - draft
-            - registered
-            - building
-            - live
-            - paused
-            - archived
-            - deleted
-        lineage:
-          type: object
-        source_repos:
-          type: array
-          items:
-            type: object
-            properties:
-              role:
-                type: string
-              url:
-                type: string
-                format: uri
-    MirrorBatch:
-      type: object
-      description: Identifier-and-status mirror pushed by the source product's Ever Connect outbox. <= 500 ops, <= 4 MiB. Per-item idempotency by `(external_id, external_version)`.
-      required:
-        - ops
-      additionalProperties: false
-      properties:
-        ops:
-          type: array
-          minItems: 1
-          maxItems: 500
-          items:
-            $ref: "#/components/schemas/MirrorOp"
-    MirrorDeploymentData:
-      type: object
+        target:
+          description: Where it runs.
+          type: string
+        url:
+          description: |-
+            Its public address, when it has one: `http` or `https`, without credentials, a query or a
+            fragment.
+          type:
+            - string
+            - "null"
       required:
         - target
         - managed_by
         - environment
         - status
-      additionalProperties: false
-      properties:
-        target:
-          type: string
-        provider:
-          type:
-            - string
-            - "null"
-        shape:
-          type:
-            - string
-            - "null"
-        managed_by:
-          type: string
-          enum:
-            - ever
-            - customer
-            - third_party
-        environment:
-          type: string
-          enum:
-            - production
-            - preview
-        url:
-          type:
-            - string
-            - "null"
-          format: uri
-        status:
-          type: string
-          enum:
-            - pending
-            - ready
-            - error
-            - canceled
-            - timeout
-            - retired
-    MirrorInventoryPage:
-      allOf:
-        - $ref: "#/components/schemas/Page"
-        - type: object
-          properties:
-            items:
-              type: array
-              items:
-                type: object
-                required:
-                  - external_id
-                  - external_version
-                  - kind
-                properties:
-                  external_id:
-                    type: string
-                  external_version:
-                    type: integer
-                    format: int64
-                  kind:
-                    type: string
-                    enum:
-                      - app
-                      - deployment
-                  org_link_id:
-                    type:
-                      - string
-                      - "null"
-    MirrorOp:
       type: object
+    MirrorInventoryItem:
+      description: A row the platform holds for this installation.
+      properties:
+        external_id:
+          description: The product's id.
+          type: string
+        external_version:
+          description: The version the platform holds.
+          format: int64
+          type: integer
+        kind:
+          $ref: "#/components/schemas/MirrorSubject"
+          description: "`app` or `deployment`."
+        org_link_id:
+          description: The tenant link it arrived under.
+          type:
+            - string
+            - "null"
+      required:
+        - external_id
+        - external_version
+        - kind
+      type: object
+    MirrorInventoryPage:
+      description: |-
+        A page of what the platform holds for this installation. Rows the platform archived (their
+        integration or link ended, or the product stopped reporting them) and rows the product deleted
+        are not held: a product still holding one sends it again, which restores it.
+      properties:
+        items:
+          description: The rows, in id order.
+          items:
+            $ref: "#/components/schemas/MirrorInventoryItem"
+          type: array
+        next_cursor:
+          description: The next page's cursor, when there is one.
+          type:
+            - string
+            - "null"
+      required:
+        - items
+      type: object
+    MirrorItemResult:
+      description: One operation's result.
+      properties:
+        app_id:
+          description: The app, when the platform holds it (a deployment's result names its app).
+          type:
+            - string
+            - "null"
+        code:
+          description: |-
+            Why it was refused: `unlinked_org`, `integration_disabled`, `unknown_app`, `org_mismatch`
+            or `schema_violation`.
+          type:
+            - string
+            - "null"
+        external_id:
+          description: The operation's `external_id`.
+          type: string
+        outcome:
+          $ref: "#/components/schemas/MirrorOutcome"
+          description: "`applied`, `ignored_stale` or `rejected`."
+      required:
+        - external_id
+        - outcome
+      type: object
+    MirrorOp:
+      additionalProperties: false
+      description: One operation.
+      properties:
+        app_external_id:
+          description: "The app's external id: required for `kind: deployment`."
+          type:
+            - string
+            - "null"
+        data:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/MirrorOpData"
+              description: What an upsert sets; a delete carries none.
+        external_id:
+          description: |-
+            The product's id of the app or deployment: letters, digits and `._:-`, at most 64
+            characters (what the events carry).
+          maxLength: 64
+          type: string
+        external_version:
+          description: Monotonic per external id; a lower or equal version answers `ignored_stale`.
+          format: int64
+          type: integer
+        kind:
+          $ref: "#/components/schemas/MirrorSubject"
+          description: "`app` or `deployment`."
+        occurred_at:
+          description: When the change happened in the product.
+          format: date-time
+          type: string
+        op:
+          $ref: "#/components/schemas/MirrorOpKind"
+          description: "`upsert` or `delete`."
       required:
         - op
         - kind
         - external_id
         - external_version
         - occurred_at
-      additionalProperties: false
-      properties:
-        op:
-          type: string
-          enum:
-            - upsert
-            - delete
-        kind:
-          type: string
-          enum:
-            - app
-            - deployment
-        external_id:
-          type: string
-          maxLength: 128
-        external_version:
-          type: integer
-          format: int64
-          description: Monotonic per external id; a lower or equal version is `ignored_stale`.
-        occurred_at:
-          $ref: "#/components/schemas/Timestamp"
-        app_external_id:
-          type: string
-          description: "Required for `kind: deployment`."
-        data:
-          oneOf:
-            - $ref: "#/components/schemas/MirrorAppData"
-            - $ref: "#/components/schemas/MirrorDeploymentData"
-    MirrorResult:
       type: object
-      required:
-        - results
+    MirrorOpData:
+      description: An upsert's fields, by the operation's `kind`.
+      oneOf:
+        - $ref: "#/components/schemas/MirrorAppData"
+          description: "For `kind: app`."
+        - $ref: "#/components/schemas/MirrorDeploymentData"
+          description: "For `kind: deployment`."
+    MirrorOpKind:
+      description: What an operation does.
+      enum:
+        - upsert
+        - delete
+      type: string
+    MirrorOutcome:
+      description: What became of an operation.
+      enum:
+        - applied
+        - ignored_stale
+        - rejected
+      type: string
+    MirrorResult:
+      description: One result per operation, in request order.
       properties:
         results:
-          type: array
+          description: The results.
           items:
-            type: object
-            required:
-              - external_id
-              - outcome
-            properties:
-              external_id:
-                type: string
-              outcome:
-                type: string
-                enum:
-                  - applied
-                  - ignored_stale
-                  - rejected
-              app_id:
-                type:
-                  - string
-                  - "null"
-              code:
-                type:
-                  - string
-                  - "null"
-                enum:
-                  - unlinked_org
-                  - schema_violation
-                  - null
+            $ref: "#/components/schemas/MirrorItemResult"
+          type: array
+      required:
+        - results
+      type: object
+    MirrorSubject:
+      description: What an operation is about.
+      enum:
+        - app
+        - deployment
+      type: string
     Money:
       description: An amount in minor units.
       properties:
@@ -5903,25 +5801,6 @@ components:
         - admin
         - member
       type: string
-    Page:
-      type: object
-      description: |
-        Cursor pagination envelope. Every list endpoint returns `items` and
-        `next_cursor` (`null` when the page is the last one). Order is
-        `(created_at DESC, id DESC)` unless the endpoint says otherwise. There are
-        no offsets and no totals.
-      required:
-        - items
-        - next_cursor
-      properties:
-        items:
-          type: array
-          items: {}
-        next_cursor:
-          type:
-            - string
-            - "null"
-          description: Opaque cursor to pass as `?cursor=` for the next page.
     PersonLink:
       description: A person link as the installation sees it.
       properties:
@@ -6153,6 +6032,31 @@ components:
       required:
         - base_url
       type: object
+    PublishedSalt:
+      description: One salt version as published.
+      properties:
+        active_from:
+          description: When it starts.
+          format: date-time
+          type: string
+        retire_after:
+          description: When it stops answering, when that is set.
+          format: date-time
+          type:
+            - string
+            - "null"
+        salt:
+          description: 32 random bytes in base64url without padding. Public by design.
+          type: string
+        version:
+          description: The version.
+          format: int32
+          type: integer
+      required:
+        - version
+        - salt
+        - active_from
+      type: object
     RedeemRequest:
       additionalProperties: false
       description: |-
@@ -6183,8 +6087,8 @@ components:
           example: gauzy
           type: string
         public_jwk:
+          $ref: "#/components/schemas/ConnectPublicJwk"
           description: "Its connect key: an Ed25519 public JWK (`kty: OKP`, `crv: Ed25519`, `x`)."
-          type: object
         return_origins:
           description: |-
             The origins (`https://host[:port]`; plain `http` only on `localhost`, `127.0.0.1` or
@@ -6287,47 +6191,27 @@ components:
             - string
             - "null"
       type: object
-    SaltSet:
-      type: object
-      description: |
-        Active salt versions. The salt is public by design; privacy comes from
-        the one-way hash, opt-in only answers, feature-scoped results, rate
-        limits and the rule that queried hashes are never persisted or logged.
-        A new version is added with `active_from`; the old one answers until
-        `retire_after` (>= 180 days).
+    SaltDocument:
+      description: The salts an installation hashes with.
+      properties:
+        active:
+          description: The versions that have not retired.
+          items:
+            $ref: "#/components/schemas/PublishedSalt"
+          type: array
+        normalization_version:
+          description: The normalization version.
+          format: int32
+          minimum: 0
+          type: integer
+        test_vectors_url:
+          description: Where the test vectors are.
+          type: string
       required:
         - active
         - normalization_version
         - test_vectors_url
-      properties:
-        active:
-          type: array
-          items:
-            type: object
-            required:
-              - version
-              - salt
-              - active_from
-            properties:
-              version:
-                type: integer
-                minimum: 1
-              salt:
-                type: string
-                description: 32 random bytes, base64url.
-              active_from:
-                $ref: "#/components/schemas/Timestamp"
-              retire_after:
-                type:
-                  - string
-                  - "null"
-                format: date-time
-        normalization_version:
-          type: integer
-          const: 1
-        test_vectors_url:
-          type: string
-          format: uri
+      type: object
     SecretRotated:
       description: "A rotated secret: the new one, shown once, and how long the old one keeps signing beside it."
       properties:
@@ -6343,11 +6227,6 @@ components:
       required:
         - secret
       type: object
-    SemVer:
-      type: string
-      description: Product version string as reported by the instance.
-      pattern: ^[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}(-[0-9A-Za-z.]{1,16})?$
-      maxLength: 32
     SsoDiscover:
       type: object
       required:
@@ -6540,17 +6419,16 @@ components:
         - product_tenant_id
       type: object
     TenantLinkRekey:
-      type: object
-      description: Re-key an installation-wide tenant link to one product organization, once the product gained organizations (Ever Traduora - the `*` link becomes the id of the default organization).
-      required:
-        - product_tenant_id
       additionalProperties: false
+      description: The one product organization the installation-wide link becomes.
       properties:
         product_tenant_id:
+          description: The product organization's id (letters, digits and `._:-`; never `*`).
+          maxLength: 64
           type: string
-          maxLength: 128
-      examples:
-        - product_tenant_id: 5b0c2f7e-2d1a-4c3b-9e8f-0a1b2c3d4e5f
+      required:
+        - product_tenant_id
+      type: object
     TestDelivery:
       additionalProperties: false
       description: The body of a test (optional).
@@ -6615,6 +6493,34 @@ components:
       pattern: ^[0-9A-HJKMNP-TV-Z]{26}$
       examples:
         - 01JC5R7Y6K1M9E0V3Q2A8XW4TB
+    UsageAccepted:
+      description: The empty answer.
+      type: object
+    UsageItem:
+      additionalProperties: false
+      description: One count.
+      properties:
+        meter_key:
+          description: A meter an installation may report (`employees.reported`, `stats.reports`).
+          example: employees.reported
+          type: string
+        period:
+          description: "`YYYY-MM` or `YYYY-MM-DD`."
+          example: 2026-11
+          type: string
+        product_tenant_id:
+          description: "The product tenant, when sent: it must be the tenant of the link in `Ever-Link-Id`."
+          type: string
+        quantity:
+          description: The count.
+          format: int64
+          minimum: 0
+          type: integer
+      required:
+        - meter_key
+        - quantity
+        - period
+      type: object
     UsageReadings:
       type: object
       description: Push alternative to the pull probe (integration `usage_reporting`).
@@ -6650,35 +6556,17 @@ components:
               product_tenant_id:
                 type: string
     UsageReport:
-      type: object
-      description: Instance-reported meters (integration `usage_reporting`). Only meters listed in the consented configuration are accepted; anything else answers 422.
-      required:
-        - items
       additionalProperties: false
+      description: "What an installation reports: counts, never a name or an identifier of a person."
       properties:
         items:
-          type: array
-          minItems: 1
-          maxItems: 100
+          description: 1 to 100 counts.
           items:
-            type: object
-            required:
-              - meter_key
-              - quantity
-              - period
-            additionalProperties: false
-            properties:
-              meter_key:
-                $ref: "#/components/schemas/MeterKey"
-              quantity:
-                type: integer
-                format: int64
-                minimum: 0
-              period:
-                type: string
-                pattern: ^20[0-9]{2}-(0[1-9]|1[0-2])(-(0[1-9]|[12][0-9]|3[01]))?$
-              product_tenant_id:
-                type: string
+            $ref: "#/components/schemas/UsageItem"
+          type: array
+      required:
+        - items
+      type: object
     Vendor:
       type: object
       required:

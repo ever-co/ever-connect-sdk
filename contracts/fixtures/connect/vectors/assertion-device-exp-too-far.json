@@ -1,0 +1,24 @@
+{
+  "assertion": "eyJhbGciOiJFZERTQSIsImtpZCI6IjEtSGdoTDRoT3dFIiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL2FwaS5ldmVyLnRlc3QvdjEvY29ubmVjdC90b2tlbiIsImRldmljZV9jb2RlX2hhc2giOiJqUTJ5bHhZM0dfRy0tbWZSMDNTNDBicTlfSG0zbkFJb3dla21uZlBpeW00IiwiZXhwIjoxNzkzNjE3MjAwLCJpYXQiOjE3OTM2MTM2MDAsImlzcyI6IjEtSGdoTDRoT3dFIiwianRpIjoiZGV2aWNlLWp0aS0wMDAwMDAwMDEwIiwic3ViIjoiMS1IZ2hMNGhPd0UifQ.Jo4yauZO2pn9ipA2wjW8VUTxVM_2aqeh8satK6SYsF_85ssuzTLHFExv4Z77UUnDBEAfkINbGAZ6NwLMB_uPCA",
+  "context": {
+    "api_origin": "https://api.ever.test",
+    "audience": "https://api.ever.test/v1/connect/token",
+    "device_code": "dGhpcy1pcy1hLXZlY3Rvci1kZXZpY2UtY29kZS0wMDA",
+    "device_code_hash": "jQ2ylxY3G_G--mfR03S40bq9_Hm3nAIowekmnfPiym4",
+    "now": 1793613600,
+    "parked_key": {
+      "crv": "Ed25519",
+      "kid": "1-HghL4hOwE",
+      "kty": "OKP",
+      "x": "1UIH2hlJd9z0atv-wrwudbUtWopCGE_t_cAAJPDj6No"
+    },
+    "seen_jti": [
+      "replayed-device-jti-000000"
+    ]
+  },
+  "description": "exp more than 300 s after iat",
+  "expected": {
+    "code": "invalid_client",
+    "status": 401
+  }
+}

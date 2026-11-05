@@ -77,6 +77,10 @@
       "type": "ever.registry.membership.role_changed",
       "valid": true
     },
+    "ever.registry.organization.export_requested.json": {
+      "type": "ever.registry.organization.export_requested",
+      "valid": true
+    },
     "ever.registry.person.deletion_requested.json": {
       "type": "ever.registry.person.deletion_requested",
       "valid": true

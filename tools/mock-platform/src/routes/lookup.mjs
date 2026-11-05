@@ -4,6 +4,20 @@ import { contract } from '../contract.mjs';
 import { fromB64url, sha256Hex } from '../crypto.mjs';
 import { fail } from '../problem.mjs';
 
+const HASH = /^[0-9a-f]{64}$/;
+
+/**
+ * What is wrong with the hashes of a lookup, as the platform's handler checks them (the pinned
+ * schema checks only the shape of the body): 1 to the per-query maximum, 64 lowercase hex
+ * characters each, each once. Null when nothing is.
+ */
+export function hashesFault(hashes, max = contract().constants.lookup.max_hashes_per_query) {
+  if (hashes.length === 0 || hashes.length > max) return `1 to ${max} hashes`;
+  if (!hashes.every((h) => HASH.test(h))) return 'each hash is 64 lowercase hex characters';
+  if (new Set(hashes).size !== hashes.length) return 'each hash once';
+  return null;
+}
+
 const hashOf = (salt, kind, normalized) => sha256Hex(Buffer.concat([fromB64url(salt), Buffer.from(`:${kind}:${normalized}`, 'utf8')]));
 
 export const lookupHandlers = {
@@ -63,16 +77,16 @@ export const lookupHandlers = {
         fail(422, 'validation_failed', 'the Ever-Link-Id header is required', {
           errors: [{ path: '#Ever-Link-Id', code: 'required', message: 'required' }],
         });
-      if (!validation.ok) {
-        if (validation.errors.every((e) => e.path.startsWith('/hashes')))
-          fail(422, 'hashes_invalid', undefined, { errors: validation.errors });
-        fail(422, 'validation_failed', undefined, { errors: validation.errors });
-      }
       const s = instance.integrations[`counterparty_lookup@${linkId}`];
       if (!s || !instance.links[linkId]) fail(403, 'integration_disabled', 'counterparty_lookup is not enabled for this link');
       if (s.state === 'revoked') fail(403, 'integration_revoked');
       if (s.state !== 'enabled') fail(403, 'integration_disabled', 'counterparty_lookup is not enabled for this link');
       if (!state.config.entitlement.features.lookup) fail(403, 'entitlement_required');
+      // As the platform: the body is read after the gates, and any fault in it is hashes_invalid
+      // (a fixed sentence, never the input).
+      if (!validation.ok) fail(422, 'hashes_invalid', 'the body is {salt_version, hashes}', { errors: validation.errors });
+      const fault = hashesFault(body.hashes);
+      if (fault) fail(422, 'hashes_invalid', fault);
       if ((state.config.lookup.retired_versions ?? []).includes(body.salt_version)) fail(422, 'salt_version_retired');
       const salt = state.config.lookup.salt_versions.find((x) => x.version === body.salt_version);
       if (!salt) fail(422, 'salt_version_unknown');

@@ -1,6 +1,6 @@
 {
   "key": "app_sync",
-  "scope_version": 1,
+  "scope_version": 2,
   "screen_version": "1",
   "blocks": {
     "title": "Enable Apps and deployments for {organization}",
@@ -29,6 +29,46 @@
         "when": "events",
         "purpose": "App status",
         "required": true
+      },
+      {
+        "field": "work.name",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "events",
+        "purpose": "Show the app's name on your account pages",
+        "required": true
+      },
+      {
+        "field": "work.slug",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "events",
+        "purpose": "Identify the app in links to Ever Works",
+        "required": true
+      },
+      {
+        "field": "work.base",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "events",
+        "purpose": "What the app is built on: an Ever product or a public open-source project",
+        "required": false
+      },
+      {
+        "field": "work.lineage",
+        "form": "id",
+        "form_text": "as an identifier",
+        "when": "events",
+        "purpose": "How the app was started: the template's id and version, the way it was created, and the marketplace install it came from",
+        "required": false
+      },
+      {
+        "field": "deployment.id",
+        "form": "id",
+        "form_text": "as an identifier",
+        "when": "events",
+        "purpose": "Identify the deployment",
+        "required": false
       },
       {
         "field": "deployment.target",
@@ -71,6 +111,22 @@
         "required": false
       },
       {
+        "field": "deployment.environment",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "events",
+        "purpose": "Production or preview",
+        "required": false
+      },
+      {
+        "field": "deployment.status",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "events",
+        "purpose": "Whether the deployment is running",
+        "required": false
+      },
+      {
         "field": "organization.id",
         "form": "id",
         "form_text": "as an identifier",
@@ -99,35 +155,63 @@
     "platform_keeps": [
       {
         "field": "work.id",
-        "retention": "Kept while the integration is enabled."
+        "retention": "Kept while the integration is enabled. When it ends the app is archived and shown only to your organization's members."
       },
       {
         "field": "work.kind",
-        "retention": "Kept while the integration is enabled."
+        "retention": "Kept while the integration is enabled. When it ends the app is archived and shown only to your organization's members."
       },
       {
         "field": "work.status",
-        "retention": "Kept while the integration is enabled."
+        "retention": "Kept while the integration is enabled. When it ends the app is archived and shown only to your organization's members."
+      },
+      {
+        "field": "work.name",
+        "retention": "Kept while the integration is enabled. When it ends the app is archived and shown only to your organization's members."
+      },
+      {
+        "field": "work.slug",
+        "retention": "Kept while the integration is enabled. When it ends the app is archived and shown only to your organization's members."
+      },
+      {
+        "field": "work.base",
+        "retention": "Kept while the integration is enabled. When it ends the app is archived and shown only to your organization's members."
+      },
+      {
+        "field": "work.lineage",
+        "retention": "Kept while the integration is enabled. When it ends the app is archived and shown only to your organization's members."
+      },
+      {
+        "field": "deployment.id",
+        "retention": "Kept while the integration is enabled. When it ends the deployment is marked retired and shown only to your organization's members."
       },
       {
         "field": "deployment.target",
-        "retention": "Kept while the integration is enabled."
+        "retention": "Kept while the integration is enabled. When it ends the deployment is marked retired and shown only to your organization's members."
       },
       {
         "field": "deployment.provider",
-        "retention": "Kept while the integration is enabled."
+        "retention": "Kept while the integration is enabled. When it ends the deployment is marked retired and shown only to your organization's members."
       },
       {
         "field": "deployment.shape",
-        "retention": "Kept while the integration is enabled."
+        "retention": "Kept while the integration is enabled. When it ends the deployment is marked retired and shown only to your organization's members."
       },
       {
         "field": "deployment.managed_by",
-        "retention": "Kept while the integration is enabled."
+        "retention": "Kept while the integration is enabled. When it ends the deployment is marked retired and shown only to your organization's members."
       },
       {
         "field": "deployment.url",
-        "retention": "Kept while the integration is enabled."
+        "retention": "Kept while the integration is enabled. Erased when it ends."
+      },
+      {
+        "field": "deployment.environment",
+        "retention": "Kept while the integration is enabled. When it ends the deployment is marked retired and shown only to your organization's members."
+      },
+      {
+        "field": "deployment.status",
+        "retention": "Kept while the integration is enabled. When it ends the deployment is marked retired and shown only to your organization's members."
       },
       {
         "field": "organization.id",
@@ -146,7 +230,7 @@
       "as events happen"
     ],
     "where_to_change": "Integrations & data in this product, or Instances in app.ever.co; turning it off refuses new requests at once; the revoke effect says what else changes and when.",
-    "revoke_effect": "Pending updates are drained and no further updates are sent.",
+    "revoke_effect": "Pending updates are drained and no further updates are sent. The apps already listed are archived at once and their public addresses erased.",
     "legal": {
       "terms_url": "https://ever.co/legal/terms",
       "terms_version": "2026-10",

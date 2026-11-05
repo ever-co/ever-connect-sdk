@@ -1396,6 +1396,24 @@ export type EverRegistryMembershipRoleChangedV1CommonExternalId = string;
  */
 export type EverRegistryMembershipRoleChangedV1CommonProductId = string;
 
+export type EverRegistryOrganizationExportRequestedV1CommonUlid = string;
+export type EverRegistryOrganizationExportRequestedV1CommonDatetime = string;
+
+/**
+ * fan-out to every installation holding a live tenant link of the organization; the installation answers with its own export
+ */
+export interface EverRegistryOrganizationExportRequestedV1 {
+  org_id: EverRegistryOrganizationExportRequestedV1CommonUlid;
+  job_id: EverRegistryOrganizationExportRequestedV1CommonUlid;
+  respond_by: EverRegistryOrganizationExportRequestedV1CommonDatetime;
+  /**
+   * tenant_link_ids (the request to one installation, on instance/{instance_id}): the live tenant links it holds of the organization, so it finds the tenants to export. Absent on the platform's own record of the request.
+   *
+   * @minItems 1
+   */
+  tenant_link_ids?: [EverRegistryOrganizationExportRequestedV1CommonUlid, ...EverRegistryOrganizationExportRequestedV1CommonUlid[]];
+}
+
 export type EverRegistryPersonDeletionRequestedV1CommonUlid = string;
 export type EverRegistryPersonDeletionRequestedV1CommonDatetime = string;
 export type EverRegistryPersonDeletionRequestedV1CommonHex64 = string;
@@ -1581,6 +1599,7 @@ export interface EventDataByType {
   'ever.registry.membership.created': EverRegistryMembershipCreatedV1;
   'ever.registry.membership.removed': EverRegistryMembershipRemovedV1;
   'ever.registry.membership.role_changed': EverRegistryMembershipRoleChangedV1;
+  'ever.registry.organization.export_requested': EverRegistryOrganizationExportRequestedV1;
   'ever.registry.person.deletion_requested': EverRegistryPersonDeletionRequestedV1;
   'ever.registry.person.export_requested': EverRegistryPersonExportRequestedV1;
   'ever.registry.tenant_link.created': EverRegistryTenantLinkCreatedV1;
@@ -5481,6 +5500,39 @@ export const EVENT_SCHEMAS = {
           "role": "admin"
         }
       ]
+    } as JsonSchemaDocument,
+    'ever.registry.organization.export_requested': {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "https://api.ever.co/v1/events/catalog/schemas/ever.registry.organization.export_requested.v1.schema.json",
+      "title": "ever.registry.organization.export_requested v1 data",
+      "description": "fan-out to every installation holding a live tenant link of the organization; the installation answers with its own export",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "org_id",
+        "job_id",
+        "respond_by"
+      ],
+      "properties": {
+        "org_id": {
+          "$ref": "common.schema.json#/$defs/ulid"
+        },
+        "job_id": {
+          "$ref": "common.schema.json#/$defs/ulid"
+        },
+        "respond_by": {
+          "$ref": "common.schema.json#/$defs/datetime"
+        },
+        "tenant_link_ids": {
+          "description": "tenant_link_ids (the request to one installation, on instance/{instance_id}): the live tenant links it holds of the organization, so it finds the tenants to export. Absent on the platform's own record of the request.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "common.schema.json#/$defs/ulid"
+          }
+        }
+      }
     } as JsonSchemaDocument,
     'ever.registry.person.deletion_requested': {
       "$schema": "https://json-schema.org/draft/2020-12/schema",

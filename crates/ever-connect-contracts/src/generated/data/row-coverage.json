@@ -524,6 +524,11 @@
           "documented": true
         },
         {
+          "status": 422,
+          "code": "validation_failed",
+          "documented": true
+        },
+        {
           "status": 429,
           "code": "rate_limited",
           "documented": true

@@ -135,6 +135,9 @@ export function integrationState(instance, key, linkId) {
 }
 
 const TENANT_LINK_ID = /^[0-9A-HJKMNP-TV-Z]{26}$/;
+
+/** A fault inside a connect key (`public_jwk`), which the handler answers, not the schema. */
+const keyCheckedByHandler = (e) => e.path.startsWith('/public_jwk/') || (e.path === '/public_jwk' && e.code !== 'required');
 const linkProblem = (code, message) => fail(422, 'validation_failed', message, { errors: [{ path: '#Ever-Link-Id', code, message }] });
 
 /**
@@ -304,8 +307,12 @@ export function createMockPlatform(options = {}) {
           : route.schema && ctx.body !== null
             ? validateComponent(route.schema, ctx.body)
             : { ok: true };
-        ctx.validation = v;
-        if (!v.ok && !HANDLERS[route.operationId].ownValidation) fail(422, 'validation_failed', undefined, { errors: v.errors });
+        // The platform reads a connect key as plain JSON and its handler answers a bad one with
+        // `422 public_jwk_invalid`: the schema (ConnectPublicJwk) states the key, it refuses none.
+        // A missing key stays a fault of the body.
+        const errors = v.ok ? [] : v.errors.filter((e) => !keyCheckedByHandler(e));
+        ctx.validation = errors.length === 0 ? { ok: true, errors: [] } : { ok: false, errors };
+        if (!ctx.validation.ok && !HANDLERS[route.operationId].ownValidation) fail(422, 'validation_failed', undefined, { errors });
       }
       if (route.idempotent) {
         const key = headers['idempotency-key'];

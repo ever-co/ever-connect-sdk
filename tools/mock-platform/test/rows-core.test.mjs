@@ -644,6 +644,53 @@ describe('rows 6-10 and 16', () => {
     expect((await env.call('POST', '/v1/lookup', { token, body, headers: { 'ever-link-id': linkId } })).status).toBe(200);
   });
 
+  it('a lookup body the platform refuses is hashes_invalid: count, form, repeats and unknown fields', async () => {
+    env = await startMock();
+    const { token, linkId } = await env.connect();
+    await env.admin('consent', { integration: 'counterparty_lookup' });
+    const lookup = (body) => env.call('POST', '/v1/lookup', { token, body, headers: { 'ever-link-id': linkId } });
+    const hex = (i) => i.toString(16).padStart(64, '0');
+    for (const body of [
+      { salt_version: 1, hashes: [] },
+      { salt_version: 1, hashes: Array.from({ length: 101 }, (_, i) => hex(i)) },
+      { salt_version: 1, hashes: ['C'.repeat(64)] },
+      { salt_version: 1, hashes: ['c'.repeat(63)] },
+      { salt_version: 1, hashes: [hex(1), hex(1)] },
+      { salt_version: 1, hashes: [hex(1)], unexpected_field: 'x' },
+    ])
+      expectProblem(expect, await lookup(body), 422, 'hashes_invalid');
+    expect((await lookup({ salt_version: 1, hashes: Array.from({ length: 100 }, (_, i) => hex(i)) })).status).toBe(200);
+  });
+
+  it('a usage report the platform refuses is validation_failed: count, meter, tenant, period', async () => {
+    env = await startMock();
+    const { token, linkId } = await env.connect();
+    await env.admin('consent', { integration: 'usage_reporting' });
+    let n = 0;
+    const report = (items) => {
+      n += 1;
+      return env.call('POST', '/v1/instances/me/usage', {
+        token,
+        body: { items },
+        headers: { 'idempotency-key': `usage-${n}`, 'ever-link-id': linkId },
+      });
+    };
+    const ok = { meter_key: 'employees.reported', quantity: 3, period: '2026-11' };
+    for (const [items, path] of [
+      [[], '/items'],
+      [Array.from({ length: 101 }, () => ok), '/items'],
+      [[{ ...ok, meter_key: 'members' }], '/items/0/meter_key'],
+      [[ok, { ...ok, product_tenant_id: 'another-tenant' }], '/items/1/product_tenant_id'],
+      [[{ ...ok, period: '2026-13' }], '/items/0/period'],
+      [[{ ...ok, period: '2099-01' }], '/items/0/period'],
+    ]) {
+      const r = await report(items);
+      expectProblem(expect, r, 422, 'validation_failed');
+      expect(r.body.errors[0].path).toBe(path);
+    }
+    expect((await report([ok, { ...ok, meter_key: 'stats.reports', period: '2026-11-02' }])).status).toBe(202);
+  });
+
   it('disconnect: the next call is credential_revoked', async () => {
     env = await startMock();
     const { token } = await env.connect();

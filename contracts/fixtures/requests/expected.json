@@ -121,11 +121,6 @@
       "schema": "LookupRequest",
       "valid": true
     },
-    "lookup.invalid-too-many.json": {
-      "schema": "LookupRequest",
-      "valid": false,
-      "path": "/hashes"
-    },
     "lookup.invalid-extra-field.json": {
       "schema": "LookupRequest",
       "valid": false,

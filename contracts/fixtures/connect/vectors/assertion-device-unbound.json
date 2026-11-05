@@ -1,0 +1,24 @@
+{
+  "assertion": "eyJhbGciOiJFZERTQSIsImtpZCI6IjEtSGdoTDRoT3dFIiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL2FwaS5ldmVyLnRlc3QvdjEvY29ubmVjdC90b2tlbiIsImV4cCI6MTc5MzYxMzkwMCwiaWF0IjoxNzkzNjEzNjAwLCJpc3MiOiIxLUhnaEw0aE93RSIsImp0aSI6ImRldmljZS1qdGktMDAwMDAwMDAwNiIsInN1YiI6IjEtSGdoTDRoT3dFIn0.bApTxNlZLa7nu04r_WVLX3nBTRqzhPUqSQ372dpcWysftMKyn8r9LGlstvskanQaysNiGrMgzbwm2Dg5eFnrCw",
+  "context": {
+    "api_origin": "https://api.ever.test",
+    "audience": "https://api.ever.test/v1/connect/token",
+    "device_code": "dGhpcy1pcy1hLXZlY3Rvci1kZXZpY2UtY29kZS0wMDA",
+    "device_code_hash": "jQ2ylxY3G_G--mfR03S40bq9_Hm3nAIowekmnfPiym4",
+    "now": 1793613600,
+    "parked_key": {
+      "crv": "Ed25519",
+      "kid": "1-HghL4hOwE",
+      "kty": "OKP",
+      "x": "1UIH2hlJd9z0atv-wrwudbUtWopCGE_t_cAAJPDj6No"
+    },
+    "seen_jti": [
+      "replayed-device-jti-000000"
+    ]
+  },
+  "description": "no device_code_hash",
+  "expected": {
+    "code": "invalid_client",
+    "status": 401
+  }
+}

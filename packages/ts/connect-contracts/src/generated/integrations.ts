@@ -12,6 +12,7 @@ export type IntegrationKey =
   | 'usage_reporting'
   | 'app_sync'
   | 'billing_link'
+  | 'provisioning'
   | 'webhooks'
   | 'managed_operations'
   | 'provider_access'
@@ -27,6 +28,7 @@ export const INTEGRATION_KEYS = [
   "usage_reporting",
   "app_sync",
   "billing_link",
+  "provisioning",
   "webhooks",
   "managed_operations",
   "provider_access",
@@ -43,6 +45,8 @@ export interface IntegrationScopeRow {
   readonly purpose: string;
   readonly retention: string;
   readonly group?: string;
+  /** The products this row applies to, when it is not every product of the integration. */
+  readonly products?: readonly string[];
 }
 
 /** An integration definition: the same data app.ever.co renders its consent screen from. */
@@ -607,8 +611,8 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
       "works"
     ],
     "status": "active",
-    "scope_version": 1,
-    "revoke_effect": "Pending updates are drained and no further updates are sent.",
+    "scope_version": 2,
+    "revoke_effect": "Pending updates are drained and no further updates are sent. The apps already listed are archived at once and their public addresses erased.",
     "scope": [
       {
         "field_path": "work.id",
@@ -617,7 +621,7 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
         "frequency": "events",
         "required": true,
         "purpose": "Identify the app",
-        "retention": "Kept while the integration is enabled."
+        "retention": "Kept while the integration is enabled. When it ends the app is archived and shown only to your organization's members."
       },
       {
         "field_path": "work.kind",
@@ -626,7 +630,7 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
         "frequency": "events",
         "required": true,
         "purpose": "App type",
-        "retention": "Kept while the integration is enabled."
+        "retention": "Kept while the integration is enabled. When it ends the app is archived and shown only to your organization's members."
       },
       {
         "field_path": "work.status",
@@ -635,7 +639,52 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
         "frequency": "events",
         "required": true,
         "purpose": "App status",
-        "retention": "Kept while the integration is enabled."
+        "retention": "Kept while the integration is enabled. When it ends the app is archived and shown only to your organization's members."
+      },
+      {
+        "field_path": "work.name",
+        "direction": "to_ever",
+        "form": "clear",
+        "frequency": "events",
+        "required": true,
+        "purpose": "Show the app's name on your account pages",
+        "retention": "Kept while the integration is enabled. When it ends the app is archived and shown only to your organization's members."
+      },
+      {
+        "field_path": "work.slug",
+        "direction": "to_ever",
+        "form": "clear",
+        "frequency": "events",
+        "required": true,
+        "purpose": "Identify the app in links to Ever Works",
+        "retention": "Kept while the integration is enabled. When it ends the app is archived and shown only to your organization's members."
+      },
+      {
+        "field_path": "work.base",
+        "direction": "to_ever",
+        "form": "clear",
+        "frequency": "events",
+        "required": false,
+        "purpose": "What the app is built on: an Ever product or a public open-source project",
+        "retention": "Kept while the integration is enabled. When it ends the app is archived and shown only to your organization's members."
+      },
+      {
+        "field_path": "work.lineage",
+        "direction": "to_ever",
+        "form": "id",
+        "frequency": "events",
+        "required": false,
+        "purpose": "How the app was started: the template's id and version, the way it was created, and the marketplace install it came from",
+        "retention": "Kept while the integration is enabled. When it ends the app is archived and shown only to your organization's members."
+      },
+      {
+        "field_path": "deployment.id",
+        "direction": "to_ever",
+        "form": "id",
+        "frequency": "events",
+        "required": false,
+        "purpose": "Identify the deployment",
+        "retention": "Kept while the integration is enabled. When it ends the deployment is marked retired and shown only to your organization's members."
       },
       {
         "field_path": "deployment.target",
@@ -644,7 +693,7 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
         "frequency": "events",
         "required": false,
         "purpose": "Where the app runs",
-        "retention": "Kept while the integration is enabled."
+        "retention": "Kept while the integration is enabled. When it ends the deployment is marked retired and shown only to your organization's members."
       },
       {
         "field_path": "deployment.provider",
@@ -653,7 +702,7 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
         "frequency": "events",
         "required": false,
         "purpose": "Where the app runs",
-        "retention": "Kept while the integration is enabled."
+        "retention": "Kept while the integration is enabled. When it ends the deployment is marked retired and shown only to your organization's members."
       },
       {
         "field_path": "deployment.shape",
@@ -662,7 +711,7 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
         "frequency": "events",
         "required": false,
         "purpose": "Deployment kind",
-        "retention": "Kept while the integration is enabled."
+        "retention": "Kept while the integration is enabled. When it ends the deployment is marked retired and shown only to your organization's members."
       },
       {
         "field_path": "deployment.managed_by",
@@ -671,7 +720,7 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
         "frequency": "events",
         "required": false,
         "purpose": "Who manages the deployment",
-        "retention": "Kept while the integration is enabled."
+        "retention": "Kept while the integration is enabled. When it ends the deployment is marked retired and shown only to your organization's members."
       },
       {
         "field_path": "deployment.url",
@@ -680,7 +729,25 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
         "frequency": "events",
         "required": false,
         "purpose": "Public address of a live app",
-        "retention": "Kept while the integration is enabled."
+        "retention": "Kept while the integration is enabled. Erased when it ends."
+      },
+      {
+        "field_path": "deployment.environment",
+        "direction": "to_ever",
+        "form": "clear",
+        "frequency": "events",
+        "required": false,
+        "purpose": "Production or preview",
+        "retention": "Kept while the integration is enabled. When it ends the deployment is marked retired and shown only to your organization's members."
+      },
+      {
+        "field_path": "deployment.status",
+        "direction": "to_ever",
+        "form": "clear",
+        "frequency": "events",
+        "required": false,
+        "purpose": "Whether the deployment is running",
+        "retention": "Kept while the integration is enabled. When it ends the deployment is marked retired and shown only to your organization's members."
       },
       {
         "field_path": "organization.id",
@@ -745,6 +812,171 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
       }
     ],
     "docs_anchor": "billing_link"
+  },
+  provisioning: {
+    "key": "provisioning",
+    "name": "Set up a product",
+    "description": "Sends your organization's details to the Ever product you chose, so it can create your workspace after you confirm there. You accept this each time you set up a product.",
+    "category": "apps",
+    "direction": "inbound",
+    "defaults": {
+      "cloud": false,
+      "self_hosted": false
+    },
+    "availability": {
+      "cloud": "not_applicable",
+      "self_hosted": "not_applicable"
+    },
+    "requires_feature": null,
+    "products": [
+      "gauzy",
+      "works"
+    ],
+    "status": "active",
+    "scope_version": 2,
+    "revoke_effect": "A set-up that has not reached the product stops: no new confirmation link is issued. A workspace already created stays in the product, under your control there.",
+    "notes": "Ever Teams is set up with Ever Gauzy. No e-mail address is sent: the product takes it from your own Ever ID sign-in.",
+    "scope": [
+      {
+        "field_path": "org.id",
+        "direction": "from_ever",
+        "form": "id",
+        "frequency": "once",
+        "required": true,
+        "purpose": "Connect the new workspace to your organization",
+        "retention": "The product keeps it with the workspace it creates. Ever Platform keeps it with the provisioning job."
+      },
+      {
+        "field_path": "org.handle",
+        "direction": "from_ever",
+        "form": "clear",
+        "frequency": "once",
+        "required": true,
+        "purpose": "Name the new workspace after your organization",
+        "retention": "The product keeps it with the workspace it creates. Ever Platform keeps it with the provisioning job."
+      },
+      {
+        "field_path": "org.display_name",
+        "direction": "from_ever",
+        "form": "clear",
+        "frequency": "once",
+        "required": true,
+        "purpose": "Name the new workspace after your organization",
+        "retention": "The product keeps it with the workspace it creates. Ever Platform keeps it with the provisioning job."
+      },
+      {
+        "field_path": "org.legal_name",
+        "direction": "from_ever",
+        "form": "clear",
+        "frequency": "once",
+        "required": false,
+        "purpose": "Fill in your company details in the new workspace",
+        "retention": "The product keeps it with the workspace it creates. Ever Platform keeps it with the provisioning job."
+      },
+      {
+        "field_path": "org.country",
+        "direction": "from_ever",
+        "form": "clear",
+        "frequency": "once",
+        "required": false,
+        "purpose": "Fill in your company details in the new workspace",
+        "retention": "The product keeps it with the workspace it creates. Ever Platform keeps it with the provisioning job."
+      },
+      {
+        "field_path": "org.website",
+        "direction": "from_ever",
+        "form": "clear",
+        "frequency": "once",
+        "required": false,
+        "purpose": "Fill in your company details in the new workspace",
+        "retention": "The product keeps it with the workspace it creates. Ever Platform keeps it with the provisioning job."
+      },
+      {
+        "field_path": "tier",
+        "direction": "from_ever",
+        "form": "clear",
+        "frequency": "once",
+        "required": true,
+        "purpose": "Set up the workspace on the plan your organization has",
+        "retention": "The product keeps it with the workspace it creates. Ever Platform keeps it with the provisioning job."
+      },
+      {
+        "field_path": "features",
+        "direction": "from_ever",
+        "form": "clear",
+        "frequency": "once",
+        "required": true,
+        "purpose": "Set up what you chose with the workspace",
+        "retention": "The product keeps it with the workspace it creates. Ever Platform keeps it with the provisioning job."
+      },
+      {
+        "field_path": "person.ever_id_sub",
+        "direction": "from_ever",
+        "form": "id",
+        "frequency": "once",
+        "required": true,
+        "purpose": "Check that the person who confirms in the product is the person who started this",
+        "retention": "The product keeps it with the workspace it creates. Ever Platform keeps it with the provisioning job."
+      },
+      {
+        "field_path": "billing.stripe_customer_ref",
+        "direction": "from_ever",
+        "form": "id",
+        "frequency": "once",
+        "required": false,
+        "purpose": "Connect the workspace to your organization's billing account",
+        "retention": "The product keeps it with the workspace it creates. Ever Platform keeps it with the provisioning job.",
+        "products": [
+          "gauzy"
+        ]
+      },
+      {
+        "field_path": "tenant_link_id",
+        "direction": "from_ever",
+        "form": "id",
+        "frequency": "events",
+        "required": true,
+        "purpose": "Say which workspace the change is about (product role sync)",
+        "retention": "The product keeps it with the person's account there. Ever Platform keeps the event for 90 days."
+      },
+      {
+        "field_path": "identity_issuer",
+        "direction": "from_ever",
+        "form": "id",
+        "frequency": "events",
+        "required": true,
+        "purpose": "Say who the change is about, as the product sees them at sign-in (product role sync)",
+        "retention": "The product keeps it with the person's account there. Ever Platform keeps the event for 90 days."
+      },
+      {
+        "field_path": "identity_subject",
+        "direction": "from_ever",
+        "form": "id",
+        "frequency": "events",
+        "required": true,
+        "purpose": "Say who the change is about, as the product sees them at sign-in (product role sync)",
+        "retention": "The product keeps it with the person's account there. Ever Platform keeps the event for 90 days."
+      },
+      {
+        "field_path": "product_user_ref",
+        "direction": "from_ever",
+        "form": "id",
+        "frequency": "events",
+        "required": false,
+        "purpose": "Say who the change is about when the product has already told us its user (product role sync)",
+        "retention": "The product keeps it with the person's account there. Ever Platform keeps the event for 90 days."
+      },
+      {
+        "field_path": "role",
+        "direction": "from_ever",
+        "form": "clear",
+        "frequency": "events",
+        "required": true,
+        "purpose": "Give the person the same role in the product as in your organization (product role sync)",
+        "retention": "The product keeps it with the person's account there. Ever Platform keeps the event for 90 days."
+      }
+    ],
+    "docs_anchor": "provisioning"
   },
   webhooks: {
     "key": "webhooks",

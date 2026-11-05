@@ -1,0 +1,24 @@
+{
+  "assertion": "eyJhbGciOiJFZERTQSIsImtpZCI6IjEtSGdoTDRoT3dFIiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL2FwaS5ldmVyLnRlc3QvdjEvY29ubmVjdC90b2tlbiIsImRldmljZV9jb2RlX2hhc2giOiJPQzRyeDNsNE9XZUFRTl9aRi1VMWJyT2VXaW4wczI4MHVBb2FxU0JhRlFJIiwiZXhwIjoxNzkzNjEzOTAwLCJpYXQiOjE3OTM2MTM2MDAsImlzcyI6IjEtSGdoTDRoT3dFIiwianRpIjoiZGV2aWNlLWp0aS0wMDAwMDAwMDA3Iiwic3ViIjoiMS1IZ2hMNGhPd0UifQ.nQYo8Ep16xE3Q0OgBToRdrh3AMD1LP8WtuJt8i9M8Yc__BKRTN3hP1NwEUDdX9YSxcOQXnN5xMnQSO84TadDDw",
+  "context": {
+    "api_origin": "https://api.ever.test",
+    "audience": "https://api.ever.test/v1/connect/token",
+    "device_code": "dGhpcy1pcy1hLXZlY3Rvci1kZXZpY2UtY29kZS0wMDA",
+    "device_code_hash": "jQ2ylxY3G_G--mfR03S40bq9_Hm3nAIowekmnfPiym4",
+    "now": 1793613600,
+    "parked_key": {
+      "crv": "Ed25519",
+      "kid": "1-HghL4hOwE",
+      "kty": "OKP",
+      "x": "1UIH2hlJd9z0atv-wrwudbUtWopCGE_t_cAAJPDj6No"
+    },
+    "seen_jti": [
+      "replayed-device-jti-000000"
+    ]
+  },
+  "description": "device_code_hash binds another device code: an assertion made for one code is worth nothing on another",
+  "expected": {
+    "code": "invalid_client",
+    "status": 401
+  }
+}

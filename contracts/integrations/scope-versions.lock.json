@@ -30,12 +30,16 @@
       "scope_sha256": "b4c8eb301eca01068617b749162548324275e8ee6d3bd82e68cf8809eadcde2f"
     },
     "app_sync": {
-      "scope_version": 1,
-      "scope_sha256": "12e10672c4e3d16a1440c5c9483e91cc1db31793f231601456b198f83f887000"
+      "scope_version": 2,
+      "scope_sha256": "99dfb7db7317243edd709cb555ea316d773f1d24c3f9e3a7444350c6b11c2f65"
     },
     "billing_link": {
       "scope_version": 1,
       "scope_sha256": "0107fb9b931fa1d27104091bc1de04f6a2485252e9cdb65b84913560dbc927c8"
+    },
+    "provisioning": {
+      "scope_version": 2,
+      "scope_sha256": "d3ea986ddfb1d2ca20a6f5879ee76a76c7af632a083353314419aa867cf0a3b4"
     },
     "webhooks": {
       "scope_version": 1,

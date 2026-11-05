@@ -168,7 +168,7 @@ export const ROWS: readonly OutboundCallRow[] = [
         "method": "PATCH",
         "path": "/v1/instances/me/tenant-links/{link}",
         "operation_id": "instanceRekeyTenantLink",
-        "status": "not_in_v1"
+        "status": "pinned"
       }
     ],
     "trigger": "an organization admin submits a link code, removes a link, or a single-organization product moves its link to a new organization id",
@@ -429,7 +429,7 @@ export const ROWS: readonly OutboundCallRow[] = [
         "method": "GET",
         "path": "/v1/lookup/salt",
         "operation_id": "getLookupSalt",
-        "status": "not_in_v1"
+        "status": "pinned"
       },
       {
         "method": "GET",
@@ -441,7 +441,7 @@ export const ROWS: readonly OutboundCallRow[] = [
         "method": "POST",
         "path": "/v1/lookup",
         "operation_id": "lookupCounterparties",
-        "status": "not_in_v1"
+        "status": "pinned"
       }
     ],
     "trigger": "daily salt refresh; a user clicks Check on Ever Platform on a contact",
@@ -501,19 +501,19 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "integration",
     "integration": "app_sync",
     "auth": "instance token",
-    "availability": "not_in_v1",
+    "availability": "v1",
     "endpoints": [
       {
         "method": "POST",
         "path": "/v1/instances/me/mirror/apps",
         "operation_id": "instanceMirrorApps",
-        "status": "not_in_v1"
+        "status": "pinned"
       },
       {
         "method": "GET",
         "path": "/v1/instances/me/mirror/apps",
         "operation_id": "instanceListMirroredApps",
-        "status": "not_in_v1"
+        "status": "pinned"
       }
     ],
     "trigger": "integration app_sync enabled and an app or deployment changes; nightly reconciliation",
@@ -810,13 +810,13 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "integration",
     "integration": "billing_link",
     "auth": "instance token and Ever-Link-Id",
-    "availability": "not_in_v1",
+    "availability": "v1",
     "endpoints": [
       {
         "method": "POST",
         "path": "/v1/instances/me/billing-links",
         "operation_id": "instanceCreateBillingLink",
-        "status": "not_in_v1"
+        "status": "pinned"
       }
     ],
     "trigger": "integration billing_link enabled (installations Ever operates only)",
@@ -863,13 +863,13 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "integration",
     "integration": "usage_reporting",
     "auth": "instance token and Ever-Link-Id",
-    "availability": "not_in_v1",
+    "availability": "v1",
     "endpoints": [
       {
         "method": "POST",
         "path": "/v1/instances/me/usage",
         "operation_id": "instanceReportUsage",
-        "status": "not_in_v1"
+        "status": "pinned"
       },
       {
         "method": "POST",
@@ -1108,13 +1108,13 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "integration",
     "integration": "managed_operations",
     "auth": "instance token",
-    "availability": "not_in_v1",
+    "availability": "v1",
     "endpoints": [
       {
         "method": "POST",
         "path": "/v1/instances/me/managed-operations/{operation}/result",
         "operation_id": "instanceReportManagedOperationResult",
-        "status": "not_in_v1"
+        "status": "pinned"
       }
     ],
     "trigger": "the product's executor finished an operation an owner or admin requested, with the managed_operations integration consented and the operator's local opt-in",
@@ -1687,6 +1687,11 @@ export const ROW_COVERAGE: readonly RowCoverage[] = [
       {
         "status": 422,
         "code": "hashes_invalid",
+        "documented": true
+      },
+      {
+        "status": 422,
+        "code": "validation_failed",
         "documented": true
       },
       {

@@ -7,6 +7,7 @@ import { test } from 'node:test';
 import YAML from 'yaml';
 import { checkPins, checkScope, pinLines } from '../check-schema-drift.mjs';
 import { REPO, readJson } from '../lib/common.mjs';
+import { parseDesignYaml } from '../lib/openapi-subset.mjs';
 import { checkRows } from '../sync-contract.mjs';
 
 const spec = YAML.parse(readFileSync(join(REPO, 'contracts/openapi/ever-platform.v1.yaml'), 'utf8'));
@@ -180,4 +181,20 @@ test('the catalog is the one the platform publishes: no hidden row, the public n
   assert.ok(rows.every((r) => r.status !== 'hidden'));
   assert.equal(rows.find((r) => r.key === 'managed_operations')?.name, 'Maintenance operations');
   assert.equal(readJson(join(REPO, 'contracts/integrations/managed_operations.json')).name, 'Maintenance operations');
+});
+
+test('a design file: a plain one-line description holding ": " is read as quoted, with a warning; any other error fails', () => {
+  const warnings = [];
+  const warn = (m) => warnings.push(m);
+  assert.deepEqual(parseDesignYaml('a:\n  description: plain text\n', 'ok.yaml', warn), { a: { description: 'plain text' } });
+  assert.deepEqual(warnings, []);
+  const text = 'p:\n  - name: action\n    description: As `x` names it (`a`; `b` for a step: the code once).\n    in: path\n';
+  assert.deepEqual(parseDesignYaml(text, 'p.yaml', warn), {
+    p: [{ name: 'action', description: 'As `x` names it (`a`; `b` for a step: the code once).', in: 'path' }],
+  });
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0], /p\.yaml:3: the plain description contains ": "/);
+  assert.deepEqual(parseDesignYaml(text.replace(/\n/g, '\r\n'), 'crlf.yaml', warn).p[0].in, 'path');
+  assert.throws(() => parseDesignYaml('a:\n  name: one: two\n', 'other.yaml', warn));
+  assert.throws(() => parseDesignYaml('a: [unclosed\n', 'broken.yaml', warn));
 });

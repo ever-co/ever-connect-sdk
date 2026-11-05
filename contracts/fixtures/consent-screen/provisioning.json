@@ -1,0 +1,197 @@
+{
+  "key": "provisioning",
+  "scope_version": 2,
+  "screen_version": "1",
+  "blocks": {
+    "title": "Enable Set up a product for {organization}",
+    "purpose": "Sends your organization's details to the Ever product you chose, so it can create your workspace after you confirm there. You accept this each time you set up a product.",
+    "leaves_installation": [],
+    "arrives_at_installation": [
+      {
+        "field": "org.id",
+        "form": "id",
+        "form_text": "as an identifier",
+        "when": "once",
+        "purpose": "Connect the new workspace to your organization"
+      },
+      {
+        "field": "org.handle",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "once",
+        "purpose": "Name the new workspace after your organization"
+      },
+      {
+        "field": "org.display_name",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "once",
+        "purpose": "Name the new workspace after your organization"
+      },
+      {
+        "field": "org.legal_name",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "once",
+        "purpose": "Fill in your company details in the new workspace"
+      },
+      {
+        "field": "org.country",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "once",
+        "purpose": "Fill in your company details in the new workspace"
+      },
+      {
+        "field": "org.website",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "once",
+        "purpose": "Fill in your company details in the new workspace"
+      },
+      {
+        "field": "tier",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "once",
+        "purpose": "Set up the workspace on the plan your organization has"
+      },
+      {
+        "field": "features",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "once",
+        "purpose": "Set up what you chose with the workspace"
+      },
+      {
+        "field": "person.ever_id_sub",
+        "form": "id",
+        "form_text": "as an identifier",
+        "when": "once",
+        "purpose": "Check that the person who confirms in the product is the person who started this"
+      },
+      {
+        "field": "billing.stripe_customer_ref",
+        "form": "id",
+        "form_text": "as an identifier",
+        "when": "once",
+        "purpose": "Connect the workspace to your organization's billing account"
+      },
+      {
+        "field": "tenant_link_id",
+        "form": "id",
+        "form_text": "as an identifier",
+        "when": "events",
+        "purpose": "Say which workspace the change is about (product role sync)"
+      },
+      {
+        "field": "identity_issuer",
+        "form": "id",
+        "form_text": "as an identifier",
+        "when": "events",
+        "purpose": "Say who the change is about, as the product sees them at sign-in (product role sync)"
+      },
+      {
+        "field": "identity_subject",
+        "form": "id",
+        "form_text": "as an identifier",
+        "when": "events",
+        "purpose": "Say who the change is about, as the product sees them at sign-in (product role sync)"
+      },
+      {
+        "field": "product_user_ref",
+        "form": "id",
+        "form_text": "as an identifier",
+        "when": "events",
+        "purpose": "Say who the change is about when the product has already told us its user (product role sync)"
+      },
+      {
+        "field": "role",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "events",
+        "purpose": "Give the person the same role in the product as in your organization (product role sync)"
+      }
+    ],
+    "platform_keeps": [
+      {
+        "field": "org.id",
+        "retention": "The product keeps it with the workspace it creates. Ever Platform keeps it with the provisioning job."
+      },
+      {
+        "field": "org.handle",
+        "retention": "The product keeps it with the workspace it creates. Ever Platform keeps it with the provisioning job."
+      },
+      {
+        "field": "org.display_name",
+        "retention": "The product keeps it with the workspace it creates. Ever Platform keeps it with the provisioning job."
+      },
+      {
+        "field": "org.legal_name",
+        "retention": "The product keeps it with the workspace it creates. Ever Platform keeps it with the provisioning job."
+      },
+      {
+        "field": "org.country",
+        "retention": "The product keeps it with the workspace it creates. Ever Platform keeps it with the provisioning job."
+      },
+      {
+        "field": "org.website",
+        "retention": "The product keeps it with the workspace it creates. Ever Platform keeps it with the provisioning job."
+      },
+      {
+        "field": "tier",
+        "retention": "The product keeps it with the workspace it creates. Ever Platform keeps it with the provisioning job."
+      },
+      {
+        "field": "features",
+        "retention": "The product keeps it with the workspace it creates. Ever Platform keeps it with the provisioning job."
+      },
+      {
+        "field": "person.ever_id_sub",
+        "retention": "The product keeps it with the workspace it creates. Ever Platform keeps it with the provisioning job."
+      },
+      {
+        "field": "billing.stripe_customer_ref",
+        "retention": "The product keeps it with the workspace it creates. Ever Platform keeps it with the provisioning job."
+      },
+      {
+        "field": "tenant_link_id",
+        "retention": "The product keeps it with the person's account there. Ever Platform keeps the event for 90 days."
+      },
+      {
+        "field": "identity_issuer",
+        "retention": "The product keeps it with the person's account there. Ever Platform keeps the event for 90 days."
+      },
+      {
+        "field": "identity_subject",
+        "retention": "The product keeps it with the person's account there. Ever Platform keeps the event for 90 days."
+      },
+      {
+        "field": "product_user_ref",
+        "retention": "The product keeps it with the person's account there. Ever Platform keeps the event for 90 days."
+      },
+      {
+        "field": "role",
+        "retention": "The product keeps it with the person's account there. Ever Platform keeps the event for 90 days."
+      }
+    ],
+    "how_often": [
+      "once",
+      "as events happen"
+    ],
+    "where_to_change": "Integrations & data in this product, or Instances in app.ever.co; turning it off refuses new requests at once; the revoke effect says what else changes and when.",
+    "revoke_effect": "A set-up that has not reached the product stops: no new confirmation link is issued. A workspace already created stays in the product, under your control there.",
+    "legal": {
+      "terms_url": "https://ever.co/legal/terms",
+      "terms_version": "2026-10",
+      "dpa_url": "https://ever.co/legal/dpa",
+      "dpa_version": "2026-10",
+      "subprocessors_url": "https://ever.co/legal/subprocessors"
+    },
+    "authorisation": "I am authorised to enable this for {organization}"
+  },
+  "in_product": {
+    "allowed": true,
+    "step_up_max_age_s": 300
+  }
+}

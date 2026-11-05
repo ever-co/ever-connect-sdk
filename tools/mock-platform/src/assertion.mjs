@@ -4,7 +4,7 @@
 // endpoint; typ, when present, JWT; exp at most 300 s after iat and iat within 300 s of the clock;
 // nbf, when present, not in the future; jti 16-128 visible characters, never seen before.
 // Every failure is the same `invalid_client` to the caller; `reason` is for logs and tests only.
-import { decodeJws, verifyBytes } from './crypto.mjs';
+import { b64url, decodeJws, instanceKid, sha256, verifyBytes } from './crypto.mjs';
 
 const ULID = /^[0-9A-HJKMNP-TV-Z]{26}$/;
 
@@ -77,4 +77,37 @@ export function verifyRotation(currentKeyProof, newKeyProof, ctx) {
   if (!next.ok) return next;
   if (next.jti === current.jti) return { ok: false, reason: 'jti' };
   return { ok: true, jtis: [current.jti, next.jti], exp: [current.exp, next.exp] };
+}
+
+/**
+ * One poll of the device-first connect, as the platform checks its assertion: signed with the
+ * parked connect key (EdDSA; another key is `409 key_mismatch`), iss = sub = the parked key's kid,
+ * aud = the device token endpoint, exp after the clock and at most 300 s after iat, bound to the
+ * device code (`device_code_hash`, base64url of its SHA-256) and a jti the parked key has not spent.
+ * Every other failure is `401 invalid_client`; `reason` is for logs and tests only.
+ *
+ * @param {string} token the compact JWS
+ * @param {object} ctx {now, audience, parkedX, deviceCode, seenJti(kid, jti) -> boolean, maxTtlS}
+ * @returns {{ok: true, kid: string, jti: string} | {ok: false, status: 401 | 409, code: string, reason: string}}
+ */
+export function verifyDeviceAssertion(token, ctx) {
+  const { now, audience, parkedX, deviceCode, maxTtlS = 300 } = ctx;
+  const refuse = (reason) => ({ ok: false, status: 401, code: 'invalid_client', reason });
+  const decoded = decodeJws(token);
+  if (decoded?.header.alg !== 'EdDSA') return refuse('algorithm');
+  if (!verifyBytes(parkedX, decoded.signingInput, decoded.signature))
+    return { ok: false, status: 409, code: 'key_mismatch', reason: 'signature' };
+  const kid = instanceKid(parkedX);
+  const p = decoded.payload;
+  if (p.iss !== kid) return refuse('issuer');
+  if (p.sub !== kid) return refuse('subject_differs');
+  if (p.aud !== audience) return refuse('audience');
+  if (!Number.isInteger(p.exp) || p.exp <= now) return refuse('expired');
+  if (p.exp - p.iat > maxTtlS) return refuse('lifetime');
+  if (typeof p.jti !== 'string') return refuse('jti');
+  // Bound to this device code, as the platform requires.
+  if (p.device_code_hash !== b64url(sha256(deviceCode))) return refuse('device_code');
+  // Spent per parked key, not per code: an assertion names only the key.
+  if (ctx.seenJti(kid, p.jti)) return refuse('replay');
+  return { ok: true, kid, jti: p.jti };
 }
