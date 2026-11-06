@@ -100,7 +100,15 @@ files:
   of the sealed default network (the products reach it there; the driver by its alias).
 - **The driver.** A small container on the sealed Docker network waits for `health_url`, runs the
   adapter's hooks, requests the managed operation (`positive_managed`), probes the module routes
-  and reads the mock's record. Its own traffic never passes through a sniffed namespace.
+  and reads the mock's record. Its own traffic never passes through a sniffed namespace. Each step
+  runs as a named container with a time limit (15 minutes; for the scenario at least `health_timeout_s`
+  + 5 minutes, for the watch at least `wait_s` + 6 minutes): a step that runs out of time is a fault
+  of the run, with what it printed so far in `driver-<step>.log`, and its container is removed.
+- **The other product services** (a paired API, a database) keep Docker's resolver for the compose
+  names, which they look up as written (`ndots:0`, unless the service sets its own `dns`,
+  `dns_search` or `dns_opt`): on a Kubernetes runner a container inherits the pod's search domains
+  with `ndots:5`, Docker's resolver answers SERVFAIL for those on a sealed network, and a musl
+  resolver (Alpine images) stops at a SERVFAIL, so `db` would never resolve.
 
 Nothing is mounted from the host: images are built from their directories and files are copied in
 with `docker cp`, so the audit runs the same on a laptop, on `ubuntu-latest` and on self-hosted

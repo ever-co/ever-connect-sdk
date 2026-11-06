@@ -165,6 +165,16 @@ export function buildOverlay(opts) {
     product.depends_on = { ...dependsOn(original), [v.SNIFFER]: { condition: 'service_started' } };
     services[name] = product;
   }
+  // Every other product service keeps Docker's resolver, which answers the compose names. On a
+  // Kubernetes runner its containers inherit the pod's search domains with ndots:5: Docker's
+  // resolver answers SERVFAIL for those on a sealed network, and a musl resolver (Alpine images)
+  // stops at a SERVFAIL, so a name such as `db` would never resolve. Names are looked up as written
+  // (as the driver does), unless the service sets its own resolver options or shares a namespace.
+  for (const [name, svc] of Object.entries(opts.product.services)) {
+    if (services[name] || svc?.network_mode) continue;
+    if (['dns', 'dns_search', 'dns_opt'].some((key) => svc?.[key] !== undefined)) continue;
+    services[name] = { dns_opt: ['ndots:0'] };
+  }
   if (opts.driverImage)
     services['ever-audit-driver'] = fill(t.services['ever-audit-driver'], { ...values, DRIVER_IMAGE: opts.driverImage });
   if (opts.browser) {
