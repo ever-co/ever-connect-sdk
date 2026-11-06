@@ -92,7 +92,8 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
       "teams",
       "works",
       "rec",
-      "traduora"
+      "traduora",
+      "app"
     ],
     "status": "active",
     "scope_version": 1,
@@ -185,7 +186,8 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
       "gauzy",
       "works",
       "rec",
-      "traduora"
+      "traduora",
+      "app"
     ],
     "status": "coming_soon",
     "scope_version": 2,

@@ -10,6 +10,7 @@ place, in TypeScript and Rust:
 - the statistics report format ([docs/stats-schema.md](docs/stats-schema.md)), the integration
   definitions and their scopes ([docs/integrations.md](docs/integrations.md)), and the signed
   entitlement and key formats ([docs/entitlements.md](docs/entitlements.md));
+- connecting an App that is not one of the Ever products ([docs/apps.md](docs/apps.md));
 - fixtures every implementation must agree on, signed with TEST keys;
 - a mock of the Ever Platform API for product CI ([docs/mock-platform.md](docs/mock-platform.md));
 - an egress audit that proves a product makes no outbound call it should not, from its server

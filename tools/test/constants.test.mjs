@@ -43,7 +43,12 @@ test('code patterns, install sources and products equal the contract schemas whe
   // operation still refers to it.
   if (stated('InstallSource')) assert.equal(constants.install_sources, stated('InstallSource'));
   assert.ok(new RegExp(constants.link_code_pattern).test('EVL-TEST-0000-0002'));
-  assert.deepEqual(constants.products, s.ProductCode.enum);
+  // The contract states the product codes while it has a `ProductCode` schema; else they are the
+  // entitlement schema's.
+  const productCodes =
+    s.ProductCode?.enum ??
+    JSON.parse(readFileSync(new URL('../../contracts/schemas/ever.entitlement.v1.json', import.meta.url), 'utf8')).$defs.product.enum;
+  assert.deepEqual(constants.products, productCodes);
   assert.ok(constants.products.includes('demand'), 'demand is a product code (it answers product_not_supported)');
   const code = new RegExp(constants.connect_code_pattern);
   assert.ok(code.test('EVC-TEST-0000-0001'));
