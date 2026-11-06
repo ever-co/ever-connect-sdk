@@ -75,3 +75,5 @@ Wording-only changes outside `scope` (`name`, `description`, `revoke_effect`) do
 ## 5. Versions
 
 `contracts/VERSION` follows semantic versioning. A new optional field, a new row, a new integration or a new problem code is a minor change; removing or renaming anything a product reads, or narrowing what the platform accepts, is a major change. The generated `constants.contracts_version` carries the value into both languages.
+
+An App outside the Ever products connects as an installation of `app:<app id>`: see [apps.md](apps.md).

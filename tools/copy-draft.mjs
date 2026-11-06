@@ -6,6 +6,7 @@
  *   ever-connect-outbound-calls.md    -> docs/outbound-calls.md
  *   anonymous-stats.md                -> docs/stats-schema.md
  *   integrations-and-data-scopes.md   -> docs/integrations.md
+ *   connecting-an-app.md              -> docs/apps.md
  *
  * Only a file whose first line carries the public-safe marker of the drafts is copied; anything else is
  * refused. Every HTML comment is stripped. The corrections where the contract wins over a draft are
@@ -90,6 +91,12 @@ export const DRAFTS = [
         '*What this installation sends, and when* (every row that names an integration)',
       ],
     ],
+  },
+  {
+    from: 'connecting-an-app.md',
+    to: 'docs/apps.md',
+    regions: [],
+    fixes: [],
   },
 ];
 
