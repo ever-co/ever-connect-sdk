@@ -1,7 +1,7 @@
 {
   "description": "The scope of contract v1 for installations of Ever products: which operations of the Ever Platform API an installation calls (the instance-facing set an SDK pins), which of them contract v1 serves (pinned in ever-api.v1.json) and which it does not serve yet (not_in_v1: designed, never answered by a v1 deployment; a later minor version of the contract adds them without changing anything pinned). An SDK release for contract v1 carries only pinned operations; a not_in_v1 operation is neither generated nor documented as callable, and its outbound-call row says it is not available yet. Checked by tools/check-contract-scope.mjs against the pinned contract and the design; `pinned` is written by its --write.",
   "contract": "contracts/openapi/ever-api.v1.json",
-  "version": "1.3.0",
+  "version": "1.6.0",
   "selection": {
     "description": "An operation is instance-facing when it accepts instanceToken, or it is one of `also` (the public calls an installation makes and the two reads it makes with a signed-in person's token). Paths under never_path_prefixes and operations that accept never_security are never instance-facing; `exclude` names the ones left out on purpose.",
     "select_security": [
@@ -60,6 +60,11 @@
       "operation_id": "deleteWebhook",
       "method": "DELETE",
       "path": "/v1/webhooks/{webhook}"
+    },
+    {
+      "operation_id": "discoverSso",
+      "method": "GET",
+      "path": "/v1/sso/discover"
     },
     {
       "operation_id": "get_key_manifest",
@@ -182,6 +187,11 @@
       "path": "/v1/instances/me/oidc-client"
     },
     {
+      "operation_id": "instanceGetProviderGrant",
+      "method": "GET",
+      "path": "/v1/instances/me/provider-grants/{grant}"
+    },
+    {
       "operation_id": "instanceHeartbeat",
       "method": "POST",
       "path": "/v1/instances/me/heartbeat"
@@ -217,9 +227,19 @@
       "path": "/v1/instances/me/tenant-links/{link}"
     },
     {
+      "operation_id": "instanceReportInstallStatus",
+      "method": "POST",
+      "path": "/v1/installs/{install}/status"
+    },
+    {
       "operation_id": "instanceReportManagedOperationResult",
       "method": "POST",
       "path": "/v1/instances/me/managed-operations/{operation}/result"
+    },
+    {
+      "operation_id": "instanceReportProviderGrantStatus",
+      "method": "POST",
+      "path": "/v1/instances/me/provider-grants/{grant}/status"
     },
     {
       "operation_id": "instanceReportUsage",
@@ -318,43 +338,12 @@
       "why": "Importing an organization profile is not offered yet."
     },
     {
-      "operation_id": "discoverSso",
-      "method": "GET",
-      "path": "/v1/sso/discover",
-      "row": 24,
-      "why": "Company sign-in discovery is not offered yet."
-    },
-    {
       "operation_id": "instanceReportUsageReadings",
       "method": "POST",
       "path": "/v1/instances/me/usage-readings",
       "row": 27,
       "integration": "usage_reporting",
       "why": "Usage reports are not served yet."
-    },
-    {
-      "operation_id": "instanceReportInstallStatus",
-      "method": "POST",
-      "path": "/v1/installs/{install}/status",
-      "row": 28,
-      "integration": "marketplace_installs",
-      "why": "Marketplace installs are not offered yet."
-    },
-    {
-      "operation_id": "instanceGetProviderGrant",
-      "method": "GET",
-      "path": "/v1/instances/me/provider-grants/{grant}",
-      "row": 32,
-      "integration": "provider_access",
-      "why": "Provider access grants are not offered yet. When they are, the invitee's e-mail address and name travel only in this answer and only after the provider person accepted the grant (409 grant_not_accepted before)."
-    },
-    {
-      "operation_id": "instanceReportProviderGrantStatus",
-      "method": "POST",
-      "path": "/v1/instances/me/provider-grants/{grant}/status",
-      "row": 32,
-      "integration": "provider_access",
-      "why": "Provider access grants are not offered yet."
     }
   ],
   "security": {
@@ -379,12 +368,12 @@
       "note": "The installation's public address, under the instance_url integration."
     },
     "32": {
-      "status": "not_in_v1",
+      "status": "pinned",
       "operations": [
         "instanceGetProviderGrant",
         "instanceReportProviderGrantStatus"
       ],
-      "note": "Provider access grants; designed, not served by contract v1."
+      "note": "Provider access grants: the installation reads an accepted grant and reports what it did."
     },
     "33": {
       "status": "app_ever_co_only",

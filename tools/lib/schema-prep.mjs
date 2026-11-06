@@ -162,5 +162,22 @@ export function forRust(schema, prefix, { rootName } = {}) {
     delete root.title;
     defs[rootName] = root;
   }
+  // An `anyOf` whose every branch is a string (a product code, or a patterned `app:<id>`) is a
+  // string to serde: the generator would make it a struct of flattened options that no string
+  // deserializes into. Validation still runs against the original schema.
+  const stringish = (s, seen = new Set()) => {
+    if (!s || typeof s !== 'object') return false;
+    if (s.type === 'string') return true;
+    if (typeof s.$ref !== 'string') return false;
+    const name = s.$ref.split('/').pop();
+    if (seen.has(name)) return false;
+    seen.add(name);
+    return stringish(defs[name], seen);
+  };
+  for (const [name, def] of Object.entries(defs)) {
+    if (Array.isArray(def.anyOf) && def.anyOf.length > 0 && def.anyOf.every((b) => stringish(b))) {
+      defs[name] = { type: 'string', ...(def.description ? { description: def.description } : {}) };
+    }
+  }
   return defs;
 }

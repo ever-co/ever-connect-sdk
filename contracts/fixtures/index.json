@@ -508,14 +508,14 @@
     {
       "file": "requests/install-status.invalid-extra-field.json",
       "kind": "component",
-      "schema": "InstallStatus",
+      "schema": "InstallStatusReport",
       "valid": false,
       "typed": false
     },
     {
       "file": "requests/install-status.json",
       "kind": "component",
-      "schema": "InstallStatus",
+      "schema": "InstallStatusReport",
       "valid": true,
       "typed": true
     },
@@ -697,14 +697,14 @@
     {
       "file": "requests/provider-grant-status.invalid-extra-field.json",
       "kind": "component",
-      "schema": "ProviderGrantStatus",
+      "schema": "ProviderGrantStatusReport",
       "valid": false,
       "typed": false
     },
     {
       "file": "requests/provider-grant-status.json",
       "kind": "component",
-      "schema": "ProviderGrantStatus",
+      "schema": "ProviderGrantStatusReport",
       "valid": true,
       "typed": true
     },

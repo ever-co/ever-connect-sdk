@@ -213,12 +213,12 @@ export const OPERATIONS = {
     ],
     "query": [],
     "auth": "instance",
-    "idempotencyKey": "required",
+    "idempotencyKey": "none",
     "linkHeader": "none",
     "conditional": false,
     "body": {
       "schema": {
-        "$ref": "#/components/schemas/InstallStatus"
+        "$ref": "#/components/schemas/InstallStatusReport"
       },
       "required": true
     },
@@ -228,7 +228,7 @@ export const OPERATIONS = {
     "row": 28,
     "integration": "marketplace_installs",
     "rateLimit": "instance",
-    "status": "not_in_v1"
+    "status": "pinned"
   },
   "getInstanceSelf": {
     "id": "getInstanceSelf",
@@ -748,7 +748,7 @@ export const OPERATIONS = {
     "row": 32,
     "integration": "provider_access",
     "rateLimit": "instance",
-    "status": "not_in_v1"
+    "status": "pinned"
   },
   "instanceReportProviderGrantStatus": {
     "id": "instanceReportProviderGrantStatus",
@@ -764,7 +764,7 @@ export const OPERATIONS = {
     "conditional": false,
     "body": {
       "schema": {
-        "$ref": "#/components/schemas/ProviderGrantStatus"
+        "$ref": "#/components/schemas/ProviderGrantStatusReport"
       },
       "required": true
     },
@@ -774,7 +774,7 @@ export const OPERATIONS = {
     "row": 32,
     "integration": "provider_access",
     "rateLimit": "instance",
-    "status": "not_in_v1"
+    "status": "pinned"
   },
   "instancePutPublicUrl": {
     "id": "instancePutPublicUrl",
@@ -1087,7 +1087,7 @@ export const OPERATIONS = {
     "query": [],
     "auth": "instance",
     "idempotencyKey": "none",
-    "linkHeader": "required",
+    "linkHeader": "optional",
     "conditional": false,
     "body": {
       "schema": {
@@ -1252,7 +1252,7 @@ export const OPERATIONS = {
     "row": 24,
     "integration": null,
     "rateLimit": "public-availability",
-    "status": "not_in_v1"
+    "status": "pinned"
   },
   "ingestStatsReport": {
     "id": "ingestStatsReport",
@@ -1493,7 +1493,8 @@ export const REQUEST_SCHEMAS: { readonly [key: string]: unknown } = {
         "enum": [
           "cloud",
           "self_hosted",
-          "works_app"
+          "works_app",
+          "app"
         ],
         "type": "string"
       },
@@ -1776,31 +1777,40 @@ export const REQUEST_SCHEMAS: { readonly [key: string]: unknown } = {
         ],
         "type": "object"
       },
-      "InstallStatus": {
-        "type": "object",
-        "description": "Reported by the instance that performed an `instance_plugin` install.",
+      "InstallStatusReport": {
+        "additionalProperties": false,
+        "description": "`POST /v1/installs/{install}/status`: what the installation did with a plugin install.",
+        "properties": {
+          "detail": {
+            "description": "Why it failed: `checksum_mismatch`, `incompatible_version`, `installer_disabled`,\n`permission_denied` or `unknown`, optionally followed by a short note (at most 500\ncharacters in all; only the token is kept).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "external_ref": {
+            "description": "The installation's own reference to the installed plugin (at most 128 characters).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "state": {
+            "description": "`installing`, `installed`, `failed` or `removed`.",
+            "type": "string"
+          },
+          "version": {
+            "description": "The version installed (1 to 64 characters).",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
         "required": [
           "state"
         ],
-        "additionalProperties": false,
-        "properties": {
-          "state": {
-            "type": "string",
-            "enum": [
-              "installing",
-              "installed",
-              "failed",
-              "removed"
-            ]
-          },
-          "detail": {
-            "type": "string",
-            "maxLength": 500
-          },
-          "external_ref": {
-            "type": "string"
-          }
-        }
+        "type": "object"
       },
       "InstanceAck": {
         "additionalProperties": false,
@@ -2423,31 +2433,31 @@ export const REQUEST_SCHEMAS: { readonly [key: string]: unknown } = {
         ],
         "type": "object"
       },
-      "ProviderGrantStatus": {
-        "type": "object",
+      "ProviderGrantStatusReport": {
+        "additionalProperties": false,
+        "description": "What the installation did.",
+        "properties": {
+          "grant_id": {
+            "description": "The grant (as in the path).",
+            "type": "string"
+          },
+          "product_user_ref": {
+            "description": "The product's own user (required with `accepted`; never a name or an address).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "description": "`accepted`, `declined`, `revoked` or `expired`.",
+            "type": "string"
+          }
+        },
         "required": [
           "grant_id",
           "status"
         ],
-        "additionalProperties": false,
-        "properties": {
-          "grant_id": {
-            "$ref": "#/components/schemas/Ulid"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "accepted",
-              "declined",
-              "revoked",
-              "expired"
-            ]
-          },
-          "product_user_ref": {
-            "type": "string",
-            "pattern": "^[A-Za-z0-9._:-]{1,128}$"
-          }
-        }
+        "type": "object"
       },
       "PublicUrlPut": {
         "additionalProperties": false,
@@ -2489,7 +2499,7 @@ export const REQUEST_SCHEMAS: { readonly [key: string]: unknown } = {
             ]
           },
           "product": {
-            "description": "The product the installation runs.",
+            "description": "The product the installation runs; an App connects as `app:<app id>` with `kind: app`\nwhere Apps connect.",
             "example": "gauzy",
             "type": "string"
           },

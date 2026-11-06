@@ -2150,7 +2150,7 @@ pub mod entitlement_v1 {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct EntitlementV1EverTenant {
-        pub product: Product,
+        pub product: InstanceProduct,
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub product_org_id: ::std::option::Option<ProductId>,
         pub product_tenant_id: ProductId,
@@ -2212,6 +2212,39 @@ pub mod entitlement_v1 {
             value: ::std::string::String,
         ) -> ::std::result::Result<Self, self::error::ConversionError> {
             value.parse()
+        }
+    }
+    ///A product code, or the App of an App instance's link (app:<app id>).
+    #[derive(
+        ::serde::Deserialize, ::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+    )]
+    #[serde(transparent)]
+    pub struct InstanceProduct(pub ::std::string::String);
+    impl ::std::ops::Deref for InstanceProduct {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<InstanceProduct> for ::std::string::String {
+        fn from(value: InstanceProduct) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<::std::string::String> for InstanceProduct {
+        fn from(value: ::std::string::String) -> Self {
+            Self(value)
+        }
+    }
+    impl ::std::fmt::Display for InstanceProduct {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            self.0.fmt(f)
+        }
+    }
+    impl ::std::str::FromStr for InstanceProduct {
+        type Err = ::std::convert::Infallible;
+        fn from_str(value: &str) -> ::std::result::Result<Self, Self::Err> {
+            Ok(Self(value.to_string()))
         }
     }
     ///`Meter`
@@ -4983,6 +5016,8 @@ pub mod registry_instance_approved_v1 {
         SelfHosted,
         #[serde(rename = "works_app")]
         WorksApp,
+        #[serde(rename = "app")]
+        App,
     }
     impl ::std::fmt::Display for CommonInstanceKind {
         fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
@@ -4990,6 +5025,7 @@ pub mod registry_instance_approved_v1 {
                 Self::Cloud => f.write_str("cloud"),
                 Self::SelfHosted => f.write_str("self_hosted"),
                 Self::WorksApp => f.write_str("works_app"),
+                Self::App => f.write_str("app"),
             }
         }
     }
@@ -5000,6 +5036,7 @@ pub mod registry_instance_approved_v1 {
                 "cloud" => Ok(Self::Cloud),
                 "self_hosted" => Ok(Self::SelfHosted),
                 "works_app" => Ok(Self::WorksApp),
+                "app" => Ok(Self::App),
                 _ => Err("invalid value".into()),
             }
         }
@@ -5016,6 +5053,39 @@ pub mod registry_instance_approved_v1 {
             value: ::std::string::String,
         ) -> ::std::result::Result<Self, self::error::ConversionError> {
             value.parse()
+        }
+    }
+    ///What a connected instance runs: a shipped product, or an App outside the six products (app:<app id>).
+    #[derive(
+        ::serde::Deserialize, ::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+    )]
+    #[serde(transparent)]
+    pub struct CommonInstanceProduct(pub ::std::string::String);
+    impl ::std::ops::Deref for CommonInstanceProduct {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<CommonInstanceProduct> for ::std::string::String {
+        fn from(value: CommonInstanceProduct) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<::std::string::String> for CommonInstanceProduct {
+        fn from(value: ::std::string::String) -> Self {
+            Self(value)
+        }
+    }
+    impl ::std::fmt::Display for CommonInstanceProduct {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            self.0.fmt(f)
+        }
+    }
+    impl ::std::str::FromStr for CommonInstanceProduct {
+        type Err = ::std::convert::Infallible;
+        fn from_str(value: &str) -> ::std::result::Result<Self, Self::Err> {
+            Ok(Self(value.to_string()))
         }
     }
     ///`CommonInstanceStatus`
@@ -5256,7 +5326,7 @@ pub mod registry_instance_approved_v1 {
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub last_seen_bucket: ::std::option::Option<CommonLastSeenBucket>,
         pub org_id: CommonUlid,
-        pub product: CommonProductShipped,
+        pub product: CommonInstanceProduct,
         pub serves_products: ::std::vec::Vec<CommonProductShipped>,
         pub status: CommonInstanceStatus,
     }
@@ -5343,6 +5413,8 @@ pub mod registry_instance_connected_v1 {
         SelfHosted,
         #[serde(rename = "works_app")]
         WorksApp,
+        #[serde(rename = "app")]
+        App,
     }
     impl ::std::fmt::Display for CommonInstanceKind {
         fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
@@ -5350,6 +5422,7 @@ pub mod registry_instance_connected_v1 {
                 Self::Cloud => f.write_str("cloud"),
                 Self::SelfHosted => f.write_str("self_hosted"),
                 Self::WorksApp => f.write_str("works_app"),
+                Self::App => f.write_str("app"),
             }
         }
     }
@@ -5360,6 +5433,7 @@ pub mod registry_instance_connected_v1 {
                 "cloud" => Ok(Self::Cloud),
                 "self_hosted" => Ok(Self::SelfHosted),
                 "works_app" => Ok(Self::WorksApp),
+                "app" => Ok(Self::App),
                 _ => Err("invalid value".into()),
             }
         }
@@ -5376,6 +5450,39 @@ pub mod registry_instance_connected_v1 {
             value: ::std::string::String,
         ) -> ::std::result::Result<Self, self::error::ConversionError> {
             value.parse()
+        }
+    }
+    ///What a connected instance runs: a shipped product, or an App outside the six products (app:<app id>).
+    #[derive(
+        ::serde::Deserialize, ::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+    )]
+    #[serde(transparent)]
+    pub struct CommonInstanceProduct(pub ::std::string::String);
+    impl ::std::ops::Deref for CommonInstanceProduct {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<CommonInstanceProduct> for ::std::string::String {
+        fn from(value: CommonInstanceProduct) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<::std::string::String> for CommonInstanceProduct {
+        fn from(value: ::std::string::String) -> Self {
+            Self(value)
+        }
+    }
+    impl ::std::fmt::Display for CommonInstanceProduct {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            self.0.fmt(f)
+        }
+    }
+    impl ::std::str::FromStr for CommonInstanceProduct {
+        type Err = ::std::convert::Infallible;
+        fn from_str(value: &str) -> ::std::result::Result<Self, Self::Err> {
+            Ok(Self(value.to_string()))
         }
     }
     ///`CommonInstanceStatus`
@@ -5616,7 +5723,7 @@ pub mod registry_instance_connected_v1 {
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub last_seen_bucket: ::std::option::Option<CommonLastSeenBucket>,
         pub org_id: CommonUlid,
-        pub product: CommonProductShipped,
+        pub product: CommonInstanceProduct,
         pub serves_products: ::std::vec::Vec<CommonProductShipped>,
         pub status: CommonInstanceStatus,
     }
@@ -5703,6 +5810,8 @@ pub mod registry_instance_disconnected_v1 {
         SelfHosted,
         #[serde(rename = "works_app")]
         WorksApp,
+        #[serde(rename = "app")]
+        App,
     }
     impl ::std::fmt::Display for CommonInstanceKind {
         fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
@@ -5710,6 +5819,7 @@ pub mod registry_instance_disconnected_v1 {
                 Self::Cloud => f.write_str("cloud"),
                 Self::SelfHosted => f.write_str("self_hosted"),
                 Self::WorksApp => f.write_str("works_app"),
+                Self::App => f.write_str("app"),
             }
         }
     }
@@ -5720,6 +5830,7 @@ pub mod registry_instance_disconnected_v1 {
                 "cloud" => Ok(Self::Cloud),
                 "self_hosted" => Ok(Self::SelfHosted),
                 "works_app" => Ok(Self::WorksApp),
+                "app" => Ok(Self::App),
                 _ => Err("invalid value".into()),
             }
         }
@@ -5736,6 +5847,39 @@ pub mod registry_instance_disconnected_v1 {
             value: ::std::string::String,
         ) -> ::std::result::Result<Self, self::error::ConversionError> {
             value.parse()
+        }
+    }
+    ///What a connected instance runs: a shipped product, or an App outside the six products (app:<app id>).
+    #[derive(
+        ::serde::Deserialize, ::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+    )]
+    #[serde(transparent)]
+    pub struct CommonInstanceProduct(pub ::std::string::String);
+    impl ::std::ops::Deref for CommonInstanceProduct {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<CommonInstanceProduct> for ::std::string::String {
+        fn from(value: CommonInstanceProduct) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<::std::string::String> for CommonInstanceProduct {
+        fn from(value: ::std::string::String) -> Self {
+            Self(value)
+        }
+    }
+    impl ::std::fmt::Display for CommonInstanceProduct {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            self.0.fmt(f)
+        }
+    }
+    impl ::std::str::FromStr for CommonInstanceProduct {
+        type Err = ::std::convert::Infallible;
+        fn from_str(value: &str) -> ::std::result::Result<Self, Self::Err> {
+            Ok(Self(value.to_string()))
         }
     }
     ///`CommonInstanceStatus`
@@ -5976,7 +6120,7 @@ pub mod registry_instance_disconnected_v1 {
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub last_seen_bucket: ::std::option::Option<CommonLastSeenBucket>,
         pub org_id: CommonUlid,
-        pub product: CommonProductShipped,
+        pub product: CommonInstanceProduct,
         pub serves_products: ::std::vec::Vec<CommonProductShipped>,
         pub status: CommonInstanceStatus,
     }
@@ -6063,6 +6207,8 @@ pub mod registry_instance_key_rotated_v1 {
         SelfHosted,
         #[serde(rename = "works_app")]
         WorksApp,
+        #[serde(rename = "app")]
+        App,
     }
     impl ::std::fmt::Display for CommonInstanceKind {
         fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
@@ -6070,6 +6216,7 @@ pub mod registry_instance_key_rotated_v1 {
                 Self::Cloud => f.write_str("cloud"),
                 Self::SelfHosted => f.write_str("self_hosted"),
                 Self::WorksApp => f.write_str("works_app"),
+                Self::App => f.write_str("app"),
             }
         }
     }
@@ -6080,6 +6227,7 @@ pub mod registry_instance_key_rotated_v1 {
                 "cloud" => Ok(Self::Cloud),
                 "self_hosted" => Ok(Self::SelfHosted),
                 "works_app" => Ok(Self::WorksApp),
+                "app" => Ok(Self::App),
                 _ => Err("invalid value".into()),
             }
         }
@@ -6096,6 +6244,39 @@ pub mod registry_instance_key_rotated_v1 {
             value: ::std::string::String,
         ) -> ::std::result::Result<Self, self::error::ConversionError> {
             value.parse()
+        }
+    }
+    ///What a connected instance runs: a shipped product, or an App outside the six products (app:<app id>).
+    #[derive(
+        ::serde::Deserialize, ::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+    )]
+    #[serde(transparent)]
+    pub struct CommonInstanceProduct(pub ::std::string::String);
+    impl ::std::ops::Deref for CommonInstanceProduct {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<CommonInstanceProduct> for ::std::string::String {
+        fn from(value: CommonInstanceProduct) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<::std::string::String> for CommonInstanceProduct {
+        fn from(value: ::std::string::String) -> Self {
+            Self(value)
+        }
+    }
+    impl ::std::fmt::Display for CommonInstanceProduct {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            self.0.fmt(f)
+        }
+    }
+    impl ::std::str::FromStr for CommonInstanceProduct {
+        type Err = ::std::convert::Infallible;
+        fn from_str(value: &str) -> ::std::result::Result<Self, Self::Err> {
+            Ok(Self(value.to_string()))
         }
     }
     ///`CommonInstanceStatus`
@@ -6336,7 +6517,7 @@ pub mod registry_instance_key_rotated_v1 {
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub last_seen_bucket: ::std::option::Option<CommonLastSeenBucket>,
         pub org_id: CommonUlid,
-        pub product: CommonProductShipped,
+        pub product: CommonInstanceProduct,
         pub serves_products: ::std::vec::Vec<CommonProductShipped>,
         pub status: CommonInstanceStatus,
     }
@@ -6423,6 +6604,8 @@ pub mod registry_instance_revoked_v1 {
         SelfHosted,
         #[serde(rename = "works_app")]
         WorksApp,
+        #[serde(rename = "app")]
+        App,
     }
     impl ::std::fmt::Display for CommonInstanceKind {
         fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
@@ -6430,6 +6613,7 @@ pub mod registry_instance_revoked_v1 {
                 Self::Cloud => f.write_str("cloud"),
                 Self::SelfHosted => f.write_str("self_hosted"),
                 Self::WorksApp => f.write_str("works_app"),
+                Self::App => f.write_str("app"),
             }
         }
     }
@@ -6440,6 +6624,7 @@ pub mod registry_instance_revoked_v1 {
                 "cloud" => Ok(Self::Cloud),
                 "self_hosted" => Ok(Self::SelfHosted),
                 "works_app" => Ok(Self::WorksApp),
+                "app" => Ok(Self::App),
                 _ => Err("invalid value".into()),
             }
         }
@@ -6456,6 +6641,39 @@ pub mod registry_instance_revoked_v1 {
             value: ::std::string::String,
         ) -> ::std::result::Result<Self, self::error::ConversionError> {
             value.parse()
+        }
+    }
+    ///What a connected instance runs: a shipped product, or an App outside the six products (app:<app id>).
+    #[derive(
+        ::serde::Deserialize, ::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+    )]
+    #[serde(transparent)]
+    pub struct CommonInstanceProduct(pub ::std::string::String);
+    impl ::std::ops::Deref for CommonInstanceProduct {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<CommonInstanceProduct> for ::std::string::String {
+        fn from(value: CommonInstanceProduct) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<::std::string::String> for CommonInstanceProduct {
+        fn from(value: ::std::string::String) -> Self {
+            Self(value)
+        }
+    }
+    impl ::std::fmt::Display for CommonInstanceProduct {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            self.0.fmt(f)
+        }
+    }
+    impl ::std::str::FromStr for CommonInstanceProduct {
+        type Err = ::std::convert::Infallible;
+        fn from_str(value: &str) -> ::std::result::Result<Self, Self::Err> {
+            Ok(Self(value.to_string()))
         }
     }
     ///`CommonInstanceStatus`
@@ -6696,7 +6914,7 @@ pub mod registry_instance_revoked_v1 {
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub last_seen_bucket: ::std::option::Option<CommonLastSeenBucket>,
         pub org_id: CommonUlid,
-        pub product: CommonProductShipped,
+        pub product: CommonInstanceProduct,
         pub serves_products: ::std::vec::Vec<CommonProductShipped>,
         pub status: CommonInstanceStatus,
     }
@@ -6783,6 +7001,8 @@ pub mod registry_instance_seen_v1 {
         SelfHosted,
         #[serde(rename = "works_app")]
         WorksApp,
+        #[serde(rename = "app")]
+        App,
     }
     impl ::std::fmt::Display for CommonInstanceKind {
         fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
@@ -6790,6 +7010,7 @@ pub mod registry_instance_seen_v1 {
                 Self::Cloud => f.write_str("cloud"),
                 Self::SelfHosted => f.write_str("self_hosted"),
                 Self::WorksApp => f.write_str("works_app"),
+                Self::App => f.write_str("app"),
             }
         }
     }
@@ -6800,6 +7021,7 @@ pub mod registry_instance_seen_v1 {
                 "cloud" => Ok(Self::Cloud),
                 "self_hosted" => Ok(Self::SelfHosted),
                 "works_app" => Ok(Self::WorksApp),
+                "app" => Ok(Self::App),
                 _ => Err("invalid value".into()),
             }
         }
@@ -6816,6 +7038,39 @@ pub mod registry_instance_seen_v1 {
             value: ::std::string::String,
         ) -> ::std::result::Result<Self, self::error::ConversionError> {
             value.parse()
+        }
+    }
+    ///What a connected instance runs: a shipped product, or an App outside the six products (app:<app id>).
+    #[derive(
+        ::serde::Deserialize, ::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+    )]
+    #[serde(transparent)]
+    pub struct CommonInstanceProduct(pub ::std::string::String);
+    impl ::std::ops::Deref for CommonInstanceProduct {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<CommonInstanceProduct> for ::std::string::String {
+        fn from(value: CommonInstanceProduct) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<::std::string::String> for CommonInstanceProduct {
+        fn from(value: ::std::string::String) -> Self {
+            Self(value)
+        }
+    }
+    impl ::std::fmt::Display for CommonInstanceProduct {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            self.0.fmt(f)
+        }
+    }
+    impl ::std::str::FromStr for CommonInstanceProduct {
+        type Err = ::std::convert::Infallible;
+        fn from_str(value: &str) -> ::std::result::Result<Self, Self::Err> {
+            Ok(Self(value.to_string()))
         }
     }
     ///`CommonInstanceStatus`
@@ -7056,7 +7311,7 @@ pub mod registry_instance_seen_v1 {
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub last_seen_bucket: ::std::option::Option<CommonLastSeenBucket>,
         pub org_id: CommonUlid,
-        pub product: CommonProductShipped,
+        pub product: CommonInstanceProduct,
         pub serves_products: ::std::vec::Vec<CommonProductShipped>,
         pub status: CommonInstanceStatus,
     }
@@ -8761,6 +9016,39 @@ pub mod registry_person_export_requested_v1 {
 
 /// Data of the `ever.registry.tenant_link.created` event (`contracts/schemas/events/ever.registry.tenant_link.created.v1.schema.json`).
 pub mod registry_tenant_link_created_v1 {
+    ///What a connected instance runs: a shipped product, or an App outside the six products (app:<app id>).
+    #[derive(
+        ::serde::Deserialize, ::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+    )]
+    #[serde(transparent)]
+    pub struct CommonInstanceProduct(pub ::std::string::String);
+    impl ::std::ops::Deref for CommonInstanceProduct {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<CommonInstanceProduct> for ::std::string::String {
+        fn from(value: CommonInstanceProduct) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<::std::string::String> for CommonInstanceProduct {
+        fn from(value: ::std::string::String) -> Self {
+            Self(value)
+        }
+    }
+    impl ::std::fmt::Display for CommonInstanceProduct {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            self.0.fmt(f)
+        }
+    }
+    impl ::std::str::FromStr for CommonInstanceProduct {
+        type Err = ::std::convert::Infallible;
+        fn from_str(value: &str) -> ::std::result::Result<Self, Self::Err> {
+            Ok(Self(value.to_string()))
+        }
+    }
     ///A tenant link's state, as the API's TenantLink.state.
     #[derive(
         ::serde::Deserialize,
@@ -8853,69 +9141,6 @@ pub mod registry_tenant_link_created_v1 {
             Ok(Self(value.to_string()))
         }
     }
-    ///`CommonProductShipped`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum CommonProductShipped {
-        #[serde(rename = "gauzy")]
-        Gauzy,
-        #[serde(rename = "teams")]
-        Teams,
-        #[serde(rename = "works")]
-        Works,
-        #[serde(rename = "rec")]
-        Rec,
-        #[serde(rename = "traduora")]
-        Traduora,
-    }
-    impl ::std::fmt::Display for CommonProductShipped {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Gauzy => f.write_str("gauzy"),
-                Self::Teams => f.write_str("teams"),
-                Self::Works => f.write_str("works"),
-                Self::Rec => f.write_str("rec"),
-                Self::Traduora => f.write_str("traduora"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for CommonProductShipped {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "gauzy" => Ok(Self::Gauzy),
-                "teams" => Ok(Self::Teams),
-                "works" => Ok(Self::Works),
-                "rec" => Ok(Self::Rec),
-                "traduora" => Ok(Self::Traduora),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for CommonProductShipped {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for CommonProductShipped {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
     ///`CommonUlid`
     #[derive(
         ::serde::Deserialize, ::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
@@ -8957,7 +9182,7 @@ pub mod registry_tenant_link_created_v1 {
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub link_method: ::std::option::Option<EverRegistryTenantLinkCreatedV1LinkMethod>,
         pub org_id: CommonUlid,
-        pub product: CommonProductShipped,
+        pub product: CommonInstanceProduct,
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub product_org_id: ::std::option::Option<CommonProductId>,
         pub product_tenant_id: CommonProductId,
@@ -9057,6 +9282,39 @@ pub mod registry_tenant_link_created_v1 {
 
 /// Data of the `ever.registry.tenant_link.orphaned` event (`contracts/schemas/events/ever.registry.tenant_link.orphaned.v1.schema.json`).
 pub mod registry_tenant_link_orphaned_v1 {
+    ///What a connected instance runs: a shipped product, or an App outside the six products (app:<app id>).
+    #[derive(
+        ::serde::Deserialize, ::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+    )]
+    #[serde(transparent)]
+    pub struct CommonInstanceProduct(pub ::std::string::String);
+    impl ::std::ops::Deref for CommonInstanceProduct {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<CommonInstanceProduct> for ::std::string::String {
+        fn from(value: CommonInstanceProduct) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<::std::string::String> for CommonInstanceProduct {
+        fn from(value: ::std::string::String) -> Self {
+            Self(value)
+        }
+    }
+    impl ::std::fmt::Display for CommonInstanceProduct {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            self.0.fmt(f)
+        }
+    }
+    impl ::std::str::FromStr for CommonInstanceProduct {
+        type Err = ::std::convert::Infallible;
+        fn from_str(value: &str) -> ::std::result::Result<Self, Self::Err> {
+            Ok(Self(value.to_string()))
+        }
+    }
     ///A tenant link's state, as the API's TenantLink.state.
     #[derive(
         ::serde::Deserialize,
@@ -9149,69 +9407,6 @@ pub mod registry_tenant_link_orphaned_v1 {
             Ok(Self(value.to_string()))
         }
     }
-    ///`CommonProductShipped`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum CommonProductShipped {
-        #[serde(rename = "gauzy")]
-        Gauzy,
-        #[serde(rename = "teams")]
-        Teams,
-        #[serde(rename = "works")]
-        Works,
-        #[serde(rename = "rec")]
-        Rec,
-        #[serde(rename = "traduora")]
-        Traduora,
-    }
-    impl ::std::fmt::Display for CommonProductShipped {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Gauzy => f.write_str("gauzy"),
-                Self::Teams => f.write_str("teams"),
-                Self::Works => f.write_str("works"),
-                Self::Rec => f.write_str("rec"),
-                Self::Traduora => f.write_str("traduora"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for CommonProductShipped {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "gauzy" => Ok(Self::Gauzy),
-                "teams" => Ok(Self::Teams),
-                "works" => Ok(Self::Works),
-                "rec" => Ok(Self::Rec),
-                "traduora" => Ok(Self::Traduora),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for CommonProductShipped {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for CommonProductShipped {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
     ///`CommonUlid`
     #[derive(
         ::serde::Deserialize, ::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
@@ -9253,7 +9448,7 @@ pub mod registry_tenant_link_orphaned_v1 {
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub link_method: ::std::option::Option<EverRegistryTenantLinkOrphanedV1LinkMethod>,
         pub org_id: CommonUlid,
-        pub product: CommonProductShipped,
+        pub product: CommonInstanceProduct,
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub product_org_id: ::std::option::Option<CommonProductId>,
         pub product_tenant_id: CommonProductId,
@@ -9353,6 +9548,39 @@ pub mod registry_tenant_link_orphaned_v1 {
 
 /// Data of the `ever.registry.tenant_link.resumed` event (`contracts/schemas/events/ever.registry.tenant_link.resumed.v1.schema.json`).
 pub mod registry_tenant_link_resumed_v1 {
+    ///What a connected instance runs: a shipped product, or an App outside the six products (app:<app id>).
+    #[derive(
+        ::serde::Deserialize, ::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+    )]
+    #[serde(transparent)]
+    pub struct CommonInstanceProduct(pub ::std::string::String);
+    impl ::std::ops::Deref for CommonInstanceProduct {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<CommonInstanceProduct> for ::std::string::String {
+        fn from(value: CommonInstanceProduct) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<::std::string::String> for CommonInstanceProduct {
+        fn from(value: ::std::string::String) -> Self {
+            Self(value)
+        }
+    }
+    impl ::std::fmt::Display for CommonInstanceProduct {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            self.0.fmt(f)
+        }
+    }
+    impl ::std::str::FromStr for CommonInstanceProduct {
+        type Err = ::std::convert::Infallible;
+        fn from_str(value: &str) -> ::std::result::Result<Self, Self::Err> {
+            Ok(Self(value.to_string()))
+        }
+    }
     ///A tenant link's state, as the API's TenantLink.state.
     #[derive(
         ::serde::Deserialize,
@@ -9445,69 +9673,6 @@ pub mod registry_tenant_link_resumed_v1 {
             Ok(Self(value.to_string()))
         }
     }
-    ///`CommonProductShipped`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum CommonProductShipped {
-        #[serde(rename = "gauzy")]
-        Gauzy,
-        #[serde(rename = "teams")]
-        Teams,
-        #[serde(rename = "works")]
-        Works,
-        #[serde(rename = "rec")]
-        Rec,
-        #[serde(rename = "traduora")]
-        Traduora,
-    }
-    impl ::std::fmt::Display for CommonProductShipped {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Gauzy => f.write_str("gauzy"),
-                Self::Teams => f.write_str("teams"),
-                Self::Works => f.write_str("works"),
-                Self::Rec => f.write_str("rec"),
-                Self::Traduora => f.write_str("traduora"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for CommonProductShipped {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "gauzy" => Ok(Self::Gauzy),
-                "teams" => Ok(Self::Teams),
-                "works" => Ok(Self::Works),
-                "rec" => Ok(Self::Rec),
-                "traduora" => Ok(Self::Traduora),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for CommonProductShipped {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for CommonProductShipped {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
     ///`CommonUlid`
     #[derive(
         ::serde::Deserialize, ::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
@@ -9549,7 +9714,7 @@ pub mod registry_tenant_link_resumed_v1 {
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub link_method: ::std::option::Option<EverRegistryTenantLinkResumedV1LinkMethod>,
         pub org_id: CommonUlid,
-        pub product: CommonProductShipped,
+        pub product: CommonInstanceProduct,
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub product_org_id: ::std::option::Option<CommonProductId>,
         pub product_tenant_id: CommonProductId,
@@ -9649,6 +9814,39 @@ pub mod registry_tenant_link_resumed_v1 {
 
 /// Data of the `ever.registry.tenant_link.suspended` event (`contracts/schemas/events/ever.registry.tenant_link.suspended.v1.schema.json`).
 pub mod registry_tenant_link_suspended_v1 {
+    ///What a connected instance runs: a shipped product, or an App outside the six products (app:<app id>).
+    #[derive(
+        ::serde::Deserialize, ::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+    )]
+    #[serde(transparent)]
+    pub struct CommonInstanceProduct(pub ::std::string::String);
+    impl ::std::ops::Deref for CommonInstanceProduct {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<CommonInstanceProduct> for ::std::string::String {
+        fn from(value: CommonInstanceProduct) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<::std::string::String> for CommonInstanceProduct {
+        fn from(value: ::std::string::String) -> Self {
+            Self(value)
+        }
+    }
+    impl ::std::fmt::Display for CommonInstanceProduct {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            self.0.fmt(f)
+        }
+    }
+    impl ::std::str::FromStr for CommonInstanceProduct {
+        type Err = ::std::convert::Infallible;
+        fn from_str(value: &str) -> ::std::result::Result<Self, Self::Err> {
+            Ok(Self(value.to_string()))
+        }
+    }
     ///A tenant link's state, as the API's TenantLink.state.
     #[derive(
         ::serde::Deserialize,
@@ -9741,69 +9939,6 @@ pub mod registry_tenant_link_suspended_v1 {
             Ok(Self(value.to_string()))
         }
     }
-    ///`CommonProductShipped`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum CommonProductShipped {
-        #[serde(rename = "gauzy")]
-        Gauzy,
-        #[serde(rename = "teams")]
-        Teams,
-        #[serde(rename = "works")]
-        Works,
-        #[serde(rename = "rec")]
-        Rec,
-        #[serde(rename = "traduora")]
-        Traduora,
-    }
-    impl ::std::fmt::Display for CommonProductShipped {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Gauzy => f.write_str("gauzy"),
-                Self::Teams => f.write_str("teams"),
-                Self::Works => f.write_str("works"),
-                Self::Rec => f.write_str("rec"),
-                Self::Traduora => f.write_str("traduora"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for CommonProductShipped {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "gauzy" => Ok(Self::Gauzy),
-                "teams" => Ok(Self::Teams),
-                "works" => Ok(Self::Works),
-                "rec" => Ok(Self::Rec),
-                "traduora" => Ok(Self::Traduora),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for CommonProductShipped {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for CommonProductShipped {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
     ///`CommonUlid`
     #[derive(
         ::serde::Deserialize, ::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
@@ -9845,7 +9980,7 @@ pub mod registry_tenant_link_suspended_v1 {
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub link_method: ::std::option::Option<EverRegistryTenantLinkSuspendedV1LinkMethod>,
         pub org_id: CommonUlid,
-        pub product: CommonProductShipped,
+        pub product: CommonInstanceProduct,
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub product_org_id: ::std::option::Option<CommonProductId>,
         pub product_tenant_id: CommonProductId,
@@ -9947,6 +10082,39 @@ pub mod registry_tenant_link_suspended_v1 {
 
 /// Data of the `ever.registry.tenant_link.unlinked` event (`contracts/schemas/events/ever.registry.tenant_link.unlinked.v1.schema.json`).
 pub mod registry_tenant_link_unlinked_v1 {
+    ///What a connected instance runs: a shipped product, or an App outside the six products (app:<app id>).
+    #[derive(
+        ::serde::Deserialize, ::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+    )]
+    #[serde(transparent)]
+    pub struct CommonInstanceProduct(pub ::std::string::String);
+    impl ::std::ops::Deref for CommonInstanceProduct {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<CommonInstanceProduct> for ::std::string::String {
+        fn from(value: CommonInstanceProduct) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<::std::string::String> for CommonInstanceProduct {
+        fn from(value: ::std::string::String) -> Self {
+            Self(value)
+        }
+    }
+    impl ::std::fmt::Display for CommonInstanceProduct {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            self.0.fmt(f)
+        }
+    }
+    impl ::std::str::FromStr for CommonInstanceProduct {
+        type Err = ::std::convert::Infallible;
+        fn from_str(value: &str) -> ::std::result::Result<Self, Self::Err> {
+            Ok(Self(value.to_string()))
+        }
+    }
     ///A tenant link's state, as the API's TenantLink.state.
     #[derive(
         ::serde::Deserialize,
@@ -10039,69 +10207,6 @@ pub mod registry_tenant_link_unlinked_v1 {
             Ok(Self(value.to_string()))
         }
     }
-    ///`CommonProductShipped`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum CommonProductShipped {
-        #[serde(rename = "gauzy")]
-        Gauzy,
-        #[serde(rename = "teams")]
-        Teams,
-        #[serde(rename = "works")]
-        Works,
-        #[serde(rename = "rec")]
-        Rec,
-        #[serde(rename = "traduora")]
-        Traduora,
-    }
-    impl ::std::fmt::Display for CommonProductShipped {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Gauzy => f.write_str("gauzy"),
-                Self::Teams => f.write_str("teams"),
-                Self::Works => f.write_str("works"),
-                Self::Rec => f.write_str("rec"),
-                Self::Traduora => f.write_str("traduora"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for CommonProductShipped {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "gauzy" => Ok(Self::Gauzy),
-                "teams" => Ok(Self::Teams),
-                "works" => Ok(Self::Works),
-                "rec" => Ok(Self::Rec),
-                "traduora" => Ok(Self::Traduora),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for CommonProductShipped {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for CommonProductShipped {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
     ///`CommonUlid`
     #[derive(
         ::serde::Deserialize, ::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
@@ -10143,7 +10248,7 @@ pub mod registry_tenant_link_unlinked_v1 {
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub link_method: ::std::option::Option<EverRegistryTenantLinkUnlinkedV1LinkMethod>,
         pub org_id: CommonUlid,
-        pub product: CommonProductShipped,
+        pub product: CommonInstanceProduct,
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub product_org_id: ::std::option::Option<CommonProductId>,
         pub product_tenant_id: CommonProductId,

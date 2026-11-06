@@ -24,7 +24,7 @@
       "$ref": "common.schema.json#/$defs/ulid"
     },
     "product": {
-      "$ref": "common.schema.json#/$defs/product_shipped"
+      "$ref": "common.schema.json#/$defs/instance_product"
     },
     "product_tenant_id": {
       "$ref": "common.schema.json#/$defs/product_id"

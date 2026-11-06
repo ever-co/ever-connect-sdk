@@ -22,7 +22,7 @@
       "$ref": "common.schema.json#/$defs/ulid"
     },
     "product": {
-      "$ref": "common.schema.json#/$defs/product_shipped"
+      "$ref": "common.schema.json#/$defs/instance_product"
     },
     "serves_products": {
       "type": "array",

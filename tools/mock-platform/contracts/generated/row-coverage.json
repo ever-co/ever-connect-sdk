@@ -1330,6 +1330,11 @@
           "status": 409,
           "code": "illegal_transition",
           "documented": true
+        },
+        {
+          "status": 409,
+          "code": "grant_not_accepted",
+          "documented": true
         }
       ]
     },

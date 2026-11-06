@@ -1194,7 +1194,16 @@ export const ERRORS = {
   ...integrationPairs(32, 'provider_access', calls.grant),
   '32:409:illegal_transition': async (env) => {
     const c = await connected(env, { enable: ['provider_access'] });
-    const { grant_id } = await env.admin('provider-grant', { status: 'invited' });
+    const { grant_id } = await env.admin('provider-grant', { status: 'revoked' });
+    return env.call('POST', `/v1/instances/me/provider-grants/${grant_id}/status`, {
+      token: c.token,
+      headers: linkHeader(c),
+      body: { grant_id, status: 'accepted', product_user_ref: 'user-2' },
+    });
+  },
+  '32:409:grant_not_accepted': async (env) => {
+    const c = await connected(env, { enable: ['provider_access'] });
+    const { grant_id } = await env.admin('provider-grant', { status: 'requested' });
     return env.call('GET', `/v1/instances/me/provider-grants/${grant_id}`, { token: c.token, headers: linkHeader(c) });
   },
   '33:403:step_up_required': async (env) => {

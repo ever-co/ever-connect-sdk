@@ -474,7 +474,7 @@ export type EntitlementV1 = {
     instance_id?: EntitlementV1Ulid;
     tenant_link_id?: EntitlementV1Ulid;
     tenant?: {
-      product: EntitlementV1Product;
+      product: EntitlementV1InstanceProduct;
       product_tenant_id: EntitlementV1ProductId;
       product_org_id?: EntitlementV1ProductId;
     };
@@ -550,6 +550,10 @@ export type EntitlementV1 = {
   };
 };
 export type EntitlementV1Ulid = string;
+/**
+ * A product code, or the App of an App instance's link (app:<app id>).
+ */
+export type EntitlementV1InstanceProduct = EntitlementV1Product | string;
 export type EntitlementV1Product = 'gauzy' | 'teams' | 'works' | 'rec' | 'traduora' | 'demand';
 export type EntitlementV1ProductId = string;
 
@@ -1040,9 +1044,13 @@ export interface EverEntitlementsUsageLimitReachedV1CommonEntitlementSubject {
 }
 
 export type EverRegistryInstanceApprovedV1CommonUlid = string;
+/**
+ * What a connected instance runs: a shipped product, or an App outside the six products (app:<app id>).
+ */
+export type EverRegistryInstanceApprovedV1CommonInstanceProduct = ('gauzy' | 'teams' | 'works' | 'rec' | 'traduora') | string;
 export type EverRegistryInstanceApprovedV1CommonProductShipped = 'gauzy' | 'teams' | 'works' | 'rec' | 'traduora';
 export type EverRegistryInstanceApprovedV1CommonInstallSource = string;
-export type EverRegistryInstanceApprovedV1CommonInstanceKind = 'cloud' | 'self_hosted' | 'works_app';
+export type EverRegistryInstanceApprovedV1CommonInstanceKind = 'cloud' | 'self_hosted' | 'works_app' | 'app';
 export type EverRegistryInstanceApprovedV1CommonInstanceStatus = 'active' | 'pending_approval' | 'disconnected' | 'revoked';
 export type EverRegistryInstanceApprovedV1CommonLastSeenBucket =
   'now' | 'lt_1h' | 'lt_24h' | 'lt_7d' | 'lt_30d' | 'gt_30d' | 'never';
@@ -1053,7 +1061,7 @@ export type EverRegistryInstanceApprovedV1CommonLastSeenBucket =
 export interface EverRegistryInstanceApprovedV1 {
   instance_id: EverRegistryInstanceApprovedV1CommonUlid;
   org_id: EverRegistryInstanceApprovedV1CommonUlid;
-  product: EverRegistryInstanceApprovedV1CommonProductShipped;
+  product: EverRegistryInstanceApprovedV1CommonInstanceProduct;
   /**
    * @maxItems 5
    */
@@ -1078,9 +1086,13 @@ export interface EverRegistryInstanceApprovedV1 {
 }
 
 export type EverRegistryInstanceConnectedV1CommonUlid = string;
+/**
+ * What a connected instance runs: a shipped product, or an App outside the six products (app:<app id>).
+ */
+export type EverRegistryInstanceConnectedV1CommonInstanceProduct = ('gauzy' | 'teams' | 'works' | 'rec' | 'traduora') | string;
 export type EverRegistryInstanceConnectedV1CommonProductShipped = 'gauzy' | 'teams' | 'works' | 'rec' | 'traduora';
 export type EverRegistryInstanceConnectedV1CommonInstallSource = string;
-export type EverRegistryInstanceConnectedV1CommonInstanceKind = 'cloud' | 'self_hosted' | 'works_app';
+export type EverRegistryInstanceConnectedV1CommonInstanceKind = 'cloud' | 'self_hosted' | 'works_app' | 'app';
 export type EverRegistryInstanceConnectedV1CommonInstanceStatus = 'active' | 'pending_approval' | 'disconnected' | 'revoked';
 export type EverRegistryInstanceConnectedV1CommonLastSeenBucket =
   'now' | 'lt_1h' | 'lt_24h' | 'lt_7d' | 'lt_30d' | 'gt_30d' | 'never';
@@ -1091,7 +1103,7 @@ export type EverRegistryInstanceConnectedV1CommonLastSeenBucket =
 export interface EverRegistryInstanceConnectedV1 {
   instance_id: EverRegistryInstanceConnectedV1CommonUlid;
   org_id: EverRegistryInstanceConnectedV1CommonUlid;
-  product: EverRegistryInstanceConnectedV1CommonProductShipped;
+  product: EverRegistryInstanceConnectedV1CommonInstanceProduct;
   /**
    * @maxItems 5
    */
@@ -1116,9 +1128,13 @@ export interface EverRegistryInstanceConnectedV1 {
 }
 
 export type EverRegistryInstanceDisconnectedV1CommonUlid = string;
+/**
+ * What a connected instance runs: a shipped product, or an App outside the six products (app:<app id>).
+ */
+export type EverRegistryInstanceDisconnectedV1CommonInstanceProduct = ('gauzy' | 'teams' | 'works' | 'rec' | 'traduora') | string;
 export type EverRegistryInstanceDisconnectedV1CommonProductShipped = 'gauzy' | 'teams' | 'works' | 'rec' | 'traduora';
 export type EverRegistryInstanceDisconnectedV1CommonInstallSource = string;
-export type EverRegistryInstanceDisconnectedV1CommonInstanceKind = 'cloud' | 'self_hosted' | 'works_app';
+export type EverRegistryInstanceDisconnectedV1CommonInstanceKind = 'cloud' | 'self_hosted' | 'works_app' | 'app';
 export type EverRegistryInstanceDisconnectedV1CommonInstanceStatus = 'active' | 'pending_approval' | 'disconnected' | 'revoked';
 export type EverRegistryInstanceDisconnectedV1CommonLastSeenBucket =
   'now' | 'lt_1h' | 'lt_24h' | 'lt_7d' | 'lt_30d' | 'gt_30d' | 'never';
@@ -1129,7 +1145,7 @@ export type EverRegistryInstanceDisconnectedV1CommonLastSeenBucket =
 export interface EverRegistryInstanceDisconnectedV1 {
   instance_id: EverRegistryInstanceDisconnectedV1CommonUlid;
   org_id: EverRegistryInstanceDisconnectedV1CommonUlid;
-  product: EverRegistryInstanceDisconnectedV1CommonProductShipped;
+  product: EverRegistryInstanceDisconnectedV1CommonInstanceProduct;
   /**
    * @maxItems 5
    */
@@ -1154,9 +1170,13 @@ export interface EverRegistryInstanceDisconnectedV1 {
 }
 
 export type EverRegistryInstanceKeyRotatedV1CommonUlid = string;
+/**
+ * What a connected instance runs: a shipped product, or an App outside the six products (app:<app id>).
+ */
+export type EverRegistryInstanceKeyRotatedV1CommonInstanceProduct = ('gauzy' | 'teams' | 'works' | 'rec' | 'traduora') | string;
 export type EverRegistryInstanceKeyRotatedV1CommonProductShipped = 'gauzy' | 'teams' | 'works' | 'rec' | 'traduora';
 export type EverRegistryInstanceKeyRotatedV1CommonInstallSource = string;
-export type EverRegistryInstanceKeyRotatedV1CommonInstanceKind = 'cloud' | 'self_hosted' | 'works_app';
+export type EverRegistryInstanceKeyRotatedV1CommonInstanceKind = 'cloud' | 'self_hosted' | 'works_app' | 'app';
 export type EverRegistryInstanceKeyRotatedV1CommonInstanceStatus = 'active' | 'pending_approval' | 'disconnected' | 'revoked';
 export type EverRegistryInstanceKeyRotatedV1CommonLastSeenBucket =
   'now' | 'lt_1h' | 'lt_24h' | 'lt_7d' | 'lt_30d' | 'gt_30d' | 'never';
@@ -1167,7 +1187,7 @@ export type EverRegistryInstanceKeyRotatedV1CommonLastSeenBucket =
 export interface EverRegistryInstanceKeyRotatedV1 {
   instance_id: EverRegistryInstanceKeyRotatedV1CommonUlid;
   org_id: EverRegistryInstanceKeyRotatedV1CommonUlid;
-  product: EverRegistryInstanceKeyRotatedV1CommonProductShipped;
+  product: EverRegistryInstanceKeyRotatedV1CommonInstanceProduct;
   /**
    * @maxItems 5
    */
@@ -1192,9 +1212,13 @@ export interface EverRegistryInstanceKeyRotatedV1 {
 }
 
 export type EverRegistryInstanceRevokedV1CommonUlid = string;
+/**
+ * What a connected instance runs: a shipped product, or an App outside the six products (app:<app id>).
+ */
+export type EverRegistryInstanceRevokedV1CommonInstanceProduct = ('gauzy' | 'teams' | 'works' | 'rec' | 'traduora') | string;
 export type EverRegistryInstanceRevokedV1CommonProductShipped = 'gauzy' | 'teams' | 'works' | 'rec' | 'traduora';
 export type EverRegistryInstanceRevokedV1CommonInstallSource = string;
-export type EverRegistryInstanceRevokedV1CommonInstanceKind = 'cloud' | 'self_hosted' | 'works_app';
+export type EverRegistryInstanceRevokedV1CommonInstanceKind = 'cloud' | 'self_hosted' | 'works_app' | 'app';
 export type EverRegistryInstanceRevokedV1CommonInstanceStatus = 'active' | 'pending_approval' | 'disconnected' | 'revoked';
 export type EverRegistryInstanceRevokedV1CommonLastSeenBucket =
   'now' | 'lt_1h' | 'lt_24h' | 'lt_7d' | 'lt_30d' | 'gt_30d' | 'never';
@@ -1205,7 +1229,7 @@ export type EverRegistryInstanceRevokedV1CommonLastSeenBucket =
 export interface EverRegistryInstanceRevokedV1 {
   instance_id: EverRegistryInstanceRevokedV1CommonUlid;
   org_id: EverRegistryInstanceRevokedV1CommonUlid;
-  product: EverRegistryInstanceRevokedV1CommonProductShipped;
+  product: EverRegistryInstanceRevokedV1CommonInstanceProduct;
   /**
    * @maxItems 5
    */
@@ -1230,9 +1254,13 @@ export interface EverRegistryInstanceRevokedV1 {
 }
 
 export type EverRegistryInstanceSeenV1CommonUlid = string;
+/**
+ * What a connected instance runs: a shipped product, or an App outside the six products (app:<app id>).
+ */
+export type EverRegistryInstanceSeenV1CommonInstanceProduct = ('gauzy' | 'teams' | 'works' | 'rec' | 'traduora') | string;
 export type EverRegistryInstanceSeenV1CommonProductShipped = 'gauzy' | 'teams' | 'works' | 'rec' | 'traduora';
 export type EverRegistryInstanceSeenV1CommonInstallSource = string;
-export type EverRegistryInstanceSeenV1CommonInstanceKind = 'cloud' | 'self_hosted' | 'works_app';
+export type EverRegistryInstanceSeenV1CommonInstanceKind = 'cloud' | 'self_hosted' | 'works_app' | 'app';
 export type EverRegistryInstanceSeenV1CommonInstanceStatus = 'active' | 'pending_approval' | 'disconnected' | 'revoked';
 export type EverRegistryInstanceSeenV1CommonLastSeenBucket =
   'now' | 'lt_1h' | 'lt_24h' | 'lt_7d' | 'lt_30d' | 'gt_30d' | 'never';
@@ -1243,7 +1271,7 @@ export type EverRegistryInstanceSeenV1CommonLastSeenBucket =
 export interface EverRegistryInstanceSeenV1 {
   instance_id: EverRegistryInstanceSeenV1CommonUlid;
   org_id: EverRegistryInstanceSeenV1CommonUlid;
-  product: EverRegistryInstanceSeenV1CommonProductShipped;
+  product: EverRegistryInstanceSeenV1CommonInstanceProduct;
   /**
    * @maxItems 5
    */
@@ -1454,7 +1482,10 @@ export interface EverRegistryPersonExportRequestedV1 {
 }
 
 export type EverRegistryTenantLinkCreatedV1CommonUlid = string;
-export type EverRegistryTenantLinkCreatedV1CommonProductShipped = 'gauzy' | 'teams' | 'works' | 'rec' | 'traduora';
+/**
+ * What a connected instance runs: a shipped product, or an App outside the six products (app:<app id>).
+ */
+export type EverRegistryTenantLinkCreatedV1CommonInstanceProduct = ('gauzy' | 'teams' | 'works' | 'rec' | 'traduora') | string;
 /**
  * product-side identifier (uuid, slug or '*'); an id, never a name
  */
@@ -1471,7 +1502,7 @@ export interface EverRegistryTenantLinkCreatedV1 {
   tenant_link_id: EverRegistryTenantLinkCreatedV1CommonUlid;
   org_id: EverRegistryTenantLinkCreatedV1CommonUlid;
   instance_id: EverRegistryTenantLinkCreatedV1CommonUlid;
-  product: EverRegistryTenantLinkCreatedV1CommonProductShipped;
+  product: EverRegistryTenantLinkCreatedV1CommonInstanceProduct;
   product_tenant_id: EverRegistryTenantLinkCreatedV1CommonProductId;
   product_org_id?: EverRegistryTenantLinkCreatedV1CommonProductId;
   state: EverRegistryTenantLinkCreatedV1CommonLinkState;
@@ -1479,7 +1510,10 @@ export interface EverRegistryTenantLinkCreatedV1 {
 }
 
 export type EverRegistryTenantLinkOrphanedV1CommonUlid = string;
-export type EverRegistryTenantLinkOrphanedV1CommonProductShipped = 'gauzy' | 'teams' | 'works' | 'rec' | 'traduora';
+/**
+ * What a connected instance runs: a shipped product, or an App outside the six products (app:<app id>).
+ */
+export type EverRegistryTenantLinkOrphanedV1CommonInstanceProduct = ('gauzy' | 'teams' | 'works' | 'rec' | 'traduora') | string;
 /**
  * product-side identifier (uuid, slug or '*'); an id, never a name
  */
@@ -1496,7 +1530,7 @@ export interface EverRegistryTenantLinkOrphanedV1 {
   tenant_link_id: EverRegistryTenantLinkOrphanedV1CommonUlid;
   org_id: EverRegistryTenantLinkOrphanedV1CommonUlid;
   instance_id: EverRegistryTenantLinkOrphanedV1CommonUlid;
-  product: EverRegistryTenantLinkOrphanedV1CommonProductShipped;
+  product: EverRegistryTenantLinkOrphanedV1CommonInstanceProduct;
   product_tenant_id: EverRegistryTenantLinkOrphanedV1CommonProductId;
   product_org_id?: EverRegistryTenantLinkOrphanedV1CommonProductId;
   state: EverRegistryTenantLinkOrphanedV1CommonLinkState;
@@ -1504,7 +1538,10 @@ export interface EverRegistryTenantLinkOrphanedV1 {
 }
 
 export type EverRegistryTenantLinkResumedV1CommonUlid = string;
-export type EverRegistryTenantLinkResumedV1CommonProductShipped = 'gauzy' | 'teams' | 'works' | 'rec' | 'traduora';
+/**
+ * What a connected instance runs: a shipped product, or an App outside the six products (app:<app id>).
+ */
+export type EverRegistryTenantLinkResumedV1CommonInstanceProduct = ('gauzy' | 'teams' | 'works' | 'rec' | 'traduora') | string;
 /**
  * product-side identifier (uuid, slug or '*'); an id, never a name
  */
@@ -1521,7 +1558,7 @@ export interface EverRegistryTenantLinkResumedV1 {
   tenant_link_id: EverRegistryTenantLinkResumedV1CommonUlid;
   org_id: EverRegistryTenantLinkResumedV1CommonUlid;
   instance_id: EverRegistryTenantLinkResumedV1CommonUlid;
-  product: EverRegistryTenantLinkResumedV1CommonProductShipped;
+  product: EverRegistryTenantLinkResumedV1CommonInstanceProduct;
   product_tenant_id: EverRegistryTenantLinkResumedV1CommonProductId;
   product_org_id?: EverRegistryTenantLinkResumedV1CommonProductId;
   state: EverRegistryTenantLinkResumedV1CommonLinkState;
@@ -1529,7 +1566,10 @@ export interface EverRegistryTenantLinkResumedV1 {
 }
 
 export type EverRegistryTenantLinkSuspendedV1CommonUlid = string;
-export type EverRegistryTenantLinkSuspendedV1CommonProductShipped = 'gauzy' | 'teams' | 'works' | 'rec' | 'traduora';
+/**
+ * What a connected instance runs: a shipped product, or an App outside the six products (app:<app id>).
+ */
+export type EverRegistryTenantLinkSuspendedV1CommonInstanceProduct = ('gauzy' | 'teams' | 'works' | 'rec' | 'traduora') | string;
 /**
  * product-side identifier (uuid, slug or '*'); an id, never a name
  */
@@ -1546,7 +1586,7 @@ export interface EverRegistryTenantLinkSuspendedV1 {
   tenant_link_id: EverRegistryTenantLinkSuspendedV1CommonUlid;
   org_id: EverRegistryTenantLinkSuspendedV1CommonUlid;
   instance_id: EverRegistryTenantLinkSuspendedV1CommonUlid;
-  product: EverRegistryTenantLinkSuspendedV1CommonProductShipped;
+  product: EverRegistryTenantLinkSuspendedV1CommonInstanceProduct;
   product_tenant_id: EverRegistryTenantLinkSuspendedV1CommonProductId;
   product_org_id?: EverRegistryTenantLinkSuspendedV1CommonProductId;
   state: EverRegistryTenantLinkSuspendedV1CommonLinkState;
@@ -1554,7 +1594,10 @@ export interface EverRegistryTenantLinkSuspendedV1 {
 }
 
 export type EverRegistryTenantLinkUnlinkedV1CommonUlid = string;
-export type EverRegistryTenantLinkUnlinkedV1CommonProductShipped = 'gauzy' | 'teams' | 'works' | 'rec' | 'traduora';
+/**
+ * What a connected instance runs: a shipped product, or an App outside the six products (app:<app id>).
+ */
+export type EverRegistryTenantLinkUnlinkedV1CommonInstanceProduct = ('gauzy' | 'teams' | 'works' | 'rec' | 'traduora') | string;
 /**
  * product-side identifier (uuid, slug or '*'); an id, never a name
  */
@@ -1571,7 +1614,7 @@ export interface EverRegistryTenantLinkUnlinkedV1 {
   tenant_link_id: EverRegistryTenantLinkUnlinkedV1CommonUlid;
   org_id: EverRegistryTenantLinkUnlinkedV1CommonUlid;
   instance_id: EverRegistryTenantLinkUnlinkedV1CommonUlid;
-  product: EverRegistryTenantLinkUnlinkedV1CommonProductShipped;
+  product: EverRegistryTenantLinkUnlinkedV1CommonInstanceProduct;
   product_tenant_id: EverRegistryTenantLinkUnlinkedV1CommonProductId;
   product_org_id?: EverRegistryTenantLinkUnlinkedV1CommonProductId;
   state: EverRegistryTenantLinkUnlinkedV1CommonLinkState;
@@ -2974,7 +3017,7 @@ export const SCHEMAS = {
             ],
             "properties": {
               "product": {
-                "$ref": "#/$defs/product"
+                "$ref": "#/$defs/instance_product"
               },
               "product_tenant_id": {
                 "$ref": "#/$defs/product_id"
@@ -3297,6 +3340,19 @@ export const SCHEMAS = {
           "rec",
           "traduora",
           "demand"
+        ]
+      },
+      "instance_product": {
+        "description": "A product code, or the App of an App instance's link (app:<app id>).",
+        "anyOf": [
+          {
+            "$ref": "#/$defs/product"
+          },
+          {
+            "type": "string",
+            "pattern": "^app:[0-9A-HJKMNP-TV-Z]{26}$",
+            "maxLength": 30
+          }
         ]
       },
       "product_id": {
@@ -3991,6 +4047,25 @@ export const EVENT_SCHEMAS = {
           "traduora"
         ]
       },
+      "instance_product": {
+        "description": "What a connected instance runs: a shipped product, or an App outside the six products (app:<app id>).",
+        "anyOf": [
+          {
+            "enum": [
+              "gauzy",
+              "teams",
+              "works",
+              "rec",
+              "traduora"
+            ]
+          },
+          {
+            "type": "string",
+            "pattern": "^app:[0-9A-HJKMNP-TV-Z]{26}$",
+            "maxLength": 30
+          }
+        ]
+      },
       "install_source": {
         "type": "string",
         "pattern": "^(cloud|self-hosted|ever\\.sh|works_app|desktop|partner:[a-z0-9-]{2,32})$",
@@ -4191,7 +4266,8 @@ export const EVENT_SCHEMAS = {
         "enum": [
           "cloud",
           "self_hosted",
-          "works_app"
+          "works_app",
+          "app"
         ]
       },
       "last_seen_bucket": {
@@ -4789,7 +4865,7 @@ export const EVENT_SCHEMAS = {
           "$ref": "common.schema.json#/$defs/ulid"
         },
         "product": {
-          "$ref": "common.schema.json#/$defs/product_shipped"
+          "$ref": "common.schema.json#/$defs/instance_product"
         },
         "serves_products": {
           "type": "array",
@@ -4842,7 +4918,7 @@ export const EVENT_SCHEMAS = {
           "$ref": "common.schema.json#/$defs/ulid"
         },
         "product": {
-          "$ref": "common.schema.json#/$defs/product_shipped"
+          "$ref": "common.schema.json#/$defs/instance_product"
         },
         "serves_products": {
           "type": "array",
@@ -4895,7 +4971,7 @@ export const EVENT_SCHEMAS = {
           "$ref": "common.schema.json#/$defs/ulid"
         },
         "product": {
-          "$ref": "common.schema.json#/$defs/product_shipped"
+          "$ref": "common.schema.json#/$defs/instance_product"
         },
         "serves_products": {
           "type": "array",
@@ -4948,7 +5024,7 @@ export const EVENT_SCHEMAS = {
           "$ref": "common.schema.json#/$defs/ulid"
         },
         "product": {
-          "$ref": "common.schema.json#/$defs/product_shipped"
+          "$ref": "common.schema.json#/$defs/instance_product"
         },
         "serves_products": {
           "type": "array",
@@ -5001,7 +5077,7 @@ export const EVENT_SCHEMAS = {
           "$ref": "common.schema.json#/$defs/ulid"
         },
         "product": {
-          "$ref": "common.schema.json#/$defs/product_shipped"
+          "$ref": "common.schema.json#/$defs/instance_product"
         },
         "serves_products": {
           "type": "array",
@@ -5054,7 +5130,7 @@ export const EVENT_SCHEMAS = {
           "$ref": "common.schema.json#/$defs/ulid"
         },
         "product": {
-          "$ref": "common.schema.json#/$defs/product_shipped"
+          "$ref": "common.schema.json#/$defs/instance_product"
         },
         "serves_products": {
           "type": "array",
@@ -5630,7 +5706,7 @@ export const EVENT_SCHEMAS = {
           "$ref": "common.schema.json#/$defs/ulid"
         },
         "product": {
-          "$ref": "common.schema.json#/$defs/product_shipped"
+          "$ref": "common.schema.json#/$defs/instance_product"
         },
         "product_tenant_id": {
           "$ref": "common.schema.json#/$defs/product_id"
@@ -5678,7 +5754,7 @@ export const EVENT_SCHEMAS = {
           "$ref": "common.schema.json#/$defs/ulid"
         },
         "product": {
-          "$ref": "common.schema.json#/$defs/product_shipped"
+          "$ref": "common.schema.json#/$defs/instance_product"
         },
         "product_tenant_id": {
           "$ref": "common.schema.json#/$defs/product_id"
@@ -5726,7 +5802,7 @@ export const EVENT_SCHEMAS = {
           "$ref": "common.schema.json#/$defs/ulid"
         },
         "product": {
-          "$ref": "common.schema.json#/$defs/product_shipped"
+          "$ref": "common.schema.json#/$defs/instance_product"
         },
         "product_tenant_id": {
           "$ref": "common.schema.json#/$defs/product_id"
@@ -5774,7 +5850,7 @@ export const EVENT_SCHEMAS = {
           "$ref": "common.schema.json#/$defs/ulid"
         },
         "product": {
-          "$ref": "common.schema.json#/$defs/product_shipped"
+          "$ref": "common.schema.json#/$defs/instance_product"
         },
         "product_tenant_id": {
           "$ref": "common.schema.json#/$defs/product_id"
@@ -5822,7 +5898,7 @@ export const EVENT_SCHEMAS = {
           "$ref": "common.schema.json#/$defs/ulid"
         },
         "product": {
-          "$ref": "common.schema.json#/$defs/product_shipped"
+          "$ref": "common.schema.json#/$defs/instance_product"
         },
         "product_tenant_id": {
           "$ref": "common.schema.json#/$defs/product_id"

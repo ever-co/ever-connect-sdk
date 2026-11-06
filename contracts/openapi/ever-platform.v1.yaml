@@ -406,94 +406,63 @@ paths:
       x-ever-row: 22
   /v1/installs/{install}/status:
     post:
+      summary: |-
+        An installation reports what it did with a plugin install it was asked for: `installing`,
+        `installed` (with its version), `failed` (with a detail token) or `removed`. Only the target
+        installation may report (any other gets `404`); a request it has not acknowledged yet counts
+        as delivered by the report itself. Reporting the state it is in again changes nothing.
       tags:
         - listings
-      summary: Instance reports the outcome of an `instance_plugin` install
-      description: Only the instance the install targets may report; the product's own installer performs the install.
-      x-ever-phase: 4
-      x-ever-auth: instance
       x-ever-integration: marketplace_installs
       x-ever-rate-limit: instance
-      x-ever-idempotent: true
       operationId: instanceReportInstallStatus
       security:
         - instanceToken: []
       parameters:
-        - name: install
+        - description: The install.
           in: path
+          name: install
           required: true
-          schema:
-            $ref: "#/components/schemas/Ulid"
-        - name: Idempotency-Key
-          in: header
-          required: true
-          description: Client-generated key, unique per principal, <= 128 characters. See the `Idempotency` schema.
           schema:
             type: string
-            minLength: 1
-            maxLength: 128
       requestBody:
-        required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/InstallStatus"
+              $ref: "#/components/schemas/InstallStatusReport"
+        required: true
       responses:
         "200":
-          description: Recorded.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Install"
+                $ref: "#/components/schemas/InstallStatusView"
+          description: Recorded
         "403":
-          description: "Principal lacks the role, scope, integration or entitlement, or the operation needs a fresh sign-in (`forbidden_role`, `forbidden_scope`, `integration_disabled`, `integration_revoked`, `instance_pending_approval`, `entitlement_required`, `tier_required`, `sso_required`, `reauth_required`, `session_required`: an Ever ID token issued to a product, installation or App client used anywhere except the two `everIdTokenRead` reads and the in-product consent write; `step_up_required`: that consent write without a sign-in in the last 300 s; `not_connection_owner`: an installation-wide integration changed by an organization that does not own the installation)."
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+          description: "`integration_disabled`, `integration_revoked` or `denied_by_policy`"
         "404":
-          description: Not found, or the module that serves this route is disabled on this deployment (`not_found`, `module_disabled`).
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+          description: Not this installation's install, or installs are off
         "409":
-          description: State conflict (`handle_taken`, `already_exists`, `key_mismatch`, `idempotency_in_progress`, `illegal_transition`, `billing_active`, `job_in_progress` when another job for the same subject is running).
-          headers:
-            Retry-After:
-              description: Seconds to wait before retrying.
-              schema:
-                type: integer
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-        default:
-          description: Any other error, as a problem document.
-          headers:
-            x-request-id:
-              description: The request id (generated or echoed). Quote it in support requests.
-              schema:
-                type: string
-            RateLimit-Limit:
-              description: IETF RateLimit header; requests allowed in the current window for this principal class.
-              schema:
-                type: integer
-            RateLimit-Remaining:
-              description: IETF RateLimit header; requests remaining in the current window.
-              schema:
-                type: integer
-            RateLimit-Reset:
-              description: IETF RateLimit header; seconds until the window resets.
-              schema:
-                type: integer
+          description: "`illegal_transition`: the install cannot move there"
+        "422":
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+          description: "`validation_failed`"
       x-ever-row: 28
-      x-ever-availability: not_in_v1
-      x-ever-availability-note: Marketplace installs are not offered yet.
   /v1/instances/me:
     get:
       summary: |-
@@ -1543,184 +1512,106 @@ paths:
       x-ever-row: 19
   /v1/instances/me/provider-grants/{grant}:
     get:
+      summary: |-
+        A provider access grant addressed to this installation; the invitee's e-mail and name only
+        once the provider's person accepted (read now, never stored).
       tags:
         - registry
-      summary: Read a provider access grant addressed to this installation
-      description: |
-        Outbound-call row 32; not in contract v1 (`contracts/openapi/v1-scope.json`).
-        The grant a provider
-        organization's owner or admin requested for one of its members on this
-        installation's linked organization. The invitee's `email` and `name`
-        travel only in this answer and only once the provider person accepted
-        the grant in app.ever.co (`person_accepted` or later); before that the
-        answer is `409 grant_not_accepted` and nothing about the person moves.
-        A grant of another installation answers `404`.
-      x-ever-phase: 4
-      x-ever-auth: instance
       x-ever-integration: provider_access
       x-ever-rate-limit: instance
       operationId: instanceGetProviderGrant
       security:
         - instanceToken: []
       parameters:
-        - name: grant
+        - description: The grant.
           in: path
+          name: grant
           required: true
-          description: Provider grant id (ULID) from the `provider_grant_requested` feed notice.
           schema:
-            $ref: "#/components/schemas/Ulid"
+            type: string
       responses:
         "200":
-          description: The grant.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ProviderGrant"
+                $ref: "#/components/schemas/InstanceProviderGrant"
+          description: "The grant (`Cache-Control: no-store`)"
         "403":
-          description: "Principal lacks the role, scope, integration or entitlement, or the operation needs a fresh sign-in (`forbidden_role`, `forbidden_scope`, `integration_disabled`, `integration_revoked`, `instance_pending_approval`, `entitlement_required`, `tier_required`, `sso_required`, `reauth_required`, `session_required`: an Ever ID token issued to a product, installation or App client used anywhere except the two `everIdTokenRead` reads and the in-product consent write; `step_up_required`: that consent write without a sign-in in the last 300 s; `not_connection_owner`: an installation-wide integration changed by an organization that does not own the installation)."
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+          description: "`integration_disabled`, `integration_revoked` or `denied_by_policy`"
         "404":
-          description: Not found, or the module that serves this route is disabled on this deployment (`not_found`, `module_disabled`).
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+          description: Another installation's or link's grant, or `module_disabled`
         "409":
-          description: State conflict (`handle_taken`, `already_exists`, `key_mismatch`, `idempotency_in_progress`, `illegal_transition`, `billing_active`, `job_in_progress` when another job for the same subject is running).
-          headers:
-            Retry-After:
-              description: Seconds to wait before retrying.
-              schema:
-                type: integer
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-        default:
-          description: Any other error, as a problem document.
-          headers:
-            x-request-id:
-              description: The request id (generated or echoed). Quote it in support requests.
-              schema:
-                type: string
-            RateLimit-Limit:
-              description: IETF RateLimit header; requests allowed in the current window for this principal class.
-              schema:
-                type: integer
-            RateLimit-Remaining:
-              description: IETF RateLimit header; requests remaining in the current window.
-              schema:
-                type: integer
-            RateLimit-Reset:
-              description: IETF RateLimit header; seconds until the window resets.
-              schema:
-                type: integer
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          description: "`grant_not_accepted`: the person has not accepted yet (nothing about them is answered)"
       x-ever-row: 32
-      x-ever-availability: not_in_v1
-      x-ever-availability-note: Provider access grants are not offered yet. When they are, the invitee's e-mail address and name travel only in this answer and only after the provider person accepted the grant (409 grant_not_accepted before).
   /v1/instances/me/provider-grants/{grant}/status:
     post:
+      summary: |-
+        What the installation did with a grant: invited the person (`accepted`, with its own user's
+        reference), or the grant ended on its side. Repeating the current state changes nothing.
       tags:
         - registry
-      summary: Report what the product did with a provider access grant
-      description: |
-        Outbound-call row 32; not in contract v1 (`contracts/openapi/v1-scope.json`).
-        The product invited the provider's person through its own
-        invite and role path (`accepted`), or the grant ended on its side
-        (`declined`, `revoked`, `expired`). `product_user_ref` names the
-        product's own user, never a name or an address. A transition the grant
-        machine does not allow answers `409 illegal_transition`; a grant not
-        accepted by its person yet answers `409 grant_not_accepted`.
-      x-ever-phase: 4
-      x-ever-auth: instance
       x-ever-integration: provider_access
       x-ever-rate-limit: instance
-      x-ever-idempotent: false
       operationId: instanceReportProviderGrantStatus
       security:
         - instanceToken: []
       parameters:
-        - name: grant
+        - description: The grant.
           in: path
+          name: grant
           required: true
-          description: Provider grant id (ULID).
           schema:
-            $ref: "#/components/schemas/Ulid"
+            type: string
       requestBody:
-        required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ProviderGrantStatus"
+              $ref: "#/components/schemas/ProviderGrantStatusReport"
+        required: true
       responses:
         "200":
-          description: Recorded.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ProviderGrantState"
+                $ref: "#/components/schemas/ProviderGrantStateView"
+          description: Recorded
         "403":
-          description: "Principal lacks the role, scope, integration or entitlement, or the operation needs a fresh sign-in (`forbidden_role`, `forbidden_scope`, `integration_disabled`, `integration_revoked`, `instance_pending_approval`, `entitlement_required`, `tier_required`, `sso_required`, `reauth_required`, `session_required`: an Ever ID token issued to a product, installation or App client used anywhere except the two `everIdTokenRead` reads and the in-product consent write; `step_up_required`: that consent write without a sign-in in the last 300 s; `not_connection_owner`: an installation-wide integration changed by an organization that does not own the installation)."
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+          description: "`integration_disabled`, `integration_revoked` or `denied_by_policy`"
         "404":
-          description: Not found, or the module that serves this route is disabled on this deployment (`not_found`, `module_disabled`).
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+          description: Another installation's or link's grant, or `module_disabled`
         "409":
-          description: State conflict (`handle_taken`, `already_exists`, `key_mismatch`, `idempotency_in_progress`, `illegal_transition`, `billing_active`, `job_in_progress` when another job for the same subject is running).
-          headers:
-            Retry-After:
-              description: Seconds to wait before retrying.
-              schema:
-                type: integer
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+          description: "`grant_not_accepted` (the person has not accepted yet), `illegal_transition`"
         "422":
-          description: Validation failed; unknown fields are rejected on writes (`validation_failed`, `schema_violation`, `code_invalid`, `idempotency_mismatch`, `mirror_owned_field`, `limit_exceeded`).
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-        default:
-          description: Any other error, as a problem document.
-          headers:
-            x-request-id:
-              description: The request id (generated or echoed). Quote it in support requests.
-              schema:
-                type: string
-            RateLimit-Limit:
-              description: IETF RateLimit header; requests allowed in the current window for this principal class.
-              schema:
-                type: integer
-            RateLimit-Remaining:
-              description: IETF RateLimit header; requests remaining in the current window.
-              schema:
-                type: integer
-            RateLimit-Reset:
-              description: IETF RateLimit header; seconds until the window resets.
-              schema:
-                type: integer
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          description: "`validation_failed`: an unknown status, a grant id that is not the path's, `accepted` without `product_user_ref`"
       x-ever-row: 32
-      x-ever-availability: not_in_v1
-      x-ever-availability-note: Provider access grants are not offered yet.
   /v1/instances/me/public-url:
     put:
       summary: |-
@@ -2496,12 +2387,14 @@ paths:
       security:
         - instanceToken: []
       parameters:
-        - name: Ever-Link-Id
+        - description: "The tenant link the lookup is made for: required with an instance token (`422 validation_failed` without it); an organization key names none."
           in: header
-          required: true
-          description: "The tenant link the lookup is made for. Required from an installation: without it the platform answers `422 validation_failed` at `#Ever-Link-Id`."
+          name: Ever-Link-Id
+          required: false
           schema:
-            type: string
+            type:
+              - string
+              - "null"
       requestBody:
         content:
           application/json:
@@ -2843,78 +2736,47 @@ paths:
       x-ever-row: 26
   /v1/sso/discover:
     get:
+      summary: |-
+        Whether an e-mail domain signs in with a company's own provider, and where. Public; the same
+        answer for every domain without an active Company sign-in.
       tags:
         - identity
-      summary: Does this e-mail domain belong to an organization with company sign-in?
-      description: Answers only for verified domains with the `sso` purpose on organizations that enabled company sign-in. 60 requests per minute per IP. Never reveals anything for other domains.
-      x-ever-phase: 4
-      x-ever-auth: public
       x-ever-rate-limit: public-availability
       operationId: discoverSso
       security: []
       parameters:
-        - name: email_domain
+        - description: An e-mail domain (`acme.com`; never an address).
           in: query
+          name: email_domain
           required: true
           schema:
             type: string
-            maxLength: 253
       responses:
         "200":
-          description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SsoDiscover"
+                $ref: "#/components/schemas/SsoDiscovery"
+          description: "The answer (`Cache-Control: no-store`)"
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "`module_disabled`"
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "`validation_failed`: not a domain (the value is not echoed)"
         "429":
-          description: Rate limit exceeded for this principal class (`rate_limited`).
-          headers:
-            Retry-After:
-              description: Seconds to wait before retrying.
-              schema:
-                type: integer
-            RateLimit-Limit:
-              description: IETF RateLimit header; requests allowed in the current window for this principal class.
-              schema:
-                type: integer
-            RateLimit-Remaining:
-              description: IETF RateLimit header; requests remaining in the current window.
-              schema:
-                type: integer
-            RateLimit-Reset:
-              description: IETF RateLimit header; seconds until the window resets.
-              schema:
-                type: integer
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-        default:
-          description: Any other error, as a problem document.
-          headers:
-            x-request-id:
-              description: The request id (generated or echoed). Quote it in support requests.
-              schema:
-                type: string
-            RateLimit-Limit:
-              description: IETF RateLimit header; requests allowed in the current window for this principal class.
-              schema:
-                type: integer
-            RateLimit-Remaining:
-              description: IETF RateLimit header; requests remaining in the current window.
-              schema:
-                type: integer
-            RateLimit-Reset:
-              description: IETF RateLimit header; seconds until the window resets.
-              schema:
-                type: integer
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          description: "`rate_limited`"
       x-ever-row: 24
-      x-ever-availability: not_in_v1
-      x-ever-availability-note: Company sign-in discovery is not offered yet.
   /v1/stats/reports:
     post:
       summary: |-
@@ -3377,17 +3239,6 @@ components:
         - product_tenant_id
         - customer_ref
       type: object
-    Compat:
-      type: object
-      required:
-        - product
-        - version_range
-      properties:
-        product:
-          $ref: "#/components/schemas/ProductCode"
-        version_range:
-          type: string
-          description: semver range.
     CompletionUrls:
       additionalProperties: false
       description: URLs the product reports.
@@ -3409,6 +3260,7 @@ components:
         - cloud
         - self_hosted
         - works_app
+        - app
       type: string
     ConnectPublicJwk:
       description: |-
@@ -4034,6 +3886,14 @@ components:
         - billing_active
         - sso_required
         - sso_bound
+        - domain_not_verified
+        - saml_unsupported
+        - sso_already_enabled
+        - sso_decommissioning
+        - sso_test_required
+        - sso_not_enabled
+        - link_conflict
+        - grant_not_accepted
         - reauth_required
         - session_required
         - step_up_required
@@ -4209,18 +4069,6 @@ components:
         - code
         - message
       type: object
-    Handle:
-      type: string
-      description: |
-        Organization handle as shown at `ever.co/<handle>`. Lowercase ASCII,
-        letter first, 3-30 characters, single hyphens only, no leading, trailing
-        or double hyphen. Handles belong to organizations only.
-      pattern: ^[a-z](?:[a-z0-9]|-(?=[a-z0-9]))*$
-      minLength: 3
-      maxLength: 30
-      examples:
-        - acme
-        - acme-ltd
     HeartbeatAck:
       description: The answer to a heartbeat.
       properties:
@@ -4394,93 +4242,47 @@ components:
         - issuer
         - subject
       type: object
-    Install:
-      type: object
-      description: The install fact, not the mechanics; `next_action_url` tells the caller where to continue (deep link, checkout, product admin).
+    InstallStatusReport:
+      additionalProperties: false
+      description: "`POST /v1/installs/{install}/status`: what the installation did with a plugin install."
+      properties:
+        detail:
+          description: |-
+            Why it failed: `checksum_mismatch`, `incompatible_version`, `installer_disabled`,
+            `permission_denied` or `unknown`, optionally followed by a short note (at most 500
+            characters in all; only the token is kept).
+          type:
+            - string
+            - "null"
+        external_ref:
+          description: The installation's own reference to the installed plugin (at most 128 characters).
+          type:
+            - string
+            - "null"
+        state:
+          description: "`installing`, `installed`, `failed` or `removed`."
+          type: string
+        version:
+          description: The version installed (1 to 64 characters).
+          type:
+            - string
+            - "null"
       required:
-        - id
-        - listing_id
-        - org_id
-        - mechanism
         - state
-        - created_at
+      type: object
+    InstallStatusView:
+      description: "The answer to an installation: its own install's state, nothing of the organization."
       properties:
         id:
-          $ref: "#/components/schemas/Ulid"
-        listing_id:
-          $ref: "#/components/schemas/Ulid"
-        listing:
-          $ref: "#/components/schemas/ListingCard"
-        edition_id:
-          type:
-            - string
-            - "null"
-        org_id:
-          $ref: "#/components/schemas/Ulid"
-        instance_id:
-          type:
-            - string
-            - "null"
-        tenant_link_id:
-          type:
-            - string
-            - "null"
-        mechanism:
-          $ref: "#/components/schemas/InstallMechanism"
-        state:
+          description: The install.
           type: string
-          description: "Same vocabulary as `p_listings.install.state` and the event `install_state`: `cancelled` = stopped before it was installed (`requested | pending_payment | installing`), `removed` = removed after `installed | delivered`."
-          enum:
-            - requested
-            - pending_payment
-            - installing
-            - installed
-            - delivered
-            - failed
-            - removed
-            - cancelled
-        next_action_url:
-          type:
-            - string
-            - "null"
-          format: uri
-        external_ref:
-          type:
-            - string
-            - "null"
-        requested_by_person_id:
-          $ref: "#/components/schemas/Ulid"
-        created_at:
-          $ref: "#/components/schemas/Timestamp"
-        updated_at:
-          $ref: "#/components/schemas/Timestamp"
-    InstallMechanism:
-      type: string
-      enum:
-        - works_blueprint
-        - provision_product
-        - instance_plugin
-        - external_link
-        - partner_referral
-    InstallStatus:
-      type: object
-      description: Reported by the instance that performed an `instance_plugin` install.
+        state:
+          description: Where it stands.
+          type: string
       required:
+        - id
         - state
-      additionalProperties: false
-      properties:
-        state:
-          type: string
-          enum:
-            - installing
-            - installed
-            - failed
-            - removed
-        detail:
-          type: string
-          maxLength: 500
-        external_ref:
-          type: string
+      type: object
     Instance:
       description: |-
         A connected instance as an organization sees it. Instances are outbound-only: no address is
@@ -4701,6 +4503,38 @@ components:
           type:
             - string
             - "null"
+      type: object
+    InstanceProviderGrant:
+      description: "The grant as the installation reads it: the invitee only once the person accepted."
+      properties:
+        email:
+          description: The invitee's e-mail (read now, never stored).
+          type:
+            - string
+            - "null"
+        expires_at:
+          description: When it ends.
+          format: date-time
+          type: string
+        grant_id:
+          description: The grant.
+          type: string
+        name:
+          description: The invitee's name (read now, never stored).
+          type:
+            - string
+            - "null"
+        role:
+          description: The product role.
+          type: string
+        status:
+          description: "`person_accepted`, `accepted`, `declined`, `revoked` or `expired`."
+          type: string
+      required:
+        - grant_id
+        - status
+        - role
+        - expires_at
       type: object
     InstanceSelf:
       description: What an instance sees about itself.
@@ -5066,58 +4900,6 @@ components:
         - state
         - linked_at
       type: object
-    ListingCard:
-      type: object
-      description: Public card projection produced by the type plugin.
-      required:
-        - id
-        - type
-        - slug
-        - title
-        - summary
-        - vendor
-      properties:
-        id:
-          $ref: "#/components/schemas/Ulid"
-        type:
-          type: string
-        slug:
-          type: string
-        title:
-          type: string
-          maxLength: 120
-        summary:
-          type: string
-          maxLength: 300
-        vendor:
-          $ref: "#/components/schemas/Vendor"
-        categories:
-          type: array
-          items:
-            type: string
-        icon_url:
-          type:
-            - string
-            - "null"
-          format: uri
-        compat:
-          type: array
-          items:
-            $ref: "#/components/schemas/Compat"
-        from_price:
-          $ref: "#/components/schemas/Money"
-        pricing_models:
-          type: array
-          items:
-            $ref: "#/components/schemas/PricingModel"
-        reviewed:
-          type: boolean
-          description: Passed review (shown as a "Verified" badge).
-        published_at:
-          type:
-            - string
-            - "null"
-          format: date-time
     LookupMatch:
       description: One organization that matched.
       properties:
@@ -5643,20 +5425,6 @@ components:
         - app
         - deployment
       type: string
-    Money:
-      description: An amount in minor units.
-      properties:
-        amount_minor:
-          description: Minor units (cents).
-          format: int64
-          type: integer
-        currency:
-          description: ISO 4217, upper case.
-          type: string
-      required:
-        - amount_minor
-        - currency
-      type: object
     MyMembership:
       description: One authoritative membership of the caller (claims inside tokens are only a hint).
       properties:
@@ -5880,15 +5648,6 @@ components:
         - identity_subject
         - link_method
       type: object
-    PricingModel:
-      type: string
-      description: Pricing is delegated to the app; `external` means the vendor bills on its own site.
-      enum:
-        - free
-        - one_time
-        - subscription
-        - per_unit
-        - external
     Problem:
       description: An RFC 9457 problem document.
       properties:
@@ -5935,81 +5694,38 @@ components:
         - code
         - detail
       type: object
-    ProductCode:
-      type: string
-      description: The Ever product a record belongs to. `demand` is listed with status `soon` and accepts no connections.
-      enum:
-        - gauzy
-        - teams
-        - works
-        - rec
-        - traduora
-        - demand
-    ProviderGrant:
-      type: object
-      description: A provider access grant as the installation reads it (`provider_access`). `email` and `name` of the invitee appear only once the provider person accepted the grant.
+    ProviderGrantStateView:
+      description: The grant's state after a report.
+      properties:
+        grant_id:
+          description: The grant.
+          type: string
+        status:
+          description: Its state.
+          type: string
       required:
         - grant_id
         - status
-        - role
-      additionalProperties: false
-      properties:
-        grant_id:
-          $ref: "#/components/schemas/Ulid"
-        status:
-          type: string
-          enum:
-            - person_accepted
-            - accepted
-            - declined
-            - revoked
-            - expired
-        role:
-          type: string
-          maxLength: 64
-          description: The product role the provider organization asked for.
-        email:
-          type: string
-          maxLength: 254
-        name:
-          type: string
-          maxLength: 200
-    ProviderGrantState:
       type: object
-      required:
-        - grant_id
-        - status
+    ProviderGrantStatusReport:
       additionalProperties: false
+      description: What the installation did.
       properties:
         grant_id:
-          $ref: "#/components/schemas/Ulid"
-        status:
+          description: The grant (as in the path).
           type: string
-          enum:
-            - person_accepted
-            - accepted
-            - declined
-            - revoked
-            - expired
-    ProviderGrantStatus:
-      type: object
-      required:
-        - grant_id
-        - status
-      additionalProperties: false
-      properties:
-        grant_id:
-          $ref: "#/components/schemas/Ulid"
-        status:
-          type: string
-          enum:
-            - accepted
-            - declined
-            - revoked
-            - expired
         product_user_ref:
+          description: The product's own user (required with `accepted`; never a name or an address).
+          type:
+            - string
+            - "null"
+        status:
+          description: "`accepted`, `declined`, `revoked` or `expired`."
           type: string
-          pattern: ^[A-Za-z0-9._:-]{1,128}$
+      required:
+        - grant_id
+        - status
+      type: object
     PublicUrl:
       description: "The public address as stored (normalised: lower-case host, no default port)."
       properties:
@@ -6083,7 +5799,9 @@ components:
             - $ref: "#/components/schemas/ConnectKind"
               description: Its kind (default `self_hosted`).
         product:
-          description: The product the installation runs.
+          description: |-
+            The product the installation runs; an App connects as `app:<app id>` with `kind: app`
+            where Apps connect.
           example: gauzy
           type: string
         public_jwk:
@@ -6227,18 +5945,27 @@ components:
       required:
         - secret
       type: object
-    SsoDiscover:
-      type: object
+    SsoDiscovery:
+      description: |-
+        What discovery answers: the same `{"sso": false}` for every domain without an active Company
+        sign-in, so the answer tells nothing more.
+      properties:
+        entry:
+          description: Where to sign in with the company's account.
+          type:
+            - string
+            - "null"
+        handle:
+          description: That organization's handle.
+          type:
+            - string
+            - "null"
+        sso:
+          description: The domain belongs to an organization with an active Company sign-in.
+          type: boolean
       required:
         - sso
-      properties:
-        sso:
-          type: boolean
-        handle:
-          $ref: "#/components/schemas/Handle"
-        entry:
-          type: string
-          format: uri
+      type: object
     StatsAccepted:
       description: The answer to an accepted report.
       properties:
@@ -6567,28 +6294,6 @@ components:
       required:
         - items
       type: object
-    Vendor:
-      type: object
-      required:
-        - handle
-        - name
-        - kind
-      properties:
-        handle:
-          $ref: "#/components/schemas/Handle"
-        name:
-          type: string
-        kind:
-          $ref: "#/components/schemas/VendorKind"
-        verified:
-          type: boolean
-    VendorKind:
-      type: string
-      enum:
-        - ever
-        - partner
-        - third_party
-        - community
     WebhookCreate:
       additionalProperties: false
       description: A new endpoint.
