@@ -2,49 +2,42 @@
   "description": "Where every contract file of this repository comes from. Written by tools/sync-contract.mjs; checked by tools/check-schema-drift.mjs. `provisional` sources are drafts the platform has not published yet: tools/check-schema-drift.mjs --strict refuses them.",
   "platform": {
     "repository": "ever-co/platform",
-    "commit": "3c30a957174b5914995a5cb781ce7fc8aaa45979"
+    "commit": "5972af9f44135565e652f63430959886dbdaefc6"
   },
   "openapi": {
     "target": "contracts/openapi/ever-platform.v1.yaml",
-    "sha256": "84eb0b490e27e29f3670fa5a62e903747e5b313bd7ebdeb3eb1f2c3c3ecb7c56",
+    "sha256": "416c92de4e6bf83c652c0d77ce42537fcebf53841b3a151c7222866e697b6eca",
     "pinned": {
       "source": "contracts/openapi/ever-api.v1.json",
-      "sha256": "623066aeaa4a39527fb02742fcbd2f5d189dac19a3837edc5b6fa58f84d7c788"
+      "sha256": "77afc50ae40eb87ab81f25c48abc9fabcef01d9768de54f57a5dc3d17b7536d5"
     },
     "design": {
       "source": "docs/specs/api",
-      "sha256": "4744cf4e06ea44268e330b1404e2baf66a6c63de742b40571f4498ed404f5f72",
-      "files": 18
+      "sha256": "00bd6f8b2f52197e2ab522fad3b8cad3d08116aa73781ea327f1ccda5021fb1c",
+      "files": 16
     },
     "operations": 60,
     "scope": {
       "source": "contracts/openapi/v1-scope.json",
-      "sha256": "4cb0b66d2d76105283ff237db16073974eb7369200d273f2ae333b7fbebbb10f",
-      "version": "1.3.0"
+      "sha256": "5b8b347ea39e276d06a62d1ce021d13f9bc9e698d8dd19c1bb8574284995d4ec",
+      "version": "1.6.0"
     },
     "provisional_operations": [],
     "not_in_v1_operations": [
-      "discoverSso",
       "instanceDeleteLinkIdentifiers",
-      "instanceGetProviderGrant",
       "instancePushOrgProfile",
       "instancePutLinkIdentifiers",
-      "instanceReportInstallStatus",
-      "instanceReportProviderGrantStatus",
       "instanceReportUsageReadings",
       "putIntegrationState"
     ],
     "shape_differences": [
       "Identifier",
-      "Money",
       "Problem"
     ],
     "renamed_schemas": [],
     "schema_overrides": [],
     "security_overrides": [],
-    "parameter_overrides": [
-      "lookupCounterparties"
-    ],
+    "parameter_overrides": [],
     "pending_upstream_rows": []
   },
   "events": {
@@ -94,8 +87,8 @@
     {
       "path": "contracts/schemas/ever.entitlement.v1.json",
       "source": "contracts/entitlements/ever.entitlement.v1.schema.json",
-      "source_sha256": "5fb0404cb84b32fbf07fab0354223f8b390785f6bcfeaf05cde0e99e4262f143",
-      "sha256": "5fb0404cb84b32fbf07fab0354223f8b390785f6bcfeaf05cde0e99e4262f143",
+      "source_sha256": "6d4901e1dd820788197d6b1583d86ddd2ab70d267499f95368c27caa84888d8c",
+      "sha256": "6d4901e1dd820788197d6b1583d86ddd2ab70d267499f95368c27caa84888d8c",
       "transform": null,
       "provisional": false,
       "upstream": null
@@ -112,8 +105,8 @@
     {
       "path": "contracts/integrations/catalog.v1.json",
       "source": "contracts/integrations/catalog.v1.json",
-      "source_sha256": "28cb18190521e5acd4fe4d9f0ffd6ac6d6c149a1ec4baded41c22858c2393a78",
-      "sha256": "28cb18190521e5acd4fe4d9f0ffd6ac6d6c149a1ec4baded41c22858c2393a78",
+      "source_sha256": "36e5173a6222c4cd375bd2024c491058711209e804a35c4cf2cc10127bffa040",
+      "sha256": "36e5173a6222c4cd375bd2024c491058711209e804a35c4cf2cc10127bffa040",
       "transform": null,
       "provisional": false,
       "upstream": null
@@ -148,8 +141,8 @@
     {
       "path": "contracts/openapi/v1-scope.json",
       "source": "contracts/openapi/v1-scope.json",
-      "source_sha256": "4cb0b66d2d76105283ff237db16073974eb7369200d273f2ae333b7fbebbb10f",
-      "sha256": "4cb0b66d2d76105283ff237db16073974eb7369200d273f2ae333b7fbebbb10f",
+      "source_sha256": "5b8b347ea39e276d06a62d1ce021d13f9bc9e698d8dd19c1bb8574284995d4ec",
+      "sha256": "5b8b347ea39e276d06a62d1ce021d13f9bc9e698d8dd19c1bb8574284995d4ec",
       "transform": null,
       "provisional": false,
       "upstream": null
@@ -157,8 +150,8 @@
     {
       "path": "contracts/schemas/events/common.schema.json",
       "source": "contracts/events/schemas/common.schema.json",
-      "source_sha256": "8c67c396dc03509af67f3b37c02a279b967bc9925c27701dd536aaa5c113d77c",
-      "sha256": "8c67c396dc03509af67f3b37c02a279b967bc9925c27701dd536aaa5c113d77c",
+      "source_sha256": "99c845cd575eada5379f52483fbfa7483484fbdb2b5914c20eb7ebb457f8331f",
+      "sha256": "99c845cd575eada5379f52483fbfa7483484fbdb2b5914c20eb7ebb457f8331f",
       "transform": null,
       "provisional": false,
       "upstream": null
@@ -247,8 +240,8 @@
     {
       "path": "contracts/schemas/events/ever.registry.instance.approved.v1.schema.json",
       "source": "contracts/events/schemas/ever.registry.instance.approved.v1.schema.json",
-      "source_sha256": "f4d7bf09d10445c19bad4444194050c1337216157051218dd03a8d4a37e6dfc5",
-      "sha256": "f4d7bf09d10445c19bad4444194050c1337216157051218dd03a8d4a37e6dfc5",
+      "source_sha256": "2947753a704273032bb9d56c53904429441c7cb186533f227a111412636a5166",
+      "sha256": "2947753a704273032bb9d56c53904429441c7cb186533f227a111412636a5166",
       "transform": null,
       "provisional": false,
       "upstream": null
@@ -256,8 +249,8 @@
     {
       "path": "contracts/schemas/events/ever.registry.instance.connected.v1.schema.json",
       "source": "contracts/events/schemas/ever.registry.instance.connected.v1.schema.json",
-      "source_sha256": "7a92ff3a142d99586f62dc9b190a1e90ddb254d1572cce3dac2891d27df815d2",
-      "sha256": "7a92ff3a142d99586f62dc9b190a1e90ddb254d1572cce3dac2891d27df815d2",
+      "source_sha256": "7493477249d6c7d898bc17742bed2ee451dd26c0b85c95516add3bb588d03ca6",
+      "sha256": "7493477249d6c7d898bc17742bed2ee451dd26c0b85c95516add3bb588d03ca6",
       "transform": null,
       "provisional": false,
       "upstream": null
@@ -265,8 +258,8 @@
     {
       "path": "contracts/schemas/events/ever.registry.instance.disconnected.v1.schema.json",
       "source": "contracts/events/schemas/ever.registry.instance.disconnected.v1.schema.json",
-      "source_sha256": "e36d58c30a63387d07f7b2eb865e658ed8ca9b3ad4ccc45f865011ae4c335290",
-      "sha256": "e36d58c30a63387d07f7b2eb865e658ed8ca9b3ad4ccc45f865011ae4c335290",
+      "source_sha256": "1ab234eed0adddfab5a88098d401f941bc14407e0c9acca5cf4b69d50678d4b0",
+      "sha256": "1ab234eed0adddfab5a88098d401f941bc14407e0c9acca5cf4b69d50678d4b0",
       "transform": null,
       "provisional": false,
       "upstream": null
@@ -274,8 +267,8 @@
     {
       "path": "contracts/schemas/events/ever.registry.instance.key_rotated.v1.schema.json",
       "source": "contracts/events/schemas/ever.registry.instance.key_rotated.v1.schema.json",
-      "source_sha256": "d9490846376c74d8dda7f8876ddd220d528e113018678d623b5fd0714f5d8689",
-      "sha256": "d9490846376c74d8dda7f8876ddd220d528e113018678d623b5fd0714f5d8689",
+      "source_sha256": "97ba29d01e112a3e9ee56c8a4260dae512bb0696e56dc4786e2d792787293e55",
+      "sha256": "97ba29d01e112a3e9ee56c8a4260dae512bb0696e56dc4786e2d792787293e55",
       "transform": null,
       "provisional": false,
       "upstream": null
@@ -283,8 +276,8 @@
     {
       "path": "contracts/schemas/events/ever.registry.instance.revoked.v1.schema.json",
       "source": "contracts/events/schemas/ever.registry.instance.revoked.v1.schema.json",
-      "source_sha256": "b2d68e0a79ad8df30415b5676cabf65a7645987e46261b8934668bd5513561a2",
-      "sha256": "b2d68e0a79ad8df30415b5676cabf65a7645987e46261b8934668bd5513561a2",
+      "source_sha256": "addbeda163ef4702863d5f6c30aab08a55845d3059a0ef7dd21a097676f7a8f2",
+      "sha256": "addbeda163ef4702863d5f6c30aab08a55845d3059a0ef7dd21a097676f7a8f2",
       "transform": null,
       "provisional": false,
       "upstream": null
@@ -292,8 +285,8 @@
     {
       "path": "contracts/schemas/events/ever.registry.instance.seen.v1.schema.json",
       "source": "contracts/events/schemas/ever.registry.instance.seen.v1.schema.json",
-      "source_sha256": "2fa75eb47859b1bb4b0c8507dcfbe1219a3f92516929c41ae0aa1f33d274aa9c",
-      "sha256": "2fa75eb47859b1bb4b0c8507dcfbe1219a3f92516929c41ae0aa1f33d274aa9c",
+      "source_sha256": "4551ecf3396f7939314d334f2f9255526fdbbd15c905769257e37b0f0afadc0a",
+      "sha256": "4551ecf3396f7939314d334f2f9255526fdbbd15c905769257e37b0f0afadc0a",
       "transform": null,
       "provisional": false,
       "upstream": null
@@ -373,8 +366,8 @@
     {
       "path": "contracts/schemas/events/ever.registry.tenant_link.created.v1.schema.json",
       "source": "contracts/events/schemas/ever.registry.tenant_link.created.v1.schema.json",
-      "source_sha256": "c3c0a42c7d76dd6a0aefecfa415a279fcc2a2b5676cb0da9e4d1ffcdb171ffb3",
-      "sha256": "c3c0a42c7d76dd6a0aefecfa415a279fcc2a2b5676cb0da9e4d1ffcdb171ffb3",
+      "source_sha256": "d9c109b2e34c14d5325342dcdbf273415f37770af650a984d249b606de573241",
+      "sha256": "d9c109b2e34c14d5325342dcdbf273415f37770af650a984d249b606de573241",
       "transform": null,
       "provisional": false,
       "upstream": null
@@ -382,8 +375,8 @@
     {
       "path": "contracts/schemas/events/ever.registry.tenant_link.orphaned.v1.schema.json",
       "source": "contracts/events/schemas/ever.registry.tenant_link.orphaned.v1.schema.json",
-      "source_sha256": "9afd8dbb34ccdcc0891a893aa757095cd23e14f903effc6e5877c26975386977",
-      "sha256": "9afd8dbb34ccdcc0891a893aa757095cd23e14f903effc6e5877c26975386977",
+      "source_sha256": "f9b216caa8e5b394adac6a17775c550ae8dd865878c995064bf3a8af21173132",
+      "sha256": "f9b216caa8e5b394adac6a17775c550ae8dd865878c995064bf3a8af21173132",
       "transform": null,
       "provisional": false,
       "upstream": null
@@ -391,8 +384,8 @@
     {
       "path": "contracts/schemas/events/ever.registry.tenant_link.resumed.v1.schema.json",
       "source": "contracts/events/schemas/ever.registry.tenant_link.resumed.v1.schema.json",
-      "source_sha256": "d9bfad53802d7d3a33398e3c3f982f40a6af89b03a722769714a2b5628352a97",
-      "sha256": "d9bfad53802d7d3a33398e3c3f982f40a6af89b03a722769714a2b5628352a97",
+      "source_sha256": "5bcb5f332c26c0bea3c05d90f03249ef3d9ba53cf36b16b8c932df498b9adb44",
+      "sha256": "5bcb5f332c26c0bea3c05d90f03249ef3d9ba53cf36b16b8c932df498b9adb44",
       "transform": null,
       "provisional": false,
       "upstream": null
@@ -400,8 +393,8 @@
     {
       "path": "contracts/schemas/events/ever.registry.tenant_link.suspended.v1.schema.json",
       "source": "contracts/events/schemas/ever.registry.tenant_link.suspended.v1.schema.json",
-      "source_sha256": "f064dd5fca7a2475f3a934bba98d36fe4788c6d9e0faf44eb0ef9ab7fcd77703",
-      "sha256": "f064dd5fca7a2475f3a934bba98d36fe4788c6d9e0faf44eb0ef9ab7fcd77703",
+      "source_sha256": "ee3d0a096d8b17de304bfb693e41df8ccfeba3dfb64d104b2d7243a652ea5fc2",
+      "sha256": "ee3d0a096d8b17de304bfb693e41df8ccfeba3dfb64d104b2d7243a652ea5fc2",
       "transform": null,
       "provisional": false,
       "upstream": null
@@ -409,8 +402,8 @@
     {
       "path": "contracts/schemas/events/ever.registry.tenant_link.unlinked.v1.schema.json",
       "source": "contracts/events/schemas/ever.registry.tenant_link.unlinked.v1.schema.json",
-      "source_sha256": "e437939ff4810504bf910bbb499c1d9fdf18d9754453fb6de59bf1975f24458d",
-      "sha256": "e437939ff4810504bf910bbb499c1d9fdf18d9754453fb6de59bf1975f24458d",
+      "source_sha256": "d575ea6d2ed858605c623f450ed76f4132dade11700c86cd63868cea906d19e5",
+      "sha256": "d575ea6d2ed858605c623f450ed76f4132dade11700c86cd63868cea906d19e5",
       "transform": null,
       "provisional": false,
       "upstream": null

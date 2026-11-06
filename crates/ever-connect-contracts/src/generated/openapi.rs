@@ -117,13 +117,6 @@ pub mod components {
         ///The product tenant: the tenant of the link in `Ever-Link-Id`.
         pub product_tenant_id: ::std::string::String,
     }
-    ///`Compat`
-    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
-    pub struct Compat {
-        pub product: ProductCode,
-        ///semver range.
-        pub version_range: ::std::string::String,
-    }
     ///URLs the product reports.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, Default)]
     #[serde(deny_unknown_fields)]
@@ -155,6 +148,8 @@ pub mod components {
         SelfHosted,
         #[serde(rename = "works_app")]
         WorksApp,
+        #[serde(rename = "app")]
+        App,
     }
     impl ::std::fmt::Display for ConnectKind {
         fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
@@ -162,6 +157,7 @@ pub mod components {
                 Self::Cloud => f.write_str("cloud"),
                 Self::SelfHosted => f.write_str("self_hosted"),
                 Self::WorksApp => f.write_str("works_app"),
+                Self::App => f.write_str("app"),
             }
         }
     }
@@ -172,6 +168,7 @@ pub mod components {
                 "cloud" => Ok(Self::Cloud),
                 "self_hosted" => Ok(Self::SelfHosted),
                 "works_app" => Ok(Self::WorksApp),
+                "app" => Ok(Self::App),
                 _ => Err("invalid value".into()),
             }
         }
@@ -671,6 +668,22 @@ pub mod components {
         SsoRequired,
         #[serde(rename = "sso_bound")]
         SsoBound,
+        #[serde(rename = "domain_not_verified")]
+        DomainNotVerified,
+        #[serde(rename = "saml_unsupported")]
+        SamlUnsupported,
+        #[serde(rename = "sso_already_enabled")]
+        SsoAlreadyEnabled,
+        #[serde(rename = "sso_decommissioning")]
+        SsoDecommissioning,
+        #[serde(rename = "sso_test_required")]
+        SsoTestRequired,
+        #[serde(rename = "sso_not_enabled")]
+        SsoNotEnabled,
+        #[serde(rename = "link_conflict")]
+        LinkConflict,
+        #[serde(rename = "grant_not_accepted")]
+        GrantNotAccepted,
         #[serde(rename = "reauth_required")]
         ReauthRequired,
         #[serde(rename = "session_required")]
@@ -842,6 +855,14 @@ pub mod components {
                 Self::BillingActive => f.write_str("billing_active"),
                 Self::SsoRequired => f.write_str("sso_required"),
                 Self::SsoBound => f.write_str("sso_bound"),
+                Self::DomainNotVerified => f.write_str("domain_not_verified"),
+                Self::SamlUnsupported => f.write_str("saml_unsupported"),
+                Self::SsoAlreadyEnabled => f.write_str("sso_already_enabled"),
+                Self::SsoDecommissioning => f.write_str("sso_decommissioning"),
+                Self::SsoTestRequired => f.write_str("sso_test_required"),
+                Self::SsoNotEnabled => f.write_str("sso_not_enabled"),
+                Self::LinkConflict => f.write_str("link_conflict"),
+                Self::GrantNotAccepted => f.write_str("grant_not_accepted"),
                 Self::ReauthRequired => f.write_str("reauth_required"),
                 Self::SessionRequired => f.write_str("session_required"),
                 Self::StepUpRequired => f.write_str("step_up_required"),
@@ -968,6 +989,14 @@ pub mod components {
                 "billing_active" => Ok(Self::BillingActive),
                 "sso_required" => Ok(Self::SsoRequired),
                 "sso_bound" => Ok(Self::SsoBound),
+                "domain_not_verified" => Ok(Self::DomainNotVerified),
+                "saml_unsupported" => Ok(Self::SamlUnsupported),
+                "sso_already_enabled" => Ok(Self::SsoAlreadyEnabled),
+                "sso_decommissioning" => Ok(Self::SsoDecommissioning),
+                "sso_test_required" => Ok(Self::SsoTestRequired),
+                "sso_not_enabled" => Ok(Self::SsoNotEnabled),
+                "link_conflict" => Ok(Self::LinkConflict),
+                "grant_not_accepted" => Ok(Self::GrantNotAccepted),
                 "reauth_required" => Ok(Self::ReauthRequired),
                 "session_required" => Ok(Self::SessionRequired),
                 "step_up_required" => Ok(Self::StepUpRequired),
@@ -1124,42 +1153,6 @@ pub mod components {
         header.*/
         pub path: ::std::string::String,
     }
-    /**Organization handle as shown at `ever.co/<handle>`. Lowercase ASCII,
-    letter first, 3-30 characters, single hyphens only, no leading, trailing
-    or double hyphen. Handles belong to organizations only.
-    */
-    #[derive(
-        ::serde::Deserialize, ::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
-    )]
-    #[serde(transparent)]
-    pub struct Handle(pub ::std::string::String);
-    impl ::std::ops::Deref for Handle {
-        type Target = ::std::string::String;
-        fn deref(&self) -> &::std::string::String {
-            &self.0
-        }
-    }
-    impl ::std::convert::From<Handle> for ::std::string::String {
-        fn from(value: Handle) -> Self {
-            value.0
-        }
-    }
-    impl ::std::convert::From<::std::string::String> for Handle {
-        fn from(value: ::std::string::String) -> Self {
-            Self(value)
-        }
-    }
-    impl ::std::fmt::Display for Handle {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            self.0.fmt(f)
-        }
-    }
-    impl ::std::str::FromStr for Handle {
-        type Err = ::std::convert::Infallible;
-        fn from_str(value: &str) -> ::std::result::Result<Self, Self::Err> {
-            Ok(Self(value.to_string()))
-        }
-    }
     ///The answer to a heartbeat.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct HeartbeatAck {
@@ -1306,239 +1299,31 @@ pub mod components {
         ///The Ever ID subject.
         pub subject: ::std::string::String,
     }
-    ///The install fact, not the mechanics; `next_action_url` tells the caller where to continue (deep link, checkout, product admin).
-    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
-    pub struct Install {
-        pub created_at: Timestamp,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub edition_id: ::std::option::Option<::std::string::String>,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub external_ref: ::std::option::Option<::std::string::String>,
-        pub id: Ulid,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub instance_id: ::std::option::Option<::std::string::String>,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub listing: ::std::option::Option<ListingCard>,
-        pub listing_id: Ulid,
-        pub mechanism: InstallMechanism,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub next_action_url: ::std::option::Option<::std::string::String>,
-        pub org_id: Ulid,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub requested_by_person_id: ::std::option::Option<Ulid>,
-        ///Same vocabulary as `p_listings.install.state` and the event `install_state`: `cancelled` = stopped before it was installed (`requested | pending_payment | installing`), `removed` = removed after `installed | delivered`.
-        pub state: InstallState,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub tenant_link_id: ::std::option::Option<::std::string::String>,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub updated_at: ::std::option::Option<Timestamp>,
-    }
-    ///`InstallMechanism`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum InstallMechanism {
-        #[serde(rename = "works_blueprint")]
-        WorksBlueprint,
-        #[serde(rename = "provision_product")]
-        ProvisionProduct,
-        #[serde(rename = "instance_plugin")]
-        InstancePlugin,
-        #[serde(rename = "external_link")]
-        ExternalLink,
-        #[serde(rename = "partner_referral")]
-        PartnerReferral,
-    }
-    impl ::std::fmt::Display for InstallMechanism {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::WorksBlueprint => f.write_str("works_blueprint"),
-                Self::ProvisionProduct => f.write_str("provision_product"),
-                Self::InstancePlugin => f.write_str("instance_plugin"),
-                Self::ExternalLink => f.write_str("external_link"),
-                Self::PartnerReferral => f.write_str("partner_referral"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for InstallMechanism {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "works_blueprint" => Ok(Self::WorksBlueprint),
-                "provision_product" => Ok(Self::ProvisionProduct),
-                "instance_plugin" => Ok(Self::InstancePlugin),
-                "external_link" => Ok(Self::ExternalLink),
-                "partner_referral" => Ok(Self::PartnerReferral),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for InstallMechanism {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for InstallMechanism {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    ///Same vocabulary as `p_listings.install.state` and the event `install_state`: `cancelled` = stopped before it was installed (`requested | pending_payment | installing`), `removed` = removed after `installed | delivered`.
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum InstallState {
-        #[serde(rename = "requested")]
-        Requested,
-        #[serde(rename = "pending_payment")]
-        PendingPayment,
-        #[serde(rename = "installing")]
-        Installing,
-        #[serde(rename = "installed")]
-        Installed,
-        #[serde(rename = "delivered")]
-        Delivered,
-        #[serde(rename = "failed")]
-        Failed,
-        #[serde(rename = "removed")]
-        Removed,
-        #[serde(rename = "cancelled")]
-        Cancelled,
-    }
-    impl ::std::fmt::Display for InstallState {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Requested => f.write_str("requested"),
-                Self::PendingPayment => f.write_str("pending_payment"),
-                Self::Installing => f.write_str("installing"),
-                Self::Installed => f.write_str("installed"),
-                Self::Delivered => f.write_str("delivered"),
-                Self::Failed => f.write_str("failed"),
-                Self::Removed => f.write_str("removed"),
-                Self::Cancelled => f.write_str("cancelled"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for InstallState {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "requested" => Ok(Self::Requested),
-                "pending_payment" => Ok(Self::PendingPayment),
-                "installing" => Ok(Self::Installing),
-                "installed" => Ok(Self::Installed),
-                "delivered" => Ok(Self::Delivered),
-                "failed" => Ok(Self::Failed),
-                "removed" => Ok(Self::Removed),
-                "cancelled" => Ok(Self::Cancelled),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for InstallState {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for InstallState {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    ///Reported by the instance that performed an `instance_plugin` install.
+    ///`POST /v1/installs/{install}/status`: what the installation did with a plugin install.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
-    pub struct InstallStatus {
+    pub struct InstallStatusReport {
+        /**Why it failed: `checksum_mismatch`, `incompatible_version`, `installer_disabled`,
+        `permission_denied` or `unknown`, optionally followed by a short note (at most 500
+        characters in all; only the token is kept).*/
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub detail: ::std::option::Option<::std::string::String>,
+        ///The installation's own reference to the installed plugin (at most 128 characters).
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub external_ref: ::std::option::Option<::std::string::String>,
-        pub state: InstallStatusState,
+        ///`installing`, `installed`, `failed` or `removed`.
+        pub state: ::std::string::String,
+        ///The version installed (1 to 64 characters).
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub version: ::std::option::Option<::std::string::String>,
     }
-    ///`InstallStatusState`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum InstallStatusState {
-        #[serde(rename = "installing")]
-        Installing,
-        #[serde(rename = "installed")]
-        Installed,
-        #[serde(rename = "failed")]
-        Failed,
-        #[serde(rename = "removed")]
-        Removed,
-    }
-    impl ::std::fmt::Display for InstallStatusState {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Installing => f.write_str("installing"),
-                Self::Installed => f.write_str("installed"),
-                Self::Failed => f.write_str("failed"),
-                Self::Removed => f.write_str("removed"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for InstallStatusState {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "installing" => Ok(Self::Installing),
-                "installed" => Ok(Self::Installed),
-                "failed" => Ok(Self::Failed),
-                "removed" => Ok(Self::Removed),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for InstallStatusState {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for InstallStatusState {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
+    ///The answer to an installation: its own install's state, nothing of the organization.
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct InstallStatusView {
+        ///The install.
+        pub id: ::std::string::String,
+        ///Where it stands.
+        pub state: ::std::string::String,
     }
     /**A connected instance as an organization sees it. Instances are outbound-only: no address is
     ever derived, and none is shown here.*/
@@ -1659,6 +1444,24 @@ pub mod components {
         ///When it was last rotated.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub rotated_at: ::std::option::Option<::std::string::String>,
+    }
+    ///The grant as the installation reads it: the invitee only once the person accepted.
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct InstanceProviderGrant {
+        ///The invitee's e-mail (read now, never stored).
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub email: ::std::option::Option<::std::string::String>,
+        ///When it ends.
+        pub expires_at: ::std::string::String,
+        ///The grant.
+        pub grant_id: ::std::string::String,
+        ///The invitee's name (read now, never stored).
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub name: ::std::option::Option<::std::string::String>,
+        ///The product role.
+        pub role: ::std::string::String,
+        ///`person_accepted`, `accepted`, `declined`, `revoked` or `expired`.
+        pub status: ::std::string::String,
     }
     ///What an instance sees about itself.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
@@ -1863,32 +1666,6 @@ pub mod components {
         pub product_tenant_id: ::std::string::String,
         ///`active`, `suspended`, `orphaned` or `unlinked`.
         pub state: ::std::string::String,
-    }
-    ///Public card projection produced by the type plugin.
-    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
-    pub struct ListingCard {
-        #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
-        pub categories: ::std::vec::Vec<::std::string::String>,
-        #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
-        pub compat: ::std::vec::Vec<Compat>,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub from_price: ::std::option::Option<Money>,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub icon_url: ::std::option::Option<::std::string::String>,
-        pub id: Ulid,
-        #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
-        pub pricing_models: ::std::vec::Vec<PricingModel>,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub published_at: ::std::option::Option<::std::string::String>,
-        ///Passed review (shown as a "Verified" badge).
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub reviewed: ::std::option::Option<bool>,
-        pub slug: ::std::string::String,
-        pub summary: ::std::string::String,
-        pub title: ::std::string::String,
-        #[serde(rename = "type")]
-        pub type_: ::std::string::String,
-        pub vendor: Vendor,
     }
     ///One organization that matched.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
@@ -2437,14 +2214,6 @@ pub mod components {
             value.parse()
         }
     }
-    ///An amount in minor units.
-    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
-    pub struct Money {
-        ///Minor units (cents).
-        pub amount_minor: i64,
-        ///ISO 4217, upper case.
-        pub currency: ::std::string::String,
-    }
     ///One authoritative membership of the caller (claims inside tokens are only a hint).
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct MyMembership {
@@ -2625,69 +2394,6 @@ pub mod components {
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub tenant_link_id: ::std::option::Option<::std::string::String>,
     }
-    ///Pricing is delegated to the app; `external` means the vendor bills on its own site.
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum PricingModel {
-        #[serde(rename = "free")]
-        Free,
-        #[serde(rename = "one_time")]
-        OneTime,
-        #[serde(rename = "subscription")]
-        Subscription,
-        #[serde(rename = "per_unit")]
-        PerUnit,
-        #[serde(rename = "external")]
-        External,
-    }
-    impl ::std::fmt::Display for PricingModel {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Free => f.write_str("free"),
-                Self::OneTime => f.write_str("one_time"),
-                Self::Subscription => f.write_str("subscription"),
-                Self::PerUnit => f.write_str("per_unit"),
-                Self::External => f.write_str("external"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for PricingModel {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "free" => Ok(Self::Free),
-                "one_time" => Ok(Self::OneTime),
-                "subscription" => Ok(Self::Subscription),
-                "per_unit" => Ok(Self::PerUnit),
-                "external" => Ok(Self::External),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for PricingModel {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for PricingModel {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
     ///An RFC 9457 problem document.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct Problem {
@@ -2713,286 +2419,25 @@ pub mod components {
         #[serde(rename = "type")]
         pub type_: ::std::string::String,
     }
-    ///The Ever product a record belongs to. `demand` is listed with status `soon` and accepts no connections.
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum ProductCode {
-        #[serde(rename = "gauzy")]
-        Gauzy,
-        #[serde(rename = "teams")]
-        Teams,
-        #[serde(rename = "works")]
-        Works,
-        #[serde(rename = "rec")]
-        Rec,
-        #[serde(rename = "traduora")]
-        Traduora,
-        #[serde(rename = "demand")]
-        Demand,
+    ///The grant's state after a report.
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct ProviderGrantStateView {
+        ///The grant.
+        pub grant_id: ::std::string::String,
+        ///Its state.
+        pub status: ::std::string::String,
     }
-    impl ::std::fmt::Display for ProductCode {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Gauzy => f.write_str("gauzy"),
-                Self::Teams => f.write_str("teams"),
-                Self::Works => f.write_str("works"),
-                Self::Rec => f.write_str("rec"),
-                Self::Traduora => f.write_str("traduora"),
-                Self::Demand => f.write_str("demand"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for ProductCode {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "gauzy" => Ok(Self::Gauzy),
-                "teams" => Ok(Self::Teams),
-                "works" => Ok(Self::Works),
-                "rec" => Ok(Self::Rec),
-                "traduora" => Ok(Self::Traduora),
-                "demand" => Ok(Self::Demand),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for ProductCode {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for ProductCode {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    ///A provider access grant as the installation reads it (`provider_access`). `email` and `name` of the invitee appear only once the provider person accepted the grant.
+    ///What the installation did.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
-    pub struct ProviderGrant {
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub email: ::std::option::Option<::std::string::String>,
-        pub grant_id: Ulid,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub name: ::std::option::Option<::std::string::String>,
-        ///The product role the provider organization asked for.
-        pub role: ::std::string::String,
-        pub status: ProviderGrantStatusValue,
-    }
-    ///`ProviderGrantState`
-    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
-    #[serde(deny_unknown_fields)]
-    pub struct ProviderGrantState {
-        pub grant_id: Ulid,
-        pub status: ProviderGrantStateStatus,
-    }
-    ///`ProviderGrantStateStatus`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum ProviderGrantStateStatus {
-        #[serde(rename = "person_accepted")]
-        PersonAccepted,
-        #[serde(rename = "accepted")]
-        Accepted,
-        #[serde(rename = "declined")]
-        Declined,
-        #[serde(rename = "revoked")]
-        Revoked,
-        #[serde(rename = "expired")]
-        Expired,
-    }
-    impl ::std::fmt::Display for ProviderGrantStateStatus {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::PersonAccepted => f.write_str("person_accepted"),
-                Self::Accepted => f.write_str("accepted"),
-                Self::Declined => f.write_str("declined"),
-                Self::Revoked => f.write_str("revoked"),
-                Self::Expired => f.write_str("expired"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for ProviderGrantStateStatus {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "person_accepted" => Ok(Self::PersonAccepted),
-                "accepted" => Ok(Self::Accepted),
-                "declined" => Ok(Self::Declined),
-                "revoked" => Ok(Self::Revoked),
-                "expired" => Ok(Self::Expired),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for ProviderGrantStateStatus {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for ProviderGrantStateStatus {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    ///`ProviderGrantStatus`
-    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
-    #[serde(deny_unknown_fields)]
-    pub struct ProviderGrantStatus {
-        pub grant_id: Ulid,
+    pub struct ProviderGrantStatusReport {
+        ///The grant (as in the path).
+        pub grant_id: ::std::string::String,
+        ///The product's own user (required with `accepted`; never a name or an address).
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub product_user_ref: ::std::option::Option<::std::string::String>,
-        pub status: ProviderGrantStatusStatus,
-    }
-    ///`ProviderGrantStatusStatus`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum ProviderGrantStatusStatus {
-        #[serde(rename = "accepted")]
-        Accepted,
-        #[serde(rename = "declined")]
-        Declined,
-        #[serde(rename = "revoked")]
-        Revoked,
-        #[serde(rename = "expired")]
-        Expired,
-    }
-    impl ::std::fmt::Display for ProviderGrantStatusStatus {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Accepted => f.write_str("accepted"),
-                Self::Declined => f.write_str("declined"),
-                Self::Revoked => f.write_str("revoked"),
-                Self::Expired => f.write_str("expired"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for ProviderGrantStatusStatus {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "accepted" => Ok(Self::Accepted),
-                "declined" => Ok(Self::Declined),
-                "revoked" => Ok(Self::Revoked),
-                "expired" => Ok(Self::Expired),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for ProviderGrantStatusStatus {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for ProviderGrantStatusStatus {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    ///`ProviderGrantStatusValue`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum ProviderGrantStatusValue {
-        #[serde(rename = "person_accepted")]
-        PersonAccepted,
-        #[serde(rename = "accepted")]
-        Accepted,
-        #[serde(rename = "declined")]
-        Declined,
-        #[serde(rename = "revoked")]
-        Revoked,
-        #[serde(rename = "expired")]
-        Expired,
-    }
-    impl ::std::fmt::Display for ProviderGrantStatusValue {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::PersonAccepted => f.write_str("person_accepted"),
-                Self::Accepted => f.write_str("accepted"),
-                Self::Declined => f.write_str("declined"),
-                Self::Revoked => f.write_str("revoked"),
-                Self::Expired => f.write_str("expired"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for ProviderGrantStatusValue {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "person_accepted" => Ok(Self::PersonAccepted),
-                "accepted" => Ok(Self::Accepted),
-                "declined" => Ok(Self::Declined),
-                "revoked" => Ok(Self::Revoked),
-                "expired" => Ok(Self::Expired),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for ProviderGrantStatusValue {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for ProviderGrantStatusValue {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
+        ///`accepted`, `declined`, `revoked` or `expired`.
+        pub status: ::std::string::String,
     }
     ///The public address as stored (normalised: lower-case host, no default port).
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
@@ -3038,7 +2483,8 @@ pub mod components {
         pub install_source: ::std::string::String,
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub kind: ::std::option::Option<ConnectKind>,
-        ///The product the installation runs.
+        /**The product the installation runs; an App connects as `app:<app id>` with `kind: app`
+        where Apps connect.*/
         pub product: ::std::string::String,
         ///Its connect key: an Ed25519 public JWK (`kty: OKP`, `crv: Ed25519`, `x`).
         pub public_jwk: ConnectPublicJwk,
@@ -3114,13 +2560,17 @@ pub mod components {
         ///The new signing secret.
         pub secret: ::std::string::String,
     }
-    ///`SsoDiscover`
+    /**What discovery answers: the same `{"sso": false}` for every domain without an active Company
+    sign-in, so the answer tells nothing more.*/
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
-    pub struct SsoDiscover {
+    pub struct SsoDiscovery {
+        ///Where to sign in with the company's account.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub entry: ::std::option::Option<::std::string::String>,
+        ///That organization's handle.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub handle: ::std::option::Option<Handle>,
+        pub handle: ::std::option::Option<::std::string::String>,
+        ///The domain belongs to an organization with an active Company sign-in.
         pub sso: bool,
     }
     ///The answer to an accepted report.
@@ -3413,74 +2863,6 @@ pub mod components {
     pub struct UsageReport {
         ///1 to 100 counts.
         pub items: ::std::vec::Vec<UsageItem>,
-    }
-    ///`Vendor`
-    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
-    pub struct Vendor {
-        pub handle: Handle,
-        pub kind: VendorKind,
-        pub name: ::std::string::String,
-        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-        pub verified: ::std::option::Option<bool>,
-    }
-    ///`VendorKind`
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd,
-    )]
-    pub enum VendorKind {
-        #[serde(rename = "ever")]
-        Ever,
-        #[serde(rename = "partner")]
-        Partner,
-        #[serde(rename = "third_party")]
-        ThirdParty,
-        #[serde(rename = "community")]
-        Community,
-    }
-    impl ::std::fmt::Display for VendorKind {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Ever => f.write_str("ever"),
-                Self::Partner => f.write_str("partner"),
-                Self::ThirdParty => f.write_str("third_party"),
-                Self::Community => f.write_str("community"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for VendorKind {
-        type Err = self::error::ConversionError;
-        fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "ever" => Ok(Self::Ever),
-                "partner" => Ok(Self::Partner),
-                "third_party" => Ok(Self::ThirdParty),
-                "community" => Ok(Self::Community),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for VendorKind {
-        type Error = self::error::ConversionError;
-        fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for VendorKind {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
     }
     ///A new endpoint.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]

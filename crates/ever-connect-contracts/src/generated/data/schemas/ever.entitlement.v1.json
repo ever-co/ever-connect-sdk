@@ -102,7 +102,7 @@
           ],
           "properties": {
             "product": {
-              "$ref": "#/$defs/product"
+              "$ref": "#/$defs/instance_product"
             },
             "product_tenant_id": {
               "$ref": "#/$defs/product_id"
@@ -425,6 +425,19 @@
         "rec",
         "traduora",
         "demand"
+      ]
+    },
+    "instance_product": {
+      "description": "A product code, or the App of an App instance's link (app:<app id>).",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/product"
+        },
+        {
+          "type": "string",
+          "pattern": "^app:[0-9A-HJKMNP-TV-Z]{26}$",
+          "maxLength": 30
+        }
       ]
     },
     "product_id": {

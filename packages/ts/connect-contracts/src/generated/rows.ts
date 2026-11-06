@@ -782,13 +782,13 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "sign_in",
     "integration": null,
     "auth": "none",
-    "availability": "not_in_v1",
+    "availability": "v1",
     "endpoints": [
       {
         "method": "GET",
         "path": "/v1/sso/discover",
         "operation_id": "discoverSso",
-        "status": "not_in_v1"
+        "status": "pinned"
       }
     ],
     "trigger": "a user picks Sign in with your company",
@@ -895,13 +895,13 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "integration",
     "integration": "marketplace_installs",
     "auth": "instance token",
-    "availability": "not_in_v1",
+    "availability": "v1",
     "endpoints": [
       {
         "method": "POST",
         "path": "/v1/installs/{install}/status",
         "operation_id": "instanceReportInstallStatus",
-        "status": "not_in_v1"
+        "status": "pinned"
       }
     ],
     "trigger": "an install request picked from apps.ever.co was handled by the installation's plugin installer",
@@ -1047,19 +1047,19 @@ export const ROWS: readonly OutboundCallRow[] = [
     "group": "integration",
     "integration": "provider_access",
     "auth": "instance token",
-    "availability": "not_in_v1",
+    "availability": "v1",
     "endpoints": [
       {
         "method": "GET",
         "path": "/v1/instances/me/provider-grants/{grant}",
         "operation_id": "instanceGetProviderGrant",
-        "status": "not_in_v1"
+        "status": "pinned"
       },
       {
         "method": "POST",
         "path": "/v1/instances/me/provider-grants/{grant}/status",
         "operation_id": "instanceReportProviderGrantStatus",
-        "status": "not_in_v1"
+        "status": "pinned"
       }
     ],
     "trigger": "a provider access notice arrived on the event feed and was handled",
@@ -2495,6 +2495,11 @@ export const ROW_COVERAGE: readonly RowCoverage[] = [
       {
         "status": 409,
         "code": "illegal_transition",
+        "documented": true
+      },
+      {
+        "status": 409,
+        "code": "grant_not_accepted",
         "documented": true
       }
     ]

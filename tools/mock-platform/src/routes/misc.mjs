@@ -356,9 +356,20 @@ export const miscHandlers = {
   instanceGetProviderGrant({ state, instance, params }) {
     const g = state.grants.get(params.grant);
     if (!g || g.instance_id !== instance.id) fail(404, 'not_found', 'no such grant');
-    if (g.status !== 'person_accepted' && g.status !== 'accepted')
-      fail(409, 'illegal_transition', 'the provider person has not accepted the grant yet');
-    return { status: 200, body: { grant_id: g.id, status: g.status, role: g.role, email: g.email, name: g.name } };
+    // Nothing about the invitee before the provider's person accepted; their e-mail and name only
+    // while the grant stands.
+    if (g.status === 'requested') fail(409, 'grant_not_accepted', 'the provider person has not accepted the grant yet');
+    const invitee = g.status === 'person_accepted' || g.status === 'accepted';
+    return {
+      status: 200,
+      body: {
+        grant_id: g.id,
+        status: g.status,
+        role: g.role,
+        expires_at: g.expires_at,
+        ...(invitee ? { email: g.email, name: g.name } : {}),
+      },
+    };
   },
 
   instanceReportProviderGrantStatus({ state, instance, params, body }) {

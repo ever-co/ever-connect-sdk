@@ -255,9 +255,10 @@ export const adminRoutes = {
       id,
       instance_id: instance.id,
       status: body?.status ?? 'person_accepted',
-      role: body?.role ?? 'accountant',
+      role: body?.role ?? 'MANAGER',
       email: 'provider@example.com',
       name: 'Provider Person',
+      expires_at: state.iso(state.now() + 30 * 86400),
     });
     return { status: 201, body: { grant_id: id } };
   },

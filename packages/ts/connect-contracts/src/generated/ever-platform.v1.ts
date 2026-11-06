@@ -186,8 +186,10 @@ export interface paths {
         readonly get?: never;
         readonly put?: never;
         /**
-         * Instance reports the outcome of an `instance_plugin` install
-         * @description Only the instance the install targets may report; the product's own installer performs the install.
+         * An installation reports what it did with a plugin install it was asked for: `installing`,
+         *     `installed` (with its version), `failed` (with a detail token) or `removed`. Only the target
+         *     installation may report (any other gets `404`); a request it has not acknowledged yet counts
+         *     as delivered by the report itself. Reporting the state it is in again changes nothing.
          */
         readonly post: operations["instanceReportInstallStatus"];
         readonly delete?: never;
@@ -622,15 +624,8 @@ export interface paths {
             readonly cookie?: never;
         };
         /**
-         * Read a provider access grant addressed to this installation
-         * @description Outbound-call row 32; not in contract v1 (`contracts/openapi/v1-scope.json`).
-         *     The grant a provider
-         *     organization's owner or admin requested for one of its members on this
-         *     installation's linked organization. The invitee's `email` and `name`
-         *     travel only in this answer and only once the provider person accepted
-         *     the grant in app.ever.co (`person_accepted` or later); before that the
-         *     answer is `409 grant_not_accepted` and nothing about the person moves.
-         *     A grant of another installation answers `404`.
+         * A provider access grant addressed to this installation; the invitee's e-mail and name only
+         *     once the provider's person accepted (read now, never stored).
          */
         readonly get: operations["instanceGetProviderGrant"];
         readonly put?: never;
@@ -651,14 +646,8 @@ export interface paths {
         readonly get?: never;
         readonly put?: never;
         /**
-         * Report what the product did with a provider access grant
-         * @description Outbound-call row 32; not in contract v1 (`contracts/openapi/v1-scope.json`).
-         *     The product invited the provider's person through its own
-         *     invite and role path (`accepted`), or the grant ended on its side
-         *     (`declined`, `revoked`, `expired`). `product_user_ref` names the
-         *     product's own user, never a name or an address. A transition the grant
-         *     machine does not allow answers `409 illegal_transition`; a grant not
-         *     accepted by its person yet answers `409 grant_not_accepted`.
+         * What the installation did with a grant: invited the person (`accepted`, with its own user's
+         *     reference), or the grant ended on its side. Repeating the current state changes nothing.
          */
         readonly post: operations["instanceReportProviderGrantStatus"];
         readonly delete?: never;
@@ -1085,8 +1074,8 @@ export interface paths {
             readonly cookie?: never;
         };
         /**
-         * Does this e-mail domain belong to an organization with company sign-in?
-         * @description Answers only for verified domains with the `sso` purpose on organizations that enabled company sign-in. 60 requests per minute per IP. Never reveals anything for other domains.
+         * Whether an e-mail domain signs in with a company's own provider, and where. Public; the same
+         *     answer for every domain without an active Company sign-in.
          */
         readonly get: operations["discoverSso"];
         readonly put?: never;
@@ -1261,11 +1250,6 @@ export interface components {
             /** @description The product tenant: the tenant of the link in `Ever-Link-Id`. */
             readonly product_tenant_id: string;
         };
-        readonly Compat: {
-            readonly product: components["schemas"]["ProductCode"];
-            /** @description semver range. */
-            readonly version_range: string;
-        };
         /** @description URLs the product reports. */
         readonly CompletionUrls: {
             /** @description The product's API. */
@@ -1277,7 +1261,7 @@ export interface components {
          * @description The kind of deployment an installation is.
          * @enum {string}
          */
-        readonly ConnectKind: "cloud" | "self_hosted" | "works_app";
+        readonly ConnectKind: "cloud" | "self_hosted" | "works_app" | "app";
         /**
          * @description A connect key as a public JWK (RFC 8037): the public half of the Ed25519 key pair an installation
          *     generates. A private key (`d`) is refused. The platform assigns the key id: a `kid` sent here is
@@ -1632,7 +1616,7 @@ export interface components {
          *     unknown code by its HTTP status.
          * @enum {string}
          */
-        readonly ErrorCode: "validation_failed" | "not_found" | "unauthorized" | "forbidden_role" | "forbidden_scope" | "ambiguous_credentials" | "credential_revoked" | "instance_disconnected" | "instance_pending_approval" | "not_connection_owner" | "integration_disabled" | "integration_revoked" | "subject_unknown" | "link_not_found" | "oidc_client_exists" | "redirect_uri_invalid" | "denied_by_policy" | "integration_not_available" | "entitlement_required" | "publishing_unavailable" | "section_not_available" | "tier_required" | "limit_exceeded" | "rate_limited" | "idempotency_mismatch" | "idempotency_in_progress" | "stale_version" | "module_disabled" | "handle_taken" | "totp_required" | "totp_invalid" | "totp_locked" | "totp_already_enrolled" | "notice_period_running" | "handle_reserved" | "handle_retired" | "handle_invalid" | "handle_held" | "domain_denied" | "domain_taken" | "handle_held_by_you" | "hold_expired" | "hold_renewals_exhausted" | "claimant_has_handle" | "release_forbidden" | "code_invalid" | "code_expired" | "code_already_revealed" | "origin_not_allowed" | "product_mismatch" | "product_not_supported" | "product_not_provisionable" | "job_in_progress" | "not_job_owner" | "tier_not_available" | "checkout_email_mismatch" | "intent_expired" | "intent_consumed" | "key_mismatch" | "signature_invalid" | "unlinked_org" | "schema_violation" | "mirror_owned_field" | "illegal_transition" | "already_exists" | "already_completed" | "legal_basis_required" | "receipt_final" | "billing_active" | "sso_required" | "sso_bound" | "reauth_required" | "session_required" | "step_up_required" | "session_bound" | "authorization_pending" | "slow_down" | "expired_token" | "already_connected" | "already_linked" | "already_claimed" | "claim_locked" | "invalid_client" | "public_jwk_invalid" | "identifier_claimed" | "salt_version_unknown" | "salt_version_retired" | "hashes_invalid" | "lookup_key_required" | "required_component" | "resync_required" | "last_owner" | "last_auth_method" | "instances_linked" | "install_in_progress" | "slug_reserved" | "checklist_incomplete" | "scope_version_outdated" | "consent_required" | "method_not_allowed" | "payload_too_large" | "unsupported_media_type" | "gone" | "unavailable" | "upstream" | "database_absent" | "database_unreachable" | "topic_private" | "realtime_disabled" | "topic_forbidden" | "topic_invalid" | "realtime_busy" | "too_many_streams" | "keys_unavailable" | "start_disabled" | "turnstile_failed" | "invalid_request" | "file_rejected" | "internal_error";
+        readonly ErrorCode: "validation_failed" | "not_found" | "unauthorized" | "forbidden_role" | "forbidden_scope" | "ambiguous_credentials" | "credential_revoked" | "instance_disconnected" | "instance_pending_approval" | "not_connection_owner" | "integration_disabled" | "integration_revoked" | "subject_unknown" | "link_not_found" | "oidc_client_exists" | "redirect_uri_invalid" | "denied_by_policy" | "integration_not_available" | "entitlement_required" | "publishing_unavailable" | "section_not_available" | "tier_required" | "limit_exceeded" | "rate_limited" | "idempotency_mismatch" | "idempotency_in_progress" | "stale_version" | "module_disabled" | "handle_taken" | "totp_required" | "totp_invalid" | "totp_locked" | "totp_already_enrolled" | "notice_period_running" | "handle_reserved" | "handle_retired" | "handle_invalid" | "handle_held" | "domain_denied" | "domain_taken" | "handle_held_by_you" | "hold_expired" | "hold_renewals_exhausted" | "claimant_has_handle" | "release_forbidden" | "code_invalid" | "code_expired" | "code_already_revealed" | "origin_not_allowed" | "product_mismatch" | "product_not_supported" | "product_not_provisionable" | "job_in_progress" | "not_job_owner" | "tier_not_available" | "checkout_email_mismatch" | "intent_expired" | "intent_consumed" | "key_mismatch" | "signature_invalid" | "unlinked_org" | "schema_violation" | "mirror_owned_field" | "illegal_transition" | "already_exists" | "already_completed" | "legal_basis_required" | "receipt_final" | "billing_active" | "sso_required" | "sso_bound" | "domain_not_verified" | "saml_unsupported" | "sso_already_enabled" | "sso_decommissioning" | "sso_test_required" | "sso_not_enabled" | "link_conflict" | "grant_not_accepted" | "reauth_required" | "session_required" | "step_up_required" | "session_bound" | "authorization_pending" | "slow_down" | "expired_token" | "already_connected" | "already_linked" | "already_claimed" | "claim_locked" | "invalid_client" | "public_jwk_invalid" | "identifier_claimed" | "salt_version_unknown" | "salt_version_retired" | "hashes_invalid" | "lookup_key_required" | "required_component" | "resync_required" | "last_owner" | "last_auth_method" | "instances_linked" | "install_in_progress" | "slug_reserved" | "checklist_incomplete" | "scope_version_outdated" | "consent_required" | "method_not_allowed" | "payload_too_large" | "unsupported_media_type" | "gone" | "unavailable" | "upstream" | "database_absent" | "database_unreachable" | "topic_private" | "realtime_disabled" | "topic_forbidden" | "topic_invalid" | "realtime_busy" | "too_many_streams" | "keys_unavailable" | "start_disabled" | "turnstile_failed" | "invalid_request" | "file_rejected" | "internal_error";
         /**
          * @description One event on a webhook, the installation feed or SSE. Payloads carry identifiers and status
          *     only, never records; delivery is at-least-once: dedupe on `id`.
@@ -1713,14 +1697,6 @@ export interface components {
              */
             readonly path: string;
         };
-        /**
-         * @description Organization handle as shown at `ever.co/<handle>`. Lowercase ASCII,
-         *     letter first, 3-30 characters, single hyphens only, no leading, trailing
-         *     or double hyphen. Handles belong to organizations only.
-         * @example acme
-         * @example acme-ltd
-         */
-        readonly Handle: string;
         /** @description The answer to a heartbeat. */
         readonly HeartbeatAck: {
             /** @description Compact hints; the feed carries the full events. */
@@ -1827,36 +1803,27 @@ export interface components {
             /** @description The Ever ID subject. */
             readonly subject: string;
         };
-        /** @description The install fact, not the mechanics; `next_action_url` tells the caller where to continue (deep link, checkout, product admin). */
-        readonly Install: {
-            readonly created_at: components["schemas"]["Timestamp"];
-            readonly edition_id?: string | null;
-            readonly external_ref?: string | null;
-            readonly id: components["schemas"]["Ulid"];
-            readonly instance_id?: string | null;
-            readonly listing?: components["schemas"]["ListingCard"];
-            readonly listing_id: components["schemas"]["Ulid"];
-            readonly mechanism: components["schemas"]["InstallMechanism"];
-            /** Format: uri */
-            readonly next_action_url?: string | null;
-            readonly org_id: components["schemas"]["Ulid"];
-            readonly requested_by_person_id?: components["schemas"]["Ulid"];
+        /** @description `POST /v1/installs/{install}/status`: what the installation did with a plugin install. */
+        readonly InstallStatusReport: {
             /**
-             * @description Same vocabulary as `p_listings.install.state` and the event `install_state`: `cancelled` = stopped before it was installed (`requested | pending_payment | installing`), `removed` = removed after `installed | delivered`.
-             * @enum {string}
+             * @description Why it failed: `checksum_mismatch`, `incompatible_version`, `installer_disabled`,
+             *     `permission_denied` or `unknown`, optionally followed by a short note (at most 500
+             *     characters in all; only the token is kept).
              */
-            readonly state: "requested" | "pending_payment" | "installing" | "installed" | "delivered" | "failed" | "removed" | "cancelled";
-            readonly tenant_link_id?: string | null;
-            readonly updated_at?: components["schemas"]["Timestamp"];
+            readonly detail?: string | null;
+            /** @description The installation's own reference to the installed plugin (at most 128 characters). */
+            readonly external_ref?: string | null;
+            /** @description `installing`, `installed`, `failed` or `removed`. */
+            readonly state: string;
+            /** @description The version installed (1 to 64 characters). */
+            readonly version?: string | null;
         };
-        /** @enum {string} */
-        readonly InstallMechanism: "works_blueprint" | "provision_product" | "instance_plugin" | "external_link" | "partner_referral";
-        /** @description Reported by the instance that performed an `instance_plugin` install. */
-        readonly InstallStatus: {
-            readonly detail?: string;
-            readonly external_ref?: string;
-            /** @enum {string} */
-            readonly state: "installing" | "installed" | "failed" | "removed";
+        /** @description The answer to an installation: its own install's state, nothing of the organization. */
+        readonly InstallStatusView: {
+            /** @description The install. */
+            readonly id: string;
+            /** @description Where it stands. */
+            readonly state: string;
         };
         /**
          * @description A connected instance as an organization sees it. Instances are outbound-only: no address is
@@ -2016,6 +1983,24 @@ export interface components {
              * @description When it was last rotated.
              */
             readonly rotated_at?: string | null;
+        };
+        /** @description The grant as the installation reads it: the invitee only once the person accepted. */
+        readonly InstanceProviderGrant: {
+            /** @description The invitee's e-mail (read now, never stored). */
+            readonly email?: string | null;
+            /**
+             * Format: date-time
+             * @description When it ends.
+             */
+            readonly expires_at: string;
+            /** @description The grant. */
+            readonly grant_id: string;
+            /** @description The invitee's name (read now, never stored). */
+            readonly name?: string | null;
+            /** @description The product role. */
+            readonly role: string;
+            /** @description `person_accepted`, `accepted`, `declined`, `revoked` or `expired`. */
+            readonly status: string;
         };
         /** @description What an instance sees about itself. */
         readonly InstanceSelf: {
@@ -2227,25 +2212,6 @@ export interface components {
             readonly product_tenant_id: string;
             /** @description `active`, `suspended`, `orphaned` or `unlinked`. */
             readonly state: string;
-        };
-        /** @description Public card projection produced by the type plugin. */
-        readonly ListingCard: {
-            readonly categories?: readonly string[];
-            readonly compat?: readonly components["schemas"]["Compat"][];
-            readonly from_price?: components["schemas"]["Money"];
-            /** Format: uri */
-            readonly icon_url?: string | null;
-            readonly id: components["schemas"]["Ulid"];
-            readonly pricing_models?: readonly components["schemas"]["PricingModel"][];
-            /** Format: date-time */
-            readonly published_at?: string | null;
-            /** @description Passed review (shown as a "Verified" badge). */
-            readonly reviewed?: boolean;
-            readonly slug: string;
-            readonly summary: string;
-            readonly title: string;
-            readonly type: string;
-            readonly vendor: components["schemas"]["Vendor"];
         };
         /** @description One organization that matched. */
         readonly LookupMatch: {
@@ -2547,16 +2513,6 @@ export interface components {
          * @enum {string}
          */
         readonly MirrorSubject: "app" | "deployment";
-        /** @description An amount in minor units. */
-        readonly Money: {
-            /**
-             * Format: int64
-             * @description Minor units (cents).
-             */
-            readonly amount_minor: number;
-            /** @description ISO 4217, upper case. */
-            readonly currency: string;
-        };
         /** @description One authoritative membership of the caller (claims inside tokens are only a hint). */
         readonly MyMembership: {
             /** @description Its display name. */
@@ -2694,11 +2650,6 @@ export interface components {
              */
             readonly tenant_link_id?: string;
         };
-        /**
-         * @description Pricing is delegated to the app; `external` means the vendor bills on its own site.
-         * @enum {string}
-         */
-        readonly PricingModel: "free" | "one_time" | "subscription" | "per_unit" | "external";
         /** @description An RFC 9457 problem document. */
         readonly Problem: {
             /** @description The machine code, stable for clients to branch on. */
@@ -2725,31 +2676,21 @@ export interface components {
             /** @description `https://api.ever.co/problems/<code>`. */
             readonly type: string;
         };
-        /**
-         * @description The Ever product a record belongs to. `demand` is listed with status `soon` and accepts no connections.
-         * @enum {string}
-         */
-        readonly ProductCode: "gauzy" | "teams" | "works" | "rec" | "traduora" | "demand";
-        /** @description A provider access grant as the installation reads it (`provider_access`). `email` and `name` of the invitee appear only once the provider person accepted the grant. */
-        readonly ProviderGrant: {
-            readonly email?: string;
-            readonly grant_id: components["schemas"]["Ulid"];
-            readonly name?: string;
-            /** @description The product role the provider organization asked for. */
-            readonly role: string;
-            /** @enum {string} */
-            readonly status: "person_accepted" | "accepted" | "declined" | "revoked" | "expired";
+        /** @description The grant's state after a report. */
+        readonly ProviderGrantStateView: {
+            /** @description The grant. */
+            readonly grant_id: string;
+            /** @description Its state. */
+            readonly status: string;
         };
-        readonly ProviderGrantState: {
-            readonly grant_id: components["schemas"]["Ulid"];
-            /** @enum {string} */
-            readonly status: "person_accepted" | "accepted" | "declined" | "revoked" | "expired";
-        };
-        readonly ProviderGrantStatus: {
-            readonly grant_id: components["schemas"]["Ulid"];
-            readonly product_user_ref?: string;
-            /** @enum {string} */
-            readonly status: "accepted" | "declined" | "revoked" | "expired";
+        /** @description What the installation did. */
+        readonly ProviderGrantStatusReport: {
+            /** @description The grant (as in the path). */
+            readonly grant_id: string;
+            /** @description The product's own user (required with `accepted`; never a name or an address). */
+            readonly product_user_ref?: string | null;
+            /** @description `accepted`, `declined`, `revoked` or `expired`. */
+            readonly status: string;
         };
         /** @description The public address as stored (normalised: lower-case host, no default port). */
         readonly PublicUrl: {
@@ -2804,7 +2745,8 @@ export interface components {
             readonly install_source: string;
             readonly kind?: null | components["schemas"]["ConnectKind"];
             /**
-             * @description The product the installation runs.
+             * @description The product the installation runs; an App connects as `app:<app id>` with `kind: app`
+             *     where Apps connect.
              * @example gauzy
              */
             readonly product: string;
@@ -2885,10 +2827,16 @@ export interface components {
             /** @description The new signing secret. */
             readonly secret: string;
         };
-        readonly SsoDiscover: {
-            /** Format: uri */
-            readonly entry?: string;
-            readonly handle?: components["schemas"]["Handle"];
+        /**
+         * @description What discovery answers: the same `{"sso": false}` for every domain without an active Company
+         *     sign-in, so the answer tells nothing more.
+         */
+        readonly SsoDiscovery: {
+            /** @description Where to sign in with the company's account. */
+            readonly entry?: string | null;
+            /** @description That organization's handle. */
+            readonly handle?: string | null;
+            /** @description The domain belongs to an organization with an active Company sign-in. */
             readonly sso: boolean;
         };
         /** @description The answer to an accepted report. */
@@ -3103,14 +3051,6 @@ export interface components {
             /** @description 1 to 100 counts. */
             readonly items: readonly components["schemas"]["UsageItem"][];
         };
-        readonly Vendor: {
-            readonly handle: components["schemas"]["Handle"];
-            readonly kind: components["schemas"]["VendorKind"];
-            readonly name: string;
-            readonly verified?: boolean;
-        };
-        /** @enum {string} */
-        readonly VendorKind: "ever" | "partner" | "third_party" | "community";
         /** @description A new endpoint. */
         readonly WebhookCreate: {
             /** @description `v1` (the default). */
@@ -3634,31 +3574,29 @@ export interface operations {
     readonly instanceReportInstallStatus: {
         readonly parameters: {
             readonly query?: never;
-            readonly header: {
-                /** @description Client-generated key, unique per principal, <= 128 characters. See the `Idempotency` schema. */
-                readonly "Idempotency-Key": string;
-            };
+            readonly header?: never;
             readonly path: {
-                readonly install: components["schemas"]["Ulid"];
+                /** @description The install. */
+                readonly install: string;
             };
             readonly cookie?: never;
         };
         readonly requestBody: {
             readonly content: {
-                readonly "application/json": components["schemas"]["InstallStatus"];
+                readonly "application/json": components["schemas"]["InstallStatusReport"];
             };
         };
         readonly responses: {
-            /** @description Recorded. */
+            /** @description Recorded */
             readonly 200: {
                 headers: {
                     readonly [name: string]: unknown;
                 };
                 content: {
-                    readonly "application/json": components["schemas"]["Install"];
+                    readonly "application/json": components["schemas"]["InstallStatusView"];
                 };
             };
-            /** @description Principal lacks the role, scope, integration or entitlement, or the operation needs a fresh sign-in (`forbidden_role`, `forbidden_scope`, `integration_disabled`, `integration_revoked`, `instance_pending_approval`, `entitlement_required`, `tier_required`, `sso_required`, `reauth_required`, `session_required`: an Ever ID token issued to a product, installation or App client used anywhere except the two `everIdTokenRead` reads and the in-product consent write; `step_up_required`: that consent write without a sign-in in the last 300 s; `not_connection_owner`: an installation-wide integration changed by an organization that does not own the installation). */
+            /** @description `integration_disabled`, `integration_revoked` or `denied_by_policy` */
             readonly 403: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -3667,7 +3605,7 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Not found, or the module that serves this route is disabled on this deployment (`not_found`, `module_disabled`). */
+            /** @description Not this installation's install, or installs are off */
             readonly 404: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -3676,28 +3614,18 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description State conflict (`handle_taken`, `already_exists`, `key_mismatch`, `idempotency_in_progress`, `illegal_transition`, `billing_active`, `job_in_progress` when another job for the same subject is running). */
+            /** @description `illegal_transition`: the install cannot move there */
             readonly 409: {
                 headers: {
-                    /** @description Seconds to wait before retrying. */
-                    readonly "Retry-After"?: number;
                     readonly [name: string]: unknown;
                 };
                 content: {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Any other error, as a problem document. */
-            readonly default: {
+            /** @description `validation_failed` */
+            readonly 422: {
                 headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
                     readonly [name: string]: unknown;
                 };
                 content: {
@@ -4787,23 +4715,23 @@ export interface operations {
             readonly query?: never;
             readonly header?: never;
             readonly path: {
-                /** @description Provider grant id (ULID) from the `provider_grant_requested` feed notice. */
-                readonly grant: components["schemas"]["Ulid"];
+                /** @description The grant. */
+                readonly grant: string;
             };
             readonly cookie?: never;
         };
         readonly requestBody?: never;
         readonly responses: {
-            /** @description The grant. */
+            /** @description The grant (`Cache-Control: no-store`) */
             readonly 200: {
                 headers: {
                     readonly [name: string]: unknown;
                 };
                 content: {
-                    readonly "application/json": components["schemas"]["ProviderGrant"];
+                    readonly "application/json": components["schemas"]["InstanceProviderGrant"];
                 };
             };
-            /** @description Principal lacks the role, scope, integration or entitlement, or the operation needs a fresh sign-in (`forbidden_role`, `forbidden_scope`, `integration_disabled`, `integration_revoked`, `instance_pending_approval`, `entitlement_required`, `tier_required`, `sso_required`, `reauth_required`, `session_required`: an Ever ID token issued to a product, installation or App client used anywhere except the two `everIdTokenRead` reads and the in-product consent write; `step_up_required`: that consent write without a sign-in in the last 300 s; `not_connection_owner`: an installation-wide integration changed by an organization that does not own the installation). */
+            /** @description `integration_disabled`, `integration_revoked` or `denied_by_policy` */
             readonly 403: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -4812,7 +4740,7 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Not found, or the module that serves this route is disabled on this deployment (`not_found`, `module_disabled`). */
+            /** @description Another installation's or link's grant, or `module_disabled` */
             readonly 404: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -4821,28 +4749,9 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description State conflict (`handle_taken`, `already_exists`, `key_mismatch`, `idempotency_in_progress`, `illegal_transition`, `billing_active`, `job_in_progress` when another job for the same subject is running). */
+            /** @description `grant_not_accepted`: the person has not accepted yet (nothing about them is answered) */
             readonly 409: {
                 headers: {
-                    /** @description Seconds to wait before retrying. */
-                    readonly "Retry-After"?: number;
-                    readonly [name: string]: unknown;
-                };
-                content: {
-                    readonly "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description Any other error, as a problem document. */
-            readonly default: {
-                headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
                     readonly [name: string]: unknown;
                 };
                 content: {
@@ -4856,27 +4765,27 @@ export interface operations {
             readonly query?: never;
             readonly header?: never;
             readonly path: {
-                /** @description Provider grant id (ULID). */
-                readonly grant: components["schemas"]["Ulid"];
+                /** @description The grant. */
+                readonly grant: string;
             };
             readonly cookie?: never;
         };
         readonly requestBody: {
             readonly content: {
-                readonly "application/json": components["schemas"]["ProviderGrantStatus"];
+                readonly "application/json": components["schemas"]["ProviderGrantStatusReport"];
             };
         };
         readonly responses: {
-            /** @description Recorded. */
+            /** @description Recorded */
             readonly 200: {
                 headers: {
                     readonly [name: string]: unknown;
                 };
                 content: {
-                    readonly "application/json": components["schemas"]["ProviderGrantState"];
+                    readonly "application/json": components["schemas"]["ProviderGrantStateView"];
                 };
             };
-            /** @description Principal lacks the role, scope, integration or entitlement, or the operation needs a fresh sign-in (`forbidden_role`, `forbidden_scope`, `integration_disabled`, `integration_revoked`, `instance_pending_approval`, `entitlement_required`, `tier_required`, `sso_required`, `reauth_required`, `session_required`: an Ever ID token issued to a product, installation or App client used anywhere except the two `everIdTokenRead` reads and the in-product consent write; `step_up_required`: that consent write without a sign-in in the last 300 s; `not_connection_owner`: an installation-wide integration changed by an organization that does not own the installation). */
+            /** @description `integration_disabled`, `integration_revoked` or `denied_by_policy` */
             readonly 403: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -4885,7 +4794,7 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Not found, or the module that serves this route is disabled on this deployment (`not_found`, `module_disabled`). */
+            /** @description Another installation's or link's grant, or `module_disabled` */
             readonly 404: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -4894,37 +4803,18 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description State conflict (`handle_taken`, `already_exists`, `key_mismatch`, `idempotency_in_progress`, `illegal_transition`, `billing_active`, `job_in_progress` when another job for the same subject is running). */
+            /** @description `grant_not_accepted` (the person has not accepted yet), `illegal_transition` */
             readonly 409: {
                 headers: {
-                    /** @description Seconds to wait before retrying. */
-                    readonly "Retry-After"?: number;
                     readonly [name: string]: unknown;
                 };
                 content: {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Validation failed; unknown fields are rejected on writes (`validation_failed`, `schema_violation`, `code_invalid`, `idempotency_mismatch`, `mirror_owned_field`, `limit_exceeded`). */
+            /** @description `validation_failed`: an unknown status, a grant id that is not the path's, `accepted` without `product_user_ref` */
             readonly 422: {
                 headers: {
-                    readonly [name: string]: unknown;
-                };
-                content: {
-                    readonly "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description Any other error, as a problem document. */
-            readonly default: {
-                headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
                     readonly [name: string]: unknown;
                 };
                 content: {
@@ -5672,9 +5562,9 @@ export interface operations {
     readonly lookupCounterparties: {
         readonly parameters: {
             readonly query?: never;
-            readonly header: {
-                /** @description The tenant link the lookup is made for. Required from an installation: without it the platform answers `422 validation_failed` at `#Ever-Link-Id`. */
-                readonly "Ever-Link-Id": string;
+            readonly header?: {
+                /** @description The tenant link the lookup is made for: required with an instance token (`422 validation_failed` without it); an organization key names none. */
+                readonly "Ever-Link-Id"?: string | null;
             };
             readonly path?: never;
             readonly cookie?: never;
@@ -6024,6 +5914,7 @@ export interface operations {
     readonly discoverSso: {
         readonly parameters: {
             readonly query: {
+                /** @description An e-mail domain (`acme.com`; never an address). */
                 readonly email_domain: string;
             };
             readonly header?: never;
@@ -6032,43 +5923,36 @@ export interface operations {
         };
         readonly requestBody?: never;
         readonly responses: {
-            /** @description OK */
+            /** @description The answer (`Cache-Control: no-store`) */
             readonly 200: {
                 headers: {
                     readonly [name: string]: unknown;
                 };
                 content: {
-                    readonly "application/json": components["schemas"]["SsoDiscover"];
+                    readonly "application/json": components["schemas"]["SsoDiscovery"];
                 };
             };
-            /** @description Rate limit exceeded for this principal class (`rate_limited`). */
-            readonly 429: {
+            /** @description `module_disabled` */
+            readonly 404: {
                 headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description Seconds to wait before retrying. */
-                    readonly "Retry-After"?: number;
                     readonly [name: string]: unknown;
                 };
                 content: {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Any other error, as a problem document. */
-            readonly default: {
+            /** @description `validation_failed`: not a domain (the value is not echoed) */
+            readonly 422: {
                 headers: {
-                    /** @description IETF RateLimit header; requests allowed in the current window for this principal class. */
-                    readonly "RateLimit-Limit"?: number;
-                    /** @description IETF RateLimit header; requests remaining in the current window. */
-                    readonly "RateLimit-Remaining"?: number;
-                    /** @description IETF RateLimit header; seconds until the window resets. */
-                    readonly "RateLimit-Reset"?: number;
-                    /** @description The request id (generated or echoed). Quote it in support requests. */
-                    readonly "x-request-id"?: string;
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `rate_limited` */
+            readonly 429: {
+                headers: {
                     readonly [name: string]: unknown;
                 };
                 content: {

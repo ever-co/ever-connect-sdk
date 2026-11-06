@@ -35,7 +35,8 @@
         "teams",
         "works",
         "rec",
-        "traduora"
+        "traduora",
+        "app"
       ],
       "status": "active",
       "scope_version": 1,
@@ -126,7 +127,8 @@
         "gauzy",
         "works",
         "rec",
-        "traduora"
+        "traduora",
+        "app"
       ],
       "status": "coming_soon",
       "scope_version": 2,

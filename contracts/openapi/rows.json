@@ -472,7 +472,6 @@
       "row": 24,
       "title": "Company sign-in discovery",
       "operation_ids": ["discoverSso"],
-      "availability": "not_in_v1",
       "module": "connect",
       "group": "sign_in",
       "auth": "none",
@@ -551,7 +550,6 @@
       "row": 28,
       "title": "Install status",
       "operation_ids": ["instanceReportInstallStatus"],
-      "availability": "not_in_v1",
       "module": "connect",
       "group": "integration",
       "integration": "marketplace_installs",
@@ -637,7 +635,6 @@
       "row": 32,
       "title": "Provider access grants",
       "operation_ids": ["instanceGetProviderGrant", "instanceReportProviderGrantStatus"],
-      "availability": "not_in_v1",
       "module": "connect",
       "group": "integration",
       "integration": "provider_access",
@@ -650,7 +647,8 @@
       "errors": [
         [403, "integration_disabled"],
         [403, "integration_revoked"],
-        [409, "illegal_transition"]
+        [409, "illegal_transition"],
+        [409, "grant_not_accepted"]
       ]
     },
     {

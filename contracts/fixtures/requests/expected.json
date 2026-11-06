@@ -246,11 +246,11 @@
       "path": "/unexpected_field"
     },
     "install-status.json": {
-      "schema": "InstallStatus",
+      "schema": "InstallStatusReport",
       "valid": true
     },
     "install-status.invalid-extra-field.json": {
-      "schema": "InstallStatus",
+      "schema": "InstallStatusReport",
       "valid": false,
       "path": "/unexpected_field"
     },
@@ -337,11 +337,11 @@
       "path": "/unexpected_field"
     },
     "provider-grant-status.json": {
-      "schema": "ProviderGrantStatus",
+      "schema": "ProviderGrantStatusReport",
       "valid": true
     },
     "provider-grant-status.invalid-extra-field.json": {
-      "schema": "ProviderGrantStatus",
+      "schema": "ProviderGrantStatusReport",
       "valid": false,
       "path": "/email"
     }
