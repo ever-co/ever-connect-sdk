@@ -23,6 +23,9 @@ export function docker(args, { env, input, allowFail = false, timeoutS = 900, lo
   });
   if (r.error) {
     if (r.error.code === 'ENOENT') throw new Error('the docker CLI is not installed or not on PATH');
+    // Out of time: the CLI was killed, but a container it started keeps running. A caller that allows
+    // a failure gets what was printed so far (timedOut) and cleans up; any other caller gets the error.
+    if (r.error.code === 'ETIMEDOUT' && allowFail) return { status: null, timedOut: true, stdout: r.stdout ?? '', stderr: r.stderr ?? '' };
     throw r.error;
   }
   if (r.status !== 0 && !allowFail) throw new DockerError(args, r);

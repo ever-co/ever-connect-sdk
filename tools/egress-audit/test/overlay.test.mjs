@@ -67,6 +67,27 @@ test('every compose network is sealed and each process gets a holder, a sniffer 
   assert.deepEqual(doc.services.api.depends_on.db, { condition: 'service_started' });
   assert.equal(doc.services['mock-platform'], undefined);
   assert.match(text, /ports: !reset null/);
+  // A service outside the holders looks compose names up as written (a Kubernetes search list would
+  // otherwise come first); the process services keep their holder's resolver.
+  assert.deepEqual(doc.services.db, { dns_opt: ['ndots:0'] });
+  assert.equal(doc.services.api.dns_opt, undefined);
+});
+
+test('a service with resolver options or a shared namespace of its own keeps them', () => {
+  const own = productModel({
+    services: {
+      api: { image: 'example/api' },
+      cache: { image: 'example/cache', dns_opt: ['ndots:2'] },
+      search: { image: 'example/search', dns_search: ['example.test'] },
+      sidecar: { image: 'example/side', network_mode: 'service:api' },
+      db: { image: 'postgres:16' },
+    },
+  });
+  const doc = parse(
+    buildOverlay({ project: 'p', subnet: '10.231.43.0/24', dnsImage: 'd', product: own, processServices: ['api'], env: {}, mock: null }),
+  );
+  for (const svc of ['cache', 'search', 'sidecar']) assert.equal(doc.services[svc], undefined, svc);
+  assert.deepEqual(doc.services.db, { dns_opt: ['ndots:0'] });
 });
 
 test('the mock platform joins only when asked, with its configuration in the environment', () => {

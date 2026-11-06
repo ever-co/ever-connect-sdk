@@ -28,6 +28,15 @@ export const BROWSER_BASE_IMAGE =
   'mcr.microsoft.com/playwright:v1.62.1@sha256:dcc5531e97840b9b5e794f2814476b21571c5124a3fca2267d73041f56e7580e';
 /** Seconds the product is watched after the scenario when the config sets no wait_s. */
 export const DEFAULT_WAIT_S = 120;
+/**
+ * Seconds one driver step may take: 15 minutes, or longer for a scenario whose health wait is long
+ * and for a watch longer than that (wait_s, then up to 60 s for the required rows, then the settle).
+ */
+export function driverTimeoutS(plan, step) {
+  if (step === 'scenario') return Math.max(900, (plan.health_timeout_s ?? 120) + 300);
+  if (step === 'wait') return Math.max(900, (plan.wait_s ?? DEFAULT_WAIT_S) + 60 + 300);
+  return 900;
+}
 /** Seconds an idle page stays open when the config sets no idle_s. */
 export const DEFAULT_IDLE_S = 30;
 export const LEGS = ['api', 'browser'];
@@ -590,13 +599,30 @@ export async function runAudit({
       after_required_rows: mode.after_mark?.required_rows ?? [],
       managed_request: mode.managed_request,
     };
+    // Each step runs as a named container with a time limit of its own: a step that runs out of time
+    // is a fault of the run (with what it printed so far), and its container is removed, never left
+    // running next to the next step or the next mode.
     const driver = (step, extra = {}) => {
       const b64 = Buffer.from(JSON.stringify({ ...plan, ...extra })).toString('base64');
-      const r = full(['run', '--rm', '-T', '--no-deps', '-e', `EVER_AUDIT_PLAN_B64=${b64}`, 'ever-audit-driver', step], {
+      const name = `${project}-driver-${step}`;
+      const timeoutS = driverTimeoutS(plan, step);
+      docker(['rm', '-f', name], { allowFail: true, log });
+      const r = full(['run', '--rm', '-T', '--no-deps', '--name', name, '-e', `EVER_AUDIT_PLAN_B64=${b64}`, 'ever-audit-driver', step], {
         allowFail: true,
+        timeoutS,
       });
-      const res = parseResult(r.stdout);
-      writeFileSync(join(out, `driver-${step}.log`), scrubLog(`${redactResultLine(r.stdout)}${r.stderr}`));
+      let res = parseResult(r.stdout);
+      let tail = '';
+      if (r.timedOut) {
+        const logs = docker(['logs', '--tail', '200', name], { allowFail: true });
+        tail = `\n--- docker logs ${name} at the time limit ---\n${logs.stdout}${logs.stderr}`;
+        docker(['rm', '-f', name], { allowFail: true, log });
+        res = {
+          ok: false,
+          fault: `the driver step ${step} did not finish within ${timeoutS} s (its container was removed; what it printed is in driver-${step}.log)`,
+        };
+      }
+      writeFileSync(join(out, `driver-${step}.log`), scrubLog(`${redactResultLine(`${r.stdout}${tail}`)}${r.stderr}`));
       return res;
     };
     const scenario = driver('scenario');

@@ -10,12 +10,14 @@ import { test } from 'node:test';
 import Ajv2020 from 'ajv/dist/2020.js';
 import { walk } from '../browser.mjs';
 import { loadOptinHosts } from '../hosts.mjs';
+import { docker } from '../lib/docker.mjs';
 import { harLeaks, redactUrl } from '../lib/har.mjs';
 import {
   BROWSER_BASE_IMAGE,
   browserDockerfile,
   checkRouteList,
   checkWebUrl,
+  driverTimeoutS,
   HARNESS_DIR,
   loadConfig,
   redactValues,
@@ -358,4 +360,25 @@ test('URLs keep no phone number, e-mail address or JWT in their path', () => {
     'https://app.example.test/invite/[redacted]',
   );
   assert.equal(redactUrl('https://app.example.test/items/42?tab=1'), 'https://app.example.test/items/42?tab=');
+});
+
+test('a driver step has a time limit of its own: 15 minutes, longer for a long health wait or watch', () => {
+  assert.equal(driverTimeoutS({ health_timeout_s: 120 }, 'scenario'), 900);
+  assert.equal(driverTimeoutS({ health_timeout_s: 900 }, 'scenario'), 1200);
+  assert.equal(driverTimeoutS({ wait_s: 120 }, 'wait'), 900);
+  assert.equal(driverTimeoutS({ wait_s: 660 }, 'wait'), 1020);
+  assert.equal(driverTimeoutS({ wait_s: 3600 }, 'probe'), 900);
+});
+
+test('a docker call that runs out of time answers what it printed when a failure is allowed, else throws', {
+  skip: process.platform === 'win32',
+}, () => {
+  const dir = mkdtempSync(join(tmpdir(), 'egress-docker-'));
+  writeFileSync(join(dir, 'docker'), '#!/bin/sh\necho started\nexec sleep 30\n', { mode: 0o755 });
+  const env = { ...process.env, PATH: `${dir}:${process.env.PATH}` };
+  const r = docker(['compose', 'run', 'ever-audit-driver', 'scenario'], { env, allowFail: true, timeoutS: 1 });
+  assert.equal(r.timedOut, true);
+  assert.equal(r.status, null);
+  assert.match(r.stdout, /started/);
+  assert.throws(() => docker(['compose', 'run'], { env, timeoutS: 1 }), { code: 'ETIMEDOUT' });
 });
