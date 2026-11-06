@@ -66,7 +66,13 @@ export function build() {
   const overrides = readJson(join(REPO, INTEGRATIONS_DIR, 'overrides.json'));
   const features = new Set(entitlementFeatures());
   const doc = spec();
-  const products = doc.components.schemas.ProductCode.enum;
+  // The product codes: the contract's `ProductCode` while it states one, else the entitlement
+  // schema's (the served contract types products as strings, `app:<id>` included).
+  const products =
+    doc.components.schemas.ProductCode?.enum ??
+    readJson(join(REPO, 'contracts/schemas/ever.entitlement.v1.json')).$defs.product.enum;
+  // A catalog row may also be offered to connected Apps (the `app` family of `app:<id>`).
+  const offered = new Set([...products, 'app']);
   const problems = [];
   const files = {};
   const keys = [];
@@ -82,7 +88,7 @@ export function build() {
     }
     if (def.requires_feature !== null && !features.has(def.requires_feature))
       problems.push(`${row.key}: requires_feature ${def.requires_feature} is not a key of the entitlement features`);
-    for (const p of def.products) if (!products.includes(p)) problems.push(`${row.key}: unknown product ${p}`);
+    for (const p of def.products) if (!offered.has(p)) problems.push(`${row.key}: unknown product ${p}`);
     // A scope row may apply to some of the integration's products only.
     for (const s of def.scope)
       for (const p of s.products ?? [])

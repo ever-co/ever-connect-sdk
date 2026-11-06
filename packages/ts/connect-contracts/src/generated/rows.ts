@@ -490,7 +490,8 @@ export const ROWS: readonly OutboundCallRow[] = [
       "gauzy",
       "works",
       "rec",
-      "traduora"
+      "traduora",
+      "app"
     ],
     "phase": 2
   },
@@ -620,7 +621,8 @@ export const ROWS: readonly OutboundCallRow[] = [
       "teams",
       "works",
       "rec",
-      "traduora"
+      "traduora",
+      "app"
     ],
     "phase": 2
   },
@@ -654,7 +656,8 @@ export const ROWS: readonly OutboundCallRow[] = [
       "gauzy",
       "works",
       "rec",
-      "traduora"
+      "traduora",
+      "app"
     ],
     "phase": 2
   },
@@ -737,7 +740,8 @@ export const ROWS: readonly OutboundCallRow[] = [
       "gauzy",
       "works",
       "rec",
-      "traduora"
+      "traduora",
+      "app"
     ],
     "phase": 2
   },
@@ -771,7 +775,8 @@ export const ROWS: readonly OutboundCallRow[] = [
       "gauzy",
       "works",
       "rec",
-      "traduora"
+      "traduora",
+      "app"
     ],
     "phase": 2
   },
