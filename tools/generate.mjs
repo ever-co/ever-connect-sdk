@@ -360,7 +360,12 @@ function rustfmt(source) {
       }),
     );
   } catch (error) {
-    throw new Error(`rustfmt failed:\n${error.stderr?.toString() ?? error.message}`);
+    // An empty stderr says nothing: name the binary and how it ended (exit status, signal, spawn error code) too.
+    const how = [`status ${error.status ?? '-'}`, `signal ${error.signal ?? '-'}`, error.code && `code ${error.code}`]
+      .filter(Boolean)
+      .join(', ');
+    const stderr = error.stderr?.toString().trim();
+    throw new Error(`rustfmt failed (${bin}: ${how}):\n${stderr || error.message}`);
   }
 }
 
