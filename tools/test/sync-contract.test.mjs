@@ -19,8 +19,8 @@ const ops = Object.entries(spec.paths).flatMap(([path, item]) =>
   METHODS.filter((m) => item[m]).map((m) => ({ method: m, path, op: item[m] })),
 );
 
-test('the table has 35 contiguous rows and every row is covered by the spec or pending upstream', () => {
-  assert.equal(rowsDoc.rows.length, 35);
+test('the table has 37 contiguous rows and every row is covered by the spec or pending upstream', () => {
+  assert.equal(rowsDoc.rows.length, 37);
   rowsDoc.rows.forEach((r, i) => assert.equal(r.row, i + 1));
   for (const r of rowsDoc.rows) {
     if (r.pending_upstream) {

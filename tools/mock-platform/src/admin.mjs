@@ -217,8 +217,21 @@ export const adminRoutes = {
       exp: now + (body?.ttl ?? 900),
       'urn:ever:person_id': person.person_id,
       role: body?.role ?? person.org_role,
+      ...(typeof body?.scope === 'string' ? { scope: body.scope } : {}),
     };
     return { body: { token: signJws(testKey('identity').privateKey, { kid: testKey('identity').kid, typ: 'JWT' }, claims), claims } };
+  },
+
+  // The App Launcher feeds an organization answers (rows 36, 37): `{org_id, installs?, apps?}`,
+  // each list as the contract shapes its items; replaces what was seeded before.
+  'POST /__mock/launcher': ({ state, body }) => {
+    if (typeof body?.org_id !== 'string') fail(422, 'validation_failed', 'org_id is required');
+    state.launcherFeeds ??= new Map();
+    state.launcherFeeds.set(body.org_id, {
+      installs: Array.isArray(body.installs) ? body.installs : [],
+      apps: Array.isArray(body.apps) ? body.apps : [],
+    });
+    return { body: { org_id: body.org_id } };
   },
 
   'POST /__mock/provision-intent': ({ state, body, issuer }) => {

@@ -1487,6 +1487,51 @@
           "documented": true
         }
       ]
+    },
+    {
+      "row": 36,
+      "operations": [
+        {
+          "operation_id": "listInstalls",
+          "method": "GET",
+          "path": "/v1/orgs/{org}/installs",
+          "success": [
+            200
+          ]
+        }
+      ],
+      "errors": [
+        {
+          "status": 401,
+          "code": "unauthorized",
+          "documented": true
+        },
+        {
+          "status": 404,
+          "code": "not_found",
+          "documented": true
+        }
+      ]
+    },
+    {
+      "row": 37,
+      "operations": [
+        {
+          "operation_id": "listOrganizationApps",
+          "method": "GET",
+          "path": "/v1/orgs/{org}/apps",
+          "success": [
+            200
+          ]
+        }
+      ],
+      "errors": [
+        {
+          "status": 404,
+          "code": "not_found",
+          "documented": true
+        }
+      ]
     }
   ]
 }

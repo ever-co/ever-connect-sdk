@@ -7,7 +7,8 @@
     "integration": "Integrations, each with its own consent and scope",
     "receipt": "Receipts for a person's deletion or export request",
     "sign_in": "Company sign-in discovery",
-    "stats": "Anonymous usage statistics"
+    "stats": "Anonymous usage statistics",
+    "launcher": "The App Launcher in the product's header"
   },
   "rows": [
     {
@@ -720,6 +721,36 @@
         [503, "realtime_disabled"],
         [503, "realtime_busy"]
       ]
+    },
+    {
+      "row": 36,
+      "title": "App Launcher: the organization's installs",
+      "operation_ids": ["listInstalls"],
+      "module": "connect",
+      "group": "launcher",
+      "auth": "the signed-in person's Ever ID token, exchanged by the product's server for the apps:read scope (read-only; answers only for an organization the person belongs to)",
+      "trigger": "the person opens the App Launcher while signed in with Ever ID in an organization linked to Ever Platform",
+      "payload": "none (read)",
+      "cadence": "when the person opens the App Launcher; at most once a minute per organization and person (cached)",
+      "disable": "leave the product's App Launcher switch off",
+      "products": ["gauzy", "teams"],
+      "phase": 4,
+      "errors": [[401, "unauthorized"], [404, "not_found"]]
+    },
+    {
+      "row": 37,
+      "title": "App Launcher: the organization's apps",
+      "operation_ids": ["listOrganizationApps"],
+      "module": "connect",
+      "group": "launcher",
+      "auth": "the signed-in person's Ever ID token, exchanged by the product's server for the apps:read scope (read-only; answers only for an organization the person belongs to)",
+      "trigger": "the person opens the App Launcher while signed in with Ever ID in an organization linked to Ever Platform",
+      "payload": "none (read)",
+      "cadence": "when the person opens the App Launcher; at most once a minute per organization and person (cached)",
+      "disable": "leave the product's App Launcher switch off",
+      "products": ["gauzy", "teams"],
+      "phase": 4,
+      "errors": [[404, "not_found"]]
     }
   ]
 }

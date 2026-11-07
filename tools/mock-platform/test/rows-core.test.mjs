@@ -911,7 +911,7 @@ describe('the request record', () => {
   it('every documented row is routed', async () => {
     env = await startMock();
     const rows = new Set(env.mock.routes.map((r) => r.row));
-    for (let row = 1; row <= 35; row += 1) expect(rows.has(row), `row ${row}`).toBe(true);
+    for (let row = 1; row <= 37; row += 1) expect(rows.has(row), `row ${row}`).toBe(true);
     expect(readdirSync(join(REPO, 'tools/mock-platform/src/routes')).length).toBeGreaterThanOrEqual(12);
     expect(b64url(Buffer.from('x'))).toBe('eA');
   });

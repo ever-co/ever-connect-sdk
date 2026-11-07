@@ -1179,6 +1179,53 @@ export const OPERATIONS = {
     "rateLimit": null,
     "status": "pinned"
   },
+  "listOrganizationApps": {
+    "id": "listOrganizationApps",
+    "method": "GET",
+    "path": "/v1/orgs/{org}/apps",
+    "pathParams": [
+      "org"
+    ],
+    "query": [
+      "cursor",
+      "limit"
+    ],
+    "auth": "person",
+    "idempotencyKey": "none",
+    "linkHeader": "none",
+    "conditional": false,
+    "body": null,
+    "success": [
+      200
+    ],
+    "row": 37,
+    "integration": null,
+    "rateLimit": null,
+    "status": "pinned"
+  },
+  "listInstalls": {
+    "id": "listInstalls",
+    "method": "GET",
+    "path": "/v1/orgs/{org}/installs",
+    "pathParams": [
+      "org"
+    ],
+    "query": [
+      "state"
+    ],
+    "auth": "person",
+    "idempotencyKey": "none",
+    "linkHeader": "none",
+    "conditional": false,
+    "body": null,
+    "success": [
+      200
+    ],
+    "row": 36,
+    "integration": null,
+    "rateLimit": "person",
+    "status": "pinned"
+  },
   "putIntegrationState": {
     "id": "putIntegrationState",
     "method": "PUT",

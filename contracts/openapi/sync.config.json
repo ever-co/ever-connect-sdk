@@ -18,7 +18,9 @@
     "discoverSso",
     "getMyContext",
     "listMyMemberships",
-    "putIntegrationState"
+    "putIntegrationState",
+    "listInstalls",
+    "listOrganizationApps"
   ],
   "exclude_operation_ids": {
     "subscribeRealtime": "the server-sent event stream serves the app.ever.co browser; installations read their events from the instance feed instead"
@@ -33,6 +35,7 @@
   "keep_security": [
     "instanceToken",
     "everIdTokenRead",
+    "everIdTokenAppsRead",
     "everIdStepUpToken"
   ],
   "keep_security_by_operation": {

@@ -2,25 +2,25 @@
   "description": "Where every contract file of this repository comes from. Written by tools/sync-contract.mjs; checked by tools/check-schema-drift.mjs. `provisional` sources are drafts the platform has not published yet: tools/check-schema-drift.mjs --strict refuses them.",
   "platform": {
     "repository": "ever-co/platform",
-    "commit": "5972af9f44135565e652f63430959886dbdaefc6"
+    "commit": "9b40957c637360369110066f34a084cb2fe69973"
   },
   "openapi": {
     "target": "contracts/openapi/ever-platform.v1.yaml",
-    "sha256": "416c92de4e6bf83c652c0d77ce42537fcebf53841b3a151c7222866e697b6eca",
+    "sha256": "22aabdbf7eb3391f6a8e7b4f747485ff5f595e5941730c80adb26e115d9a660e",
     "pinned": {
       "source": "contracts/openapi/ever-api.v1.json",
-      "sha256": "77afc50ae40eb87ab81f25c48abc9fabcef01d9768de54f57a5dc3d17b7536d5"
+      "sha256": "8b02bff222055e985317f5d9358faa1bf5d05d9b70d50264d4d5e67dae24713f"
     },
     "design": {
       "source": "docs/specs/api",
       "sha256": "00bd6f8b2f52197e2ab522fad3b8cad3d08116aa73781ea327f1ccda5021fb1c",
       "files": 16
     },
-    "operations": 60,
+    "operations": 62,
     "scope": {
       "source": "contracts/openapi/v1-scope.json",
-      "sha256": "5b8b347ea39e276d06a62d1ce021d13f9bc9e698d8dd19c1bb8574284995d4ec",
-      "version": "1.6.0"
+      "sha256": "890e972e53debf473beab10f70acdb5329873a4e5ca0051f535e9b336df26ede",
+      "version": "1.7.0"
     },
     "provisional_operations": [],
     "not_in_v1_operations": [
@@ -141,8 +141,8 @@
     {
       "path": "contracts/openapi/v1-scope.json",
       "source": "contracts/openapi/v1-scope.json",
-      "source_sha256": "5b8b347ea39e276d06a62d1ce021d13f9bc9e698d8dd19c1bb8574284995d4ec",
-      "sha256": "5b8b347ea39e276d06a62d1ce021d13f9bc9e698d8dd19c1bb8574284995d4ec",
+      "source_sha256": "890e972e53debf473beab10f70acdb5329873a4e5ca0051f535e9b336df26ede",
+      "sha256": "890e972e53debf473beab10f70acdb5329873a4e5ca0051f535e9b336df26ede",
       "transform": null,
       "provisional": false,
       "upstream": null

@@ -335,6 +335,16 @@ export const OK = {
     await connected(env);
     return env.call('GET', '/v1/me/memberships', { token: await personToken(env) });
   },
+  listInstalls: async (env) => {
+    const c = await connected(env);
+    const org = env.state.instance(c.instanceId).org.id;
+    return env.call('GET', `/v1/orgs/${org}/installs`, { token: await personToken(env, { scope: 'openid apps:read' }) });
+  },
+  listOrganizationApps: async (env) => {
+    const c = await connected(env);
+    const org = env.state.instance(c.instanceId).org.id;
+    return env.call('GET', `/v1/orgs/${org}/apps`, { token: await personToken(env, { scope: 'openid apps:read' }) });
+  },
   discoverSso: (env) => env.call('GET', '/v1/sso/discover?email_domain=acme.example'),
   instanceCreateBillingLink: async (env) => {
     const c = await connected(env, { enable: ['billing_link'] });
@@ -1295,6 +1305,18 @@ export const ERRORS = {
   '35:403:topic_forbidden': async (env) => {
     const c = await connected(env);
     return env.call('GET', `/rt/sse?topics=instance/${c.instanceId},org/${env.state.instance(c.instanceId).org.id}`, { token: c.token });
+  },
+  '36:401:unauthorized': async (env) => {
+    const c = await connected(env);
+    return env.call('GET', `/v1/orgs/${env.state.instance(c.instanceId).org.id}/installs`);
+  },
+  '36:404:not_found': async (env) => {
+    await connected(env);
+    return env.call('GET', '/v1/orgs/01JMQCK0RG00000000000000ZZ/installs', { token: await personToken(env, { scope: 'apps:read' }) });
+  },
+  '37:404:not_found': async (env) => {
+    await connected(env);
+    return env.call('GET', '/v1/orgs/01JMQCK0RG00000000000000ZZ/apps', { token: await personToken(env, { scope: 'apps:read' }) });
   },
   '35:422:topic_invalid': async (env) => env.call('GET', '/rt/sse?topics=instances', { token: (await connected(env)).token }),
   '35:429:too_many_streams': async (env) => {

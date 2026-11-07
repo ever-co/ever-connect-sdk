@@ -1162,6 +1162,58 @@ export const ROWS: readonly OutboundCallRow[] = [
       "traduora"
     ],
     "phase": 2
+  },
+  {
+    "row": 36,
+    "title": "App Launcher: the organization's installs",
+    "module": "connect",
+    "group": "launcher",
+    "integration": null,
+    "auth": "the signed-in person's Ever ID token, exchanged by the product's server for the apps:read scope (read-only; answers only for an organization the person belongs to)",
+    "availability": "v1",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/v1/orgs/{org}/installs",
+        "operation_id": "listInstalls",
+        "status": "pinned"
+      }
+    ],
+    "trigger": "the person opens the App Launcher while signed in with Ever ID in an organization linked to Ever Platform",
+    "payload": "none (read)",
+    "cadence": "when the person opens the App Launcher; at most once a minute per organization and person (cached)",
+    "disable": "leave the product's App Launcher switch off",
+    "products": [
+      "gauzy",
+      "teams"
+    ],
+    "phase": 4
+  },
+  {
+    "row": 37,
+    "title": "App Launcher: the organization's apps",
+    "module": "connect",
+    "group": "launcher",
+    "integration": null,
+    "auth": "the signed-in person's Ever ID token, exchanged by the product's server for the apps:read scope (read-only; answers only for an organization the person belongs to)",
+    "availability": "v1",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/v1/orgs/{org}/apps",
+        "operation_id": "listOrganizationApps",
+        "status": "pinned"
+      }
+    ],
+    "trigger": "the person opens the App Launcher while signed in with Ever ID in an organization linked to Ever Platform",
+    "payload": "none (read)",
+    "cadence": "when the person opens the App Launcher; at most once a minute per organization and person (cached)",
+    "disable": "leave the product's App Launcher switch off",
+    "products": [
+      "gauzy",
+      "teams"
+    ],
+    "phase": 4
   }
 ];
 
@@ -2655,6 +2707,51 @@ export const ROW_COVERAGE: readonly RowCoverage[] = [
       {
         "status": 503,
         "code": "realtime_busy",
+        "documented": true
+      }
+    ]
+  },
+  {
+    "row": 36,
+    "operations": [
+      {
+        "operation_id": "listInstalls",
+        "method": "GET",
+        "path": "/v1/orgs/{org}/installs",
+        "success": [
+          200
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "status": 401,
+        "code": "unauthorized",
+        "documented": true
+      },
+      {
+        "status": 404,
+        "code": "not_found",
+        "documented": true
+      }
+    ]
+  },
+  {
+    "row": 37,
+    "operations": [
+      {
+        "operation_id": "listOrganizationApps",
+        "method": "GET",
+        "path": "/v1/orgs/{org}/apps",
+        "success": [
+          200
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "status": 404,
+        "code": "not_found",
         "documented": true
       }
     ]
