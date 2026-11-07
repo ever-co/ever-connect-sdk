@@ -108,16 +108,22 @@ describe('the organization feeds', () => {
         work_kind: 'directory',
         deployments: [
           { environment: 'preview', status: 'ready', url: 'https://preview.bookings.example' },
-          { environment: 'production', status: 'deploying', url: 'https://bookings.example' },
+          { environment: 'production', status: 'pending', url: 'https://bookings.example' },
         ],
       },
       { id: 'a2', name: 'Draft', status: 'draft', deployments: [{ environment: 'production', status: 'ready', url: 'https://d.example' }] },
       { id: 'a3', name: 'No address', status: 'live', deployments: [{ environment: 'production', status: 'ready', url: null }] },
       {
+        id: 'a5',
+        name: 'Retired',
+        status: 'live',
+        deployments: [{ environment: 'production', status: 'retired', url: 'https://old.example' }],
+      },
+      {
         id: 'a4',
         name: 'Failed',
         status: 'live',
-        deployments: [{ environment: 'production', status: 'failed', url: 'https://f.example' }],
+        deployments: [{ environment: 'production', status: 'timeout', url: 'https://f.example' }],
       },
     ]);
     expect(items.map((i) => [i.key, i.url, i.chip ?? null])).toEqual([
