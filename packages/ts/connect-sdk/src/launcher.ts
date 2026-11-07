@@ -215,15 +215,22 @@ export function mapInstalls(
   return items;
 }
 
-/** The deployment an app's tile opens: production first, then any other with an address. */
+/** Deployment states that no longer serve the app (Ever Platform's vocabulary). */
+const ENDED = new Set(['canceled', 'retired']);
+
+/**
+ * The deployment an app's tile opens: production first, then any other with an address; a
+ * canceled or retired deployment never.
+ */
 function deploymentOf(app: LauncherApp): LauncherAppDeployment | null {
-  const withUrl = app.deployments.filter((d) => httpsUrl(d.url) !== null);
+  const withUrl = app.deployments.filter((d) => !ENDED.has(d.status) && httpsUrl(d.url) !== null);
   return withUrl.find((d) => d.environment === 'production') ?? withUrl[0] ?? null;
 }
 
 /**
  * The organization's apps as launcher tiles: live apps with a deployment address; a deployment
- * still going out shows `deploying`, a failed one `lastDeployFailed`.
+ * still going out (`pending`) shows `deploying`, one that failed (`error`, `timeout`)
+ * `lastDeployFailed`.
  */
 export function mapApps(apps: readonly LauncherApp[]): AppLauncherItem[] {
   const items: AppLauncherItem[] = [];
@@ -233,9 +240,9 @@ export function mapApps(apps: readonly LauncherApp[]): AppLauncherItem[] {
     const url = httpsUrl(deployment?.url);
     if (!deployment || !url) continue;
     const chip: AppLauncherWorkChip | undefined =
-      deployment.status === 'deploying' || deployment.status === 'pending'
+      deployment.status === 'pending'
         ? 'deploying'
-        : deployment.status === 'failed'
+        : deployment.status === 'error' || deployment.status === 'timeout'
           ? 'lastDeployFailed'
           : undefined;
     items.push({
