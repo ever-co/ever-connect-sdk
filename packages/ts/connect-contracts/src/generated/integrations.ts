@@ -1136,17 +1136,34 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
       "works"
     ],
     "status": "coming_soon",
-    "scope_version": 1,
+    "scope_version": 2,
     "revoke_effect": "The provider's access is removed from the installation.",
-    "notes": "The field list is provisional until the provider-access flow is specified.",
     "scope": [
       {
-        "field_path": "grant.provider_organization_id",
+        "field_path": "grant.id",
         "direction": "from_ever",
         "form": "id",
         "frequency": "on_action",
         "required": true,
+        "purpose": "Which grant the installation acts on",
+        "retention": "Kept while the grant exists."
+      },
+      {
+        "field_path": "grant.provider_org.handle",
+        "direction": "from_ever",
+        "form": "clear",
+        "frequency": "on_action",
+        "required": true,
         "purpose": "Which provider is granted access",
+        "retention": "Kept while the grant exists."
+      },
+      {
+        "field_path": "grant.provider_org.display_name",
+        "direction": "from_ever",
+        "form": "clear",
+        "frequency": "on_action",
+        "required": true,
+        "purpose": "Show the provider's name in the installation",
         "retention": "Kept while the grant exists."
       },
       {
@@ -1159,12 +1176,57 @@ export const INTEGRATIONS: { readonly [K in IntegrationKey]: IntegrationDefiniti
         "retention": "Kept while the grant exists."
       },
       {
+        "field_path": "grant.scope",
+        "direction": "from_ever",
+        "form": "clear",
+        "frequency": "on_action",
+        "required": true,
+        "purpose": "What the provider may work on",
+        "retention": "Kept while the grant exists."
+      },
+      {
+        "field_path": "grant.expires_at",
+        "direction": "from_ever",
+        "form": "clear",
+        "frequency": "on_action",
+        "required": true,
+        "purpose": "When the provider's access ends",
+        "retention": "Kept while the grant exists."
+      },
+      {
+        "field_path": "invitee.email",
+        "direction": "from_ever",
+        "form": "clear",
+        "frequency": "on_action",
+        "required": true,
+        "purpose": "Invite the provider's person, once that person accepted",
+        "retention": "Not kept by Ever Platform; read by the installation once to send its invite."
+      },
+      {
+        "field_path": "invitee.name",
+        "direction": "from_ever",
+        "form": "clear",
+        "frequency": "on_action",
+        "required": true,
+        "purpose": "Address the invite to the provider's person",
+        "retention": "Not kept by Ever Platform; read by the installation once to send its invite."
+      },
+      {
         "field_path": "grant.status",
         "direction": "to_ever",
         "form": "clear",
         "frequency": "on_change",
         "required": true,
         "purpose": "Show whether the grant is active",
+        "retention": "Kept while the grant exists."
+      },
+      {
+        "field_path": "grant.product_user_ref",
+        "direction": "to_ever",
+        "form": "id",
+        "frequency": "on_change",
+        "required": true,
+        "purpose": "Which user the installation made for the provider, so revoking reaches it",
         "retention": "Kept while the grant exists."
       }
     ],

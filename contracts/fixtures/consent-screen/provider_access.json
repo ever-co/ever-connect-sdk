@@ -1,6 +1,6 @@
 {
   "key": "provider_access",
-  "scope_version": 1,
+  "scope_version": 2,
   "screen_version": "1",
   "blocks": {
     "title": "Enable Grant a provider access for {organization}",
@@ -13,15 +13,37 @@
         "when": "on_change",
         "purpose": "Show whether the grant is active",
         "required": true
+      },
+      {
+        "field": "grant.product_user_ref",
+        "form": "id",
+        "form_text": "as an identifier",
+        "when": "on_change",
+        "purpose": "Which user the installation made for the provider, so revoking reaches it",
+        "required": true
       }
     ],
     "arrives_at_installation": [
       {
-        "field": "grant.provider_organization_id",
+        "field": "grant.id",
         "form": "id",
         "form_text": "as an identifier",
         "when": "on_action",
+        "purpose": "Which grant the installation acts on"
+      },
+      {
+        "field": "grant.provider_org.handle",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "on_action",
         "purpose": "Which provider is granted access"
+      },
+      {
+        "field": "grant.provider_org.display_name",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "on_action",
+        "purpose": "Show the provider's name in the installation"
       },
       {
         "field": "grant.role",
@@ -29,11 +51,47 @@
         "form_text": "as is",
         "when": "on_action",
         "purpose": "Role the provider gets in the installation"
+      },
+      {
+        "field": "grant.scope",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "on_action",
+        "purpose": "What the provider may work on"
+      },
+      {
+        "field": "grant.expires_at",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "on_action",
+        "purpose": "When the provider's access ends"
+      },
+      {
+        "field": "invitee.email",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "on_action",
+        "purpose": "Invite the provider's person, once that person accepted"
+      },
+      {
+        "field": "invitee.name",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "on_action",
+        "purpose": "Address the invite to the provider's person"
       }
     ],
     "platform_keeps": [
       {
-        "field": "grant.provider_organization_id",
+        "field": "grant.id",
+        "retention": "Kept while the grant exists."
+      },
+      {
+        "field": "grant.provider_org.handle",
+        "retention": "Kept while the grant exists."
+      },
+      {
+        "field": "grant.provider_org.display_name",
         "retention": "Kept while the grant exists."
       },
       {
@@ -41,7 +99,27 @@
         "retention": "Kept while the grant exists."
       },
       {
+        "field": "grant.scope",
+        "retention": "Kept while the grant exists."
+      },
+      {
+        "field": "grant.expires_at",
+        "retention": "Kept while the grant exists."
+      },
+      {
+        "field": "invitee.email",
+        "retention": "Not kept by Ever Platform; read by the installation once to send its invite."
+      },
+      {
+        "field": "invitee.name",
+        "retention": "Not kept by Ever Platform; read by the installation once to send its invite."
+      },
+      {
         "field": "grant.status",
+        "retention": "Kept while the grant exists."
+      },
+      {
+        "field": "grant.product_user_ref",
         "retention": "Kept while the grant exists."
       }
     ],

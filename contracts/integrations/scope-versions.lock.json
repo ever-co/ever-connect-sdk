@@ -50,8 +50,8 @@
       "scope_sha256": "4c09674f3374371a30cb96298e1fda97277ba2ad13ca05accbe2362938a1db93"
     },
     "provider_access": {
-      "scope_version": 1,
-      "scope_sha256": "8f7f959b0ba746bd27f97426aad84e7e5bf7571293a40fc115d86af16dbce23a"
+      "scope_version": 2,
+      "scope_sha256": "9ada1fbba4da99a28c904904958c6f3f000dc3a7d70f94c224e7695ab8302007"
     },
     "marketplace_installs": {
       "scope_version": 1,

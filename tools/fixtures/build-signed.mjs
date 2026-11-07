@@ -310,7 +310,7 @@ function requestCases() {
       },
     ),
     'install-status': c(
-      'InstallStatus',
+      'InstallStatusReport',
       { state: 'installed', external_ref: 'plugin-42' },
       { 'extra-field': (b) => [extra(b), '/unexpected_field'] },
     ),
@@ -367,7 +367,7 @@ function requestCases() {
       { 'extra-field': (b) => [extra(b), '/unexpected_field'] },
     ),
     'provider-grant-status': c(
-      'ProviderGrantStatus',
+      'ProviderGrantStatusReport',
       { grant_id: ulid('grant/1'), status: 'accepted', product_user_ref: 'user-9' },
       { 'extra-field': (b) => [extra(b, 'email', 'jane@example.com'), '/email'] },
     ),
