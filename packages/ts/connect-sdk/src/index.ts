@@ -38,6 +38,30 @@ export type { Ed25519PublicJwk, InstanceSigner } from './keys';
 export { generateInstanceKeyPair, keyIdFromPublicJwk, makeNodeSigner, publicJwkOf } from './keys';
 export type { KeySetUpdate, StoredKeySet } from './keyset';
 export { KeySet } from './keyset';
+export type {
+  AppLauncherEnvironment,
+  AppLauncherItem,
+  AppLauncherItemKind,
+  AppLauncherListResponse,
+  AppLauncherManageState,
+  AppLauncherPlatformStatus,
+  AppLauncherPlatformsResponse,
+  AppLauncherSection,
+  AppLauncherWorkChip,
+  LauncherApp,
+  LauncherAppDeployment,
+  LauncherFetch,
+  LauncherInstall,
+} from './launcher';
+export {
+  isLauncherItem,
+  LAUNCHER_SNAPSHOT_VERSION,
+  launcherSnapshot,
+  loadLauncherCatalog,
+  mapApps,
+  mapInstalls,
+  mergeLauncherResponse,
+} from './launcher';
 export { isLocalHost } from './local';
 export type { LookupHash, LookupKind, LookupSalt, LookupTestVectors } from './lookup';
 export { checkTestVectors, hashIdentifier, LOOKUP_KINDS, lookupHash, NORMALIZATION_VERSION, normalizeIdentifier } from './lookup';
