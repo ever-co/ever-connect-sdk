@@ -154,7 +154,8 @@ Every key is optional; `tools/mock-platform/mock.config.example.json` shows the 
 | `POST /__mock/revoke` | `{integration, link?}` | revokes a consent |
 | `POST /__mock/disconnect` | | disconnects the installation from the platform side |
 | `POST /__mock/revoke-instance` | | revokes the installation's credential |
-| `POST /__mock/person-token` | `{sub?, role?, azp?, auth_time? \| auth_age_s?, ttl?}` | an Ever ID token for the person routes (step-up freshness through `auth_time`) |
+| `POST /__mock/person-token` | `{sub?, role?, azp?, auth_time? \| auth_age_s?, ttl?, scope?}` | an Ever ID token for the person routes (step-up freshness through `auth_time`; `scope: "apps:read"` for the App Launcher's feeds) |
+| `POST /__mock/launcher` | `{org_id, installs?, apps?}` | what the organization's App Launcher feeds answer (`listInstalls`, `listOrganizationApps`; empty by default); a token without `apps:read` gets `403 session_required`, an organization the person does not reach through the calling installation `404` |
 | `POST /__mock/provision-intent` | `{expires_in_s?}` | a signed provisioning intent to complete |
 | `POST /__mock/install` | `{state?}` | an install request from apps.ever.co |
 | `POST /__mock/provider-grant` | `{status?, role?}` | a provider access grant |

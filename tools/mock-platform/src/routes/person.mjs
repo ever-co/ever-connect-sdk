@@ -1,5 +1,6 @@
-// Rows 19, 22 and 23: person links, identity resolution, and the two reads a product makes with
-// the token of a person who signed in with Ever ID (TEST tokens from /__mock/person-token).
+// Rows 19, 22, 23, 36 and 37: person links, identity resolution, the two reads a product makes
+// with the token of a person who signed in with Ever ID (TEST tokens from /__mock/person-token),
+// and the App Launcher's two feeds, read with that token carrying the apps:read scope.
 import { verifyJws } from '../crypto.mjs';
 import { testKey } from '../keys.mjs';
 import { activeLinks } from '../model.mjs';
@@ -58,6 +59,23 @@ function context(state, claims, instance) {
 }
 
 const contextBody = ({ raw_orgs: _raw, ...body }) => body;
+
+/** The seeded App Launcher feeds of an organization (`POST /__mock/launcher`). */
+export function launcherFeeds(state, org) {
+  state.launcherFeeds ??= new Map();
+  return state.launcherFeeds.get(org) ?? { installs: [], apps: [] };
+}
+
+/** The organization of a launcher feed call, once the token may read it. */
+function launcherOrg(ctx) {
+  const claims = personClaims(ctx);
+  const scopes = Array.isArray(claims.scope) ? claims.scope : String(claims.scope ?? '').split(' ');
+  if (!scopes.includes('apps:read'))
+    fail(403, 'session_required', "a product's token reaches the App Launcher's feeds only with the apps:read scope");
+  const c = context(ctx.state, claims, instanceOfAzp(ctx.state, claims));
+  if (!c.raw_orgs.some((o) => o.id === ctx.params.org)) fail(404, 'not_found', 'not found');
+  return ctx.params.org;
+}
 
 const instanceOfAzp = (state, claims) => {
   const m = /^inst-([0-9A-HJKMNP-TV-Z]{26})$/.exec(claims.azp ?? '');
@@ -131,6 +149,20 @@ export const personHandlers = {
   getMyContext(ctx) {
     const claims = personClaims(ctx);
     return { status: 200, body: contextBody(context(ctx.state, claims, instanceOfAzp(ctx.state, claims))) };
+  },
+
+  // Rows 36 and 37, the App Launcher's feeds: only with the apps:read scope (else 403
+  // session_required, as for any other call with a product's token), and only for an organization
+  // the person reaches through the calling installation (else 404). The feeds are what
+  // POST /__mock/launcher seeded for the organization (none by default).
+  listInstalls(ctx) {
+    const org = launcherOrg(ctx);
+    return { status: 200, body: { items: launcherFeeds(ctx.state, org).installs } };
+  },
+
+  listOrganizationApps(ctx) {
+    const org = launcherOrg(ctx);
+    return { status: 200, body: { items: launcherFeeds(ctx.state, org).apps, next_cursor: null } };
   },
 
   listMyMemberships(ctx) {

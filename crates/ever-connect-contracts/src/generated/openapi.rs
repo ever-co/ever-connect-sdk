@@ -93,6 +93,93 @@ pub mod components {
             value.parse()
         }
     }
+    /**An app or Work the organization owns, mirrored from the product that built it (the source of
+    truth). Only `public_on_profile` and `listing_id` are edited here.*/
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct App {
+        ///`none`, `ever` or `oss`.
+        pub base_kind: ::std::string::String,
+        ///What it is based on (`ever:gauzy`, `oss:calcom/cal.diy`).
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub base_ref: ::std::option::Option<::std::string::String>,
+        ///Its deployments.
+        pub deployments: ::std::vec::Vec<AppDeployment>,
+        ///The app.
+        pub id: ::std::string::String,
+        ///The marketplace install it came from, when its lineage names one.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub install_id: ::std::option::Option<::std::string::String>,
+        ///`app` or `work`.
+        pub kind: ::std::string::String,
+        ///Its marketplace listing.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub listing_id: ::std::option::Option<::std::string::String>,
+        ///When it was last mirrored.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub mirrored_at: ::std::option::Option<::std::string::String>,
+        ///Its name.
+        pub name: ::std::string::String,
+        ///The organization.
+        pub org_id: ::std::string::String,
+        ///Shown on the organization's profile.
+        pub public_on_profile: bool,
+        ///Its slug in the source product.
+        pub slug: ::std::string::String,
+        ///The instance that mirrors it.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub source_instance_id: ::std::option::Option<::std::string::String>,
+        ///Its id in the source product.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub source_ref: ::std::option::Option<::std::string::String>,
+        ///`works`, `marketplace` or `manual`.
+        pub source_system: ::std::string::String,
+        ///The source's version of it.
+        pub source_version: i64,
+        ///`draft`, `registered`, `building`, `live`, `paused`, `archived` or `deleted`.
+        pub status: ::std::string::String,
+        ///The source product's kind of Work (open vocabulary).
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub work_kind: ::std::option::Option<::std::string::String>,
+    }
+    ///One deployment of an app (open vocabulary: an unknown target is shown as reported).
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct AppDeployment {
+        ///The app.
+        pub app_id: ::std::string::String,
+        ///`production` or `preview`.
+        pub environment: ::std::string::String,
+        ///The deployment.
+        pub id: ::std::string::String,
+        ///The connected instance it is, when it is one.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub instance_id: ::std::option::Option<::std::string::String>,
+        ///`ever`, `customer` or `third_party`.
+        pub managed_by: ::std::string::String,
+        ///When it was last observed.
+        pub observed_at: ::std::string::String,
+        ///The provider.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub provider: ::std::option::Option<::std::string::String>,
+        ///The deploy shape.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub shape: ::std::option::Option<::std::string::String>,
+        ///`pending`, `ready`, `error`, `canceled`, `timeout` or `retired`.
+        pub status: ::std::string::String,
+        ///Where it runs (`ever-works`, `vercel`, `k8s`, `your-cluster`, ...).
+        pub target: ::std::string::String,
+        ///Its public address, when it has one.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub url: ::std::option::Option<::std::string::String>,
+    }
+    ///One page of apps.
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct AppPage {
+        ///The apps on this page.
+        pub items: ::std::vec::Vec<App>,
+        ///The cursor of the next page, `null` on the last one.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub next_cursor: ::std::option::Option<::std::string::String>,
+    }
     ///The link. The customer is not repeated.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct BillingLink {
@@ -1299,6 +1386,12 @@ pub mod components {
         ///The Ever ID subject.
         pub subject: ::std::string::String,
     }
+    ///The organization's installs.
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct InstallList {
+        ///Newest first, at most 500.
+        pub items: ::std::vec::Vec<InstallView>,
+    }
     ///`POST /v1/installs/{install}/status`: what the installation did with a plugin install.
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
@@ -1322,6 +1415,48 @@ pub mod components {
     pub struct InstallStatusView {
         ///The install.
         pub id: ::std::string::String,
+        ///Where it stands.
+        pub state: ::std::string::String,
+    }
+    ///An install as the organization sees it.
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct InstallView {
+        ///When it was asked for.
+        pub created_at: ::std::string::String,
+        ///When it was handed over.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub delivered_at: ::std::option::Option<::std::string::String>,
+        /**Why a failed install failed: `checksum_mismatch`, `incompatible_version`,
+        `installer_disabled`, `permission_denied` or `unknown`.*/
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub detail_code: ::std::option::Option<::std::string::String>,
+        ///The edition, when one was chosen.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub edition_key: ::std::option::Option<::std::string::String>,
+        ///That edition's name.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub edition_name: ::std::option::Option<::std::string::String>,
+        ///The install.
+        pub id: ::std::string::String,
+        ///The version the target installed, when it said.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub installed_version: ::std::option::Option<::std::string::String>,
+        ///The installation it goes to (`instance_plugin`).
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub instance_id: ::std::option::Option<::std::string::String>,
+        ///The listing.
+        pub listing_id: ::std::string::String,
+        ///The listing's slug (with the type, its page: `/<type>s/<slug>` on the catalogue).
+        pub listing_slug: ::std::string::String,
+        ///The listing's title as published (its working title while it has none).
+        pub listing_title: ::std::string::String,
+        ///The listing's type (`app`, ...).
+        pub listing_type: ::std::string::String,
+        ///`external_link`, ... (chosen from the listing).
+        pub mechanism: ::std::string::String,
+        ///Where the person goes next (the vendor's site for an external link).
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub next_action_url: ::std::option::Option<::std::string::String>,
         ///Where it stands.
         pub state: ::std::string::String,
     }

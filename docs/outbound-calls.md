@@ -56,7 +56,7 @@ Some products had features before these modules existed that can reach an Ever-o
 ## 3. The table
 
 <!-- generated:outbound-intro -->
-Rows 1–16, 18–35 belong to the connection module and row 17 to the statistics module. Each row runs only on the trigger it names: the connect calls (rows 2, 3, 29) when an operator starts a connection, every other connection-module row only while connected. Rows 11–15, 18–19, 21–23, 25, 27–28, 30, 32, 34 also need an active consent for the named integration, recorded by Ever Platform. The table holds 35 rows; a row marked *pending upstream* is answered by the mock platform and documented here before the Ever Platform API publishes it. An endpoint marked *not available in v1* is designed but not served by version 1 of the Ever Platform API, so no product calls it against a version 1 deployment (rows 12, 21, 33 are not available in v1 at all).
+Rows 1–16, 18–37 belong to the connection module and row 17 to the statistics module. Each row runs only on the trigger it names: the connect calls (rows 2, 3, 29) when an operator starts a connection, every other connection-module row only while connected. Rows 11–15, 18–19, 21–23, 25, 27–28, 30, 32, 34 also need an active consent for the named integration, recorded by Ever Platform. The table holds 37 rows; a row marked *pending upstream* is answered by the mock platform and documented here before the Ever Platform API publishes it. An endpoint marked *not available in v1* is designed but not served by version 1 of the Ever Platform API, so no product calls it against a version 1 deployment (rows 12, 21, 33 are not available in v1 at all).
 <!-- /generated:outbound-intro -->
 
 <!-- generated:outbound-calls -->
@@ -97,6 +97,8 @@ Rows 1–16, 18–35 belong to the connection module and row 17 to the statistic
 | 33 | `PUT /v1/orgs/{org}/instances/{instance}/integrations/{key}` (not available in v1) | an organization owner or admin confirms the in-product consent dialog after a fresh Ever ID sign-in. | enabled, tenant_link_id?, consent {scope_version, dpa_version, accepted, screen_version?, ui_locale?} | on action | never offered for instance_url and counterparty_discoverable; without an Ever ID client the product links to app.ever.co instead | all |
 | 34 | `POST /v1/instances/me/managed-operations/{operation}/result` | the product's executor finished an operation an owner or admin requested, with the managed_operations integration consented and the operator's local opt-in. Integration `managed_operations`. | status, version?, artefact_ref?, size_bytes? (status and size only; never backup content, file names or customer data) | once per operation status | disable managed_operations, or leave the local opt-in off | Gauzy, Works, Rec, Traduora |
 | 35 | `GET /rt/sse` | while connected, only when the product opens the live stream of its own instance topic; the event feed (row 7) stays the way a product receives and acknowledges its events. A deployment that does not serve the stream answers 503 realtime_disabled. | topics (instance/<the installation's instance id>); Last-Event-ID when it reconnects | one open stream at a time; when the platform ends it with sys.closed {reauthenticate}, the product reconnects with a fresh instance token and its last event id; after sys.closed {access_revoked} it does not reconnect | disconnect, or stop opening the stream | all |
+| 36 | `GET /v1/orgs/{org}/installs` | the person opens the App Launcher while signed in with Ever ID in an organization linked to Ever Platform. | none (read) | when the person opens the App Launcher; at most once a minute per organization and person (cached) | leave the product's App Launcher switch off | Gauzy, Teams |
+| 37 | `GET /v1/orgs/{org}/apps` | the person opens the App Launcher while signed in with Ever ID in an organization linked to Ever Platform. | none (read) | when the person opens the App Launcher; at most once a minute per organization and person (cached) | leave the product's App Launcher switch off | Gauzy, Teams |
 <!-- /generated:outbound-calls -->
 
 **Nothing else.** A row that names an integration runs only while that integration has an active consent recorded by Ever Platform, given on app.ever.co or in the product after a fresh Ever ID sign-in; the integrations that act for the whole installation also need the operator to accept them on the installation. Apart from the connect calls themselves, every connection-module row runs only while connected; row 17 runs only while statistics are enabled. This table is generated from the SDK's operation table in continuous integration, so a request the SDK can make and this page does not list fails the build.
@@ -114,6 +116,7 @@ Rows 1–16, 18–35 belong to the connection module and row 17 to the statistic
 | Receipts for a person's deletion or export request | 20 | *Disconnect* |
 | Company sign-in discovery | 24 | *Disconnect* |
 | Anonymous usage statistics | 17 | `EVER_STATS_ENABLED=false` or the settings toggle |
+| The App Launcher in the product's header | 36, 37 | undefined |
 <!-- /generated:outbound-groups -->
 
 Scope tables for each integration: *Integrations and data scopes*.

@@ -997,6 +997,43 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/v1/orgs/{org}/apps": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * The organization's apps and Works, newest first (cursor pages), with their deployments
+         *     (members).
+         */
+        readonly get: operations["listOrganizationApps"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/v1/orgs/{org}/installs": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /** The organization's installs (any member). */
+        readonly get: operations["listInstalls"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/v1/orgs/{org}/instances/{instance}/integrations/{key}": {
         readonly parameters: {
             readonly query?: never;
@@ -1227,6 +1264,110 @@ export interface components {
          * @enum {string}
          */
         readonly AckResult: "deleted" | "anonymised" | "retained_legal" | "no_account" | "forwarded_to_controller" | "exported" | "failed";
+        /**
+         * @description An app or Work the organization owns, mirrored from the product that built it (the source of
+         *     truth). Only `public_on_profile` and `listing_id` are edited here.
+         */
+        readonly App: {
+            /**
+             * @description `none`, `ever` or `oss`.
+             * @example oss
+             */
+            readonly base_kind: string;
+            /** @description What it is based on (`ever:gauzy`, `oss:calcom/cal.diy`). */
+            readonly base_ref?: string | null;
+            /** @description Its deployments. */
+            readonly deployments: readonly components["schemas"]["AppDeployment"][];
+            /** @description The app. */
+            readonly id: string;
+            /** @description The marketplace install it came from, when its lineage names one. */
+            readonly install_id?: string | null;
+            /**
+             * @description `app` or `work`.
+             * @example app
+             */
+            readonly kind: string;
+            /** @description Its marketplace listing. */
+            readonly listing_id?: string | null;
+            /**
+             * Format: date-time
+             * @description When it was last mirrored.
+             */
+            readonly mirrored_at?: string | null;
+            /** @description Its name. */
+            readonly name: string;
+            /** @description The organization. */
+            readonly org_id: string;
+            /** @description Shown on the organization's profile. */
+            readonly public_on_profile: boolean;
+            /** @description Its slug in the source product. */
+            readonly slug: string;
+            /** @description The instance that mirrors it. */
+            readonly source_instance_id?: string | null;
+            /** @description Its id in the source product. */
+            readonly source_ref?: string | null;
+            /**
+             * @description `works`, `marketplace` or `manual`.
+             * @example works
+             */
+            readonly source_system: string;
+            /**
+             * Format: int64
+             * @description The source's version of it.
+             */
+            readonly source_version: number;
+            /**
+             * @description `draft`, `registered`, `building`, `live`, `paused`, `archived` or `deleted`.
+             * @example live
+             */
+            readonly status: string;
+            /** @description The source product's kind of Work (open vocabulary). */
+            readonly work_kind?: string | null;
+        };
+        /** @description One deployment of an app (open vocabulary: an unknown target is shown as reported). */
+        readonly AppDeployment: {
+            /** @description The app. */
+            readonly app_id: string;
+            /**
+             * @description `production` or `preview`.
+             * @example production
+             */
+            readonly environment: string;
+            /** @description The deployment. */
+            readonly id: string;
+            /** @description The connected instance it is, when it is one. */
+            readonly instance_id?: string | null;
+            /**
+             * @description `ever`, `customer` or `third_party`.
+             * @example ever
+             */
+            readonly managed_by: string;
+            /**
+             * Format: date-time
+             * @description When it was last observed.
+             */
+            readonly observed_at: string;
+            /** @description The provider. */
+            readonly provider?: string | null;
+            /** @description The deploy shape. */
+            readonly shape?: string | null;
+            /**
+             * @description `pending`, `ready`, `error`, `canceled`, `timeout` or `retired`.
+             * @example ready
+             */
+            readonly status: string;
+            /** @description Where it runs (`ever-works`, `vercel`, `k8s`, `your-cluster`, ...). */
+            readonly target: string;
+            /** @description Its public address, when it has one. */
+            readonly url?: string | null;
+        };
+        /** @description One page of apps. */
+        readonly AppPage: {
+            /** @description The apps on this page. */
+            readonly items: readonly components["schemas"]["App"][];
+            /** @description The cursor of the next page, `null` on the last one. */
+            readonly next_cursor?: string | null;
+        };
         /** @description The link. The customer is not repeated. */
         readonly BillingLink: {
             /**
@@ -1803,6 +1944,11 @@ export interface components {
             /** @description The Ever ID subject. */
             readonly subject: string;
         };
+        /** @description The organization's installs. */
+        readonly InstallList: {
+            /** @description Newest first, at most 500. */
+            readonly items: readonly components["schemas"]["InstallView"][];
+        };
         /** @description `POST /v1/installs/{install}/status`: what the installation did with a plugin install. */
         readonly InstallStatusReport: {
             /**
@@ -1822,6 +1968,48 @@ export interface components {
         readonly InstallStatusView: {
             /** @description The install. */
             readonly id: string;
+            /** @description Where it stands. */
+            readonly state: string;
+        };
+        /** @description An install as the organization sees it. */
+        readonly InstallView: {
+            /**
+             * Format: date-time
+             * @description When it was asked for.
+             */
+            readonly created_at: string;
+            /**
+             * Format: date-time
+             * @description When it was handed over.
+             */
+            readonly delivered_at?: string | null;
+            /**
+             * @description Why a failed install failed: `checksum_mismatch`, `incompatible_version`,
+             *     `installer_disabled`, `permission_denied` or `unknown`.
+             */
+            readonly detail_code?: string | null;
+            /** @description The edition, when one was chosen. */
+            readonly edition_key?: string | null;
+            /** @description That edition's name. */
+            readonly edition_name?: string | null;
+            /** @description The install. */
+            readonly id: string;
+            /** @description The version the target installed, when it said. */
+            readonly installed_version?: string | null;
+            /** @description The installation it goes to (`instance_plugin`). */
+            readonly instance_id?: string | null;
+            /** @description The listing. */
+            readonly listing_id: string;
+            /** @description The listing's slug (with the type, its page: `/<type>s/<slug>` on the catalogue). */
+            readonly listing_slug: string;
+            /** @description The listing's title as published (its working title while it has none). */
+            readonly listing_title: string;
+            /** @description The listing's type (`app`, ...). */
+            readonly listing_type: string;
+            /** @description `external_link`, ... (chosen from the listing). */
+            readonly mechanism: string;
+            /** @description Where the person goes next (the vendor's site for an external link). */
+            readonly next_action_url?: string | null;
             /** @description Where it stands. */
             readonly state: string;
         };
@@ -5720,6 +5908,96 @@ export interface operations {
             };
             /** @description No usable credential */
             readonly 401: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    readonly listOrganizationApps: {
+        readonly parameters: {
+            readonly query?: {
+                /** @description Opaque cursor from a previous page's `next_cursor`. */
+                readonly cursor?: string;
+                /** @description Page size, 1..100 (default 25). */
+                readonly limit?: number;
+            };
+            readonly header?: never;
+            readonly path: {
+                /** @description The organization id. */
+                readonly org: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description A page of apps */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["AppPage"];
+                };
+            };
+            /** @description No such organization, or not the caller's */
+            readonly 404: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    readonly listInstalls: {
+        readonly parameters: {
+            readonly query?: {
+                /** @description Only installs in this state. */
+                readonly state?: string;
+            };
+            readonly header?: never;
+            readonly path: {
+                /** @description The organization. */
+                readonly org: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description The installs (`Cache-Control: no-store`) */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["InstallList"];
+                };
+            };
+            /** @description No person */
+            readonly 401: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not a member, or installs are off */
+            readonly 404: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description An unknown state */
+            readonly 422: {
                 headers: {
                     readonly [name: string]: unknown;
                 };
