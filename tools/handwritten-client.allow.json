@@ -17,6 +17,11 @@
       "reason": "signStatsReport and sendStatsReport: the statistics sender of stats-only use (no token, no client), over the statistics path the contract pins"
     },
     {
+      "path": "packages/ts/connect-sdk/src/launcher.ts",
+      "rules": ["fetch"],
+      "reason": "loadLauncherCatalog reads Ever Works' public App Launcher catalog (GET /api/app-launcher/platforms, no credentials, 2 s timeout, bundled snapshot on any failure): not an Ever Platform API call, so the generated client does not cover it; the fetch is injectable"
+    },
+    {
       "path": "crates/ever-connect-sdk/src/client/guard.rs",
       "rules": ["reqwest"],
       "reason": "the one place the Rust client hands a request to reqwest; it holds no path of its own and refuses any URL outside the base URL"
