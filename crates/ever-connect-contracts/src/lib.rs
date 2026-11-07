@@ -150,7 +150,7 @@ mod tests {
                 "a hidden key never ships"
             );
         }
-        assert_eq!(outbound_calls()["rows"].as_array().unwrap().len(), 35);
+        assert_eq!(outbound_calls()["rows"].as_array().unwrap().len(), 37);
         for text in [
             schema_stats_v1(),
             schema_entitlement_v1(),
