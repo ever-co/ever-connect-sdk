@@ -116,6 +116,7 @@ Every key is optional; `tools/mock-platform/mock.config.example.json` shows the 
 - A call gated by a per-link integration names its tenant link in `Ever-Link-Id` (`422 validation_failed` at `#Ever-Link-Id` without it, or with a value that is not a tenant link id); an installation-wide integration (`instance_url`, `stats_link`, `ever_id_login`, `webhooks`, and `managed_operations` until its platform module exists) ignores the link.
 - The heartbeat's `integrations_denied` is the installation's whole local deny list: a key it names goes off on every link and reads `denied_by_policy`; a later heartbeat without the key lifts the deny. Switching an integration off with `reason: policy` adds the key to the list.
 - The consent link takes an optional `return`, accepted only when its origin is one the redeem declared (`return_origins`, at most four, normalised).
+- An App outside the six products connects as the platform lets it: `product: app:<app id>` with `kind: app`, no `serves_products`, and a code minted for that App (`POST /__mock/codes {code, product: "app:<id>"}`); another kind, a served product or another App's code is refused as on the platform, and the App's entitlement document names no product.
 - An integration the catalog marks `coming_soon` reads `coming_soon` and cannot be enabled through the API, as on Ever Platform; `POST /__mock/consent` still enables one, so a product can test what comes next.
 
 ## 3. The call record

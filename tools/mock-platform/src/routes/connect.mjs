@@ -98,6 +98,8 @@ function codeInvalid(state, code, ctx) {
 }
 
 const PRODUCTS = new Set(['gauzy', 'teams', 'works', 'rec', 'traduora', 'demand']);
+/** An App outside the six products connects as `app:<app id>`, with `kind: app`. */
+const APP_PRODUCT = /^app:[0-9A-HJKMNP-TV-Z]{26}$/;
 const VERSION = /^[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}(-[0-9A-Za-z.]{1,16})?$/;
 const INSTALL_SOURCE = /^(cloud|self-hosted|ever\.sh|works_app|desktop|partner:[a-z0-9-]{2,32})$/;
 const CODE_SHAPE = /^EVC(-[0-9A-HJKMNP-TV-Z]{4}){3}$/;
@@ -105,8 +107,12 @@ const CODE_SHAPE = /^EVC(-[0-9A-HJKMNP-TV-Z]{4}){3}$/;
 /** What a redeem body says, checked as the platform checks it before any code is consumed. */
 function checkRedeemBody(body) {
   const field = (path, code, message) => fail(422, 'validation_failed', undefined, { errors: [{ path, code, message }] });
-  if (!PRODUCTS.has(body.product)) field('/product', 'invalid', 'not a product code');
+  const app = APP_PRODUCT.test(String(body.product));
+  if (!app && !PRODUCTS.has(body.product)) field('/product', 'invalid', 'not a product code');
   if (body.product === 'demand') fail(422, 'product_not_supported');
+  // As on the platform: an App connects with `kind: app`, and only an App does; it serves no product.
+  if (app !== (body.kind === 'app')) field('/kind', 'invalid', app ? 'an App connects as kind app' : 'only an App connects as kind app');
+  if (app && (body.serves_products ?? []).length > 0) field('/serves_products', 'invalid', 'an App serves no product');
   if (!VERSION.test(String(body.version).trim())) field('/version', 'invalid_shape', 'a `major.minor.patch[-suffix]` version');
   if (!INSTALL_SOURCE.test(String(body.install_source).trim())) field('/install_source', 'invalid', 'not an install source');
   const serves = body.serves_products ?? [];
