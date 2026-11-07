@@ -69,8 +69,7 @@ export function build() {
   // The product codes: the contract's `ProductCode` while it states one, else the entitlement
   // schema's (the served contract types products as strings, `app:<id>` included).
   const products =
-    doc.components.schemas.ProductCode?.enum ??
-    readJson(join(REPO, 'contracts/schemas/ever.entitlement.v1.json')).$defs.product.enum;
+    doc.components.schemas.ProductCode?.enum ?? readJson(join(REPO, 'contracts/schemas/ever.entitlement.v1.json')).$defs.product.enum;
   // A catalog row may also be offered to connected Apps (the `app` family of `app:<id>`).
   const offered = new Set([...products, 'app']);
   const problems = [];
