@@ -1067,7 +1067,7 @@
         "works"
       ],
       "status": "coming_soon",
-      "scope_version": 1,
+      "scope_version": 2,
       "revoke_effect": "The provider's access is removed from the installation.",
       "scope": [
         {
