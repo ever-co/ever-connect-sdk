@@ -245,6 +245,9 @@ export const adminRoutes = {
     const valid = (m) => typeof m?.identity_issuer === 'string' && typeof m.identity_subject === 'string' && roles.includes(m.role);
     if (!Array.isArray(members) || !members.every(valid))
       fail(422, 'validation_failed', `members is a list of {identity_issuer, identity_subject, role (${roles.join(', ')})}`);
+    // One entry per Ever ID: the pages' cursor names a member by issuer and subject.
+    if (new Set(members.map((m) => JSON.stringify([m.identity_issuer, m.identity_subject]))).size !== members.length)
+      fail(422, 'validation_failed', 'members names an Ever ID (issuer and subject) twice');
     state.memberships.set(
       orgId,
       members.map((m) => ({ identity_issuer: m.identity_issuer, identity_subject: m.identity_subject, role: m.role })),

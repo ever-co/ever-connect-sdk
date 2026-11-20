@@ -87,10 +87,12 @@ describe('the members of a tenant link', () => {
     expectOk(expect, await page(c), 200, 'instanceListLinkMemberships');
   });
 
-  it('refuses a seed that is not a list of members', async () => {
+  it('refuses a seed that is not a list of members, or names an Ever ID twice', async () => {
     env = await startMock();
     await env.connect();
     const r = await env.call('POST', '/__mock/memberships', { body: { members: [{ identity_issuer: ISSUER, role: 'boss' }] } });
     expectProblem(expect, r, 422, 'validation_failed');
+    const twice = await env.call('POST', '/__mock/memberships', { body: { members: [...members(2), members(1)[0]] } });
+    expectProblem(expect, twice, 422, 'validation_failed');
   });
 });
