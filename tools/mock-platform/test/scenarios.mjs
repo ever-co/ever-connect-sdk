@@ -345,6 +345,10 @@ export const OK = {
     const org = env.state.instance(c.instanceId).org.id;
     return env.call('GET', `/v1/orgs/${org}/apps`, { token: await personToken(env, { scope: 'openid apps:read' }) });
   },
+  instanceListLinkMemberships: async (env) => {
+    const c = await connected(env);
+    return env.call('GET', `/v1/instances/me/tenant-links/${c.linkId}/memberships?limit=100`, { token: c.token });
+  },
   discoverSso: (env) => env.call('GET', '/v1/sso/discover?email_domain=acme.example'),
   instanceCreateBillingLink: async (env) => {
     const c = await connected(env, { enable: ['billing_link'] });
@@ -1317,6 +1321,26 @@ export const ERRORS = {
   '37:404:not_found': async (env) => {
     await connected(env);
     return env.call('GET', '/v1/orgs/01JMQCK0RG00000000000000ZZ/apps', { token: await personToken(env, { scope: 'apps:read' }) });
+  },
+  '38:403:instance_pending_approval': async (env) => {
+    const c = await connected(env, { code: 'EVC-TEST-0000-0003' });
+    return env.call('GET', `/v1/instances/me/tenant-links/${c.linkId}/memberships`, { token: c.token });
+  },
+  '38:403:instance_disconnected': async (env) => {
+    const c = await connected(env);
+    await env.admin('disconnect', {});
+    return env.call('GET', `/v1/instances/me/tenant-links/${c.linkId}/memberships`, { token: c.token });
+  },
+  '38:404:not_found': async (env) =>
+    env.call('GET', '/v1/instances/me/tenant-links/01JMQCK0RG000000000000000E/memberships', { token: (await connected(env)).token }),
+  '38:404:module_disabled': async (env) => {
+    const c = await connected(env);
+    await env.admin('faults', { memberships_module_disabled: true });
+    return env.call('GET', `/v1/instances/me/tenant-links/${c.linkId}/memberships`, { token: c.token });
+  },
+  '38:422:validation_failed': async (env) => {
+    const c = await connected(env);
+    return env.call('GET', `/v1/instances/me/tenant-links/${c.linkId}/memberships?limit=101`, { token: c.token });
   },
   '35:422:topic_invalid': async (env) => env.call('GET', '/rt/sse?topics=instances', { token: (await connected(env)).token }),
   '35:429:too_many_streams': async (env) => {

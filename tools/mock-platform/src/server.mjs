@@ -17,6 +17,7 @@ import { integrationsHandlers } from './routes/integrations.mjs';
 import { linkHandlers } from './routes/links.mjs';
 import { lookupHandlers } from './routes/lookup.mjs';
 import { managedHandlers } from './routes/managed.mjs';
+import { membershipHandlers } from './routes/memberships.mjs';
 import { mirrorHandlers } from './routes/mirror.mjs';
 import { miscHandlers } from './routes/misc.mjs';
 import { oidcHandlers } from './routes/oidc.mjs';
@@ -41,6 +42,7 @@ const HANDLERS = {
   ...miscHandlers,
   ...consentHandlers,
   ...managedHandlers,
+  ...membershipHandlers,
   ...realtimeHandlers,
 };
 
