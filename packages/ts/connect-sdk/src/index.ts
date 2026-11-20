@@ -6,10 +6,20 @@
  * import.
  */
 
+export type { LinkMembership, LinkMembershipPage } from '@ever-co/connect-contracts';
 export { CONSTANTS, FEED_EVENT_TYPES, INTEGRATIONS, SCHEMAS } from '@ever-co/connect-contracts';
 export type { ClientAssertionOptions, KeyRotationOptions } from './assertion';
 export { jwkThumbprint, signClientAssertion, signKeyRotation, subjectHash } from './assertion';
-export type { CallInput, EverPlatformClient, EverPlatformClientOptions, NotModified, RequestBody, ResponseBody } from './client';
+export type {
+  CallInput,
+  EverPlatformClient,
+  EverPlatformClientOptions,
+  LinkMembershipsPageOptions,
+  LinkMembershipsReadOptions,
+  NotModified,
+  RequestBody,
+  ResponseBody,
+} from './client';
 export { createEverPlatformClient, resolveRootKeys } from './client';
 export { codes, scopeTable } from './codes';
 export type { CachedEntitlement, EntitlementStatus, VerifiedEntitlement, VerifyEntitlementOptions } from './entitlement';
@@ -23,6 +33,7 @@ export {
   LookupInputError,
   LookupVectorError,
   NotConnectedError,
+  PagingError,
   ProblemError,
   RateLimitedError,
   RequestRefusedError,
@@ -79,6 +90,8 @@ export type { ManagedOperationRunnerOptions, RunOutcome, RunReport } from './man
 export { createManagedOperationRunner, MANAGED_REQUESTED, sanitizeResult } from './managed/runner';
 export type { KeyManifestDocument, ManifestKey, RootKey, VerifiedKeyManifest, VerifyKeyManifestOptions } from './manifest';
 export { CLOCK_SKEW_S, isVerifiedKeyManifest, keysSha256, pinnedRootKeys, verifyKeyManifest } from './manifest';
+export type { CursorPage, PageReader } from './paging';
+export { DEFAULT_MAX_PAGES, MAX_PAGE_SIZE, readAllPages, readPages } from './paging';
 export type {
   SendStatsReportOptions,
   SignedStatsReport,

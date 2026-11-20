@@ -115,6 +115,29 @@ try {
 }
 ```
 
+The membership events in between are gone too: re-read the members of each linked organization
+(`GET /v1/instances/me/tenant-links/{link}/memberships`, row 38). `tenantLinks.memberships(linkId,
+{ cursor, limit })` reads one page; `tenantLinks.allMemberships(linkId)` reads every page (100 a
+page) and stops with a `PagingError` (`cursor_repeated`, `too_many_pages` after `maxPages`, default
+1,000, or `malformed_page`) instead of answering part of the list. `readPages` and `readAllPages`
+do the same for any cursor-paged list.
+
+```ts
+import { PagingError, ProblemError } from '@ever-co/connect-sdk';
+
+for (const link of store.activeLinks()) {
+  try {
+    const members = await client.instances.tenantLinks.allMemberships(link.id);
+    await applyMembers(link, members); // only now remove the people the whole list no longer names
+  } catch (error) {
+    // This deployment of Ever Platform sends no membership events: nothing to re-read.
+    if (error instanceof ProblemError && error.status === 404 && error.code === 'module_disabled') continue;
+    if (error instanceof PagingError || error instanceof ProblemError) break; // keep everyone; retry at the next resync
+    throw error;
+  }
+}
+```
+
 ## Compact JWS helpers
 
 ```ts
