@@ -299,7 +299,7 @@
       "module": "connect",
       "group": "integration",
       "integration": "app_sync",
-      "auth": "instance token",
+      "auth": "instance token; Ever-Link-Id optional (the tenant link the batch or the read is for)",
       "trigger": "integration app_sync enabled and an app or deployment changes; nightly reconciliation",
       "payload": "app and deployment identifiers, kind, status, deployment {target, provider, shape, managed_by, url}, organization id; member joined or left (ids only)",
       "cadence": "every 30 s when there is something to send; nightly",
@@ -308,7 +308,8 @@
       "errors": [
         [403, "integration_disabled"],
         [403, "integration_revoked"],
-        [413, "payload_too_large"]
+        [413, "payload_too_large"],
+        [422, "validation_failed"]
       ]
     },
     {
@@ -554,7 +555,7 @@
       "module": "connect",
       "group": "integration",
       "integration": "marketplace_installs",
-      "auth": "instance token",
+      "auth": "instance token and Ever-Link-Id (the tenant link the install acts for)",
       "trigger": "an install request picked from apps.ever.co was handled by the installation's plugin installer",
       "payload": "state, detail? (a fixed token), external_ref?",
       "cadence": "once per install step",
@@ -564,7 +565,8 @@
         [403, "integration_disabled"],
         [403, "integration_revoked"],
         [404, "not_found"],
-        [409, "illegal_transition"]
+        [409, "illegal_transition"],
+        [422, "validation_failed"]
       ]
     },
     {

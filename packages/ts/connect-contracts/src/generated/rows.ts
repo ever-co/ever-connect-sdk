@@ -501,7 +501,7 @@ export const ROWS: readonly OutboundCallRow[] = [
     "module": "connect",
     "group": "integration",
     "integration": "app_sync",
-    "auth": "instance token",
+    "auth": "instance token; Ever-Link-Id optional (the tenant link the batch or the read is for)",
     "availability": "v1",
     "endpoints": [
       {
@@ -899,7 +899,7 @@ export const ROWS: readonly OutboundCallRow[] = [
     "module": "connect",
     "group": "integration",
     "integration": "marketplace_installs",
-    "auth": "instance token",
+    "auth": "instance token and Ever-Link-Id (the tenant link the install acts for)",
     "availability": "v1",
     "endpoints": [
       {
@@ -1875,6 +1875,11 @@ export const ROW_COVERAGE: readonly RowCoverage[] = [
         "status": 413,
         "code": "payload_too_large",
         "documented": true
+      },
+      {
+        "status": 422,
+        "code": "validation_failed",
+        "documented": true
       }
     ]
   },
@@ -2354,6 +2359,11 @@ export const ROW_COVERAGE: readonly RowCoverage[] = [
       {
         "status": 409,
         "code": "illegal_transition",
+        "documented": true
+      },
+      {
+        "status": 422,
+        "code": "validation_failed",
         "documented": true
       }
     ]

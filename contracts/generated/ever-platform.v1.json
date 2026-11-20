@@ -611,6 +611,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "Ever-Link-Id",
+            "in": "header",
+            "required": true,
+            "description": "The tenant link the install acts for. Required: without it Ever Platform answers `422 validation_failed` at `#Ever-Link-Id`.",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -1714,6 +1723,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "Ever-Link-Id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant link the read is made for. Optional: when named, `app_sync` must be enabled for that link; without it, for at least one active link of the installation.",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1772,6 +1790,17 @@
         "security": [
           {
             "instanceToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Ever-Link-Id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant link the batch is sent for. Optional: when named, `app_sync` must be enabled for that link; without it, for at least one active link of the installation. Each operation's own link is checked either way.",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {

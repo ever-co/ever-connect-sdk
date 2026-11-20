@@ -214,7 +214,7 @@ export const OPERATIONS = {
     "query": [],
     "auth": "instance",
     "idempotencyKey": "none",
-    "linkHeader": "none",
+    "linkHeader": "required",
     "conditional": false,
     "body": {
       "schema": {
@@ -563,7 +563,7 @@ export const OPERATIONS = {
     ],
     "auth": "instance",
     "idempotencyKey": "none",
-    "linkHeader": "none",
+    "linkHeader": "optional",
     "conditional": false,
     "body": null,
     "success": [
@@ -582,7 +582,7 @@ export const OPERATIONS = {
     "query": [],
     "auth": "instance",
     "idempotencyKey": "none",
-    "linkHeader": "none",
+    "linkHeader": "optional",
     "conditional": false,
     "body": {
       "schema": {

@@ -143,9 +143,19 @@ const keyCheckedByHandler = (e) => e.path.startsWith('/public_jwk/') || (e.path 
 const linkProblem = (code, message) => fail(422, 'validation_failed', message, { errors: [{ path: '#Ever-Link-Id', code, message }] });
 
 /**
+ * The batch routes whose operations name their own links: the platform gates them `any_link`, so
+ * `Ever-Link-Id` is optional there (named: that link; not named: any active link of the
+ * installation).
+ */
+const ANY_LINK_OPERATIONS = new Set(['instanceMirrorApps', 'instanceListMirroredApps']);
+
+const enabledState = (instance, key, s) => s && stateLabel(instance, key, s) === 'enabled' && s.enabled !== false;
+
+/**
  * The integration gate, as the platform's: the tenant link comes from `Ever-Link-Id` (a value that
- * is not a tenant link id is refused for every key), a per-link key needs it, and the key must be
- * enabled for that link (an installation-wide key: for the installation).
+ * is not a tenant link id is refused for every key), a per-link key needs it (an `any_link` route
+ * without it: the key enabled for at least one active link), and the key must be enabled for that
+ * link (an installation-wide key: for the installation).
  */
 function gate(ctx) {
   const key = ctx.route.integration;
@@ -155,13 +165,18 @@ function gate(ctx) {
   if (named !== null && !TENANT_LINK_ID.test(named)) linkProblem('invalid', 'Ever-Link-Id is not a tenant link id');
   let s;
   if (isInstanceWide(key)) s = ctx.instance.integrations[key];
-  else {
+  else if (named === null && ANY_LINK_OPERATIONS.has(ctx.route.operationId)) {
+    const states = Object.values(ctx.instance.links)
+      .filter((l) => l.state === 'active')
+      .map((l) => ctx.instance.integrations[`${key}@${l.id}`]);
+    s = states.find((x) => enabledState(ctx.instance, key, x)) ?? states.find(Boolean);
+  } else {
     if (named === null) linkProblem('required', 'this integration acts for one tenant link: name it in Ever-Link-Id');
     const link = ctx.instance.links[named];
     s = link && link.state === 'active' ? ctx.instance.integrations[`${key}@${named}`] : undefined;
   }
+  if (enabledState(ctx.instance, key, s)) return;
   const label = s ? stateLabel(ctx.instance, key, s) : 'disabled';
-  if (label === 'enabled' && s.enabled !== false) return;
   if (label === 'revoked') fail(403, 'integration_revoked');
   if (label === 'denied_by_policy') fail(403, 'denied_by_policy', "the installation's operator denies this integration");
   fail(403, 'integration_disabled', `the ${key} integration is not enabled`);
