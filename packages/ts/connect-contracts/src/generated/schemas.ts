@@ -4083,7 +4083,7 @@ export const EVENT_SCHEMAS = {
       },
       "integration_key": {
         "type": "string",
-        "pattern": "^(ever_id_login|counterparty_lookup|counterparty_discoverable|profile_import|usage_reporting|app_sync|instance_url|stats_link|billing_link|webhooks|managed_operations|provider_access|marketplace_installs|partner:[a-z0-9-]{2,32})$",
+        "pattern": "^(ever_id_login|counterparty_lookup|counterparty_discoverable|profile_import|usage_reporting|app_sync|instance_url|stats_link|billing_link|webhooks|managed_operations|provider_access|marketplace_installs|works_apps|partner:[a-z0-9-]{2,32})$",
         "maxLength": 40
       },
       "period": {

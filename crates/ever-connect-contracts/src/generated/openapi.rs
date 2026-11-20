@@ -93,8 +93,10 @@ pub mod components {
             value.parse()
         }
     }
-    /**An app or Work the organization owns, mirrored from the product that built it (the source of
-    truth). Only `public_on_profile` and `listing_id` are edited here.*/
+    /**An app or Work the organization owns: mirrored from the product that built it (the source of
+    truth; only `public_on_profile` and `listing_id` are edited here), or added by the organization
+    itself (`source_system: manual`), which then also owns its name, description, address and icon,
+    and says whether it is `live`.*/
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct App {
         ///`none`, `ever` or `oss`.
@@ -104,6 +106,15 @@ pub mod components {
         pub base_ref: ::std::option::Option<::std::string::String>,
         ///Its deployments.
         pub deployments: ::std::vec::Vec<AppDeployment>,
+        ///The organization's own words about an App it added itself; `null` on a mirrored one.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub description: ::std::option::Option<::std::string::String>,
+        /**The version of the icon of an App the organization added itself (32 hexadecimal
+        characters that change whenever the picture does); `null` when it has none, and on a
+        mirrored one. The picture itself is never part of an App's answer: it is served at
+        `GET /v1/apps/{app}/icon` (add `?v=<icon_version>` so the address changes with it).*/
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub icon_version: ::std::option::Option<::std::string::String>,
         ///The app.
         pub id: ::std::string::String,
         ///The marketplace install it came from, when its lineage names one.
@@ -128,6 +139,12 @@ pub mod components {
         ///The instance that mirrors it.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub source_instance_id: ::std::option::Option<::std::string::String>,
+        /**The tenant link a mirrored app arrived under (an organization may link several workspaces
+        of one product: this says which one the app is of). The platform sets it from the link
+        the mirror was accepted under; `null` on an App the organization added itself, and once
+        that link is gone.*/
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub source_link_id: ::std::option::Option<::std::string::String>,
         ///Its id in the source product.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub source_ref: ::std::option::Option<::std::string::String>,
@@ -135,8 +152,14 @@ pub mod components {
         pub source_system: ::std::string::String,
         ///The source's version of it.
         pub source_version: i64,
-        ///`draft`, `registered`, `building`, `live`, `paused`, `archived` or `deleted`.
+        /**`draft`, `registered`, `building`, `live`, `paused`, `archived` or `deleted`. An App the
+        organization added itself is `registered` until the organization says it is `live`, and
+        `archived` once removed; only a `live` app is shown on the organization's public page.*/
         pub status: ::std::string::String,
+        /**The `https` address of an App the organization added itself; `null` on a mirrored one
+        (its addresses are on its deployments).*/
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub url: ::std::option::Option<::std::string::String>,
         ///The source product's kind of Work (open vocabulary).
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub work_kind: ::std::option::Option<::std::string::String>,
@@ -865,6 +888,10 @@ pub mod components {
         InvalidRequest,
         #[serde(rename = "file_rejected")]
         FileRejected,
+        #[serde(rename = "listing_changed")]
+        ListingChanged,
+        #[serde(rename = "licence_check_required")]
+        LicenceCheckRequired,
         #[serde(rename = "internal_error")]
         InternalError,
     }
@@ -997,6 +1024,8 @@ pub mod components {
                 Self::TurnstileFailed => f.write_str("turnstile_failed"),
                 Self::InvalidRequest => f.write_str("invalid_request"),
                 Self::FileRejected => f.write_str("file_rejected"),
+                Self::ListingChanged => f.write_str("listing_changed"),
+                Self::LicenceCheckRequired => f.write_str("licence_check_required"),
                 Self::InternalError => f.write_str("internal_error"),
             }
         }
@@ -1131,6 +1160,8 @@ pub mod components {
                 "turnstile_failed" => Ok(Self::TurnstileFailed),
                 "invalid_request" => Ok(Self::InvalidRequest),
                 "file_rejected" => Ok(Self::FileRejected),
+                "listing_changed" => Ok(Self::ListingChanged),
+                "licence_check_required" => Ok(Self::LicenceCheckRequired),
                 "internal_error" => Ok(Self::InternalError),
                 _ => Err("invalid value".into()),
             }
@@ -1216,6 +1247,12 @@ pub mod components {
         /**The newest position of this feed: re-read the state through REST, then acknowledge this
         cursor and continue from it (`after`).*/
         pub last_id: ::std::string::String,
+        /**Which refusal this is, where one `code` stands for several: a stable token for clients to
+        branch on, named by the operation that sends it (a listing's `illegal_transition`:
+        `listing_in_review`, `listing_not_reviewed`, ...; a licence refusal: `licence_pending`,
+        `licence_not_osi`, `no_public_repository`). Absent where the code says it all.*/
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub reason: ::std::option::Option<::std::string::String>,
         /**Seconds until a retry can succeed (`rate_limited`, `idempotency_in_progress`); mirrors
         `Retry-After`.*/
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
@@ -1776,6 +1813,34 @@ pub mod components {
         ///Their version.
         pub terms_version: ::std::string::String,
     }
+    /**One member of the organization, named as the installation's feed names them: the Ever ID the
+    product sees at sign-in, the product's own user when a person link names one, and the role.
+    Never a person id or an e-mail.*/
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct LinkMembership {
+        ///The Ever ID issuer.
+        pub identity_issuer: ::std::string::String,
+        ///The Ever ID subject.
+        pub identity_subject: ::std::string::String,
+        /**The product's own user, when a person link of this installation names one (omitted
+        otherwise).*/
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub product_user_ref: ::std::option::Option<::std::string::String>,
+        ///The Ever role.
+        pub role: OrgRole,
+    }
+    ///One page of the members of the organization a tenant link points at.
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct LinkMembershipPage {
+        /**The members on this page (a page may hold fewer than `limit`: keep reading while
+        `next_cursor` is set).*/
+        pub items: ::std::vec::Vec<LinkMembership>,
+        ///The cursor of the next page, `null` on the last one.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub next_cursor: ::std::option::Option<::std::string::String>,
+        ///The link.
+        pub tenant_link_id: ::std::string::String,
+    }
     ///A tenant link as the instance sees it (never who linked it).
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct LinkedTenant {
@@ -1790,6 +1855,10 @@ pub mod components {
         pub link_method: ::std::string::String,
         ///When it was made.
         pub linked_at: ::std::string::String,
+        /**That organization's handle (`ever.co/<handle>`) as it stands now; `null` for an
+        organization that holds none.*/
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub org_handle: ::std::option::Option<::std::string::String>,
         ///The organization it links to.
         pub org_id: ::std::string::String,
         ///The product.
@@ -2052,7 +2121,9 @@ pub mod components {
         /**`draft`, `registered`, `building`, `live`, `paused`, `archived` or `deleted`, or the
         product's own `active` (read as `live`).*/
         pub status: ::std::string::String,
-        ///A Work's kind.
+        /**A Work's kind: `website`, `blog`, `directory`, `knowledge_base`, `awesome`, `company`,
+        `store`, `campaign`, `default`, `repository`, `project` or `landing_page` (words are only
+        ever added; another word answers `schema_violation`).*/
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub work_kind: ::std::option::Option<::std::string::String>,
     }
@@ -2542,6 +2613,12 @@ pub mod components {
         ///The request id (`x-request-id`); filled in by the API for every problem it sends.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub instance: ::std::option::Option<::std::string::String>,
+        /**Which refusal this is, where one `code` stands for several: a stable token for clients to
+        branch on, named by the operation that sends it (a listing's `illegal_transition`:
+        `listing_in_review`, `listing_not_reviewed`, ...; a licence refusal: `licence_pending`,
+        `licence_not_osi`, `no_public_repository`). Absent where the code says it all.*/
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub reason: ::std::option::Option<::std::string::String>,
         /**Seconds until a retry can succeed (`rate_limited`, `idempotency_in_progress`); mirrors
         `Retry-After`.*/
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
@@ -2794,6 +2871,10 @@ pub mod components {
         ///Who linked it.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         pub linked_by_person_id: ::std::option::Option<::std::string::String>,
+        /**The organization's handle (`ever.co/<handle>`) as it stands now; `null` for an
+        organization that holds none.*/
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        pub org_handle: ::std::option::Option<::std::string::String>,
         ///The organization.
         pub org_id: ::std::string::String,
         ///The product.

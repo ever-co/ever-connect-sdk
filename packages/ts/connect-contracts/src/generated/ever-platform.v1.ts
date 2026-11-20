@@ -791,6 +791,28 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/v1/instances/me/tenant-links/{link}/memberships": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * The current members of the organization one of this installation's active tenant links
+         *     points at, named as its feed names them (Ever ID issuer and subject, the product user when a
+         *     person link names one, the role; never a person id or an e-mail). Read it after the feed
+         *     answers `410 resync_required`, then continue the feed from the `last_id` that answer carried.
+         */
+        readonly get: operations["instanceListLinkMemberships"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/v1/instances/me/usage": {
         readonly parameters: {
             readonly query?: never;
@@ -1049,7 +1071,9 @@ export interface paths {
          *     (`instance_url`, `stats_link`, `ever_id_login`, `webhooks`, `managed_operations`) is changed only by the organization
          *     that connected a customer- or partner-operated installation, and waits for the operator's local
          *     accept (`state: pending_operator`); installations Ever operates have theirs set by Ever.
-         *     Disabling revokes the consent. Any plan may switch any integration off.
+         *     Disabling revokes the consent. Any plan may switch any integration off (and `works_apps` can
+         *     be switched off even where a deployment says plans may not: it is a delegation to act, and a
+         *     person can always withdraw it).
          * @description **Security (contract v1).** A person's app.ever.co session (`personSession`) or an Ever ID
          *     access token whose `azp` is a client of the Ever Platform project (`everIdToken`). A token must
          *     come from a sign-in at most 300 s old (`x-ever-fresh-auth-s`; else `403 step_up_required`); a
@@ -1059,8 +1083,8 @@ export interface paths {
          *     step-up token (sign-in at most 300 s old) from the installation's **own** client
          *     (`inst-<instance id>`, or an Ever Cloud product client configured for an installation Ever
          *     operates of that product) may change that installation's integrations from the product's own
-         *     dialog, never `counterparty_discoverable`
-         *     or `instance_url`; the consent records `consent_source = product_ui` and `evidence.ui =
+         *     dialog, never `counterparty_discoverable`, `instance_url`
+         *     or `works_apps`; the consent records `consent_source = product_ui` and `evidence.ui =
          *     product:<product>`. Any other product token answers `403 session_required`; otherwise a product
          *     sends its admin to app.ever.co with the signed link of `GET /v1/instances/me/consent-url`. The
          *     caller is an owner or admin of the organization (`403 forbidden_role`), and an
@@ -1265,8 +1289,10 @@ export interface components {
          */
         readonly AckResult: "deleted" | "anonymised" | "retained_legal" | "no_account" | "forwarded_to_controller" | "exported" | "failed";
         /**
-         * @description An app or Work the organization owns, mirrored from the product that built it (the source of
-         *     truth). Only `public_on_profile` and `listing_id` are edited here.
+         * @description An app or Work the organization owns: mirrored from the product that built it (the source of
+         *     truth; only `public_on_profile` and `listing_id` are edited here), or added by the organization
+         *     itself (`source_system: manual`), which then also owns its name, description, address and icon,
+         *     and says whether it is `live`.
          */
         readonly App: {
             /**
@@ -1278,6 +1304,16 @@ export interface components {
             readonly base_ref?: string | null;
             /** @description Its deployments. */
             readonly deployments: readonly components["schemas"]["AppDeployment"][];
+            /** @description The organization's own words about an App it added itself; `null` on a mirrored one. */
+            readonly description?: string | null;
+            /**
+             * @description The version of the icon of an App the organization added itself (32 hexadecimal
+             *     characters that change whenever the picture does); `null` when it has none, and on a
+             *     mirrored one. The picture itself is never part of an App's answer: it is served at
+             *     `GET /v1/apps/{app}/icon` (add `?v=<icon_version>` so the address changes with it).
+             * @example 9f86d081884c7d659a2feaa0c55ad015
+             */
+            readonly icon_version?: string | null;
             /** @description The app. */
             readonly id: string;
             /** @description The marketplace install it came from, when its lineage names one. */
@@ -1304,6 +1340,13 @@ export interface components {
             readonly slug: string;
             /** @description The instance that mirrors it. */
             readonly source_instance_id?: string | null;
+            /**
+             * @description The tenant link a mirrored app arrived under (an organization may link several workspaces
+             *     of one product: this says which one the app is of). The platform sets it from the link
+             *     the mirror was accepted under; `null` on an App the organization added itself, and once
+             *     that link is gone.
+             */
+            readonly source_link_id?: string | null;
             /** @description Its id in the source product. */
             readonly source_ref?: string | null;
             /**
@@ -1317,10 +1360,17 @@ export interface components {
              */
             readonly source_version: number;
             /**
-             * @description `draft`, `registered`, `building`, `live`, `paused`, `archived` or `deleted`.
+             * @description `draft`, `registered`, `building`, `live`, `paused`, `archived` or `deleted`. An App the
+             *     organization added itself is `registered` until the organization says it is `live`, and
+             *     `archived` once removed; only a `live` app is shown on the organization's public page.
              * @example live
              */
             readonly status: string;
+            /**
+             * @description The `https` address of an App the organization added itself; `null` on a mirrored one
+             *     (its addresses are on its deployments).
+             */
+            readonly url?: string | null;
             /** @description The source product's kind of Work (open vocabulary). */
             readonly work_kind?: string | null;
         };
@@ -1757,7 +1807,7 @@ export interface components {
          *     unknown code by its HTTP status.
          * @enum {string}
          */
-        readonly ErrorCode: "validation_failed" | "not_found" | "unauthorized" | "forbidden_role" | "forbidden_scope" | "ambiguous_credentials" | "credential_revoked" | "instance_disconnected" | "instance_pending_approval" | "not_connection_owner" | "integration_disabled" | "integration_revoked" | "subject_unknown" | "link_not_found" | "oidc_client_exists" | "redirect_uri_invalid" | "denied_by_policy" | "integration_not_available" | "entitlement_required" | "publishing_unavailable" | "section_not_available" | "tier_required" | "limit_exceeded" | "rate_limited" | "idempotency_mismatch" | "idempotency_in_progress" | "stale_version" | "module_disabled" | "handle_taken" | "totp_required" | "totp_invalid" | "totp_locked" | "totp_already_enrolled" | "notice_period_running" | "handle_reserved" | "handle_retired" | "handle_invalid" | "handle_held" | "domain_denied" | "domain_taken" | "handle_held_by_you" | "hold_expired" | "hold_renewals_exhausted" | "claimant_has_handle" | "release_forbidden" | "code_invalid" | "code_expired" | "code_already_revealed" | "origin_not_allowed" | "product_mismatch" | "product_not_supported" | "product_not_provisionable" | "job_in_progress" | "not_job_owner" | "tier_not_available" | "checkout_email_mismatch" | "intent_expired" | "intent_consumed" | "key_mismatch" | "signature_invalid" | "unlinked_org" | "schema_violation" | "mirror_owned_field" | "illegal_transition" | "already_exists" | "already_completed" | "legal_basis_required" | "receipt_final" | "billing_active" | "sso_required" | "sso_bound" | "domain_not_verified" | "saml_unsupported" | "sso_already_enabled" | "sso_decommissioning" | "sso_test_required" | "sso_not_enabled" | "link_conflict" | "grant_not_accepted" | "reauth_required" | "session_required" | "step_up_required" | "session_bound" | "authorization_pending" | "slow_down" | "expired_token" | "already_connected" | "already_linked" | "already_claimed" | "claim_locked" | "invalid_client" | "public_jwk_invalid" | "identifier_claimed" | "salt_version_unknown" | "salt_version_retired" | "hashes_invalid" | "lookup_key_required" | "required_component" | "resync_required" | "last_owner" | "last_auth_method" | "instances_linked" | "install_in_progress" | "slug_reserved" | "checklist_incomplete" | "scope_version_outdated" | "consent_required" | "method_not_allowed" | "payload_too_large" | "unsupported_media_type" | "gone" | "unavailable" | "upstream" | "database_absent" | "database_unreachable" | "topic_private" | "realtime_disabled" | "topic_forbidden" | "topic_invalid" | "realtime_busy" | "too_many_streams" | "keys_unavailable" | "start_disabled" | "turnstile_failed" | "invalid_request" | "file_rejected" | "internal_error";
+        readonly ErrorCode: "validation_failed" | "not_found" | "unauthorized" | "forbidden_role" | "forbidden_scope" | "ambiguous_credentials" | "credential_revoked" | "instance_disconnected" | "instance_pending_approval" | "not_connection_owner" | "integration_disabled" | "integration_revoked" | "subject_unknown" | "link_not_found" | "oidc_client_exists" | "redirect_uri_invalid" | "denied_by_policy" | "integration_not_available" | "entitlement_required" | "publishing_unavailable" | "section_not_available" | "tier_required" | "limit_exceeded" | "rate_limited" | "idempotency_mismatch" | "idempotency_in_progress" | "stale_version" | "module_disabled" | "handle_taken" | "totp_required" | "totp_invalid" | "totp_locked" | "totp_already_enrolled" | "notice_period_running" | "handle_reserved" | "handle_retired" | "handle_invalid" | "handle_held" | "domain_denied" | "domain_taken" | "handle_held_by_you" | "hold_expired" | "hold_renewals_exhausted" | "claimant_has_handle" | "release_forbidden" | "code_invalid" | "code_expired" | "code_already_revealed" | "origin_not_allowed" | "product_mismatch" | "product_not_supported" | "product_not_provisionable" | "job_in_progress" | "not_job_owner" | "tier_not_available" | "checkout_email_mismatch" | "intent_expired" | "intent_consumed" | "key_mismatch" | "signature_invalid" | "unlinked_org" | "schema_violation" | "mirror_owned_field" | "illegal_transition" | "already_exists" | "already_completed" | "legal_basis_required" | "receipt_final" | "billing_active" | "sso_required" | "sso_bound" | "domain_not_verified" | "saml_unsupported" | "sso_already_enabled" | "sso_decommissioning" | "sso_test_required" | "sso_not_enabled" | "link_conflict" | "grant_not_accepted" | "reauth_required" | "session_required" | "step_up_required" | "session_bound" | "authorization_pending" | "slow_down" | "expired_token" | "already_connected" | "already_linked" | "already_claimed" | "claim_locked" | "invalid_client" | "public_jwk_invalid" | "identifier_claimed" | "salt_version_unknown" | "salt_version_retired" | "hashes_invalid" | "lookup_key_required" | "required_component" | "resync_required" | "last_owner" | "last_auth_method" | "instances_linked" | "install_in_progress" | "slug_reserved" | "checklist_incomplete" | "scope_version_outdated" | "consent_required" | "method_not_allowed" | "payload_too_large" | "unsupported_media_type" | "gone" | "unavailable" | "upstream" | "database_absent" | "database_unreachable" | "topic_private" | "realtime_disabled" | "topic_forbidden" | "topic_invalid" | "realtime_busy" | "too_many_streams" | "keys_unavailable" | "start_disabled" | "turnstile_failed" | "invalid_request" | "file_rejected" | "listing_changed" | "licence_check_required" | "internal_error";
         /**
          * @description One event on a webhook, the installation feed or SSE. Payloads carry identifiers and status
          *     only, never records; delivery is at-least-once: dedupe on `id`.
@@ -2390,6 +2440,12 @@ export interface components {
              * @description When it was made.
              */
             readonly linked_at: string;
+            /**
+             * @description That organization's handle (`ever.co/<handle>`) as it stands now; `null` for an
+             *     organization that holds none.
+             * @example acme
+             */
+            readonly org_handle?: string | null;
             /** @description The organization it links to. */
             readonly org_id: string;
             /** @description The product. */
@@ -2400,6 +2456,39 @@ export interface components {
             readonly product_tenant_id: string;
             /** @description `active`, `suspended`, `orphaned` or `unlinked`. */
             readonly state: string;
+        };
+        /**
+         * @description One member of the organization, named as the installation's feed names them: the Ever ID the
+         *     product sees at sign-in, the product's own user when a person link names one, and the role.
+         *     Never a person id or an e-mail.
+         */
+        readonly LinkMembership: {
+            /**
+             * @description The Ever ID issuer.
+             * @example https://auth.ever.co
+             */
+            readonly identity_issuer: string;
+            /** @description The Ever ID subject. */
+            readonly identity_subject: string;
+            /**
+             * @description The product's own user, when a person link of this installation names one (omitted
+             *     otherwise).
+             */
+            readonly product_user_ref?: string | null;
+            /** @description The Ever role. */
+            readonly role: components["schemas"]["OrgRole"];
+        };
+        /** @description One page of the members of the organization a tenant link points at. */
+        readonly LinkMembershipPage: {
+            /**
+             * @description The members on this page (a page may hold fewer than `limit`: keep reading while
+             *     `next_cursor` is set).
+             */
+            readonly items: readonly components["schemas"]["LinkMembership"][];
+            /** @description The cursor of the next page, `null` on the last one. */
+            readonly next_cursor?: string | null;
+            /** @description The link. */
+            readonly tenant_link_id: string;
         };
         /** @description One organization that matched. */
         readonly LookupMatch: {
@@ -2578,7 +2667,11 @@ export interface components {
              *     product's own `active` (read as `live`).
              */
             readonly status: string;
-            /** @description A Work's kind. */
+            /**
+             * @description A Work's kind: `website`, `blog`, `directory`, `knowledge_base`, `awesome`, `company`,
+             *     `store`, `campaign`, `default`, `repository`, `project` or `landing_page` (words are only
+             *     ever added; another word answers `schema_violation`).
+             */
             readonly work_kind?: string | null;
         };
         /**
@@ -2849,6 +2942,13 @@ export interface components {
             /** @description The request id (`x-request-id`); filled in by the API for every problem it sends. */
             readonly instance?: string | null;
             /**
+             * @description Which refusal this is, where one `code` stands for several: a stable token for clients to
+             *     branch on, named by the operation that sends it (a listing's `illegal_transition`:
+             *     `listing_in_review`, `listing_not_reviewed`, ...; a licence refusal: `licence_pending`,
+             *     `licence_not_osi`, `no_public_repository`). Absent where the code says it all.
+             */
+            readonly reason?: string | null;
+            /**
              * Format: int32
              * @description Seconds until a retry can succeed (`rate_limited`, `idempotency_in_progress`); mirrors
              *     `Retry-After`.
@@ -3104,6 +3204,12 @@ export interface components {
             readonly linked_at: string;
             /** @description Who linked it. */
             readonly linked_by_person_id?: string | null;
+            /**
+             * @description The organization's handle (`ever.co/<handle>`) as it stands now; `null` for an
+             *     organization that holds none.
+             * @example acme
+             */
+            readonly org_handle?: string | null;
             /** @description The organization. */
             readonly org_id: string;
             /**
@@ -5513,6 +5619,61 @@ export interface operations {
             };
         };
     };
+    readonly instanceListLinkMemberships: {
+        readonly parameters: {
+            readonly query?: {
+                /** @description Opaque cursor from a previous page's `next_cursor`. */
+                readonly cursor?: string;
+                /** @description Page size, 1..100 (default 25). */
+                readonly limit?: number;
+            };
+            readonly header?: never;
+            readonly path: {
+                /** @description The tenant link id. */
+                readonly link: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description A page of members (`Cache-Control: no-store`) */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["LinkMembershipPage"];
+                };
+            };
+            /** @description `instance_pending_approval` or `instance_disconnected` */
+            readonly 403: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No active link of this installation, or `module_disabled` (membership events are off) */
+            readonly 404: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `validation_failed` at `?limit` or `?cursor` */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     readonly instanceReportUsage: {
         readonly parameters: {
             readonly query?: never;
@@ -6052,7 +6213,7 @@ export interface operations {
                     readonly "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description `session_required` (a token a product, an installation or an App obtained, except the installation's own client on the in-product path for its own installation and an integration other than `counterparty_discoverable` and `instance_url`), `step_up_required` (a token from a sign-in older than 300 s), `forbidden_role` (a member), `not_connection_owner` (an installation-wide integration changed by an organization that does not own the connection, or of an installation Ever operates), `denied_by_policy`, `entitlement_required` */
+            /** @description `session_required` (a token a product, an installation or an App obtained, except the installation's own client on the in-product path for its own installation and an integration other than `counterparty_discoverable`, `instance_url` and `works_apps`), `step_up_required` (a token from a sign-in older than 300 s), `forbidden_role` (a member), `not_connection_owner` (an installation-wide integration changed by an organization that does not own the connection, or of an installation Ever operates), `denied_by_policy`, `entitlement_required` */
             readonly 403: {
                 headers: {
                     readonly [name: string]: unknown;
@@ -6546,7 +6707,7 @@ export interface operations {
             };
             readonly cookie?: never;
         };
-        /** @description Optional; `event_type` may only be `ever.system.webhook.test`. */
+        /** @description Optional: no body, `null` or a test request; `event_type` may only be `ever.system.webhook.test`. */
         readonly requestBody?: {
             readonly content: {
                 readonly "application/json": null | components["schemas"]["TestDelivery"];
@@ -6573,6 +6734,15 @@ export interface operations {
             };
             /** @description No such endpoint, or `module_disabled` */
             readonly 404: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `validation_failed`: the body is not a test request, or names another event (`/event_type`, `unsupported`) */
+            readonly 422: {
                 headers: {
                     readonly [name: string]: unknown;
                 };

@@ -80,6 +80,8 @@ pub fn component(name: &str, value: &Value) -> Option<Result<Value, String>> {
         "KeyRotate" => rt::<components::KeyRotate>(value),
         "KeyRotated" => rt::<components::KeyRotated>(value),
         "Legal" => rt::<components::Legal>(value),
+        "LinkMembership" => rt::<components::LinkMembership>(value),
+        "LinkMembershipPage" => rt::<components::LinkMembershipPage>(value),
         "LinkedTenant" => rt::<components::LinkedTenant>(value),
         "LookupMatch" => rt::<components::LookupMatch>(value),
         "LookupRefused" => rt::<components::LookupRefused>(value),

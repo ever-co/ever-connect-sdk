@@ -128,6 +128,8 @@ export const PROBLEM_CODES = [
   "turnstile_failed",
   "invalid_request",
   "file_rejected",
+  "listing_changed",
+  "licence_check_required",
   "internal_error"
 ] as const;
 

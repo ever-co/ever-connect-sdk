@@ -983,6 +983,30 @@ export const OPERATIONS = {
     "rateLimit": "instance",
     "status": "not_in_v1"
   },
+  "instanceListLinkMemberships": {
+    "id": "instanceListLinkMemberships",
+    "method": "GET",
+    "path": "/v1/instances/me/tenant-links/{link}/memberships",
+    "pathParams": [
+      "link"
+    ],
+    "query": [
+      "cursor",
+      "limit"
+    ],
+    "auth": "instance",
+    "idempotencyKey": "none",
+    "linkHeader": "none",
+    "conditional": false,
+    "body": null,
+    "success": [
+      200
+    ],
+    "row": 38,
+    "integration": null,
+    "rateLimit": "instance",
+    "status": "pinned"
+  },
   "instanceReportUsage": {
     "id": "instanceReportUsage",
     "method": "POST",
@@ -2187,7 +2211,7 @@ export const REQUEST_SCHEMAS: { readonly [key: string]: unknown } = {
             "type": "string"
           },
           "work_kind": {
-            "description": "A Work's kind.",
+            "description": "A Work's kind: `website`, `blog`, `directory`, `knowledge_base`, `awesome`, `company`,\n`store`, `campaign`, `default`, `repository`, `project` or `landing_page` (words are only\never added; another word answers `schema_violation`).",
             "type": [
               "string",
               "null"

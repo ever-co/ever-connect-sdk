@@ -41,6 +41,10 @@
       "scope_version": 2,
       "scope_sha256": "d3ea986ddfb1d2ca20a6f5879ee76a76c7af632a083353314419aa867cf0a3b4"
     },
+    "works_apps": {
+      "scope_version": 1,
+      "scope_sha256": "012b63583d2c1ca73dc37adfa043d7ecee2f76ca1576817ac98108e9830887d8"
+    },
     "webhooks": {
       "scope_version": 1,
       "scope_sha256": "f96fa2e6fd604320f3649e8d9200b270927cc32ff9af6c78b2ca7b66e08c3bc7"

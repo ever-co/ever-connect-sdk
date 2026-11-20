@@ -199,6 +199,10 @@ pub const INTEGRATIONS_JSON: &[(&str, &str)] = &[
         "provisioning",
         include_str!("data/integrations/provisioning.json"),
     ),
+    (
+        "works_apps",
+        include_str!("data/integrations/works_apps.json"),
+    ),
     ("webhooks", include_str!("data/integrations/webhooks.json")),
     (
         "managed_operations",
@@ -229,6 +233,7 @@ pub const INTEGRATION_KEYS: &[&str] = &[
     "app_sync",
     "billing_link",
     "provisioning",
+    "works_apps",
     "webhooks",
     "managed_operations",
     "provider_access",
@@ -401,5 +406,7 @@ pub const PROBLEM_CODES: &[&str] = &[
     "turnstile_failed",
     "invalid_request",
     "file_rejected",
+    "listing_changed",
+    "licence_check_required",
     "internal_error",
 ];

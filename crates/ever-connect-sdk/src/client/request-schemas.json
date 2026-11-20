@@ -729,7 +729,7 @@
             "type": "string"
           },
           "work_kind": {
-            "description": "A Work's kind.",
+            "description": "A Work's kind: `website`, `blog`, `directory`, `knowledge_base`, `awesome`, `company`,\n`store`, `campaign`, `default`, `repository`, `project` or `landing_page` (words are only\never added; another word answers `schema_violation`).",
             "type": [
               "string",
               "null"

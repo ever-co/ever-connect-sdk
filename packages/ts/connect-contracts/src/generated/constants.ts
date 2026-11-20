@@ -75,6 +75,7 @@ export const CONSTANTS = {
     "app_sync",
     "billing_link",
     "provisioning",
+    "works_apps",
     "webhooks",
     "managed_operations",
     "provider_access",

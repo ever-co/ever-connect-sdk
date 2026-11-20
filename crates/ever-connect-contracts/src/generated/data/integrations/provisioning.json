@@ -15,7 +15,8 @@
   "requires_feature": null,
   "products": [
     "gauzy",
-    "works"
+    "works",
+    "rec"
   ],
   "status": "active",
   "scope_version": 2,

@@ -1214,6 +1214,32 @@ export const ROWS: readonly OutboundCallRow[] = [
       "teams"
     ],
     "phase": 4
+  },
+  {
+    "row": 38,
+    "title": "Membership resync",
+    "module": "connect",
+    "group": "session",
+    "integration": null,
+    "auth": "instance token",
+    "availability": "v1",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/v1/instances/me/tenant-links/{link}/memberships",
+        "operation_id": "instanceListLinkMemberships",
+        "status": "pinned"
+      }
+    ],
+    "trigger": "the event feed answered `410 resync_required` (the membership events in between are gone), and at each start, while the product's membership sync is on",
+    "payload": "none (read; `limit` and `cursor` only)",
+    "cadence": "once per resync: every page of each active tenant link, up to 100 members a page",
+    "disable": "leave EVER_CONNECT_MEMBERSHIP_SYNC_ENABLED off",
+    "products": [
+      "gauzy",
+      "works"
+    ],
+    "phase": 2
   }
 ];
 
@@ -2752,6 +2778,46 @@ export const ROW_COVERAGE: readonly RowCoverage[] = [
       {
         "status": 404,
         "code": "not_found",
+        "documented": true
+      }
+    ]
+  },
+  {
+    "row": 38,
+    "operations": [
+      {
+        "operation_id": "instanceListLinkMemberships",
+        "method": "GET",
+        "path": "/v1/instances/me/tenant-links/{link}/memberships",
+        "success": [
+          200
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "status": 403,
+        "code": "instance_pending_approval",
+        "documented": true
+      },
+      {
+        "status": 403,
+        "code": "instance_disconnected",
+        "documented": true
+      },
+      {
+        "status": 404,
+        "code": "not_found",
+        "documented": true
+      },
+      {
+        "status": 404,
+        "code": "module_disabled",
+        "documented": true
+      },
+      {
+        "status": 422,
+        "code": "validation_failed",
         "documented": true
       }
     ]
