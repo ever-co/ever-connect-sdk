@@ -16,6 +16,7 @@ pub mod error;
 #[allow(missing_docs, clippy::all)]
 pub mod generated;
 mod guard;
+pub mod paging;
 mod token;
 
 use std::fmt;
@@ -28,6 +29,7 @@ use serde_json::{Value, json};
 pub use self::error::{Error, ProblemError, ProblemFieldError};
 use self::generated::{HeaderRule, OPERATIONS, Operation, OperationAuth, REQUEST_SCHEMAS};
 use self::guard::{Base, MAX_RESPONSE_BYTES, WireResponse, check_base_url, http_client, url_for};
+pub use self::paging::{DEFAULT_MAX_PAGES, MAX_PAGE_SIZE, Pager};
 use self::token::InstanceTokens;
 use crate::assertion::{ClientAssertionOptions, sign_client_assertion};
 use crate::encoding::is_ulid;
@@ -999,6 +1001,70 @@ impl EverPlatformClient {
             },
         )
         .await
+    }
+
+    /// One page of the current members of the organization the tenant link points at, named as
+    /// the feed's membership events name them (Ever ID issuer and subject, the product user when
+    /// a person link names one, the role): after `cursor` (the previous page's `next_cursor`),
+    /// `limit` 1..100 (the platform's default 25). Read it after the feed answered
+    /// `410 resync_required`.
+    ///
+    /// # Errors
+    /// [`Error`]; `404 module_disabled` while the platform sends no membership events.
+    pub async fn link_memberships(
+        &self,
+        link_id: &str,
+        cursor: Option<&str>,
+        limit: Option<u32>,
+    ) -> Result<Value, Error> {
+        let mut query = Vec::new();
+        if let Some(cursor) = cursor {
+            query.push(("cursor", cursor.to_owned()));
+        }
+        if let Some(limit) = limit {
+            query.push(("limit", limit.to_string()));
+        }
+        self.json(
+            "instanceListLinkMemberships",
+            CallInput {
+                path: vec![("link", link_id)],
+                query,
+                ..CallInput::default()
+            },
+        )
+        .await
+    }
+
+    /// Every member of the organization the tenant link points at: page after page
+    /// ([`MAX_PAGE_SIZE`] a page) until `next_cursor` is `null`, at most `max_pages` pages
+    /// (`None`: [`DEFAULT_MAX_PAGES`]). Each item is a member as the contract shapes it
+    /// (`identity_issuer`, `identity_subject`, `product_user_ref` when a person link names one,
+    /// `role`).
+    ///
+    /// # Errors
+    /// [`Error::Paging`] on a cursor handed out before, past the page bound or on an answer that
+    /// is not a page, so a partial list is never answered as the whole one; the [`Error`] of any
+    /// page ends the read as it is.
+    pub async fn all_link_memberships(
+        &self,
+        link_id: &str,
+        max_pages: Option<usize>,
+    ) -> Result<Vec<Value>, Error> {
+        let mut pager = Pager::new(max_pages.unwrap_or(DEFAULT_MAX_PAGES));
+        let mut cursor: Option<String> = None;
+        let mut items = Vec::new();
+        loop {
+            pager.before_page()?;
+            let page = self
+                .link_memberships(link_id, cursor.as_deref(), Some(MAX_PAGE_SIZE))
+                .await?;
+            let (page_items, next) = pager.accept(page)?;
+            items.extend(page_items);
+            match next {
+                Some(next) => cursor = Some(next),
+                None => return Ok(items),
+            }
+        }
     }
 
     /// Rotates the connect key (a body from [`crate::assertion::sign_key_rotation`]).

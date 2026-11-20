@@ -80,10 +80,12 @@ export const DEFAULT_CONFIG = {
   // legal_unavailable: no terms published (legal texts 503, no consent recorded: 503);
   // consent_links_unavailable: consent links not configured (503); realtime_disabled: the live
   // stream is off (503), realtime_busy: the replica is full (503), too_many_streams: the caller
-  // holds as many streams as it may (429).
+  // holds as many streams as it may (429); memberships_module_disabled: the deployment sends no
+  // membership events, so a link's member list answers 404 module_disabled.
   faults: {
     keys_unavailable: false,
     webhooks_module_disabled: false,
+    memberships_module_disabled: false,
     revoke_credential_at_call: null,
     connect_issuance_off: false,
     legal_unavailable: false,
@@ -135,6 +137,8 @@ export class MockState {
     this.installs = new Map();
     this.grants = new Map();
     this.operations = new Map();
+    // The members an organization's tenant links answer (row 38), per organization id, once seeded.
+    this.memberships = new Map();
     this.faults = structuredClone(this.config.faults);
     this.keyGeneration = 1;
     this.keysRotatedAt = null;

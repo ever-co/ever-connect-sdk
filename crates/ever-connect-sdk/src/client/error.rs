@@ -98,6 +98,16 @@ pub enum Error {
     },
     /// The client options are not usable.
     InvalidOptions(&'static str),
+    /// A paged read stopped before its end, so that a partial list is never taken for the whole
+    /// one: `cursor_repeated` (the platform handed out a cursor it had handed out before),
+    /// `too_many_pages` (more pages than the read allows) or `malformed_page` (an answer that is
+    /// not a page).
+    Paging {
+        /// The reason.
+        code: &'static str,
+        /// The pages read when the read stopped.
+        pages: usize,
+    },
 }
 
 impl Error {
@@ -106,7 +116,9 @@ impl Error {
     pub fn code(&self) -> &str {
         match self {
             Self::Problem(p) => &p.code,
-            Self::EgressRefused { code } | Self::Validation { code, .. } => code,
+            Self::EgressRefused { code }
+            | Self::Validation { code, .. }
+            | Self::Paging { code, .. } => code,
             Self::NotConnected => "no_registry_instance_id",
             Self::Timeout { .. } => "timeout",
             Self::Entitlement(e) => e.code.as_str(),
@@ -152,6 +164,9 @@ impl fmt::Display for Error {
                 "held back before sending: rate_limited (retry after {retry_after_s} s)"
             ),
             Self::InvalidOptions(m) => write!(f, "invalid client options: {m}"),
+            Self::Paging { code, pages } => {
+                write!(f, "paged read stopped: {code} after {pages} page(s)")
+            }
         }
     }
 }

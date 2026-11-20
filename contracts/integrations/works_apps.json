@@ -1,0 +1,98 @@
+{
+  "key": "works_apps",
+  "name": "Create and deploy Apps in Ever Works for you",
+  "description": "Lets app.ever.co create an App in your Ever Works workspace, and start a deployment of one, when an owner or admin of your organization asks for it there. Ever Works does the work as the person who asked, with the rights that person has in Ever Works.",
+  "category": "apps",
+  "direction": "inbound",
+  "defaults": {
+    "cloud": false,
+    "self_hosted": false
+  },
+  "availability": {
+    "cloud": "available",
+    "self_hosted": "not_applicable"
+  },
+  "requires_feature": null,
+  "products": [
+    "works"
+  ],
+  "status": "coming_soon",
+  "scope_version": 1,
+  "revoke_effect": "app.ever.co stops creating and deploying Apps in Ever Works for your organization at once. Apps and deployments that already exist stay in Ever Works, under your control there.",
+  "notes": "Offered for Ever Works Cloud. No e-mail address or name of a person is sent: Ever Works takes the person from their own Ever ID sign-in. An owner or admin asks for each App and each deployment; nothing is created or deployed on its own.",
+  "scope": [
+    {
+      "field_path": "tenant_link_id",
+      "direction": "from_ever",
+      "form": "id",
+      "frequency": "on_action",
+      "required": true,
+      "purpose": "Say which Ever Works workspace the App belongs to",
+      "retention": "Ever Works keeps it with the App it creates or the deployment it starts. Ever Platform keeps no copy."
+    },
+    {
+      "field_path": "person.ever_id_sub",
+      "direction": "from_ever",
+      "form": "id",
+      "frequency": "on_action",
+      "required": true,
+      "purpose": "Act as the person who asked: Ever Works checks their membership and rights itself",
+      "retention": "Ever Works keeps it with the App and the deployment as the person who asked. Ever Platform keeps no copy."
+    },
+    {
+      "field_path": "app.name",
+      "direction": "from_ever",
+      "form": "clear",
+      "frequency": "on_action",
+      "required": true,
+      "purpose": "Name the new App as you typed it",
+      "retention": "Ever Works keeps it with the App it creates or the deployment it starts. Ever Platform keeps no copy."
+    },
+    {
+      "field_path": "app.blueprint_id",
+      "direction": "from_ever",
+      "form": "id",
+      "frequency": "on_action",
+      "required": true,
+      "purpose": "Create the App from the blueprint you chose",
+      "retention": "Ever Works keeps it with the App it creates or the deployment it starts. Ever Platform keeps no copy."
+    },
+    {
+      "field_path": "app.auto_provision",
+      "direction": "from_ever",
+      "form": "clear",
+      "frequency": "on_action",
+      "required": true,
+      "purpose": "Tell Ever Works whether to start setting the App up at once (your choice in the dialog)",
+      "retention": "Ever Works keeps it with the App it creates or the deployment it starts. Ever Platform keeps no copy."
+    },
+    {
+      "field_path": "install_id",
+      "direction": "from_ever",
+      "form": "id",
+      "frequency": "on_action",
+      "required": false,
+      "purpose": "Mark an install you started on apps.ever.co as done once the App exists",
+      "retention": "Ever Works keeps it with the App it creates or the deployment it starts. Ever Platform keeps no copy."
+    },
+    {
+      "field_path": "app.work_id",
+      "direction": "from_ever",
+      "form": "id",
+      "frequency": "on_action",
+      "required": false,
+      "purpose": "Say which App to deploy",
+      "retention": "Ever Works keeps it with the App it creates or the deployment it starts. Ever Platform keeps no copy."
+    },
+    {
+      "field_path": "deployment.environment",
+      "direction": "from_ever",
+      "form": "clear",
+      "frequency": "on_action",
+      "required": false,
+      "purpose": "Say where to deploy (production)",
+      "retention": "Ever Works keeps it with the App it creates or the deployment it starts. Ever Platform keeps no copy."
+    }
+  ],
+  "docs_anchor": "works_apps"
+}

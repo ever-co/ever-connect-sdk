@@ -25,7 +25,7 @@ describe('@ever-co/connect-contracts', () => {
       expect(mod.SCHEMAS.usage.$id).toBe('https://api.ever.co/v1/usage/schema/ever.usage.v1');
       expect(mod.INTEGRATIONS.stats_link.key).toBe('stats_link');
       expect(mod.CONSTANTS.stats_headers.key).toBe('Ever-Stats-Key');
-      expect(mod.ROWS).toHaveLength(37);
+      expect(mod.ROWS).toHaveLength(38);
       expect(mod.PROBLEM_CODES).toContain('code_invalid');
     }
   });

@@ -35,37 +35,43 @@ function pointerGet(doc, pointer) {
 }
 
 /**
- * Parses one design file. The design is hand-written YAML, and a one-line `description:` or
- * `summary:` whose plain value contains `: ` is not valid YAML (a strict parser reads a nested
- * mapping there). Such a line, and only such a line, is read as the quoted string it was meant to
- * be, with a warning naming the file and line so the source gets quoted; every other error still
- * fails, as before. The design hash in VENDOR.json is over the bytes of the file, untouched.
+ * Parses one design file. The design is hand-written YAML, and two kinds of one-line
+ * `description:` or `summary:` are not valid YAML although their meaning is plain: a value that
+ * contains `: ` (a strict parser reads a nested mapping there), and a value that starts with a
+ * backtick or `@` (reserved characters a plain value cannot start with, e.g. "`free` = …"). Such a
+ * line, and only such a line, is read as the quoted string it was meant to be, with a warning
+ * naming the file and line so the source gets quoted; every other error still fails, as before.
+ * The design hash in VENDOR.json is over the bytes of the file, untouched.
  */
 export function parseDesignYaml(text, file = '(design)', warn = (message) => process.stderr.write(`${message}\n`)) {
   try {
     return YAML.parse(text);
   } catch {
-    // below: repair the one known case, or fail with the parser's own error
+    // below: repair the known cases, or fail with the parser's own error
   }
   const first = YAML.parseDocument(text);
   const lines = text.split('\n');
   const repaired = [];
   for (const error of first.errors) {
     const n = error.linePos?.[0]?.line;
+    // A later error on a line already repaired follows from the first one.
+    if (n && repaired.some((r) => r.line === n)) continue;
     const raw = n ? lines[n - 1] : undefined;
     const eol = raw?.endsWith('\r') ? '\r' : '';
-    const m =
-      error.code === 'BLOCK_AS_IMPLICIT_KEY' && raw !== undefined
-        ? /^(\s*(?:-\s+)?(description|summary):[ \t]+)([^'"|>&*!%@`#\s].*?)[ \t]*$/.exec(eol ? raw.slice(0, -1) : raw)
-        : null;
-    if (!m?.[3].includes(': ')) return YAML.parse(text); // not this case: fail with the parser's own error
-    if (repaired.some((r) => r.line === n)) continue;
+    const m = raw === undefined ? null : /^(\s*(?:-\s+)?(description|summary):[ \t]+)(\S.*?)[ \t]*$/.exec(eol ? raw.slice(0, -1) : raw);
+    const why = !m
+      ? null
+      : error.code === 'BLOCK_AS_IMPLICIT_KEY' && /^[^'"|>&*!%@`#]/.test(m[3]) && m[3].includes(': ')
+        ? 'contains ": "'
+        : error.code === 'BAD_SCALAR_START' && /^[`@]/.test(m[3])
+          ? 'starts with a reserved character'
+          : null;
+    if (!why) return YAML.parse(text); // not one of these cases: fail with the parser's own error
     lines[n - 1] = `${m[1]}${JSON.stringify(m[3])}${eol}`;
-    repaired.push({ line: n, key: m[2] });
+    repaired.push({ line: n, key: m[2], why });
   }
   const doc = YAML.parse(lines.join('\n'));
-  for (const r of repaired)
-    warn(`design ${file}:${r.line}: the plain ${r.key} contains ": "; read as a quoted string (quote it at the source)`);
+  for (const r of repaired) warn(`design ${file}:${r.line}: the plain ${r.key} ${r.why}; read as a quoted string (quote it at the source)`);
   return doc;
 }
 

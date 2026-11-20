@@ -96,6 +96,23 @@ export class RequestRefusedError extends Error {
   }
 }
 
+/**
+ * A paged read the client stopped before its end, so that a partial list is never taken for the
+ * whole one: `cursor_repeated` (the platform handed out a cursor it had handed out before, so the
+ * list would not end), `too_many_pages` (more pages than the read allows) or `malformed_page` (an
+ * answer that is not a page: no `items` list, or a `next_cursor` that is not a string or `null`).
+ */
+export class PagingError extends Error {
+  override readonly name = 'PagingError';
+  constructor(
+    readonly code: 'cursor_repeated' | 'too_many_pages' | 'malformed_page',
+    /** The pages read when the read stopped. */
+    readonly pages: number,
+  ) {
+    super(`paged read stopped: ${code} after ${pages} page(s)`);
+  }
+}
+
 /** The key manifest's verification codes, in the order the checks run. */
 export type KeyManifestErrorCode =
   | 'schema_violation'

@@ -58,3 +58,5 @@ export type InstanceIntegrationPut = Schemas['InstanceIntegrationPut'];
 export type IntegrationPut = Schemas['IntegrationPut'];
 export type ManagedOperationResult = Schemas['ManagedOperationResult'];
 export type KeyManifestBody = Schemas['KeyManifestBody'];
+export type LinkMembership = Schemas['LinkMembership'];
+export type LinkMembershipPage = Schemas['LinkMembershipPage'];

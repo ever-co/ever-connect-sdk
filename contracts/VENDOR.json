@@ -2,25 +2,25 @@
   "description": "Where every contract file of this repository comes from. Written by tools/sync-contract.mjs; checked by tools/check-schema-drift.mjs. `provisional` sources are drafts the platform has not published yet: tools/check-schema-drift.mjs --strict refuses them.",
   "platform": {
     "repository": "ever-co/platform",
-    "commit": "d6452689061c95c9c982b2a586b82c6d5963dba3"
+    "commit": "0d7e72af8db4afa6ad37b6eac5bb657fc1229c73"
   },
   "openapi": {
     "target": "contracts/openapi/ever-platform.v1.yaml",
-    "sha256": "22aabdbf7eb3391f6a8e7b4f747485ff5f595e5941730c80adb26e115d9a660e",
+    "sha256": "881b42977b06e6df36110654ba763cbed230ff66e82a423b11a75e32e0000802",
     "pinned": {
       "source": "contracts/openapi/ever-api.v1.json",
-      "sha256": "8b02bff222055e985317f5d9358faa1bf5d05d9b70d50264d4d5e67dae24713f"
+      "sha256": "f899d45b552a728f4f727f5c831313142d99f62262901504d3525587e20c3991"
     },
     "design": {
       "source": "docs/specs/api",
-      "sha256": "00bd6f8b2f52197e2ab522fad3b8cad3d08116aa73781ea327f1ccda5021fb1c",
+      "sha256": "201bfc1d1e12ee49e2e7599ec10a3d5372277f9f1fedb7c4b9d6d128536fb8f2",
       "files": 16
     },
-    "operations": 62,
+    "operations": 63,
     "scope": {
       "source": "contracts/openapi/v1-scope.json",
-      "sha256": "890e972e53debf473beab10f70acdb5329873a4e5ca0051f535e9b336df26ede",
-      "version": "1.7.0"
+      "sha256": "aac2214395d7153bd40a72a0997cb9be6749f579e0f8a3a960c27718be703018",
+      "version": "1.8.0"
     },
     "provisional_operations": [],
     "not_in_v1_operations": [
@@ -42,8 +42,8 @@
   },
   "events": {
     "source": "contracts/events/catalog.json",
-    "version": "1.6",
-    "sha256": "7be5372ef8dcd32376d7cbf3b86e31fd0088814c316a7b64ea363d18fc2afa5e",
+    "version": "1.7",
+    "sha256": "2bcb55c614a3dfd996f7bc3b77de4a8f4688365cf7d8f4637b2725f8530fc4c4",
     "instance_types": [
       "ever.consent.consent.granted",
       "ever.consent.consent.revoked",
@@ -105,8 +105,8 @@
     {
       "path": "contracts/integrations/catalog.v1.json",
       "source": "contracts/integrations/catalog.v1.json",
-      "source_sha256": "ece85e7c9ab6459a6266220974886848ab755a3e1d3baceb99564f9a84064283",
-      "sha256": "ece85e7c9ab6459a6266220974886848ab755a3e1d3baceb99564f9a84064283",
+      "source_sha256": "1fde7d851ee16dad8fac604b2fc8bd179a8f598326bfd239777f9e5c1fe97612",
+      "sha256": "1fde7d851ee16dad8fac604b2fc8bd179a8f598326bfd239777f9e5c1fe97612",
       "transform": null,
       "provisional": false,
       "upstream": null
@@ -141,8 +141,8 @@
     {
       "path": "contracts/openapi/v1-scope.json",
       "source": "contracts/openapi/v1-scope.json",
-      "source_sha256": "890e972e53debf473beab10f70acdb5329873a4e5ca0051f535e9b336df26ede",
-      "sha256": "890e972e53debf473beab10f70acdb5329873a4e5ca0051f535e9b336df26ede",
+      "source_sha256": "aac2214395d7153bd40a72a0997cb9be6749f579e0f8a3a960c27718be703018",
+      "sha256": "aac2214395d7153bd40a72a0997cb9be6749f579e0f8a3a960c27718be703018",
       "transform": null,
       "provisional": false,
       "upstream": null
@@ -150,8 +150,8 @@
     {
       "path": "contracts/schemas/events/common.schema.json",
       "source": "contracts/events/schemas/common.schema.json",
-      "source_sha256": "99c845cd575eada5379f52483fbfa7483484fbdb2b5914c20eb7ebb457f8331f",
-      "sha256": "99c845cd575eada5379f52483fbfa7483484fbdb2b5914c20eb7ebb457f8331f",
+      "source_sha256": "da0f244bb62d47c85574fa1692b54fa437cd00af2d53b9dbe0ceeb09e2341b1a",
+      "sha256": "da0f244bb62d47c85574fa1692b54fa437cd00af2d53b9dbe0ceeb09e2341b1a",
       "transform": null,
       "provisional": false,
       "upstream": null

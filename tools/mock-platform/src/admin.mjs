@@ -234,6 +234,27 @@ export const adminRoutes = {
     return { body: { org_id: body.org_id } };
   },
 
+  // The members an organization's tenant links answer (row 38): `{org_id?, members}`, each member
+  // `{identity_issuer, identity_subject, role}` as the contract shapes it; replaces what was seeded
+  // before. Without `org_id`, the organization of the installation. Unseeded, an organization's
+  // members are the configured people.
+  'POST /__mock/memberships': ({ state, body }) => {
+    const orgId = typeof body?.org_id === 'string' ? body.org_id : need(state.instance(body?.instance_id)).org.id;
+    const members = body?.members;
+    const roles = contract().spec.components.schemas.OrgRole.enum;
+    const valid = (m) => typeof m?.identity_issuer === 'string' && typeof m.identity_subject === 'string' && roles.includes(m.role);
+    if (!Array.isArray(members) || !members.every(valid))
+      fail(422, 'validation_failed', `members is a list of {identity_issuer, identity_subject, role (${roles.join(', ')})}`);
+    // One entry per Ever ID: the pages' cursor names a member by issuer and subject.
+    if (new Set(members.map((m) => JSON.stringify([m.identity_issuer, m.identity_subject]))).size !== members.length)
+      fail(422, 'validation_failed', 'members names an Ever ID (issuer and subject) twice');
+    state.memberships.set(
+      orgId,
+      members.map((m) => ({ identity_issuer: m.identity_issuer, identity_subject: m.identity_subject, role: m.role })),
+    );
+    return { body: { org_id: orgId, members: members.length } };
+  },
+
   'POST /__mock/provision-intent': ({ state, body, issuer }) => {
     const instance = need(state.instance(body?.instance_id));
     const now = state.now();

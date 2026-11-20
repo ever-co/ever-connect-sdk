@@ -1,0 +1,119 @@
+{
+  "key": "works_apps",
+  "scope_version": 1,
+  "screen_version": "1",
+  "blocks": {
+    "title": "Enable Create and deploy Apps in Ever Works for you for {organization}",
+    "purpose": "Lets app.ever.co create an App in your Ever Works workspace, and start a deployment of one, when an owner or admin of your organization asks for it there. Ever Works does the work as the person who asked, with the rights that person has in Ever Works.",
+    "leaves_installation": [],
+    "arrives_at_installation": [
+      {
+        "field": "tenant_link_id",
+        "form": "id",
+        "form_text": "as an identifier",
+        "when": "on_action",
+        "purpose": "Say which Ever Works workspace the App belongs to"
+      },
+      {
+        "field": "person.ever_id_sub",
+        "form": "id",
+        "form_text": "as an identifier",
+        "when": "on_action",
+        "purpose": "Act as the person who asked: Ever Works checks their membership and rights itself"
+      },
+      {
+        "field": "app.name",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "on_action",
+        "purpose": "Name the new App as you typed it"
+      },
+      {
+        "field": "app.blueprint_id",
+        "form": "id",
+        "form_text": "as an identifier",
+        "when": "on_action",
+        "purpose": "Create the App from the blueprint you chose"
+      },
+      {
+        "field": "app.auto_provision",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "on_action",
+        "purpose": "Tell Ever Works whether to start setting the App up at once (your choice in the dialog)"
+      },
+      {
+        "field": "install_id",
+        "form": "id",
+        "form_text": "as an identifier",
+        "when": "on_action",
+        "purpose": "Mark an install you started on apps.ever.co as done once the App exists"
+      },
+      {
+        "field": "app.work_id",
+        "form": "id",
+        "form_text": "as an identifier",
+        "when": "on_action",
+        "purpose": "Say which App to deploy"
+      },
+      {
+        "field": "deployment.environment",
+        "form": "clear",
+        "form_text": "as is",
+        "when": "on_action",
+        "purpose": "Say where to deploy (production)"
+      }
+    ],
+    "platform_keeps": [
+      {
+        "field": "tenant_link_id",
+        "retention": "Ever Works keeps it with the App it creates or the deployment it starts. Ever Platform keeps no copy."
+      },
+      {
+        "field": "person.ever_id_sub",
+        "retention": "Ever Works keeps it with the App and the deployment as the person who asked. Ever Platform keeps no copy."
+      },
+      {
+        "field": "app.name",
+        "retention": "Ever Works keeps it with the App it creates or the deployment it starts. Ever Platform keeps no copy."
+      },
+      {
+        "field": "app.blueprint_id",
+        "retention": "Ever Works keeps it with the App it creates or the deployment it starts. Ever Platform keeps no copy."
+      },
+      {
+        "field": "app.auto_provision",
+        "retention": "Ever Works keeps it with the App it creates or the deployment it starts. Ever Platform keeps no copy."
+      },
+      {
+        "field": "install_id",
+        "retention": "Ever Works keeps it with the App it creates or the deployment it starts. Ever Platform keeps no copy."
+      },
+      {
+        "field": "app.work_id",
+        "retention": "Ever Works keeps it with the App it creates or the deployment it starts. Ever Platform keeps no copy."
+      },
+      {
+        "field": "deployment.environment",
+        "retention": "Ever Works keeps it with the App it creates or the deployment it starts. Ever Platform keeps no copy."
+      }
+    ],
+    "how_often": [
+      "only when you act"
+    ],
+    "where_to_change": "Integrations & data in this product, or Instances in app.ever.co; turning it off refuses new requests at once; the revoke effect says what else changes and when.",
+    "revoke_effect": "app.ever.co stops creating and deploying Apps in Ever Works for your organization at once. Apps and deployments that already exist stay in Ever Works, under your control there.",
+    "legal": {
+      "terms_url": "https://ever.co/legal/terms",
+      "terms_version": "2026-10",
+      "dpa_url": "https://ever.co/legal/dpa",
+      "dpa_version": "2026-10",
+      "subprocessors_url": "https://ever.co/legal/subprocessors"
+    },
+    "authorisation": "I am authorised to enable this for {organization}"
+  },
+  "in_product": {
+    "allowed": true,
+    "step_up_max_age_s": 300
+  }
+}

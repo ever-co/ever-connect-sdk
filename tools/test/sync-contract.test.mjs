@@ -19,8 +19,8 @@ const ops = Object.entries(spec.paths).flatMap(([path, item]) =>
   METHODS.filter((m) => item[m]).map((m) => ({ method: m, path, op: item[m] })),
 );
 
-test('the table has 37 contiguous rows and every row is covered by the spec or pending upstream', () => {
-  assert.equal(rowsDoc.rows.length, 37);
+test('the table has 38 contiguous rows and every row is covered by the spec or pending upstream', () => {
+  assert.equal(rowsDoc.rows.length, 38);
   rowsDoc.rows.forEach((r, i) => assert.equal(r.row, i + 1));
   for (const r of rowsDoc.rows) {
     if (r.pending_upstream) {
@@ -197,4 +197,19 @@ test('a design file: a plain one-line description holding ": " is read as quoted
   assert.deepEqual(parseDesignYaml(text.replace(/\n/g, '\r\n'), 'crlf.yaml', warn).p[0].in, 'path');
   assert.throws(() => parseDesignYaml('a:\n  name: one: two\n', 'other.yaml', warn));
   assert.throws(() => parseDesignYaml('a: [unclosed\n', 'broken.yaml', warn));
+});
+
+test('a design file: a plain one-line description starting with a backtick is read as quoted, with a warning', () => {
+  const warnings = [];
+  const warn = (m) => warnings.push(m);
+  const text = 'p:\n  - name: price\n    description: `free` = every edition is free; `paid` = one is not.\n    in: query\n';
+  assert.deepEqual(parseDesignYaml(text, 'q.yaml', warn), {
+    p: [{ name: 'price', description: '`free` = every edition is free; `paid` = one is not.', in: 'query' }],
+  });
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0], /q\.yaml:3: the plain description starts with a reserved character/);
+  // Both cases in one file; a backtick elsewhere (another key) still fails.
+  const both = 'a:\n  summary: `x` first\n  description: holds: a colon\n';
+  assert.deepEqual(parseDesignYaml(both, 'both.yaml', warn), { a: { summary: '`x` first', description: 'holds: a colon' } });
+  assert.throws(() => parseDesignYaml('a:\n  name: `x` first\n', 'other.yaml', warn));
 });

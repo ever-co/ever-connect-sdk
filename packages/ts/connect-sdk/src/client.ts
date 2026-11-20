@@ -15,7 +15,7 @@
  */
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { CONSTANTS, type operations, type Product } from '@ever-co/connect-contracts';
+import { CONSTANTS, type LinkMembership, type operations, type Product } from '@ever-co/connect-contracts';
 import { signClientAssertion } from './assertion';
 import { ULID } from './encoding';
 import { type CachedEntitlement, type VerifiedEntitlement, verifyEntitlement } from './entitlement';
@@ -25,6 +25,7 @@ import type { InstanceSigner } from './keys';
 import { KeySet, type KeySetUpdate } from './keyset';
 import { isLocalUrl, originOf, warnOnce } from './local';
 import { pinnedRootKeys, type RootKey, type VerifiedKeyManifest, verifyKeyManifest } from './manifest';
+import { MAX_PAGE_SIZE, readAllPages } from './paging';
 import { schemaViolations } from './schema';
 import type { SignedStatsReport } from './stats';
 import { InstanceTokens } from './token';
@@ -58,6 +59,20 @@ export interface CallInput<B = unknown> {
   readonly personToken?: string;
   /** Long-poll seconds (the read deadline becomes `waitS + 5`). */
   readonly waitS?: number;
+  readonly signal?: AbortSignal;
+}
+
+/** One page of a tenant link's members: after `cursor` (the previous page's `next_cursor`), `limit` 1..100 (the platform's default 25). */
+export interface LinkMembershipsPageOptions {
+  readonly cursor?: string | null;
+  readonly limit?: number;
+  readonly signal?: AbortSignal;
+}
+
+/** Every member of a tenant link: `limit` per page (default 100), at most `maxPages` pages (default 1,000). */
+export interface LinkMembershipsReadOptions {
+  readonly limit?: number;
+  readonly maxPages?: number;
   readonly signal?: AbortSignal;
 }
 
@@ -301,6 +316,14 @@ export function createEverPlatformClient(o: EverPlatformClientOptions) {
     return (await answer(op, res)) as ResponseBody<'ingestStatsReport'>;
   }
 
+  /** One page of a tenant link's members (`instances.tenantLinks.memberships`). */
+  const linkMemberships = (linkId: string, page: LinkMembershipsPageOptions = {}) =>
+    plain('instanceListLinkMemberships', {
+      path: { link: linkId },
+      query: { cursor: page.cursor ?? undefined, limit: page.limit },
+      signal: page.signal,
+    });
+
   async function manifest(): Promise<VerifiedKeyManifest> {
     const body = await plain('get_key_manifest');
     return verifyKeyManifest(body, { unsafeRootKeys: rootKeys, issuer, now: now() });
@@ -361,6 +384,24 @@ export function createEverPlatformClient(o: EverPlatformClientOptions) {
         remove: (linkId: string) => plain('instanceUnlinkTenantLink', { path: { link: linkId } }),
         rekey: (linkId: string, req: RequestBody<'instanceRekeyTenantLink'>) =>
           plain('instanceRekeyTenantLink', { path: { link: linkId }, body: req }),
+        /**
+         * One page of the current members of the organization the tenant link points at, named as
+         * the feed's membership events name them (Ever ID issuer and subject, the product user when
+         * a person link names one, the role). Read it after the feed answered `410 resync_required`.
+         * `404 module_disabled` while the platform sends no membership events.
+         */
+        memberships: linkMemberships,
+        /**
+         * Every member of the organization the tenant link points at: page after page (100 a page
+         * unless `limit` says otherwise) until `next_cursor` is `null`. Stops with a `PagingError` on a
+         * cursor handed out before or after `maxPages` pages (default 1,000), so a partial list is
+         * never answered as the whole one; a `ProblemError` of any page ends the read as it is.
+         */
+        allMemberships: (linkId: string, opts: LinkMembershipsReadOptions = {}): Promise<LinkMembership[]> =>
+          readAllPages<LinkMembership>(
+            (cursor) => linkMemberships(linkId, { cursor, limit: opts.limit ?? MAX_PAGE_SIZE, signal: opts.signal }),
+            opts.maxPages,
+          ),
       },
       identifiers: {
         put: (linkId: string, req: RequestBody<'instancePutLinkIdentifiers'>) =>
