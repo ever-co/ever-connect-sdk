@@ -881,6 +881,11 @@ export const ERRORS = {
     });
   },
   ...integrationPairs(15, 'app_sync', calls.mirror),
+  '15:422:validation_failed': async (env) => {
+    // Ever-Link-Id is optional on the mirror, but a value that is not a tenant link id is refused.
+    const c = await connected(env, { enable: ['app_sync'] });
+    return env.call('GET', '/v1/instances/me/mirror/apps', { token: c.token, headers: { 'ever-link-id': 'not-a-link' } });
+  },
   '15:413:payload_too_large': async (env) => {
     const c = await connected(env, { enable: ['app_sync'] });
     return env.call('POST', '/v1/instances/me/mirror/apps', {
@@ -1100,6 +1105,12 @@ export const ERRORS = {
       body: { state: 'installing' },
       headers: { ...idem('in'), ...linkHeader(c) },
     });
+  },
+  '28:422:validation_failed': async (env) => {
+    // marketplace_installs is consented per tenant link: a report that names none is refused.
+    const c = await connected(env, { enable: ['marketplace_installs'] });
+    const { install_id } = await env.admin('install', {});
+    return env.call('POST', `/v1/installs/${install_id}/status`, { token: c.token, body: { state: 'installing' }, headers: idem('nl') });
   },
   '28:409:illegal_transition': async (env) => {
     const c = await connected(env, { enable: ['marketplace_installs'] });
