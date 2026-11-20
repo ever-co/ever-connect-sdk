@@ -76,6 +76,23 @@ A non-2xx answer is `Error::Problem` (a boxed `ProblemError`). For `410 resync_r
 event feed, `last_id` is where to continue: re-read the state through REST, acknowledge that cursor
 and read the feed after it (`None`: read it again from its start).
 
+The membership events in between are gone too: re-read the members of each linked organization
+(row 38). `link_memberships(link_id, cursor, limit)` reads one page; `all_link_memberships(link_id,
+max_pages)` reads every page (100 a page) and stops with `Error::Paging` (`cursor_repeated`,
+`too_many_pages` past `max_pages`, default 1,000, or `malformed_page`) instead of answering part of
+the list. A deployment that sends no membership events answers `404 module_disabled`. `Pager`
+keeps any other cursor-paged read bounded the same way.
+
+```rust
+use ever_connect_sdk::client::Error;
+
+match client.all_link_memberships(&link_id, None).await {
+    Ok(members) => apply_members(&link_id, &members)?, // only now remove who the list no longer names
+    Err(Error::Problem(p)) if p.status == 404 && p.code == "module_disabled" => {} // nothing to re-read
+    Err(e) => return Err(e.into()),                                              // keep everyone
+}
+```
+
 ## Compact JWS helpers
 
 ```rust
