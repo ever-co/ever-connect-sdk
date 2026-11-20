@@ -476,7 +476,7 @@
       "module": "connect",
       "group": "integration",
       "integration": "app_sync",
-      "auth": "instance token",
+      "auth": "instance token; Ever-Link-Id optional (the tenant link the batch or the read is for)",
       "availability": "v1",
       "endpoints": [
         {
@@ -874,7 +874,7 @@
       "module": "connect",
       "group": "integration",
       "integration": "marketplace_installs",
-      "auth": "instance token",
+      "auth": "instance token and Ever-Link-Id (the tenant link the install acts for)",
       "availability": "v1",
       "endpoints": [
         {

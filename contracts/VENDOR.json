@@ -6,7 +6,7 @@
   },
   "openapi": {
     "target": "contracts/openapi/ever-platform.v1.yaml",
-    "sha256": "881b42977b06e6df36110654ba763cbed230ff66e82a423b11a75e32e0000802",
+    "sha256": "ba8be386238cfcc8710380c4a5ce4f63b0889b362ae8675fa9446cc6606e87b5",
     "pinned": {
       "source": "contracts/openapi/ever-api.v1.json",
       "sha256": "f899d45b552a728f4f727f5c831313142d99f62262901504d3525587e20c3991"
@@ -37,7 +37,11 @@
     "renamed_schemas": [],
     "schema_overrides": [],
     "security_overrides": [],
-    "parameter_overrides": [],
+    "parameter_overrides": [
+      "instanceListMirroredApps",
+      "instanceMirrorApps",
+      "instanceReportInstallStatus"
+    ],
     "pending_upstream_rows": []
   },
   "events": {

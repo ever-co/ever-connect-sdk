@@ -626,6 +626,11 @@
           "status": 413,
           "code": "payload_too_large",
           "documented": true
+        },
+        {
+          "status": 422,
+          "code": "validation_failed",
+          "documented": true
         }
       ]
     },
@@ -1105,6 +1110,11 @@
         {
           "status": 409,
           "code": "illegal_transition",
+          "documented": true
+        },
+        {
+          "status": 422,
+          "code": "validation_failed",
           "documented": true
         }
       ]

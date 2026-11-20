@@ -3868,7 +3868,10 @@ export interface operations {
     readonly instanceReportInstallStatus: {
         readonly parameters: {
             readonly query?: never;
-            readonly header?: never;
+            readonly header: {
+                /** @description The tenant link the install acts for. Required: without it Ever Platform answers `422 validation_failed` at `#Ever-Link-Id`. */
+                readonly "Ever-Link-Id": string;
+            };
             readonly path: {
                 /** @description The install. */
                 readonly install: string;
@@ -4641,7 +4644,10 @@ export interface operations {
                 /** @description Only the rows that arrived under this tenant link. */
                 readonly link?: string;
             };
-            readonly header?: never;
+            readonly header?: {
+                /** @description The tenant link the read is made for. Optional: when named, `app_sync` must be enabled for that link; without it, for at least one active link of the installation. */
+                readonly "Ever-Link-Id"?: string;
+            };
             readonly path?: never;
             readonly cookie?: never;
         };
@@ -4688,7 +4694,10 @@ export interface operations {
     readonly instanceMirrorApps: {
         readonly parameters: {
             readonly query?: never;
-            readonly header?: never;
+            readonly header?: {
+                /** @description The tenant link the batch is sent for. Optional: when named, `app_sync` must be enabled for that link; without it, for at least one active link of the installation. Each operation's own link is checked either way. */
+                readonly "Ever-Link-Id"?: string;
+            };
             readonly path?: never;
             readonly cookie?: never;
         };
