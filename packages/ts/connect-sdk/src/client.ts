@@ -434,9 +434,22 @@ export function createEverPlatformClient(o: EverPlatformClientOptions) {
           plain('instanceCreateBillingLink', { body: req, idempotencyKey, linkId }),
       },
       mirrorApps: {
-        push: (batch: RequestBody<'instanceMirrorApps'>) => plain('instanceMirrorApps', { body: batch }),
-        /** A page of the mirrored inventory; `link` keeps the apps of one tenant link. */
-        list: (cursor?: string, limit?: number, link?: string) => plain('instanceListMirroredApps', { query: { cursor, limit, link } }),
+        /**
+         * Pushes a mirror batch. `linkId` (sent as `Ever-Link-Id`) names the tenant link the batch is
+         * for: `app_sync` must then be enabled for that link; without it, for at least one active link.
+         */
+        push: (batch: RequestBody<'instanceMirrorApps'>, linkId?: string) => plain('instanceMirrorApps', { body: batch, linkId }),
+        /**
+         * A page of the mirrored inventory; `link` keeps the apps of one tenant link and is also sent
+         * as `Ever-Link-Id`, so the read is gated on that link's `app_sync`.
+         */
+        list: (cursor?: string, limit?: number, link?: string) =>
+          plain('instanceListMirroredApps', { query: { cursor, limit, link }, linkId: link }),
+      },
+      installs: {
+        /** Reports an install's status for the tenant link the install acts for (`Ever-Link-Id`, required). */
+        reportStatus: (installId: string, linkId: string, req: RequestBody<'instanceReportInstallStatus'>) =>
+          plain('instanceReportInstallStatus', { path: { install: installId }, body: req, linkId }),
       },
       managedOperationResult: (operationId: string, req: RequestBody<'instanceReportManagedOperationResult'>) =>
         plain('instanceReportManagedOperationResult', { path: { operation: operationId }, body: req }),
