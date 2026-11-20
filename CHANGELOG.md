@@ -20,6 +20,14 @@ platform). Versions are released together.
 - Mock platform: the member list of a tenant link (`POST /__mock/memberships` seeds an
   organization's members) and the fault `memberships_module_disabled`.
 - `LinkMembership` and `LinkMembershipPage` types in `@ever-co/connect-contracts`.
+- `Ever-Link-Id` on the apps mirror and the install status report, which the platform's contract does
+  not declare yet. The mirror (`instanceMirrorApps`, `instanceListMirroredApps`) takes it optionally,
+  as Ever Platform's `any_link` gate does. TypeScript: `mirrorApps.push(batch, linkId?)`, and
+  `mirrorApps.list(cursor, limit, link)` sends `link` as the header too. The install status report
+  requires it, as the per-link `marketplace_installs` gate does: TypeScript
+  `instances.installs.reportStatus(installId, linkId, report)`, and in both languages a call without
+  a link is refused before it is sent (`link_required`). Products no longer need to add the header
+  in their own transport.
 
 ### Changed
 
@@ -27,6 +35,11 @@ platform). Versions are released together.
   `works_apps` integration (coming soon), Ever Rec among the products of `provisioning`, the
   fields an organization's own Apps carry, and two problem codes (`listing_changed`,
   `licence_check_required`).
+- The mock platform gates the apps mirror as Ever Platform does: without `Ever-Link-Id` it answers
+  while `app_sync` is enabled for any active link (it used to require the header).
+- The mirror's vocabularies stay open, as in the platform's contract: an app or deployment status,
+  an environment, an owner (`managed_by`) or a kind the SDK does not list is sent as it is, and an
+  outcome or refusal code it does not list reaches the caller unchanged (tests in both languages).
 - The contract sync reads a one-line design `description` or `summary` that starts with a backtick
   as the quoted string it was meant to be, with a warning, as it already did for one holding `: `.
 
