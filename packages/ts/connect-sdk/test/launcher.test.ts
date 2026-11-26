@@ -3,6 +3,7 @@ import {
   type AppLauncherPlatformsResponse,
   isLauncherItem,
   LAUNCHER_SNAPSHOT_VERSION,
+  type LauncherApp,
   launcherSnapshot,
   loadLauncherCatalog,
   mapApps,
@@ -131,6 +132,53 @@ describe('the organization feeds', () => {
       ['app:a4', 'https://f.example/', 'lastDeployFailed'],
     ]);
     expect(items[0].workKind).toBe('directory');
+  });
+
+  it('opens an App the organization added itself at its own address until it is removed', () => {
+    const manual = (over: Partial<LauncherApp> = {}): LauncherApp => ({
+      id: 'm1',
+      name: 'Bookings',
+      status: 'registered',
+      source_system: 'manual',
+      url: 'https://bookings.acme.example',
+      deployments: [],
+      ...over,
+    });
+    expect(mapApps([manual()])).toEqual([
+      {
+        key: 'app:m1',
+        kind: 'work',
+        section: 'works',
+        name: 'Bookings',
+        url: 'https://bookings.acme.example/',
+        host: 'bookings.acme.example',
+        visible: true,
+        pinned: false,
+        pinOrder: null,
+        order: 0,
+        manageState: 'listed',
+      },
+    ]);
+    const keys = (apps: LauncherApp[]) => mapApps(apps).map((item) => item.key);
+    // Registered or live alike; removed, or without an https address, not.
+    expect(keys([manual({ status: 'live' })])).toEqual(['app:m1']);
+    expect(keys([manual({ status: 'archived' })])).toEqual([]);
+    expect(keys([manual({ url: null })])).toEqual([]);
+    expect(keys([manual({ url: 'http://plain.example' })])).toEqual([]);
+    expect(keys([manual({ url: 'https://user:pw@bookings.example' })])).toEqual([]);
+    // Its own address, never a deployment's.
+    const deployment = { environment: 'production', status: 'ready', url: 'https://deployed.example' };
+    expect(keys([manual({ url: null, status: 'live', deployments: [deployment] })])).toEqual([]);
+    expect(mapApps([manual({ status: 'live', deployments: [deployment] })])[0].url).toBe('https://bookings.acme.example/');
+    // Beside the mirrored apps, in the feed's order, with no deploy chip.
+    const mirrored: LauncherApp = { id: 'a1', name: 'Site', status: 'live', source_system: 'works', deployments: [deployment] };
+    const both = mapApps([manual(), mirrored]);
+    expect(both.map((item) => [item.key, item.order, item.chip ?? null])).toEqual([
+      ['app:m1', 0, null],
+      ['app:a1', 1, null],
+    ]);
+    // A mirrored app keeps its rule: a `url` of its own is not an address the launcher opens.
+    expect(keys([{ ...mirrored, status: 'registered', url: 'https://mirrored.example' }])).toEqual([]);
   });
 
   it('merges the Ever apps first, one tile per key, and marks the product itself', () => {
