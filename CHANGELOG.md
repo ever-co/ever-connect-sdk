@@ -46,7 +46,7 @@ platform). Versions are released together.
   pins each scope's SHA-256 with its version):
   - `app_sync` is at scope version 2. Ever Platform takes a consent at the current version only (an
     older one answers `422 scope_version_outdated`), and a link whose `app_sync` consent predates
-    version 2 moves nothing until an owner or admin consents again. A product that shows the
+    version 2 moves nothing until it is consented to again at version 2. A product that shows the
     `app_sync` consent screen, sends its `scope_version` or pins its scope hash takes all three from
     this release.
   - `provider_access` is at scope version 2: it declares what moves.
