@@ -28,6 +28,12 @@ platform). Versions are released together.
   `instances.installs.reportStatus(installId, linkId, report)`, and in both languages a call without
   a link is refused before it is sent (`link_required`). Products no longer need to add the header
   in their own transport.
+- The App Launcher lists the Apps an organization added itself (`source_system: manual` in
+  `GET /v1/orgs/{org}/apps`), as Ever Platform's own launcher does: `mapApps` opens such an App at
+  its own `https` address (`url`) until it is removed (`archived`), whether it is `registered` or
+  `live`, in the feed's order beside the other apps. It has no deployments, and a deployment never
+  stands in for its address. `LauncherApp` gains the optional `source_system` and `url`; a product
+  that passes the feed's items as they are needs no change.
 
 ### Changed
 

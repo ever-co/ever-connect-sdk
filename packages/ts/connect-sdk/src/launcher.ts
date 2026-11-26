@@ -1,8 +1,8 @@
 /**
  * The App Launcher's data for a product's header: the Ever apps (Ever Works' public catalog, or a
  * bundled snapshot when it cannot be read) and the organization's own apps from Ever Platform
- * (what it installed from apps.ever.co, and its apps with a live deployment), in the shape the
- * `<ever-app-launcher>` element takes (`AppLauncherListResponse`).
+ * (what it installed from apps.ever.co, its apps with a live deployment, and the Apps it added
+ * itself), in the shape the `<ever-app-launcher>` element takes (`AppLauncherListResponse`).
  *
  * The product reads the two feeds itself (`GET /v1/orgs/{org}/installs` and
  * `GET /v1/orgs/{org}/apps`) with the person's token exchanged for the `apps:read` scope, then
@@ -87,6 +87,10 @@ export interface LauncherApp {
   name: string;
   status: string;
   work_kind?: string | null;
+  /** `works`, `marketplace` or `manual` (an App the organization added itself). */
+  source_system?: string | null;
+  /** The `https` address of an App the organization added itself (`null` on a mirrored one). */
+  url?: string | null;
   deployments: LauncherAppDeployment[];
 }
 
@@ -227,14 +231,42 @@ function deploymentOf(app: LauncherApp): LauncherAppDeployment | null {
   return withUrl.find((d) => d.environment === 'production') ?? withUrl[0] ?? null;
 }
 
+/** States of an App the organization added itself in which it is no longer opened (removed). */
+const REMOVED = new Set(['archived', 'deleted']);
+
 /**
- * The organization's apps as launcher tiles: live apps with a deployment address; a deployment
- * still going out (`pending`) shows `deploying`, one that failed (`error`, `timeout`)
- * `lastDeployFailed`.
+ * The organization's apps as launcher tiles, in the feed's order:
+ *
+ * - an app mirrored from the product that built it: while `live`, at its deployment's address; a
+ *   deployment still going out (`pending`) shows `deploying`, one that failed (`error`, `timeout`)
+ *   `lastDeployFailed`;
+ * - an App the organization added itself (`source_system: manual`): at its own `https` address
+ *   (`url`) until it is removed (`archived`), `registered` or `live` alike (`live` only decides
+ *   whether it shows on the organization's public page). It has no deployments, and a deployment
+ *   never stands in for its address.
  */
 export function mapApps(apps: readonly LauncherApp[]): AppLauncherItem[] {
   const items: AppLauncherItem[] = [];
   for (const app of apps) {
+    if (app.source_system === 'manual') {
+      const url = REMOVED.has(app.status) ? null : httpsUrl(app.url);
+      if (!url) continue;
+      items.push({
+        key: `app:${app.id}`,
+        kind: 'work',
+        section: 'works',
+        name: app.name,
+        url,
+        host: hostOf(url),
+        ...(app.work_kind ? { workKind: app.work_kind } : {}),
+        visible: true,
+        pinned: false,
+        pinOrder: null,
+        order: items.length,
+        manageState: 'listed',
+      });
+      continue;
+    }
     if (app.status !== 'live') continue;
     const deployment = deploymentOf(app);
     const url = httpsUrl(deployment?.url);

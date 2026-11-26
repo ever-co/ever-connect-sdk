@@ -38,7 +38,9 @@ launcherElement.data = data;
 - `mapInstalls(installs, addressOf?)`: installs that are `installed` or `delivered` and have an `https` address
   (`next_action_url` unless the product resolves the listing's address itself) become tiles under "Your apps".
 - `mapApps(apps)`: live apps with an `https` deployment address (production first); a deployment still going out
-  shows "deploying", a failed one "last deploy failed".
+  shows "deploying", a failed one "last deploy failed". An App the organization added itself (`source_system:
+  manual`) has no deployments: it is listed at its own `https` address (`url`) until it is removed (`archived`),
+  whether it is `registered` or `live`, in the feed's order beside the other apps.
 - `mergeLauncherResponse()`: the Ever apps first, then the installs and the apps, one tile per key; `current` marks
   the product's own tile.
 
