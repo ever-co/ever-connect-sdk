@@ -88,11 +88,11 @@ describe('in-product consent (step-up)', () => {
     expect(isStepUpFresh({ auth_time: now + 120 }, now)).toBe(false);
   });
 
-  it('instance_url and counterparty_discoverable never take an in-product consent', async () => {
-    const { stepUpAllowed, INTEGRATION_KEYS } = await import('@ever-co/connect-contracts');
-    expect(stepUpAllowed('instance_url')).toBe(false);
-    expect(stepUpAllowed('counterparty_discoverable')).toBe(false);
-    for (const key of INTEGRATION_KEYS.filter((k) => !['instance_url', 'counterparty_discoverable'].includes(k)))
+  it('instance_url, counterparty_discoverable and works_apps never take an in-product consent', async () => {
+    const { stepUpAllowed, INTEGRATION_KEYS, STEP_UP_EXCLUDED_KEYS } = await import('@ever-co/connect-contracts');
+    expect([...STEP_UP_EXCLUDED_KEYS].sort()).toEqual(['counterparty_discoverable', 'instance_url', 'works_apps']);
+    for (const key of STEP_UP_EXCLUDED_KEYS) expect(stepUpAllowed(key)).toBe(false);
+    for (const key of INTEGRATION_KEYS.filter((k) => !(STEP_UP_EXCLUDED_KEYS as readonly string[]).includes(k)))
       expect(stepUpAllowed(key)).toBe(true);
   });
 
