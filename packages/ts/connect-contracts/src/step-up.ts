@@ -60,8 +60,15 @@ export type StepUpGrantBody = components['schemas']['IntegrationPut'];
 /** The state the consent write answers (`consent_source: product_ui` for a step-up consent). */
 export type StepUpGrantResponse = operations['putIntegrationState']['responses'][200]['content']['application/json'];
 
-/** Integration keys that never take an in-product consent: they are enabled in app.ever.co only. */
-export const STEP_UP_EXCLUDED_KEYS = ['counterparty_discoverable', 'instance_url'] as const satisfies readonly IntegrationKey[];
+/**
+ * Integration keys that never take an in-product consent: they are enabled in app.ever.co only
+ * (Ever Platform answers a product's consent write for one of them `403 session_required`).
+ */
+export const STEP_UP_EXCLUDED_KEYS = [
+  'counterparty_discoverable',
+  'instance_url',
+  'works_apps',
+] as const satisfies readonly IntegrationKey[];
 
 /** Whether an integration may be consented in the product's own dialog. */
 export const stepUpAllowed = (key: IntegrationKey): boolean => !(STEP_UP_EXCLUDED_KEYS as readonly string[]).includes(key);

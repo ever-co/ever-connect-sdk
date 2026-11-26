@@ -12,8 +12,10 @@ pub const STEP_UP_MAX_AGE_S: i64 = 300;
 /// How far in the future an `auth_time` may be (clock skew), in seconds.
 pub const STEP_UP_MAX_FUTURE_SKEW_S: i64 = 60;
 
-/// Integration keys that never take an in-product consent: they are enabled in app.ever.co only.
-pub const STEP_UP_EXCLUDED_KEYS: [&str; 2] = ["counterparty_discoverable", "instance_url"];
+/// Integration keys that never take an in-product consent: they are enabled in app.ever.co only
+/// (Ever Platform answers a product's consent write for one of them `403 session_required`).
+pub const STEP_UP_EXCLUDED_KEYS: [&str; 3] =
+    ["counterparty_discoverable", "instance_url", "works_apps"];
 
 /// The OpenID Connect authorization request of a step-up sign-in: a fresh sign-in
 /// (`prompt=login`, `max_age=300`) with PKCE through the installation's own client, asking for the
@@ -136,7 +138,9 @@ mod tests {
     fn excluded_keys_are_app_ever_co_only() {
         assert!(!step_up_allowed("instance_url"));
         assert!(!step_up_allowed("counterparty_discoverable"));
+        assert!(!step_up_allowed("works_apps"));
         assert!(step_up_allowed("counterparty_lookup"));
+        assert!(step_up_allowed("app_sync"));
         for key in STEP_UP_EXCLUDED_KEYS {
             assert!(
                 crate::INTEGRATION_KEYS.contains(&key),

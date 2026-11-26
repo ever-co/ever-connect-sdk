@@ -42,6 +42,32 @@ platform). Versions are released together.
   outcome or refusal code it does not list reaches the caller unchanged (tests in both languages).
 - The contract sync reads a one-line design `description` or `summary` that starts with a backtick
   as the quoted string it was meant to be, with a warning, as it already did for one holding `: `.
+- Consent scopes that changed since `1.0.0-rc.8` (`contracts/integrations/scope-versions.lock.json`
+  pins each scope's SHA-256 with its version):
+  - `app_sync` is at scope version 2. Ever Platform takes a consent at the current version only (an
+    older one answers `422 scope_version_outdated`), and a link whose `app_sync` consent predates
+    version 2 moves nothing until an owner or admin consents again. A product that shows the
+    `app_sync` consent screen, sends its `scope_version` or pins its scope hash takes all three from
+    this release.
+  - `provider_access` is at scope version 2: it declares what moves.
+  - New: `provisioning` (scope version 2) and `works_apps` (scope version 1, coming soon).
 
 The operation id is the one products used while they registered the route themselves, so a
 product's "add it when the SDK lacks it" guard keeps the SDK's entry.
+
+### Fixed
+
+- `STEP_UP_EXCLUDED_KEYS` and `stepUpAllowed` / `step_up_allowed` list `works_apps` with
+  `instance_url` and `counterparty_discoverable`: Ever Platform consents it in app.ever.co only and
+  answers a product's own consent write for it `403 session_required`.
+
+### Upgrading from 1.0.0-rc.8
+
+- Re-vendor the integration definitions, so the `app_sync` consent screen, `scope_version` and scope
+  hash are version 2.
+- Pass the tenant link to the SDK: `mirrorApps.push(batch, linkId)` and `mirrorApps.list(cursor,
+  limit, link)` for the apps mirror, `instances.installs.reportStatus(installId, linkId, report)`
+  (or `linkId` / `link_id` in `CallInput`) for the install status report. A transport that added
+  `Ever-Link-Id` itself is no longer needed.
+- Send the product's own app and deployment statuses, environments and owners as they are: the
+  mirror's request body no longer limits them to a closed list.
